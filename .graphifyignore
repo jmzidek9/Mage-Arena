@@ -1,0 +1,15 @@
+# Keep the graph to real source + hand-written notes.
+# Without this, graphify indexed its own Obsidian export inside vault/ and minified three.js,
+# which snowballed into ~670k nodes and a vault Obsidian couldn't open.
+index.html
+js/vendor/
+assets/
+archive/
+graphify-out/
+vault/graph/
+vault/Test Game/
+vault/.obsidian/
+blender/renders/
+*.blend
+*.blend1
+vault/Graph Report.md

@@ -1,0 +1,25 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "mage-pact",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8000"
+      ],
+      "port": 8000
+    },
+    {
+      "name": "mage-pact-2",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8010"
+      ],
+      "port": 8010
+    }
+  ]
+}

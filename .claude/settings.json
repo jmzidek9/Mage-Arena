@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd \"$CLAUDE_PROJECT_DIR\" && graphify update . >/dev/null 2>&1 && cp graphify-out/GRAPH_REPORT.md \"vault/Graph Report.md\"",
+            "async": true,
+            "timeout": 300
+          }
+        ]
+      }
+    ]
+  }
+}
