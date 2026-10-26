@@ -32,6 +32,15 @@ ELS = {  # glow, core
     'spirit': ((0.35, 1.0, 0.75), (0.85, 1.0, 1.0)),
     'cosmic': ((0.3, 0.35, 1.0), (1.0, 0.9, 1.0)),
     'explosion': ((1.0, 0.55, 0.05), (1.0, 0.95, 0.6)),
+    'illusion': ((0.95, 0.55, 1.0), (1.0, 0.92, 1.0)),
+    'bone': ((0.92, 0.85, 0.62), (1.0, 0.97, 0.88)),
+    'rune': ((0.1, 0.95, 0.7), (0.8, 1.0, 0.92)),
+    'plasma': ((1.0, 0.18, 0.62), (1.0, 0.85, 0.95)),
+    'soul': ((0.45, 0.65, 1.0), (0.9, 0.95, 1.0)),
+    'abyss': ((0.25, 0.18, 1.0), (0.75, 0.7, 1.0)),
+    'laser': ((0.12, 1.0, 0.35), (0.85, 1.0, 0.9)),
+    'arcane': ((0.8, 0.25, 1.0), (1.0, 0.85, 1.0)),
+    'blades': ((1.0, 0.75, 0.15), (1.0, 0.97, 0.75)),
 }
 G = {k: (mat(k + '_glow', g, emit=6), mat(k + '_core', c, emit=10)) for k, (g, c) in ELS.items()}
 
@@ -58,6 +67,18 @@ sandm = mat('sand', (0.95, 0.75, 0.4), emit=1.5)
 wrap = mat('leather', (0.15, 0.08, 0.05), rough=0.8)
 redpaint = mat('red_paint', (0.6, 0.05, 0.05), rough=0.4, metal=0.3)
 olive = mat('olive_metal', (0.18, 0.22, 0.12), rough=0.5, metal=0.6)
+bonem = mat('bone_solid', (0.86, 0.8, 0.66), rough=0.6)
+bonedk = mat('bone_dark', (0.36, 0.31, 0.25), rough=0.8)
+stonem = mat('runestone', (0.17, 0.19, 0.2), rough=0.9)
+mirrorm = mat('mirror', (0.78, 0.74, 0.95), rough=0.12, metal=0.5, emit=0.45, ecolor=(0.85, 0.72, 1.0))  # pale glassy silver (a true mirror has nothing to reflect in-game and reads black)
+maskm = mat('mask_white', (0.95, 0.92, 0.95), rough=0.3, emit=0.15, ecolor=(1.0, 0.8, 1.0))
+woolm = mat('wool', (0.95, 0.94, 0.9), rough=1.0, emit=0.06, ecolor=(1, 1, 1))
+sheepm = mat('sheep_face', (0.12, 0.1, 0.1), rough=0.8)
+eyew = mat('eye_white', (1.0, 1.0, 1.0), rough=0.3, emit=0.3)
+abyssm = mat('abyss_skin', (0.04, 0.05, 0.1), rough=0.35, metal=0.2, emit=0.15, ecolor=(0.2, 0.15, 0.6))
+fleshm = mat('abyss_flesh', (0.14, 0.03, 0.09), rough=0.5, emit=0.3, ecolor=(0.4, 0.1, 0.5))
+dronem = mat('drone_shell', (0.82, 0.85, 0.9), rough=0.3, metal=0.5)
+clothm = mat('reaper_cloth', (0.03, 0.03, 0.06), rough=0.95)
 
 ALL = []          # every top-level exported object
 BY_EL = {}        # element -> objects, for preview renders
@@ -207,6 +228,47 @@ def rim(o, el, g, h, rng):
             a = TAU * i / 16
             o.flat(g, [pol(1.0, a - 0.06), pol(1.16 if i % 2 else 1.1, a), pol(1.0, a + 0.06)])
             o.dot(h, pol(1.06, a + TAU / 32), 0.012)
+    elif st == 'illusion':  # a ring of watching eyes
+        for i in range(10):
+            a = TAU * i / 10
+            o.polyline(g, lens(pol(1.08, a - 0.075), pol(1.08, a + 0.075), 0.035), 0.01, closed=True)
+            o.dot(h, pol(1.08, a), 0.016)
+    elif st == 'bone':  # ribs curling off the rim
+        for i in range(16):
+            a = TAU * i / 16
+            o.polyline(g, [pol(1.0, a), pol(1.08, a + 0.035), pol(1.13, a + 0.09)], 0.018)
+            o.dot(h, pol(1.135, a + 0.095), 0.016)
+    elif st == 'rune':  # an outer band of carved runes
+        o.annulus(h, 1.17, 1.18, 0, 96)
+        runes(o, g, 1.09, 0.1, 22, 0.012, 0, rng)
+    elif st == 'plasma':  # crackling double arc
+        for ph in (0, 1.7):
+            o.polyline(g if ph else h, [pol(1.075 + 0.035 * math.sin(i * 1.9 + ph) * math.cos(i * 0.37), TAU * i / 140) for i in range(140)], 0.01, closed=True)
+    elif st == 'soul':  # curling flame tongues
+        for i in range(14):
+            a = TAU * i / 14
+            o.flat(g, [pol(1.0, a - 0.06), pol(1.08, a - 0.035), pol(1.18, a + 0.03), pol(1.09, a + 0.02), pol(1.0, a + 0.06)])
+    elif st == 'abyss':  # tentacles curling out of the rim
+        for i in range(8):
+            a = TAU * i / 8
+            o.polyline(g, [pol(1.0 + 0.13 * math.sin(math.pi * t / 12) + 0.004 * t, a + 0.035 * t - 0.012 * t * t / 12) for t in range(13)], 0.016)
+            o.dot(h, pol(1.05, a + 0.2), 0.012)
+    elif st == 'laser':  # segmented targeting ring with crosshair ticks
+        for i in range(24):
+            a = TAU * i / 24
+            if i % 6:
+                o.annulus(g, 1.05, 1.075, 0, 4, I, a + 0.02, a + TAU / 24 - 0.02)
+        for i in range(4):
+            o.stroke(h, pol(1.0, TAU * i / 4), pol(1.2, TAU * i / 4), 0.028)
+    elif st == 'arcane':  # diamonds
+        for i in range(16):
+            a = TAU * i / 16
+            o.flat(g if i % 2 else h, [pol(1.02, a), pol(1.08, a - 0.03), pol(1.15 if i % 2 else 1.13, a), pol(1.08, a + 0.03)])
+    elif st == 'blades':  # swords pointing outward
+        for i in range(12):
+            a = TAU * i / 12
+            o.flat(g, [pol(1.02, a - 0.012), pol(1.19, a - 0.008), pol(1.24, a), pol(1.19, a + 0.008), pol(1.02, a + 0.012)])
+            o.stroke(h, pol(1.04, a - 0.045), pol(1.04, a + 0.045), 0.014)
 
 
 def sigil(s, el, g, h, rng):
@@ -341,7 +403,74 @@ def sigil(s, el, g, h, rng):
             s.stroke(g if i % 2 else h, pol(0.18, a), pol(0.5 if i % 2 == 0 else 0.38, a), 0.016, z)
         s.polyline(h, [pol(0.13, math.pi / 2 + TAU * i / 3) for i in range(3)], 0.016, z, True)
         s.ring2d(g, (0, 0), 0.52, 0.014, z, 96)
-    s.annulus(h, 0.10, 0.12, z) if st not in ('shadow', 'chrono', 'gravity', 'light', 'spirit', 'blood') else None
+    elif st == 'illusion':  # a great eye split by a mirror line, crescents reflecting each other
+        s.polyline(g, lens((-0.46, 0), (0.46, 0), 0.24, 16), 0.022, z, True)
+        s.ring2d(h, (0, 0), 0.13, 0.024, z, 40)
+        s.flat(h, lens((0, -0.1), (0, 0.1), 0.035), z)
+        s.stroke(h, (0, -0.5), (0, 0.5), 0.008, z)
+        for sx in (-1, 1):
+            s.flat(g, crescent((sx * 0.33, 0.3), 0.08, 0.03, 0 if sx < 0 else math.pi), z)
+            s.flat(g, crescent((sx * 0.33, -0.3), 0.08, 0.03, 0 if sx < 0 else math.pi), z)
+    elif st == 'bone':  # crossed bones under a skull
+        for sgn in (1, -1):
+            a = math.pi / 4 * sgn
+            p, q = pol(0.42, a + math.pi), pol(0.42, a)
+            s.stroke(g, p, q, 0.04, z)
+            for e in (p, q):
+                n_ = Vector((-math.sin(a), math.cos(a))) * 0.035
+                s.dot(g, (e[0] + n_.x, e[1] + n_.y), 0.04, z)
+                s.dot(g, (e[0] - n_.x, e[1] - n_.y), 0.04, z)
+        s.ring2d(h, (0, 0.05), 0.15, 0.024, z, 40)
+        for sx in (-1, 1):
+            s.dot(h, (sx * 0.055, 0.06), 0.03, z)
+        for i in range(4):
+            s.stroke(h, (-0.05 + i * 0.033, -0.08), (-0.05 + i * 0.033, -0.13), 0.012, z)
+    elif st == 'rune':  # three runes in a binding triangle
+        s.polyline(g, [pol(0.5, math.pi / 2 + TAU * i / 3) for i in range(3)], 0.022, z, True)
+        s.ring2d(h, (0, 0), 0.25, 0.012, z, 64)
+        s.polyline(h, [(0, -0.16), (0, 0.16), (0.09, 0.07), (0, -0.02), (0.09, -0.13)], 0.018, z)  # R
+        for i in range(3):
+            c = pol(0.38, -math.pi / 2 + TAU * i / 3)
+            s.polyline(g, [(c[0] - 0.04, c[1] - 0.06), (c[0], c[1] + 0.06), (c[0] + 0.04, c[1] - 0.06)], 0.014, z)
+    elif st == 'plasma':  # an atom: three orbits round a burning nucleus
+        for k in range(3):
+            s.polyline(g if k else h, [rotp((0.5 * math.cos(TAU * i / 64), 0.16 * math.sin(TAU * i / 64)), k * TAU / 6) for i in range(64)], 0.014, z, True)
+        s.dot(h, (0, 0), 0.07, z)
+        s.ring2d(g, (0, 0), 0.11, 0.012, z, 32)
+    elif st == 'soul':  # a soul flame inside a ring
+        flame = [(0.2 * math.sin(math.pi * t / 30) * (1 - t / 30) ** 0.5, -0.32 + 0.72 * t / 30) for t in range(31)]
+        s.polyline(g, flame + [(-x, y) for x, y in flame[::-1]], 0.02, z, True)
+        s.polyline(h, [(x * 0.5, y * 0.55 - 0.1) for x, y in flame] + [(-x * 0.5, y * 0.55 - 0.1) for x, y in flame[::-1]], 0.014, z, True)
+        s.ring2d(h, (0, 0), 0.52, 0.012, z, 96)
+    elif st == 'abyss':  # a slit eye with tentacles spiralling out
+        s.ring2d(g, (0, 0), 0.17, 0.03, z, 48)
+        s.flat(h, lens((0, -0.13), (0, 0.13), 0.04), z)
+        for i in range(6):
+            a0 = TAU * i / 6
+            s.polyline(g, [pol(0.22 + 0.05 * t, a0 + 0.09 * t + 0.004 * t * t) for t in range(7)], 0.022 - 0.0025 * 3, z)
+    elif st == 'laser':  # crosshair
+        s.ring2d(g, (0, 0), 0.32, 0.02, z, 64)
+        s.ring2d(h, (0, 0), 0.5, 0.008, z, 96)
+        for i in range(4):
+            a = TAU * i / 4
+            s.stroke(h, pol(0.12, a), pol(0.26, a), 0.02, z)
+            s.stroke(g, pol(0.38, a), pol(0.52, a), 0.02, z)
+        s.dot(h, (0, 0), 0.03, z)
+    elif st == 'arcane':  # an eight-point star of two squares
+        for rot in (0, math.pi / 4):
+            s.polyline(g, [pol(0.48, rot + TAU * i / 4) for i in range(4)], 0.02, z, True)
+        s.ring2d(h, (0, 0), 0.3, 0.014, z, 64)
+        s.flat(h, starpts(4, 0.04, 0.16), z)
+        for i in range(8):
+            s.dot(h, pol(0.39, TAU * i / 8 + math.pi / 8), 0.02, z)
+    elif st == 'blades':  # four swords meeting at the centre
+        for i in range(4):
+            a = TAU * i / 4 + math.pi / 4
+            d, n_ = Vector(pol(1, a)), Vector(pol(1, a + math.pi / 2))
+            s.flat(g, [tuple(d * 0.5 + n_ * 0.03), tuple(d * 0.1), tuple(d * 0.5 - n_ * 0.03)], z)
+            s.stroke(h, tuple(d * 0.5 + n_ * 0.07), tuple(d * 0.5 - n_ * 0.07), 0.02, z)
+        s.ring2d(h, (0, 0), 0.52, 0.012, z, 96)
+    s.annulus(h, 0.10, 0.12, z) if st not in ('shadow', 'chrono', 'gravity', 'light', 'spirit', 'blood', 'illusion', 'bone', 'rune', 'plasma', 'abyss', 'laser', 'arcane', 'blades') else None
 
 
 def spell_circle(el):
@@ -691,16 +820,6 @@ m.lathe(darkmetal, [(0, 0), (0.07, 0.12), (0.05, 0.42), (0, 0.6)], n=4, M=aim((0
 m.lathe(dg_, [(0, 0.02), (0.075, 0.13), (0.055, 0.42), (0, 0.62)], n=4, M=TRS((0, -0.05, 0), (math.pi / 2, 0, math.pi / 4), (0.25, 1, 1)))
 m.lathe(wrap, [(0.025, 0), (0.025, 0.25)], n=6, M=aim((0, 1, 0), (0, -0.05, 0)))
 m.lathe(dh, [(0.03, -0.012), (0.06, 0), (0.03, 0.012), (0.045, 0)], n=12, M=TRS((0, 0.24, 0), (math.pi / 2, 0, 0)), closed=True)
-put('shadow', m.done())
-m = M('shadow__hand')  # grasping claw, palm faces -Y
-m.sphere(dg_, 1, TRS(scale=(0.32, 0.12, 0.36)), u=14, v=10)
-for i in range(4):
-    x = -0.2 + i * 0.135
-    base = Vector((x, 0, 0.3))
-    pts = [base, base + Vector((x * 0.2, -0.1, 0.25)), base + Vector((x * 0.35, -0.3, 0.42)), base + Vector((x * 0.4, -0.55, 0.42))]
-    m.tube(dg_, pts, [0.06, 0.05, 0.04, 0.005], n=6)
-m.tube(dg_, [(0.3, 0, 0.0), (0.48, -0.15, 0.15), (0.52, -0.4, 0.25)], [0.065, 0.045, 0.005], n=6)
-m.tube(dg_, [(0, 0.05, -0.3), (0, 0.4, -0.9), (0.1, 0.9, -1.2)], [0.2, 0.1, 0.01], n=8)
 put('shadow', m.done())
 m = M('shadow__orb')  # eclipse: a black sun with a corona
 m.sphere(void, 1, u=32, v=20)
@@ -1101,6 +1220,489 @@ for k in range(4):
     a = TAU * k / 4
     m.prism(darkmetal, [(0, 0.3), (0.2, 0.5), (0.2, 0.75), (0, 0.6)], -0.01, 0.01, M=Matrix.Rotation(a, 4, 'Z') @ Matrix.Rotation(math.pi / 2, 4, 'X'))
 put('explosion', m.done())
+
+FACE = TRS(rot=(math.pi / 2, 0, 0))  # flat art drawn in XY, stood up to face -Y
+
+# ---------- ILLUSION ----------
+lg2, lh2 = G['illusion']
+m = M('illusion__moth')  # a glowing moth flying toward -Y; the game flutters it by squashing X
+m.lathe(lh2, [(0, 0), (0.045, 0.05), (0.055, 0.16), (0.035, 0.3), (0, 0.38)], n=10, M=aim((0, 1, 0), (0, -0.14, 0)), smooth=True)
+m.sphere(lh2, 0.05, TRS((0, -0.17, 0.01)), u=10, v=8)
+for sx in (-1, 1):
+    tilt = TRS((sx * 0.02, -0.04, 0.02), (0, -sx * 0.38, 0))  # wings raised in a shallow V
+    m.flat(lg2, [(0, 0), (sx * 0.16, -0.13), (sx * 0.42, -0.18), (sx * 0.52, -0.08), (sx * 0.44, 0.05), (sx * 0.14, 0.05)], 0, tilt)
+    m.flat(lg2, [(0, 0.03), (sx * 0.28, 0.08), (sx * 0.36, 0.22), (sx * 0.22, 0.32), (sx * 0.06, 0.18)], -0.003, tilt)
+    m.dot(lh2, (sx * 0.34, -0.07), 0.05, 0.004, 14, tilt)  # eyespots
+    m.dot(lh2, (sx * 0.22, 0.17), 0.035, 0.004, 12, tilt)
+    m.tube(lh2, [(sx * 0.02, -0.2, 0.03), (sx * 0.07, -0.32, 0.1), (sx * 0.13, -0.38, 0.13)], [0.008, 0.006, 0.003], n=4)  # antennae
+put('illusion', m.done(False))
+m = M('illusion__mask')  # a grinning theatre mask facing -Y (marks charmed enemies)
+res = bmesh.ops.create_uvsphere(m.bm, u_segments=22, v_segments=16, radius=1, matrix=TRS(scale=(0.3, 0.15, 0.38)))
+bmesh.ops.delete(m.bm, geom=[v for v in res['verts'] if v.co.y > 0.03], context='VERTS')
+m._tag(list(m.bm.faces), maskm, True)
+for sx in (-1, 1):
+    m.sphere(void, 1, TRS((sx * 0.11, -0.14, 0.07), (0, sx * 0.25, 0), (0.075, 0.03, 0.035)), u=10, v=6)
+    m.tube(lh2, [(sx * 0.2, -0.1, 0.14), (sx * 0.11, -0.13, 0.16), (sx * 0.03, -0.143, 0.13)], 0.012, n=5)  # brows
+    m.tube(lh2, [(sx * 0.21, -0.108, -0.02), (sx * 0.23, -0.08, -0.14), (sx * 0.17, -0.08, -0.24)], 0.009, n=4)  # cheek swirls
+m.tube(void, [(-0.13, -0.13, -0.1), (-0.06, -0.145, -0.17), (0, -0.147, -0.185), (0.06, -0.145, -0.17), (0.13, -0.13, -0.1)], 0.022, n=6)  # the grin
+m.flat(lh2, [(0, 0.3), (0.035, 0.24), (0, 0.18), (-0.035, 0.24)], 0, Matrix.Translation((0, -0.118, 0)) @ FACE)
+put('illusion', m.done())
+
+
+def mirror_shard(m, M_, w, h):
+    """A thin mirror shard (local XY outline, thickness along local Z) with a glow halo just behind it."""
+    pts = [(-w, 0), (w * 0.9, 0), (w, h * 0.65), (w * 0.15, h), (-w * 0.7, h * 0.82)]
+    m.prism(mirrorm, pts, -0.025, 0.025, M=M_)
+    m.prism(lg2, [(x * 1.14 + (0.02 if x > 0 else -0.02), y * 1.05 - 0.02) for x, y in pts], -0.01, 0.01, M=M_ @ Matrix.Translation((0, 0, 0.035)))
+
+
+m = M('illusion__mirrors')  # Phantasmagoria: tall mirror shards facing inward round a unit circle, more floating above
+for i in range(18):
+    a = TAU * i / 18
+    mirror_shard(m, Matrix.Translation((*pol(1.0, a), 0)) @ Matrix.Rotation(a + math.pi / 2, 4, 'Z') @ Matrix.Rotation(math.pi / 2, 4, 'X') @ Matrix.Rotation(random.uniform(-0.15, 0.15), 4, 'Z'),
+                 random.uniform(0.18, 0.28), random.uniform(1.3, 2.1))
+for i in range(10):
+    a = TAU * i / 10 + 0.3
+    mirror_shard(m, Matrix.Translation((*pol(0.75, a), random.uniform(2.3, 2.9))) @ Matrix.Rotation(a + math.pi / 2, 4, 'Z') @ Matrix.Rotation(math.pi / 2 + random.uniform(-0.5, 0.5), 4, 'X') @ Matrix.Rotation(random.uniform(0, TAU), 4, 'Z'),
+                 random.uniform(0.08, 0.14), random.uniform(0.3, 0.5))
+put('illusion', m.done())
+m = M('illusion__shard')  # one flying mirror shard
+mirror_shard(m, FACE, 0.12, 0.35)
+put('illusion', m.done())
+
+# ---------- BONE ----------
+bg2, bh2 = G['bone']
+m = M('bone__spear')  # a jagged bone spear, point toward -Y
+m.lathe(bonem, [(0.03, 0), (0.05, 0.04), (0.034, 0.1), (0.032, 0.45), (0.048, 0.5), (0.032, 0.55), (0.03, 0.95), (0.055, 1.02), (0.04, 1.08), (0, 1.1)], n=8, M=aim((0, 1, 0), (0, -0.3, 0)), smooth=True)
+m.lathe(bonem, [(0.045, 0), (0.11, 0.1), (0.085, 0.32), (0.03, 0.52), (0, 0.6)], n=5, M=aim((0, -1, 0), (0, -0.28, 0), (1, 0.45, 1)), noise=0.008)
+for sx in (-1, 1):
+    m.lathe(bonem, [(0.022, 0), (0, 0.17)], n=5, M=aim((sx * 0.7, 0.7, 0), (sx * 0.05, -0.38, 0)))  # barbs
+for y in (-0.05, 0.25):
+    m.lathe(bh2, [(0.045, -0.012), (0.055, 0), (0.045, 0.012), (0.035, 0)], n=12, M=TRS((0, y, 0), (math.pi / 2, 0, 0)), closed=True)
+m.lathe(bg2, [(0.07, 0), (0.15, 0.12), (0.1, 0.36), (0, 0.66)], n=8, M=aim((0, -1, 0), (0, -0.25, 0)))  # spectral aura on the head
+put('bone', m.done())
+m = M('bone__skull')  # a flaming skull flying toward -Y; the jaw is a child so it can chatter
+m.sphere(bonem, 1, TRS((0, 0.03, 0.06), scale=(0.23, 0.26, 0.23)), u=18, v=12)
+m.sphere(bonem, 1, TRS((0, -0.16, -0.06), scale=(0.16, 0.11, 0.11)), u=14, v=10)
+for sx in (-1, 1):
+    m.sphere(void, 1, TRS((sx * 0.082, -0.205, 0.015), scale=(0.062, 0.05, 0.056)), u=10, v=8)
+    m.ico(bh2, 0.028, TRS((sx * 0.082, -0.24, 0.015)), sub=1)
+    m.sphere(bonem, 1, TRS((sx * 0.17, -0.1, -0.05), scale=(0.06, 0.09, 0.05)), u=8, v=6)
+m.sphere(void, 1, TRS((0, -0.255, -0.065), scale=(0.025, 0.02, 0.035)), u=8, v=6)
+for i in range(7):
+    m.cube(bonem, TRS((-0.075 + i * 0.025, -0.245, -0.14), scale=(0.016, 0.018, 0.03)))
+m.lathe(bg2, [(0.13, 0), (0.15, 0.1), (0.09, 0.35), (0.035, 0.6), (0, 0.72)], n=10, M=aim((0, 1, 0.3), (0, 0.24, 0.12)), twist=0.6)  # soul-fire trailing behind the cranium
+skull = m.done()
+put('bone', skull)
+j = M('bone__skull_jaw', parent=skull)
+j.loc = (0, 0.0, -0.12)
+j.sphere(bonem, 1, TRS((0, -0.13, -0.05), scale=(0.14, 0.12, 0.045)), u=12, v=8)
+for i in range(6):
+    j.cube(bonem, TRS((-0.0625 + i * 0.025, -0.235, -0.03), scale=(0.015, 0.016, 0.026)))
+j.done()
+m = M('bone__plate')  # one orbiting plate of Bone Armor, faces -Y
+m.sphere(bonem, 1, TRS(scale=(0.28, 0.07, 0.38)), u=14, v=10)
+for k in range(3):
+    z = -0.18 + k * 0.18
+    m.tube(bonem, [(-0.22, -0.055, z - 0.03), (0, -0.085, z), (0.22, -0.055, z - 0.03)], 0.022, n=6)
+m.ico(bh2, 0.045, TRS((0, -0.085, 0.0)), sub=1)
+m.sphere(bg2, 1, TRS(scale=(0.34, 0.11, 0.44)), u=14, v=10)
+put('bone', m.done())
+m = M('bone__cage')  # Bone Cage: ribs arching up and inward round a unit circle
+for i in range(10):
+    a = TAU * i / 10
+    pts = [(*pol(1.0 - 0.72 * (t / 8) ** 1.5, a + 0.18 * t / 8), 2.1 * math.sin(math.pi / 2 * t / 8)) for t in range(9)]
+    m.tube(bonem, pts, [0.1 - 0.07 * t / 8 for t in range(9)], n=7)
+    m.sphere(bonem, 0.15, TRS((*pol(1.0, a), 0.04)), u=10, v=6)
+m.lathe(bonedk, [(1.0, -0.02), (1.1, 0.06), (1.0, 0.14), (0.92, 0.06)], n=40, closed=True, smooth=True)
+m.annulus(bg2, 0.82, 0.96, 0.02, 64)
+put('bone', m.done())
+m = M('bone__skeleton')  # a raised skeleton warrior (~2 m); head, arms and legs are children pivoting at the joints
+m.sphere(bonem, 1, TRS((0, 0, 0.98), scale=(0.19, 0.11, 0.09)), u=12, v=8)
+for k in range(8):
+    m.ico(bonem, 0.042, TRS((0, 0.03 * math.sin(k * 0.6), 1.05 + k * 0.075)), sub=1)
+for k in range(4):
+    z = 1.3 + k * 0.075
+    for sx in (-1, 1):
+        m.tube(bonem, [(0, 0.04, z + 0.03), (sx * 0.12, 0.0, z + 0.01), (sx * 0.16, -0.08, z - 0.02), (sx * 0.07, -0.15, z - 0.04)], 0.017, n=5)
+m.tube(bonem, [(0, -0.15, 1.26), (0, -0.165, 1.52)], 0.022, n=6)
+m.tube(bonem, [(-0.21, -0.02, 1.62), (0, -0.05, 1.6), (0.21, -0.02, 1.62)], 0.024, n=6)
+m.ico(bh2, 0.055, TRS((0, -0.04, 1.44)), sub=2, smooth=True)  # a soul-flame in the ribcage
+m.lathe(bg2, [(0.07, 0), (0.06, 0.1), (0, 0.28)], n=8, M=TRS((0, -0.04, 1.42)))
+sk = m.done()
+put('bone', sk)
+hd = M('bone__skeleton_head', parent=sk)
+hd.loc = (0, -0.02, 1.68)
+hd.sphere(bonem, 1, TRS((0, 0, 0.15), scale=(0.11, 0.13, 0.12)), u=14, v=10)
+hd.sphere(bonem, 1, TRS((0, -0.07, 0.06), scale=(0.08, 0.07, 0.06)), u=10, v=8)
+for sx in (-1, 1):
+    hd.sphere(void, 1, TRS((sx * 0.042, -0.1, 0.15), scale=(0.032, 0.025, 0.03)), u=8, v=6)
+    hd.ico(bh2, 0.016, TRS((sx * 0.042, -0.122, 0.15)), sub=1)
+hd.done()
+for side, sx in (('L', -1), ('R', 1)):
+    ar = M('bone__skeleton_arm' + side, parent=sk)
+    ar.loc = (sx * 0.22, 0, 1.6)
+    ar.tube(bonem, [(0, 0, 0), (sx * 0.03, 0, -0.3)], 0.024, n=6)
+    ar.ico(bonem, 0.035, TRS((sx * 0.03, 0, -0.3)), sub=1)
+    ar.tube(bonem, [(sx * 0.03, 0, -0.3), (sx * 0.03, -0.14, -0.5)], 0.02, n=6)
+    ar.ico(bonem, 0.04, TRS((sx * 0.03, -0.15, -0.52)), sub=1)
+    if sx > 0:  # a jagged bone sword
+        ar.lathe(bonem, [(0.03, 0), (0.07, 0.08), (0.05, 0.75), (0, 0.95)], n=4, M=aim((0, -0.55, 0.8), (sx * 0.03, -0.17, -0.5), (1, 0.3, 1)), noise=0.01)
+        ar.lathe(bg2, [(0.04, 0.05), (0.08, 0.12), (0.06, 0.74), (0, 0.97)], n=4, M=aim((0, -0.55, 0.8), (sx * 0.03, -0.17, -0.5), (1, 0.45, 1)))
+        ar.prism(bonedk, [(-0.12, -0.02), (0.12, -0.02), (0.12, 0.02), (-0.12, 0.02)], -0.02, 0.02, M=TRS((sx * 0.03, -0.18, -0.48)))
+    else:  # a round bone buckler
+        ar.lathe(bonem, [(0, 0), (0.2, 0.0), (0.22, 0.04), (0, 0.07)], n=12, M=aim((-1, -0.3, 0), (sx * 0.06, -0.08, -0.4)))
+        ar.ico(bh2, 0.035, TRS((sx * 0.13, -0.11, -0.4)), sub=1)
+    ar.done()
+for side, sx in (('L', -1), ('R', 1)):
+    lgg = M('bone__skeleton_leg' + side, parent=sk)
+    lgg.loc = (sx * 0.1, 0, 0.95)
+    lgg.tube(bonem, [(0, 0, 0), (0, 0.02, -0.45)], 0.028, n=6)
+    lgg.ico(bonem, 0.04, TRS((0, 0.02, -0.45)), sub=1)
+    lgg.tube(bonem, [(0, 0.02, -0.45), (0, 0.04, -0.88)], 0.023, n=6)
+    lgg.cube(bonem, TRS((0, -0.04, -0.92), scale=(0.08, 0.17, 0.04)))
+    lgg.done()
+m = M('bone__dragon')  # the Bone Dragon (ultimate), ~10 m nose to tail; head, jaw and wings are children for animation
+spine = [Vector((0, -2.25 + 0.3 * k, 0.12 * math.sin(k * 0.5))) for k in range(12)]
+for k, p in enumerate(spine):
+    m.ico(bonem, 0.17 - 0.004 * k, TRS(tuple(p), scale=(1, 0.8, 0.9)), sub=1, noise=0.01)
+    m.lathe(bonem, [(0.05, 0), (0, 0.3)], n=5, M=aim((0, 0.35, 1), tuple(p + Vector((0, 0, 0.1)))))  # dorsal spikes
+neck = [Vector((0, -2.25 - 0.28 * k, 0.15 + 0.13 * k ** 1.25)) for k in range(1, 6)]
+for k, p in enumerate(neck):
+    m.ico(bonem, 0.15 - 0.012 * k, TRS(tuple(p)), sub=1)
+tail = [Vector((0.25 * math.sin(k * 0.55), 1.3 + 0.32 * k, -0.04 * k)) for k in range(12)]
+for k, p in enumerate(tail):
+    m.ico(bonem, 0.15 * (1 - k / 13), TRS(tuple(p)), sub=1)
+m.lathe(bonem, [(0, 0), (0.25, 0.15), (0.05, 0.6), (0, 0.65)], n=4, M=aim((0.2, 1, -0.05), tuple(tail[-1]), (1, 0.25, 1)))  # tail spade
+for k in range(8):  # ribcage
+    y = -1.9 + k * 0.33
+    s_ = math.sin(math.pi * (k + 0.5) / 8) * 0.85 + 0.25
+    for sx in (-1, 1):
+        m.tube(bonem, [(0, y, 0.05), (sx * 0.45 * s_, y + 0.05, -0.1), (sx * 0.6 * s_, y + 0.12, -0.55 * s_), (sx * 0.25 * s_, y + 0.18, -0.95 * s_)], [0.06, 0.055, 0.045, 0.02], n=6)
+m.tube(bonem, [(0, -1.95, -0.85), (0, -1.2, -1.1), (0, -0.2, -1.05)], [0.07, 0.07, 0.04], n=6)  # sternum keel
+m.ico(bh2, 0.4, TRS((0, -0.9, -0.45)), sub=2, smooth=True)  # spectral heart-fire inside the ribs
+m.lathe(bg2, [(0.55, -0.2), (0.6, 0.1), (0.4, 0.5), (0.15, 0.85), (0, 1.0)], n=12, M=TRS((0, -0.9, -0.55)), twist=0.6, noise=0.03)
+for sy, sx in ((-1.6, -1), (-1.6, 1), (0.8, -1), (0.8, 1)):  # tucked legs and claws
+    hip = Vector((sx * 0.3, sy, -0.1))
+    knee = hip + Vector((sx * 0.35, 0.35 if sy > 0 else -0.14, -0.55))
+    foot = knee + Vector((0, -0.45, -0.25))
+    m.tube(bonem, [hip, knee, foot], [0.09, 0.07, 0.05], n=6)
+    for c in (-1, 0, 1):
+        m.lathe(bonem, [(0.03, 0), (0, 0.2)], n=4, M=aim((c * 0.3, -1, -0.4), tuple(foot)))
+dragon = m.done()
+put('bone', dragon)
+hd = M('bone__dragon_head', parent=dragon)
+hd.loc = tuple(neck[-1] + Vector((0, -0.2, 0.05)))
+hd.lathe(bonem, [(0.0, 0), (0.12, 0.08), (0.19, 0.4), (0.22, 0.7), (0.28, 0.9), (0.24, 1.05), (0, 1.12)], n=10, M=aim((0, 1, 0.15), (0, -1.0, -0.1), (1, 1, 0.75)), smooth=True)
+for sx in (-1, 1):
+    hd.tube(bonem, [(sx * 0.15, 0.0, 0.1), (sx * 0.3, 0.35, 0.3), (sx * 0.38, 0.75, 0.38), (sx * 0.36, 1.05, 0.3)], [0.07, 0.055, 0.035, 0.005], n=6)  # swept horns
+    hd.sphere(void, 1, TRS((sx * 0.14, -0.15, 0.08), scale=(0.07, 0.09, 0.06)), u=10, v=8)
+    hd.ico(bh2, 0.05, TRS((sx * 0.16, -0.19, 0.08)), sub=1)
+    for i in range(6):
+        hd.lathe(bonem, [(0.022, 0), (0, 0.1)], n=4, M=aim((0, -0.2, -1), (sx * 0.12, -0.85 + i * 0.13, -0.12)))
+head = hd.done()
+jw = M('bone__dragon_jaw', parent=head)
+jw.loc = (0, 0.05, -0.16)
+jw.lathe(bonem, [(0, 0), (0.08, 0.1), (0.14, 0.5), (0.18, 0.9), (0, 1.0)], n=8, M=aim((0, 1, 0.05), (0, -0.9, -0.02), (1, 1, 0.45)), smooth=True)
+for sx in (-1, 1):
+    for i in range(5):
+        jw.lathe(bonem, [(0.02, 0), (0, 0.09)], n=4, M=aim((0, -0.2, 1), (sx * 0.1, -0.75 + i * 0.13, 0.03)))
+jw.done()
+for side, sx in (('L', -1), ('R', 1)):
+    wgg = M('bone__dragon_wing' + side, parent=dragon)
+    wgg.loc = (sx * 0.25, -1.5, 0.25)
+    sh_, el_, wr_ = Vector((0, 0, 0)), Vector((sx * 1.3, 0.35, 0.45)), Vector((sx * 2.5, -0.35, 0.75))
+    tips = [Vector((sx * 4.3, -0.6, 0.45)), Vector((sx * 4.4, 0.7, 0.05)), Vector((sx * 3.7, 1.8, -0.15)), Vector((sx * 2.3, 2.3, -0.2))]
+    wgg.tube(bonem, [sh_, el_], [0.11, 0.08], n=7)
+    wgg.tube(bonem, [el_, wr_], [0.08, 0.06], n=7)
+    wgg.ico(bonem, 0.1, TRS(tuple(el_)), sub=1)
+    wgg.ico(bonem, 0.08, TRS(tuple(wr_)), sub=1)
+    for t_ in tips:
+        wgg.tube(bonem, [wr_, wr_ + (t_ - wr_) * 0.55 + Vector((0, 0, 0.12)), t_], [0.05, 0.035, 0.008], n=5)
+    bm = wgg.bm  # torn spectral membrane, scalloped between the fingers
+    w_, T_ = bm.verts.new(wr_), [bm.verts.new(t) for t in tips]
+    fs = []
+    for i in range(3):
+        mid = bm.verts.new((tips[i] + tips[i + 1]) * 0.5 * 0.82 + wr_ * 0.18 + Vector((0, 0, -0.05)))
+        fs += [bm.faces.new((w_, T_[i], mid)), bm.faces.new((w_, mid, T_[i + 1]))]
+    body = Vector((-sx * 0.2, 1.4, -0.25))
+    s0, e0, b0 = bm.verts.new(sh_), bm.verts.new(el_), bm.verts.new(body)
+    midb = bm.verts.new((tips[3] + body) * 0.5 * 0.9 + Vector((0, 0, -0.1)))
+    fs += [bm.faces.new((s0, e0, w_)), bm.faces.new((s0, w_, T_[3])), bm.faces.new((s0, T_[3], midb)), bm.faces.new((s0, midb, b0))]
+    wgg._tag(fs, bg2, False)
+    wgg.done()
+
+# ---------- RUNE ----------
+rg2, rh2 = G['rune']
+RUNESET = [  # angular runes (elder-futhark flavoured), unit height centred on 0
+    [[(0, -0.5), (0, 0.5)], [(0, 0.5), (0.3, 0.25), (0, 0.05), (0.3, -0.5)]],
+    [[(0, -0.5), (0, 0.5)], [(0, 0.2), (0.32, 0.5)], [(0, -0.05), (0.32, 0.25)]],
+    [[(-0.25, -0.5), (0.25, 0.5)], [(0.25, -0.5), (-0.25, 0.5)]],
+    [[(0, -0.5), (0, 0.5)], [(-0.28, 0.5), (0, 0.18), (0.28, 0.5)]],
+    [[(-0.22, -0.5), (-0.22, 0.5)], [(0.22, -0.5), (0.22, 0.5)], [(-0.22, 0.25), (0.22, -0.05)]],
+    [[(0, 0.5), (0.3, 0.0), (0, -0.5), (-0.3, 0.0), (0, 0.5)], [(-0.3, -0.5), (0, -0.2)], [(0.3, -0.5), (0, -0.2)]],
+]
+
+
+def rune_at(m, mt, k, c, s, w, M_):
+    for pts in RUNESET[k % len(RUNESET)]:
+        m.polyline(mt, [(c[0] + x * s, c[1] + y * s) for x, y in pts], w, 0, M=M_)
+
+
+m = M('rune__bolt')  # a spinning rune disc facing its flight (-Y)
+m.annulus(rh2, 0.3, 0.35, 0, 40, FACE)
+m.annulus(rg2, 0.21, 0.235, 0, 40, FACE)
+rune_at(m, rh2, 0, (-0.04, 0), 0.32, 0.035, FACE)
+for i in range(6):
+    a = TAU * i / 6
+    m.flat(rg2, [pol(0.35, a - 0.12), pol(0.46, a), pol(0.35, a + 0.12)], 0, FACE)
+put('rune', m.done(False))
+m = M('rune__trap')  # Glyph Trap: a ward glyph on the floor (unit radius)
+m.annulus(rh2, 0.92, 1.0, 0.01, 64)
+m.annulus(rg2, 0.78, 0.8, 0.01, 64)
+runes(m, rg2, 0.86, 0.08, 16, 0.01, 0.012, random.Random('trap'))
+m.polyline(rh2, [pol(0.66, math.pi / 2 + TAU * i / 3) for i in range(3)], 0.035, 0.012, True)
+rune_at(m, rh2, 3, (0, -0.02), 0.5, 0.04, Matrix.Translation((0, 0, 0.014)))
+put('rune', m.done(False))
+m = M('rune__stone')  # a runestone monolith with glowing carvings (stands on z=0, ~2.2 m)
+m.prism(stonem, [(-0.42, -0.17), (0.42, -0.17), (0.48, 0.0), (0.42, 0.17), (-0.42, 0.17), (-0.48, 0.0)], -0.3, 2.2)
+for v in m.bm.verts:
+    if v.co.z > 2:
+        v.co.x *= 0.72
+        v.co.y *= 0.85
+    v.co.x += random.uniform(-0.025, 0.025)
+    v.co.z += random.uniform(-0.03, 0.03) if v.co.z > 2 else 0
+for side, yy in ((0, -0.18), (1, 0.18)):
+    Mf = Matrix.Translation((0, yy, 0)) @ FACE
+    for k in range(3):
+        rune_at(m, rh2, k + side * 3, (0, 0.45 + k * 0.55), 0.38, 0.045, Mf)
+    m.polyline(rg2, [(-0.3, 0.12), (0.3, 0.12)], 0.02, 0, M=Mf)
+put('rune', m.done())
+m = M('rune__glyph')  # a great rune in a ring (unit radius), upright facing -Y (Sigilfall, Word of Ruin)
+m.annulus(rh2, 0.9, 1.0, 0, 64)
+m.annulus(rg2, 0.78, 0.8, 0, 64)
+runes(m, rg2, 0.85, 0.07, 14, 0.012, 0.002, random.Random('glyph'))
+rune_at(m, rh2, 0, (-0.05, 0), 1.1, 0.09, I)
+rune_at(m, rg2, 0, (-0.05, 0), 1.1, 0.16, Matrix.Translation((0, 0, -0.004)))  # soft halo behind the strokes
+bmesh.ops.rotate(m.bm, verts=m.bm.verts[:], cent=(0, 0, 0), matrix=Matrix.Rotation(math.pi / 2, 3, 'X'))
+put('rune', m.done(False))
+
+# ---------- PLASMA ----------
+pg2, ph2 = G['plasma']
+m = M('plasma__bolt')  # white-hot core in a magenta shell with spinning rings, tail toward +Y
+m.ico(ph2, 0.11, sub=2, smooth=True)
+m.ico(pg2, 0.19, sub=2, noise=0.025)
+for k in range(2):
+    m.lathe(pg2, [(0.26, -0.012), (0.28, 0), (0.26, 0.012), (0.24, 0)], n=28, M=TRS(rot=(math.pi / 2 + k * 1.1, k * 0.7, 0)), closed=True)
+m.lathe(pg2, [(0.15, 0), (0.1, 0.3), (0.04, 0.65), (0, 0.9)], n=8, M=aim((0, 1, 0)), twist=0.8, caps=False)
+put('plasma', m.done(False))
+m = M('plasma__orb')  # the charged Plasma Cannon shot
+m.ico(ph2, 0.26, sub=3, smooth=True)
+m.ico(pg2, 0.4, sub=2, noise=0.04)
+for k in range(3):
+    m.lathe(ph2 if k == 1 else pg2, [(0.55, -0.015), (0.58, 0), (0.55, 0.015), (0.52, 0)], n=40, M=TRS(rot=(k * 1.05 + 0.4, k * 0.8, 0)), closed=True)
+for _ in range(9):
+    d = Vector((random.uniform(-1, 1), random.uniform(-1, 1), random.uniform(-1, 1))).normalized()
+    side = d.orthogonal().normalized()
+    pts = [d * 0.38] + [d * (0.38 + 0.08 * t) + side * random.uniform(-0.09, 0.09) + d.cross(side) * random.uniform(-0.09, 0.09) for t in range(1, 5)]
+    m.ribbon(ph2, pts, 0.025)
+put('plasma', m.done(False))
+m = M('plasma__blade')  # Thermal Lance: a wide crescent of plasma bulging toward -Y
+crescent_blade(m, pg2, 3.4, 1.5, 0.55, -0.05, 0.05)
+crescent_blade(m, ph2, 3.1, 1.42, 0.14, -0.03, 0.07)
+put('plasma', m.done())
+
+# ---------- SOUL ----------
+sg2, sh2 = G['soul']
+m = M('soul__flame')  # a soul flame with a faint face, tongues trailing toward +Y
+m.ico(sh2, 0.1, sub=2, smooth=True)
+m.sphere(sg2, 0.17, u=16, v=10)
+for k in range(3):
+    a = TAU * k / 3
+    m.lathe(sg2, [(0.12, 0), (0.1, 0.2), (0.05, 0.5), (0, 0.78)], n=8, M=aim((math.cos(a) * 0.35, 1, math.sin(a) * 0.35), (math.cos(a) * 0.05, 0.05, math.sin(a) * 0.05)), twist=0.7, smooth=True)
+for sx in (-1, 1):
+    m.sphere(void, 1, TRS((sx * 0.055, -0.15, 0.035), scale=(0.03, 0.02, 0.04)), u=8, v=6)
+m.sphere(void, 1, TRS((0, -0.155, -0.045), scale=(0.025, 0.015, 0.035)), u=8, v=6)
+put('soul', m.done())
+m = M('soul__scythe')  # Reap: the handle runs out along +X, the blade curls forward (-Y); swung round the caster
+m.tube(clothm, [(0, 0, 0), (1.6, 0.05, 0.02), (3.2, 0, 0)], 0.055, n=8)
+for x in (0.6, 1.4, 2.2):
+    m.lathe(sh2, [(0.065, -0.02), (0.075, 0), (0.065, 0.02), (0.055, 0)], n=12, M=TRS((x, 0, 0), (0, math.pi / 2, 0)), closed=True)
+outer = [(3.25, 0.05), (3.2, -0.6), (3.0, -1.15), (2.6, -1.6), (2.05, -1.85), (1.6, -1.9)]
+inner = [(2.15, -1.6), (2.55, -1.2), (2.82, -0.7), (2.95, -0.15)]
+m.prism(sg2, outer + inner, -0.025, 0.025)
+m.tube(sh2, [(x, y, 0) for x, y in outer], 0.035, n=5)
+put('soul', m.done())
+m = M('soul__reaper')  # the Reaper (ultimate), ~5 m tall and floating; the scythe is a child
+m.lathe(clothm, [(0, 4.05), (0.35, 4.0), (0.72, 3.72), (0.9, 3.35), (0.78, 2.7), (0.86, 1.7), (1.0, 0.8), (1.15, 0.05)], n=20, noise=0.03, twist=0.08, jag=0.35, caps=False, smooth=True)
+m.lathe(sg2, [(0, 3.9), (0.3, 3.88), (0.66, 3.6), (0.82, 3.3), (0.7, 2.7), (0.78, 1.7), (0.92, 0.8), (1.05, 0.1)], n=20, twist=0.08, caps=False, smooth=True)  # spectral lining
+m.sphere(clothm, 1, TRS((0, 0.05, 4.3), scale=(0.5, 0.55, 0.62)), u=18, v=12)  # hood
+m.sphere(void, 1, TRS((0, -0.32, 4.22), scale=(0.33, 0.25, 0.42)), u=16, v=10)  # the dark under the hood
+for sx in (-1, 1):
+    m.ico(sh2, 0.075, TRS((sx * 0.13, -0.52, 4.28)), sub=2, smooth=True)
+    m.sphere(clothm, 1, TRS((sx * 0.75, 0, 3.5), scale=(0.42, 0.4, 0.35)), u=12, v=8)
+    m.tube(clothm, [(sx * 0.8, 0, 3.45), (sx * 0.75, -0.45, 3.0), (sx * 0.45, -0.95, 2.85)], [0.3, 0.26, 0.2], n=10)  # sleeves
+    m.sphere(bonem, 1, TRS((sx * 0.4, -1.05, 2.85), scale=(0.13, 0.15, 0.1)), u=10, v=8)  # bony hands
+for k in range(6):  # wisps trailing from the hem
+    a = TAU * k / 6
+    m.tube(sg2, [(*pol(1.0, a), 0.15), (*pol(1.25, a + 0.2), -0.3), (*pol(1.1, a + 0.45), -0.8)], [0.12, 0.07, 0.005], n=6)
+reaper = m.done()
+put('soul', reaper)
+sc = M('soul__reaper_scythe', parent=reaper)
+sc.loc = (0, -1.05, 2.85)
+sc.tube(clothm, [(-0.9, 0, -0.6), (1.5, 0, 0.3), (4.2, 0, 1.2)], 0.08, n=8)
+for x in (0.0, 1.5, 3.0):
+    sc.lathe(sh2, [(0.095, -0.03), (0.11, 0), (0.095, 0.03), (0.08, 0)], n=12, M=aim((1, 0, 0.36), (x, 0, -0.3 + x * 0.36)), closed=True)
+outer = [(4.35, 0.05), (4.25, -0.9), (3.95, -1.7), (3.35, -2.3), (2.5, -2.6)]
+inner = [(3.05, -2.15), (3.6, -1.55), (3.9, -0.85), (4.0, -0.1)]
+sc.prism(sg2, outer + inner, -0.04, 0.04, M=Matrix.Translation((0, 0, 1.2)))
+sc.tube(sh2, [(x, y, 1.2) for x, y in outer], 0.045, n=5)
+sc.done()
+
+# ---------- ABYSS ----------
+ag3, ah3 = G['abyss']
+m = M('abyss__orb')  # a drowned eye in a shell of black water, looking along -Y
+m.sphere(void, 0.2, u=20, v=12)
+m.ico(ag3, 0.28, sub=2, noise=0.035)
+m.annulus(ah3, 0.055, 0.115, 0, 28, Matrix.Translation((0, -0.205, 0)) @ FACE)
+m.flat(void, lens((0, -0.085), (0, 0.085), 0.026), 0, Matrix.Translation((0, -0.21, 0)) @ FACE)
+for k in range(4):
+    a = TAU * k / 4 + 0.4
+    m.tube(ag3, [(math.cos(a) * 0.12, 0.12, math.sin(a) * 0.12), (math.cos(a) * 0.22, 0.4, math.sin(a) * 0.2), (math.cos(a + 0.6) * 0.15, 0.7, math.sin(a + 0.6) * 0.18), (math.cos(a + 1) * 0.05, 0.95, math.sin(a + 1) * 0.05)], [0.05, 0.04, 0.025, 0.004], n=5)
+put('abyss', m.done(False))
+# a tentacle as a chain of six segments, each the child of the one below, so the game can curl and whip it
+R_T = [0.34, 0.29, 0.24, 0.19, 0.145, 0.1, 0.035]
+L_T = [0.95, 0.85, 0.75, 0.65, 0.55, 0.5]
+prev = None
+for k in range(6):
+    s = M('abyss__tentacle' + (f'_seg{k}' if k else ''), parent=prev)
+    s.loc = (0, 0, L_T[k - 1]) if k else (0, 0, 0)
+    r0, r1, L = R_T[k], R_T[k + 1], L_T[k]
+    last = k == 5
+    prof = [(r0, 0), (r0 * 0.7, L * 0.5), (r0 * 0.35, L), (0, L + 0.3)] if last else [(r0, -0.3 if k == 0 else 0), ((r0 + r1) / 2 * 1.04, L * 0.5), (r1, L + 0.05)]
+    s.lathe(abyssm, prof, n=12, smooth=True)
+    s.lathe(ag3, [(r * 1.08, z) for r, z in prof], n=12, caps=False, smooth=True)  # eldritch glow rim
+    for jj in range(2):
+        u = 0.3 + 0.4 * jj
+        rr = r0 + (r1 - r0) * u if not last else r0 * (1 - 0.4 * u)
+        s.sphere(ah3, 1, TRS((0, -rr * 0.93, L * u), scale=(rr * 0.32, rr * 0.12, rr * 0.32)), u=10, v=6)  # suckers on the inner (-Y) side
+    ob = s.done()
+    if not k:
+        put('abyss', ob)
+    prev = ob
+m = M('abyss__maw')  # a toothed maw opening in the floor (unit radius)
+m.dot(void, (0, 0), 0.92, 0.012, 40)
+m.lathe(fleshm, [(0.86, 0.0), (0.98, 0.1), (1.12, 0.06), (1.12, -0.06), (0.95, -0.05)], n=40, closed=True, smooth=True)
+for ring_, (r, n_, h) in enumerate(((0.9, 16, 0.5), (0.68, 12, 0.32))):
+    for i in range(n_):
+        a = TAU * i / n_ + ring_ * 0.2
+        m.lathe(bonem, [(0.075 * h / 0.5, 0), (0.05 * h / 0.5, h * 0.55), (0, h)], n=6, M=aim((-math.cos(a) * 0.55, -math.sin(a) * 0.55, 1), (*pol(r, a), 0.02 if ring_ == 0 else -0.05)))
+m.annulus(ag3, 0.7, 0.92, 0.018, 48)
+put('abyss', m.done())
+
+# ---------- LASER ----------
+lg3, lh3 = G['laser']
+m = M('laser__drone')  # a hovering laser drone, lens toward -Y
+m.sphere(dronem, 1, TRS(scale=(0.28, 0.28, 0.2)), u=20, v=12)
+m.lathe(darkmetal, [(0.29, -0.035), (0.32, 0), (0.29, 0.035), (0.27, 0)], n=28, closed=True)
+m.lathe(darkmetal, [(0, 0), (0.1, 0), (0.1, 0.12), (0.07, 0.12)], n=16, M=aim((0, -1, 0), (0, -0.2, 0)))
+m.ico(lh3, 0.065, TRS((0, -0.33, 0)), sub=2, smooth=True)
+m.lathe(lg3, [(0.08, -0.01), (0.1, 0), (0.08, 0.01), (0.06, 0)], n=16, M=TRS((0, -0.33, 0), (math.pi / 2, 0, 0)), closed=True)
+for k in range(4):
+    a = TAU * k / 4 + TAU / 8
+    m.tube(darkmetal, [(*pol(0.22, a), 0.0), (*pol(0.55, a), 0.07)], 0.03, n=6)
+    m.lathe(darkmetal, [(0.05, 0.05), (0.05, 0.11)], n=10, M=Matrix.Translation((*pol(0.6, a), 0)))
+    m.annulus(lg3, 0.13, 0.17, 0.1, 24, Matrix.Translation((*pol(0.6, a), 0)))
+m.dot(lg3, (0, 0), 0.14, -0.205, 24)
+for sx in (-1, 1):
+    m.stroke(lh3, (sx * 0.12, -0.2), (sx * 0.2, -0.12), 0.02, 0.13)
+put('laser', m.done())
+m = M('laser__prism')  # the floating prism of Prism Nova
+m.lathe(glass, [(0, -0.7), (0.38, 0), (0, 0.7)], n=6)
+m.lathe(lh3, [(0, -0.4), (0.18, 0), (0, 0.4)], n=6)
+for k in range(2):
+    m.annulus(lg3, 0.55 + k * 0.18, 0.58 + k * 0.18, 0, 48, TRS(rot=(0.4 * (1 if k else -1), 0, 0)))
+put('laser', m.done(False))
+m = M('laser__lens')  # a lens flare for beam ends, facing -Y
+m.flat(lh3, starpts(4, 0.05, 0.62), 0, FACE)
+m.flat(lg3, starpts(4, 0.04, 0.32, math.pi / 4), 0.002, FACE)
+m.annulus(lg3, 0.16, 0.2, 0.004, 32, FACE)
+put('laser', m.done(False))
+
+# ---------- ARCANE ----------
+xg3, xh3 = G['arcane']
+m = M('arcane__missile')  # a diamond of arcane force with two spiral ribbons, nose toward -Y
+m.lathe(xh3, [(0, 0), (0.085, 0.16), (0, 0.5)], n=4, M=aim((0, -1, 0), (0, 0.15, 0)))
+m.ico(xg3, 0.15, sub=2, smooth=True)
+for k in range(2):
+    m.tube(xg3, [(0.11 * math.cos(t * 1.25 + k * math.pi), 0.08 + t * 0.09, 0.11 * math.sin(t * 1.25 + k * math.pi)) for t in range(10)], [0.03 * (1 - t / 10) + 0.003 for t in range(10)], n=5)
+put('arcane', m.done())
+m = M('arcane__orb')  # an Arcane Barrage bolt: a four-point star in a glow
+m.ico(xh3, 0.11, sub=2, smooth=True)
+m.ico(xg3, 0.21, sub=2, smooth=True)
+for rx in (0, math.pi / 2):
+    m.flat(xh3, starpts(4, 0.04, 0.38), 0, TRS(rot=(rx, 0, 0)))
+put('arcane', m.done(False))
+m = M('arcane__sheep')  # Polymorph: one fluffy sheep (about 1 m long), facing -Y
+for _ in range(16):
+    d = Vector((random.uniform(-1, 1), random.uniform(-1, 1), random.uniform(-1, 1)))
+    if d.length > 1:
+        d.normalize()
+    m.ico(woolm, random.uniform(0.17, 0.24), TRS((d.x * 0.24, 0.05 + d.y * 0.36, 0.62 + d.z * 0.16)), sub=2, smooth=True, noise=0.01)
+m.sphere(sheepm, 1, TRS((0, -0.52, 0.76), (-0.3, 0, 0), (0.13, 0.19, 0.14)), u=14, v=10)
+m.ico(woolm, 0.12, TRS((0, -0.47, 0.9)), sub=2, smooth=True)
+for sx in (-1, 1):
+    m.sphere(sheepm, 1, TRS((sx * 0.16, -0.45, 0.83), (0, 0, sx * 0.5), (0.1, 0.035, 0.045)), u=8, v=6)
+    m.sphere(eyew, 0.035, TRS((sx * 0.075, -0.65, 0.82)), u=8, v=6)
+    m.sphere(void, 0.018, TRS((sx * 0.078, -0.68, 0.82)), u=6, v=4)
+for x, y in ((-0.15, -0.25), (0.15, -0.25), (-0.15, 0.3), (0.15, 0.3)):
+    m.lathe(sheepm, [(0.05, 0), (0.045, 0.42)], n=8, M=Matrix.Translation((x, y, 0)))
+m.ico(woolm, 0.09, TRS((0, 0.48, 0.72)), sub=1, smooth=True)
+m.annulus(xh3, 0.16, 0.19, 1.12, 32)  # a little arcane halo
+for i in range(5):
+    m.flat(xh3, starpts(4, 0.01, 0.05, 0, pol(0.17, TAU * i / 5)), 1.12)
+put('arcane', m.done())
+m = M('arcane__rift')  # Arcane Torrent's sky rift: stacked rune rings over a downward vortex (unit radius)
+for k, (r, z) in enumerate(((1.0, 0.0), (0.76, -0.16), (0.52, -0.32))):
+    m.annulus(xh3 if k != 1 else xg3, r - 0.045, r, z, 64)
+    runes(m, xh3, r - 0.12, 0.07, 12 + 4 * (2 - k), 0.01, z, random.Random(f'rift{k}'))
+    for i in range(8):
+        a = TAU * i / 8 + k * 0.3
+        m.flat(xg3, [pol(r, a - 0.05), pol(r + 0.16, a), pol(r, a + 0.05)], z)
+m.lathe(xg3, [(0.48, -0.32), (0.3, -0.62), (0.14, -1.0), (0, -1.45)], n=24, twist=0.45, caps=False)
+m.ico(xh3, 0.14, TRS((0, 0, -0.42)), sub=2, smooth=True)
+put('arcane', m.done(False))
+
+# ---------- BLADES ----------
+yg3, yh3 = G['blades']
+SW = lambda loc=(0, 0, 0), s=(1, 1, 1): Matrix.Translation(loc) @ Matrix.Rotation(math.pi / 2, 4, 'X') @ Matrix.Diagonal((*s, 1))  # local +Z -> -Y
+m = M('blades__sword')  # a spectral sword, point toward -Y (flies point-first, orbits flat)
+m.lathe(yg3, [(0, 0), (0.095, 0.07), (0.085, 1.02), (0, 1.3)], n=4, M=SW((0, 0.28, 0), (1, 0.28, 1)))
+m.lathe(yh3, [(0, 0.03), (0.042, 0.09), (0.036, 0.98), (0, 1.2)], n=4, M=SW((0, 0.28, 0), (1, 0.5, 1)))
+m.prism(goldm, [(-0.3, -0.03), (0.3, -0.03), (0.37, 0.02), (0.3, 0.07), (-0.3, 0.07), (-0.37, 0.02)], -0.04, 0.04, M=Matrix.Translation((0, 0.28, 0)))
+for sx in (-1, 1):
+    m.tube(goldm, [(sx * 0.34, 0.31, 0), (sx * 0.43, 0.25, 0), (sx * 0.45, 0.16, 0)], [0.028, 0.022, 0.008], n=6)
+m.ico(yh3, 0.042, TRS((0, 0.3, 0.045)), sub=1)
+m.lathe(wrap, [(0.034, 0), (0.034, 0.32)], n=8, M=aim((0, 1, 0), (0, 0.34, 0)))
+m.ico(goldm, 0.055, TRS((0, 0.7, 0)), sub=1)
+m.ico(yh3, 0.03, TRS((0, 0.75, 0)), sub=1)
+put('blades', m.done())
+m = M('blades__colossal')  # the Colossal Blade: a 9 m sword falling point-down (-Z), hilt up
+m.lathe(metal, [(0, 0), (0.46, 0.8), (0.4, 6.9), (0, 7.0)], n=4, M=TRS(scale=(1, 0.17, 1)))
+m.lathe(yg3, [(0, -0.08), (0.56, 0.75), (0.5, 6.95), (0, 7.08)], n=4, M=TRS(scale=(1, 0.26, 1)))  # light along the edges
+for yy in (-0.08, 0.08):
+    for k in range(5):
+        rune_at(m, yh3, k, (0, 1.6 + k * 1.0), 0.42, 0.05, Matrix.Translation((0, yy, 0)) @ FACE)
+wing = [(-1.7, 0.35), (-1.25, 0.02), (-0.35, -0.12), (0.35, -0.12), (1.25, 0.02), (1.7, 0.35), (1.05, 0.22), (0.35, 0.25), (-0.35, 0.25), (-1.05, 0.22)]
+m.prism(goldm, wing, -0.12, 0.12, M=Matrix.Translation((0, 0, 7.05)) @ Matrix.Rotation(math.pi / 2, 4, 'X'))
+for yy in (-0.13, 0.13):
+    m.ico(yh3, 0.16, TRS((0, yy, 7.12)), sub=2, smooth=True)
+m.lathe(wrap, [(0.13, 7.3), (0.13, 8.5)], n=10)
+for z in (7.5, 7.9, 8.3):
+    m.lathe(goldm, [(0.13, z - 0.03), (0.16, z), (0.13, z + 0.03)], n=12, closed=True)
+m.ico(goldm, 0.24, TRS((0, 0, 8.72)), sub=2, smooth=True)
+m.ico(yh3, 0.1, TRS((0, -0.2, 8.72)), sub=1)
+put('blades', m.done())
 
 # ---------- save, export, render ----------
 bpy.context.view_layer.update()

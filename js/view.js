@@ -4,7 +4,7 @@
 
 let myId = 'h', role = 'host', playing = false;
 let timeFx = 0, whiteFx = 0;
-const views = { p: new Map(), e: new Map(), s: new Map(), n: new Map(), ch: new Map() };
+const views = { p: new Map(), e: new Map(), s: new Map(), n: new Map(), ch: new Map(), aura: new Map() };
 const Q_FACE = new THREE.Quaternion().setFromAxisAngle(V(1, 0, 0), Math.PI / 2);
 const distTo = (x, z) => Math.hypot(camera.position.x - x, camera.position.z - z);
 const me = () => role === 'guest' ? G : S.players[myId];
@@ -102,7 +102,7 @@ function onEvent(e) {
       break;
     }
     case 'spawn': {
-      circleFx('arcane', V(e.x, .06, e.z), 1.6 * Math.max(1, e.s * 1.4), { life: 1.1, color: 0xff3050 });
+      circleFx('sigil', V(e.x, .06, e.z), 1.6 * Math.max(1, e.s * 1.4), { life: 1.1, color: 0xff3050 });
       for (let k = 0; k < 16; k++) emit(e.x + rand(-1, 1), .1, e.z + rand(-1, 1), 0, rand(2, 5), 0, 0xff3050, .25, .8);
       sfx('spawn');
       break;
@@ -110,6 +110,7 @@ function onEvent(e) {
     case 'tele': teleFx(e); { const v = views.e.get(e.id); if (v) v.wind = e.d; } break;
     case 'strike': { const v = views.e.get(e.id); if (v) v.strike = 1; if (e.a === 'smash' || e.a === 'slam') sfx('smash'); break; }
     case 'stagger': popNum(e.x, e.y + .4, e.z, 'STAGGER', '#ffd36a', 'tag'); ringFx(e.x, e.y, e.z, 1.5, 0xffd36a, .3); sfx('stagger'); break;
+    case 'miss': if (e.id === myId) popNum(camera.position.x, camera.position.y + .2, camera.position.z, 'MISSED: A PHANTOM', '#f0a6ff', 'tag'); else popNum(e.x, e.y, e.z, 'MISS', '#f0a6ff', 'tag'); burst(e.x, e.y - .5, e.z, 20, 0xffc8ff, 4, .2, .4); sfx('illusion'); break;
     case 'block': burst(e.x, e.y, e.z, 12, 0xffe0a0, 6, .12, .25, 6); flash(e.x, e.y, e.z, 0xffe0a0, 8, .1); sfx('block'); break;
     case 'land': dustFx(e.x, e.z, e.s * 2); shake(clamp(.25 - distTo(e.x, e.z) * .01, 0, .2)); sfx('smash'); break;
     case 'dodge':
@@ -136,7 +137,7 @@ function onEvent(e) {
       shake(.35); sfx('ring');
       break;
     }
-    case 'roar': circleFx('arcane', V(e.x, .08, e.z), 4, { life: 1, color: 0xff2020 }); teleFx({ shape: 'line', x: e.x, z: e.z, yaw: e.yaw, len: 14, w: 4.4, d: .25 }); shake(.25); sfx('ring'); break;
+    case 'roar': circleFx('sigil', V(e.x, .08, e.z), 4, { life: 1, color: 0xff2020 }); teleFx({ shape: 'line', x: e.x, z: e.z, yaw: e.yaw, len: 14, w: 4.4, d: .25 }); shake(.25); sfx('ring'); break;
     case 'swap': break;
     case 'over': setTimeout(showOver, 1400, e); break;
     case 'floor': banner(`FLOOR ${e.n}${e.boss ? ' · THE WARDEN WAITS' : ''}`, e.boss ? '#ff8a4a' : '#ffd8a0', 2400); sfx('wave'); break;
@@ -181,7 +182,7 @@ function makeEnemy(e) {
   if (!ETPL[e.type]) for (const m of mats) m.c.set(RIM[e.type]), m.i = .5; // placeholder tint until the rig exists
   g.scale.setScalar(e.sc);
   let ring = null;
-  if (e.elite) { ring = makeCircle('arcane', 0xffc640); ring.scale.setScalar(1.4); ring.position.y = .05; g.add(ring); }
+  if (e.elite) { ring = makeCircle('sigil', 0xffc640); ring.scale.setScalar(1.4); ring.position.y = .05; g.add(ring); }
   scene.add(g);
   return { g, mats, parts, flash: 0, flinch: 0, strike: 0, wind: 0, ph: rand(0, TAU), spd: 0, last: null, ring, ov: {}, bar: null, sc: e.sc };
 }
@@ -193,6 +194,8 @@ const CC_OV = {
   root: (r) => { const o = model('nature__roots', 0x4ee04a); o.scale.setScalar(r * .9); return o; },
   fear: (r, h) => { const o = model('spirit__skull', 0x5effc8); o.scale.setScalar(.7); o.position.y = h + .6; return o; },
   lift: (r) => { const o = model('gravity__rings', 0xa040ff, { flat: true }); o.scale.setScalar(r * 2); o.position.y = -2.6; return o; },
+  charm: () => { const o = model('illusion__mask', 0xf0a6ff); o.scale.setScalar(1.1); return o; },
+  poly: (r, h) => { const o = model('arcane__sheep', 0xd84cff, { shadow: true }); o.scale.setScalar(Math.max(.9, r * 1.6)); return o; }, // the monster itself is hidden meanwhile
 };
 function animEnemy(v, e, dt, t) {
   const tp = ET[e.type], P = v.parts, g = v.g;
@@ -254,7 +257,10 @@ function renderEnemies(src, dt, t, a) {
     const h = tp.h * e.sc, r = tp.r * e.sc;
     for (const k in v.ov) if (k !== e.cc) { v.ov[k].removeFromParent(); delete v.ov[k]; }
     if (e.cc && CC_OV[e.cc] && !v.ov[e.cc]) { const o = CC_OV[e.cc](r, h); v.ov[e.cc] = o; scene.add(o); }
-    for (const k in v.ov) { const o = v.ov[k]; o.position.x = v.g.position.x; o.position.z = v.g.position.z; if (k === 'freeze' || k === 'encase' || k === 'root') o.position.y = v.g.position.y; if (k === 'bubble') o.position.y = v.g.position.y + h * .5; if (k === 'stasis' || k === 'fear') { o.position.y = v.g.position.y + h + .7; o.lookAt(camera.position); } if (k === 'lift') o.position.y = .1; o.rotation.y += dt * (k === 'lift' ? 2 : 0); }
+    for (const k in v.ov) { const o = v.ov[k]; o.position.x = v.g.position.x; o.position.z = v.g.position.z; if (k === 'freeze' || k === 'encase' || k === 'root') o.position.y = v.g.position.y; if (k === 'bubble') o.position.y = v.g.position.y + h * .5; if (k === 'stasis' || k === 'fear' || k === 'charm') { o.position.y = v.g.position.y + h + .7 + (k === 'charm' ? Math.sin(t * 3 + e.id) * .15 : 0); o.lookAt(camera.position); } if (k === 'lift') o.position.y = .1; o.rotation.y += dt * (k === 'lift' ? 2 : 0);
+      if (k === 'poly') { o.position.y = v.g.position.y + Math.abs(Math.sin(t * 5 + e.id)) * .12; o.rotation.y = v.g.rotation.y; } } // a sheep hops about
+    v.g.visible = e.cc !== 'poly';
+    if (e.cc === 'charm' && Math.random() < .3) emit(v.g.position.x + rand(-r, r), v.g.position.y + h * rand(.3, 1), v.g.position.z + rand(-r, r), 0, .6, 0, shimmer(t + e.id).getHex(), .12, .5, -.3);
     const px = v.g.position.x, pz = v.g.position.z, py = v.g.position.y;
     if (e.cc === 'stun' && Math.random() < .5) { const ang = t * 6 + rand(0, .5); emit(px + Math.cos(ang) * r * .8, py + h + .3, pz + Math.sin(ang) * r * .8, 0, 0, 0, 0xffe36a, .12, .25); }
     if (e.cc === 'blind' && Math.random() < .4) emit(px + rand(-r, r), py + h * .85, pz + rand(-r, r), 0, .5, 0, 0xfff0b0, .15, .4);
@@ -270,7 +276,7 @@ function renderEnemies(src, dt, t, a) {
       v.bar.firstChild.style.width = Math.max(0, e.hp / e.max * 100) + '%'; v.bar.lastChild.style.width = e.sh > 0 ? Math.min(100, e.sh / e.max * 300) + '%' : '0';
     }
   }, v => { // break apart / burn away instead of vanishing
-    v.bar?.remove();
+    v.bar?.remove(); v.g.visible = true; // a polymorphed monster shows its true form as it dies
     for (const k in v.ov) v.ov[k].removeFromParent();
     for (const m of v.mats) { m.m.emissive.copy(m.c); m.m.emissiveIntensity = m.i; }
     const parts = Object.values(v.parts);
@@ -301,7 +307,7 @@ function makeShot(s) {
   else {
     const m = MOVE[s.mv]; look = m?.look || { m: 'gen__orb', s: .3 };
     if (look.m === 'T.shard') { o = T.shard.clone(); o.userData.mats = []; }
-    else o = model(look.m, EL[s.el].color);
+    else o = model(look.m, look.c ?? EL[s.el].color, { flat: !!look.flat });
     o.userData.base = (look.s || 1);
     o.scale.setScalar(o.userData.base * (s.sc || 1));
   }
@@ -321,6 +327,8 @@ function renderShots(src, dt, t, a) {
       if (L.spin) { v.sp.x += L.spin[0] * dt; v.sp.y += L.spin[1] * dt; v.sp.z += L.spin[2] * dt; if (L.noFace) v.o.rotation.set(v.sp.x, v.sp.y, v.sp.z); else { v.o.rotateX(v.sp.x); v.o.rotateY(v.sp.y); v.o.rotateZ(v.sp.z); } }
       if (L.roll) { v.roll = (v.roll || 0) + Math.hypot(s.vx, s.vz) * dt / (v.o.userData.base || 1); v.o.rotateX(v.roll); }
       v.o.scale.setScalar(v.o.userData.base * (s.sc || 1) * (L.flick ? rand(.85, 1.15) : 1));
+      if (L.flap) v.o.scale.x *= .35 + .65 * Math.abs(Math.sin(t * 22 + s.id)); // wings beating
+      if (L.jaw) { const j = v.jaw ??= v.o.getObjectByName(L.jaw); if (j) j.rotation.x = Math.abs(Math.sin(t * 16 + s.id)) * .55; }
       if (L.blink) fade(v.o, .6 + .4 * Math.sin(t * 20));
       if (L.trail) { const [c, sz, life, grav, n] = L.trail; const p = v.o.position; for (let k = 0; k < n; k++) emit(p.x + rand(-.1, .1), p.y + rand(-.1, .1), p.z + rand(-.1, .1), rand(-.5, .5), rand(0, 1), rand(-.5, .5), typeof c === 'function' ? c() : c, sz * (s.sc || 1), life, grav); }
     }
@@ -393,6 +401,36 @@ function renderChannels(src, dt, t) {
   }
   for (const [id, v] of views.ch) if (!live.has(id)) { v.o.removeFromParent(); views.ch.delete(id); }
 }
+// ---------- element auras: Blades' orbiting swords, harvested Souls, Arcane charges, Illusion's mirror images, Plasma heat ----------
+// p.r = [heat, souls, arcane charges, swords, bone plates, rune count] (see snap)
+function renderAuras(src, dt, t) {
+  const live = new Set();
+  for (const p of Object.values(src.players)) {
+    live.add(p.id);
+    const mine = p.id === myId, q = mine ? me() : p, R = p.r || [], bf = p.bf || {}, down = p.down;
+    const v = views.aura.get(p.id) || (views.aura.set(p.id, { swords: [], souls: [], arc: [], imgs: [] }), views.aura.get(p.id));
+    const g = views.p.get(p.id)?.g, pos = mine || !g ? V(q.x, q.y, q.z) : g.position.clone(), yaw = q.yaw || 0;
+    const pool = (list, n, make) => { while (list.length < n) { const o = make(); scene.add(o); list.push(o); } list.forEach((o, i) => o.visible = i < n && !down); return list.slice(0, down ? 0 : n); };
+    // swords circle at the waist, pointing along their orbit
+    const sw = pool(v.swords, R[3] || 0, () => model('blades__sword', EL.blades.color));
+    sw.forEach((o, i) => { const a = t * 1.6 + TAU * i / sw.length, rr = mine ? 1.25 : 1.35, y = pos.y + (mine ? .75 : 1.1) + Math.sin(t * 2 + i) * .08; o.position.set(pos.x + Math.cos(a) * rr, y, pos.z + Math.sin(a) * rr); o.lookAt(o.position.x - Math.sin(a), y, o.position.z + Math.cos(a)); o.scale.setScalar(mine ? .7 : .85); fade(o, mine ? .7 : 1); });
+    // harvested souls drift round you, slowly
+    const so = pool(v.souls, Math.min(15, R[1] || 0), () => model('soul__flame', EL.soul.color));
+    so.forEach((o, i) => { const a = -t * .8 + TAU * i / so.length, rr = mine ? 1.1 : .9, y = pos.y + (mine ? .45 : 1.6) + Math.sin(t * 3 + i * 1.7) * .15; o.position.set(pos.x + Math.cos(a) * rr, y, pos.z + Math.sin(a) * rr); o.lookAt(o.position.x + Math.sin(a), y + .4, o.position.z - Math.cos(a)); o.scale.setScalar(.55); });
+    // arcane charges whirl round you, quick and small
+    const ac = pool(v.arc, R[2] || 0, () => model('arcane__orb', EL.arcane.color));
+    ac.forEach((o, i) => { const a = t * 3.2 + TAU * i / 4, rr = mine ? .9 : .7; o.position.set(pos.x + Math.cos(a) * rr, pos.y + (mine ? .9 : 1.3) + Math.sin(t * 4 + i) * .06, pos.z + Math.sin(a) * rr); o.rotation.z += dt * 6; o.scale.setScalar(.35); });
+    // Illusion's mirror images at your sides (a little ahead of you in your own view, so you can see them)
+    const im = pool(v.imgs, bf.mirror > 0 ? 2 : 0, () => ghostWizard(EL.illusion.color));
+    im.forEach((o, i) => { const s = i ? 1 : -1, fx = -Math.sin(yaw), fz = -Math.cos(yaw), rx = Math.cos(yaw), rz = -Math.sin(yaw), side = mine ? 2.5 : 1.6, fw = mine ? 2.1 : 0; o.position.set(pos.x + rx * side * s + fx * fw, pos.y, pos.z + rz * side * s + fz * fw); o.rotation.y = yaw + Math.PI; tint(o, shimmer(t + i)); fade(o, Math.min(1, bf.mirror * 2) * (mine ? .28 : .45) * (1 + .2 * Math.sin(t * 7 + i))); });
+    // Plasma: sparks off your hand as Heat builds, smoke while overheated
+    if (!down && ((R[0] || 0) > 35 || bf.overheat > 0) && Math.random() < (bf.overheat > 0 ? .6 : (R[0] - 35) / 80)) {
+      const h = handPos(p.id), hot = bf.overheat > 0;
+      emit(h.x, h.y, h.z, rand(-.5, .5), rand(.5, 2), rand(-.5, .5), hot ? 0x6a5a66 : Math.random() < .5 ? 0xff3ca8 : 0xffd0f0, hot ? rand(.15, .3) : rand(.03, .07), hot ? .9 : .35, hot ? -1 : 2);
+    }
+  }
+  for (const [id, v] of views.aura) if (!live.has(id)) { for (const k in v) v[k].forEach(o => o.removeFromParent()); views.aura.delete(id); }
+}
 let reticle = null, reticleEl = null, chargeCircle = null;
 function renderAim(mp, dt) {
   const chg = mp?.chg, m = chg && MOVE[chg.m];
@@ -420,6 +458,7 @@ function renderWorld(src, dt, t) {
   renderEnts(src, dt, t, a);
   renderPartner(src, dt, t, a);
   renderChannels(src, dt, t);
+  renderAuras(src, dt, t);
 }
 
 // ===================== HUD =====================
@@ -447,6 +486,8 @@ function hud(src, mp) {
     let f = 0, label = '';
     if (i === 4) { f = 1 - (sp.ult ?? mp.ult ?? 0); el.classList.toggle('ready', f <= 0); }
     else { const full = cdOf(mp, m), c = Math.max(0, cds[i] || 0); f = full ? c / full : 0; if (c > .05 && full > 1.5) label = c.toFixed(c < 3 ? 1 : 0); }
+    const hot = cur === 'plasma' && i < 4 ? sp.bf?.overheat || 0 : 0; // overheated: Plasma spells are locked
+    if (hot > 0) { f = Math.max(f, hot / 2.5); label = hot.toFixed(1); }
     const active = (mp.ch === m.key) || (mp.chg?.m === m.key);
     el.style.setProperty('--cd', clamp(f, 0, 1)); touchBtns[i]?.style.setProperty('--cd', clamp(f, 0, 1));
     el.classList.toggle('cool', f > 0.001); el.classList.toggle('active', active);
@@ -455,10 +496,16 @@ function hud(src, mp) {
   if (sp.ult >= 1 && !hud.ultReady) sfx('ready');
   hud.ultReady = sp.ult >= 1;
   const bf = sp.bf || {}, tags = [];
-  for (const [k, n, c] of [['veil', 'VEILED', '#b08cff'], ['phase', 'PHASED', '#5effc8'], ['pact', 'BLOOD PACT', '#ff4060'], ['molten', 'MOLTEN', '#ff6a2a'], ['quake', 'BEDROCK', '#d9913a'], ['tempest', 'TEMPEST', '#9dffd6'], ['shell', 'SHELL', '#ff8ae8'], ['crit', 'NEXT HIT x2', '#ffd36a'], ['glide', 'GLIDE', '#9dffd6'], ['eclipse', 'ECLIPSE', '#9a4cff'], ['bloom', 'BLOOM', '#ff9ad8']])
+  for (const [k, n, c] of [['veil', 'VEILED', '#b08cff'], ['phase', 'PHASED', '#5effc8'], ['pact', 'BLOOD PACT', '#ff4060'], ['molten', 'MOLTEN', '#ff6a2a'], ['quake', 'BEDROCK', '#d9913a'], ['tempest', 'TEMPEST', '#9dffd6'], ['shell', 'SHELL', '#ff8ae8'], ['crit', 'NEXT HIT x2', '#ffd36a'], ['glide', 'GLIDE', '#9dffd6'], ['eclipse', 'ECLIPSE', '#9a4cff'], ['bloom', 'BLOOM', '#ff9ad8'], ['mirror', 'MIRRORED', '#f0a6ff'], ['fusion', 'FUSION', '#ff3ca8']])
     if (bf[k] > 0) tags.push(`<span style="color:${c};border-color:${c}">${n}${k === 'shell' ? '' : ' ' + Math.ceil(bf[k])}</span>`);
   const tagHtml = tags.join('');
   if (tagHtml !== hud.tags) { $('buffs').innerHTML = tagHtml; hud.tags = tagHtml; }
+  // the current element's resource, if it has one
+  const R = sp.r || [], pips = (n, of) => Array.from({ length: of }, (_, i) => `<span class="pip${i < n ? ' on' : ''}"></span>`).join(''), meter = f => `<span class="meter"><i style="width:${Math.round(clamp(f, 0, 1) * 100)}%"></i></span>`;
+  const res = cur === 'plasma' ? (bf.overheat > 0 ? `OVERHEATED ${meter(1)}` : bf.fusion > 0 ? `FUSION ${meter(bf.fusion / 4)}` : `HEAT ${meter(R[0] / 100)} ${R[0] | 0}`)
+    : cur === 'soul' ? `SOULS ${meter(R[1] / 15)} ${R[1] || 0}` : cur === 'arcane' ? `CHARGES ${pips(R[2], 4)}` : cur === 'blades' ? `SWORDS ${pips(R[3], 6)}`
+    : cur === 'rune' ? (R[5] === 2 ? `NEXT SPELL EMPOWERED ${pips(2, 2)}` : `RUNE ${pips(R[5], 2)}`) : cur === 'bone' && R[4] > 0 ? `BONE ARMOR ${pips(R[4], 4)}` : '';
+  if (res !== hud.res) { hud.res = res; $('res').innerHTML = res; $('res').classList.toggle('hidden', !res); $('res').classList.toggle('hot', cur === 'plasma' && (bf.overheat > 0 || R[0] > 80)); }
   const combo = sp.combo || 0;
   $('comboCt').classList.toggle('hidden', combo < 5);
   if (combo >= 5) $('comboCt').innerHTML = `<b>${combo}</b> HITS${combo >= 10 ? ` <em>+${Math.min(30, Math.floor(combo / 10) * 5)}% dmg</em>` : ''}`;
@@ -585,7 +632,7 @@ $('modeBack').onclick = () => { $('lobby').classList.add('hidden'); $('modes').c
 $('menuBtn').onclick = () => location.reload(); // back to the mode browser (also leaves any online room)
 renderModes();
 
-// ===================== lobby: 20 elements =====================
+// ===================== lobby: 29 elements =====================
 let myEl = 'fire', myEl2 = null, hoverEl = null;
 try { const s = JSON.parse(localStorage.getItem('magepact_pick') || '{}'); if (EL[s.el]) myEl = s.el; if (EL[s.el2] && s.el2 !== myEl) myEl2 = s.el2; } catch {}
 function bestFor(el) { try { return JSON.parse(localStorage.getItem(myMode === 'dungeon' ? 'magepact_best_floor' : 'magepact_best_el') || '{}')[el] || 0; } catch { return 0; } }

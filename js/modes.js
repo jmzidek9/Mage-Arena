@@ -35,7 +35,7 @@ function handToWizard(e, hard, ctype) {
   const k = p.kick ??= [0, 0, 0];
   k[0] += e.kx; k[1] += e.kz; e.kx = e.kz = 0;
   if (e.vy > 0) { k[2] += e.vy; e.vy = 0; }
-  if (hard) p.bf.stun = Math.max(p.bf.stun || 0, e.cc.t);
+  if (hard) p.bf.stun = Math.max(p.bf.stun || 0, e.cc.t); // (charm and polymorph reach a wizard as a stun, see cc)
   else if (ctype === 'root') p.bf.root = Math.max(p.bf.root || 0, e.cc.t);
 }
 function startDuel() {

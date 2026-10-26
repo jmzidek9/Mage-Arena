@@ -557,7 +557,7 @@ function buildRoom(r) {
     add(mat, alongX ? bx(.4, .45, span).translate(r.cx + t, ch - .22, r.cz) : bx(span, .45, .4).translate(r.cx, ch - .22, r.cz + t), col);
   }
   for (const o of r.props) {
-    if (o.k === 'sigil') { const c = makeCircle('arcane', o.c || 0xff2a2a); c.scale.setScalar(3.4); c.position.set(o.x, .05, o.z); c.userData.keep = 1; dunView.add(c); dunAnim.circles.push(c); anchor(o.x, 1, o.z, o.c || 0xff3030, 9, 12); continue; }
+    if (o.k === 'sigil') { const c = makeCircle('sigil', o.c || 0xff2a2a); c.scale.setScalar(3.4); c.position.set(o.x, .05, o.z); c.userData.keep = 1; dunView.add(c); dunAnim.circles.push(c); anchor(o.x, 1, o.z, o.c || 0xff3030, 9, 12); continue; }
     PROPS[o.k](placer(o.x, o.z, o.ry), o, rnd, r);
   }
 }
@@ -595,7 +595,7 @@ function buildStairwell(P, base, arrive) {
   if (arrive) { sb(.3, 1.02, -3, 2, lo, hi, wall, wc); sb(1.02, 1.2, -1.5, 1.5, 0, 3.4, DM.wood, 0x6a4a30); for (const y of [.6, 1.7, 2.8]) sb(1.2, 1.26, -1.5, 1.5, y, y + .12, DM.iron); } // the door you came through, barred behind you
   else sb(12, 13, 8, 12, lo, 0, wall, wc); // E2 ends just past the corner on the floor above
   // a sigil on the landing and torches all the way down
-  const g = pt(13.5, 2.5, -SD2 + .02), s = makeCircle('arcane', 0xffb040); s.scale.setScalar(1.6); s.position.set(...g); s.userData.keep = 1; dunView.add(s); dunAnim.circles.push(s);
+  const g = pt(13.5, 2.5, -SD2 + .02), s = makeCircle('sigil', 0xffb040); s.scale.setScalar(1.6); s.position.set(...g); s.userData.keep = 1; dunView.add(s); dunAnim.circles.push(s);
   for (const [u, v, y, nu, nv] of [[15.7, 2.5, -SD2 + 2.4, -1, 0], [7, -1.7, -1.5 + 2.4, 0, 1], [8, 6.7, -4.3 + 2.4, 0, -1], [2.5, 11.7, -D + 2.4, 0, -1], [9, 11.7, -D + 2.4, 0, -1], [18, 11.7, -D + 2.4, 0, -1]]) {
     if (u > e2 - 1) continue;
     const [x, y2, z] = pt(u, v, y), [dx, dz] = rot4(P.r, nu, nv);

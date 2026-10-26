@@ -2,7 +2,7 @@
 'use strict';
 
 // bump when the network format or game rules change: players on different builds get told to refresh
-const GAME_VERSION = '2.3.0';
+const GAME_VERSION = '2.4.0';
 
 // ===================== snapshot (sent to the guest, and what both sides render from) =====================
 const bfSnap = bf => { const o = {}; for (const k in bf) if (bf[k] > 0) o[k] = r2(bf[k]); return o; };
@@ -10,7 +10,8 @@ const snap = () => ({
   phase: S.phase, mode: S.mode, wave: S.wave, mod: S.mod, ts: S.tstop > 0 ? 1 : 0,
   duel: S.duel, dun: S.dun && { floor: S.dun.floor, seed: S.dun.seed, o: S.dun.o, st: S.dun.st, stairs: S.dun.stairs, wait: S.dun.wait },
   players: Object.fromEntries(Object.values(S.players).map(p => [p.id, { id: p.id, ai: p.ai ? 1 : 0, kick: p.kick, spawn: p.spawn, el: p.el, el2: p.el2, cur: p.cur, x: r2(p.x), y: r2(p.y), z: r2(p.z), yaw: r2(p.yaw), pitch: r2(p.pitch),
-    hp: Math.round(p.hp), max: p.max, down: p.down, rev: r2(p.rev), up: p.up, ult: r2(p.ult), bf: bfSnap(p.bf), ch: p.ch, chT: r2(p.chT), combo: p.combo, stats: p.stats }])),
+    hp: Math.round(p.hp), max: p.max, down: p.down, rev: r2(p.rev), up: p.up, ult: r2(p.ult), bf: bfSnap(p.bf), ch: p.ch, chT: r2(p.chT), combo: p.combo, stats: p.stats,
+    r: [Math.round(p.bd.heat || 0), p.bd.souls || 0, p.bd.arc || 0, p.bd.swords || 0, p.bd.bones || 0, (p.bd.runeN || 0) % 3] }])), // element resources: heat, souls, arcane charges, swords, bone plates, rune count
   enemies: S.enemies.filter(e => !e.pid).map(e => ({ id: e.id, type: e.type, x: r2(e.x), y: r2(e.y), z: r2(e.z), yaw: r2(e.yaw), hp: Math.round(e.hp), max: Math.round(e.max), sc: e.sc, elite: e.elite,
     st: Object.keys(e.st).map(k => ELIST.indexOf(k)), cc: e.cc?.type || 0, a: e.atk ? r2(1 - e.atk.t / e.atk.max) : 0, sh: Math.round(e.sh), lk: e.link?.g || 0, ts: S.tstop > 0 ? 1 : 0 })),
   shots: S.shots.slice(-160).map(s => ({ id: s.id, mv: s.mv, el: s.el, foe: s.foe ? 1 : 0, x: r2(s.x), y: r2(s.y), z: r2(s.z), vx: r2(s.vx), vy: r2(s.vy), vz: r2(s.vz), sc: r2(s.sc || 1) })),
@@ -43,7 +44,7 @@ $('gfxBtn').onclick = () => { try { localStorage.setItem('magepact_gfx', HQ ? 'l
 // settings (remembered per browser). General: sensitivity, volume. Visuals: field of view, brightness, bloom, shadows, film filter
 let baseFov = 75;
 function applySettings(o) {
-  sens = .0022 * o.sens; sfxVol = .35 * o.vol; if (master) master.gain.value = sfxVol; musicVol = .5 * o.mus; if (musicBus) musicBus.gain.value = musicVol; baseFov = o.fov;
+  sens = .0022 * o.sens; sfxVol = .35 * o.vol; if (master) master.gain.value = sfxVol; musicVol = .4 * o.mus; if (musicBus) musicBus.gain.value = musicVol; baseFov = o.fov;
   renderer.toneMappingExposure = 1.1 * o.bright;
   const pr = (HQ ? Math.min(devicePixelRatio, 2) : 1) * o.scale; // render scale: fewer pixels for slow laptops, live
   if (renderer.getPixelRatio() !== pr) { renderer.setPixelRatio(pr); composer.setSize(innerWidth, innerHeight); }
@@ -85,7 +86,8 @@ function pickEl(el) {
   banner(`${EL[el].glyph} ${EL[el].name.toUpperCase()}`, css(EL[el].color), 1500);
   renderSwap();
 }
-function menuChanged() { renderSwap(); $('setClose').textContent = playing ? 'Resume' : 'Close'; }
+function menuChanged() { renderSwap(); $('setClose').textContent = playing ? 'Resume' : 'Close'; $('leaveBtn').classList.toggle('hidden', !playing); }
+$('leaveBtn').onclick = () => location.reload(); // back to the mode select, like Main menu on the game-over screen (also leaves any online room)
 const toggleSettings = () => { $('settings').classList.toggle('hidden'); menuChanged(); };
 $('setBtn').onclick = toggleSettings;
 $('setClose').onclick = () => { $('settings').classList.add('hidden'); menuChanged(); if (playing) lockMouse(); }; // Resume grabs the mouse back: no extra click
@@ -234,11 +236,13 @@ function testMove(m, frames = 180, budget = 1500) {
 }
 function selfTest() {
   const res = [], t = (name, ok) => res.push(`${ok ? 'PASS' : 'FAIL'} ${name}`);
-  t('20 elements with 5 moves each', ELIST.length === 20 && ELIST.every(k => EL[k].moves.length === 5));
+  t(`${ELIST.length} elements with 5 moves each`, ELIST.length === 29 && ELIST.every(k => EL[k].moves.length === 5));
   t('every move has a name, icon, description and a valid mode', Object.values(MOVE).filter(m => m.el).every(m => m.name && m.icon && m.desc && ['tap', 'aim', 'charge', 'channel'].includes(m.mode)));
   t('every move does something', Object.values(MOVE).filter(m => m.el).every(m => m.cast || m.self || m.tick));
   t('aim moves have a range, charge moves a charge time, channels a max', Object.values(MOVE).filter(m => m.el).every(m => (m.mode !== 'aim' || m.range) && (m.mode !== 'charge' || m.charge) && (m.mode !== 'channel' || m.max)));
-  t('all 100 move names are unique per element', ELIST.every(k => new Set(EL[k].moves.map(m => m.name)).size === 5));
+  t(`all ${ELIST.length * 5} move names are unique per element`, ELIST.every(k => new Set(EL[k].moves.map(m => m.name)).size === 5));
+  t('every element has a cast sound for basic attacks and for its other moves', ELIST.every(k => SFX[k] && SFX[k + '_big']));
+  t('every model a move asks for exists', Object.values(MOVE).filter(m => m.look).every(m => m.look.m === 'T.shard' || NODE[m.look.m]));
   t('burn + frost = STEAM', reactionOf('fire', 'frost').name === 'STEAM');
   t('frost + storm = SHATTER', reactionOf('frost', 'storm').name === 'SHATTER');
   t('storm + fire = OVERLOAD', reactionOf('storm', 'fire').name === 'OVERLOAD');
@@ -283,7 +287,7 @@ function selfTest() {
   // headless smoke test: every move cast on the host against a few enemies, simulated for 3 seconds
   const errs = [];
   for (const m of Object.values(MOVE)) if (m.el) { const r = testMove(m); if (r.err) errs.push(`${m.key} ${m.name}: ${r.err}`); }
-  t(`all 100 moves run without errors${errs.length ? ' (' + errs.join('; ') + ')' : ''}`, !errs.length);
+  t(`all ${ELIST.length * 5} moves run without errors${errs.length ? ' (' + errs.join('; ') + ')' : ''}`, !errs.length);
   console.log(res.join('\n'));
   return res;
 }

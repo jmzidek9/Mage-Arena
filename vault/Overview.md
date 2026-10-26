@@ -2,15 +2,15 @@
 
 A first-person magic game for 1–2 players in the browser, with three modes: Arena, 1v1 Duel and Dungeon.
 
-- **Code:** `index.html` (styles, HTML, a small boot script) plus classic scripts in `js/` that share one global scope: `core.js` (renderer, scene, shaders, VFX, sound, input), `elements.js` (the 20 elements and their 100 moves), `sim.js` (host simulation), `modes.js` (the Duel and Dungeon rules, plus the map switch), `view.js` (rendering, HUD, lobby) and `net.js` (snapshots, networking, main loop, self-test). Three.js (r169, bundled with esbuild) and PeerJS 1.5.4 ship locally in `js/vendor/`, so the game needs no CDN, import maps or ES modules and runs from a double-clicked file in any browser, Safari included.
+- **Code:** `index.html` (styles, HTML, a small boot script) plus classic scripts in `js/` that share one global scope: `core.js` (renderer, scene, shaders, VFX, sound, input), `elements.js` (the 29 elements and their 145 moves), `sim.js` (host simulation), `modes.js` (the Duel and Dungeon rules, plus the map switch), `view.js` (rendering, HUD, lobby) and `net.js` (snapshots, networking, main loop, self-test). Three.js (r169, bundled with esbuild) and PeerJS 1.5.4 ship locally in `js/vendor/`, so the game needs no CDN, import maps or ES modules and runs from a double-clicked file in any browser, Safari included.
 - **Art:** built in Blender by `blender/build_assets.py`, `build_elements.py` and `build_enemies.py` (see [[Blender Assets]])
 - **Share:** run `python pack.py` to build `MagePact.html`, one ~5 MB file with everything inside (three.js, PeerJS, the game scripts, gzip-compressed models). Send that single file; your friend double-clicks it. (`index.html` alone won't work, since it needs the `js/` and `assets/` folders next to it.)
 - **Run:** double-click `index.html`. The models load from `assets/bundle.js`, so no server is needed. A local server (`python -m http.server 8000`) also works.
 - **Modes:** the game opens on a mode screen split into three: **Arena**, **1v1 Duel** and **Dungeon**. Each plays solo, or online with **Host game** / **Join** (see [[Netcode]]); the host's mode is the one played.
   - **Arena:** the original endless waves on the floating ruins under the black hole.
-  - **1v1 Duel:** best of 3 rounds on a smaller floating plaza (radius 14). A round is lost at 0 HP or by falling off the edge. Online it's host vs guest; solo you face an AI wizard with a random element. Each wizard has 300 HP and an invisible stand-in enemy that every move can hit, so all 100 moves work against players; your own moves skip your own stand-in.
+  - **1v1 Duel:** best of 3 rounds on a smaller floating plaza (radius 14). A round is lost at 0 HP or by falling off the edge. Online it's host vs guest; solo you face an AI wizard with a random element. Each wizard has 300 HP and an invisible stand-in enemy that every move can hit, so all 145 moves work against players; your own moves skip your own stand-in.
   - **Dungeon:** endless medieval floors. Each floor is a random chain of stone rooms and corridors (generated from a seed, so the guest builds the same one). Entering a room drops its portcullises and wakes its monsters; clearing it lifts them. The farthest room holds the stairs down; every 5th floor it's the Bone Warden's room. Foes: skeletons, skeleton archers, giant rats, ghouls, dark knights. Descending heals 25% and revives a downed partner. Deepest floor is saved per element.
-- **Self-check:** open `index.html#test`. It checks the data tables, casts all 100 moves against test enemies, checks that dungeon floors always connect every room, and that duel hits land on the opponent but never on yourself.
+- **Self-check:** open `index.html#test`. It checks the data tables, casts all 145 moves against test enemies, checks that dungeon floors always connect every room, and that duel hits land on the opponent but never on yourself.
 
 ## Core loop (Arena)
 1. Each player picks one of 20 [[Elements]], and optionally a second one (Tab swaps between them).
@@ -27,7 +27,7 @@ A first-person magic game for 1–2 players in the browser, with three modes: Ar
 - **Settings:** mouse sensitivity, volume and field of view (saved per browser). **Graphics: Low** turns off bloom and shadows. Slow devices switch to low graphics on their own after a few seconds, unless the player chose a setting.
 
 ## Why it's replayable
-- 20 elements × a second element
+- 29 elements × a second element
 - Random enemy mix and a budget per wave, 8 enemy types plus the boss
 - About 1 wave in 3 rolls a modifier, and a boss every 5th wave
 - Best wave (Arena) and deepest floor (Dungeon) are remembered per element (shown on the lobby cards)

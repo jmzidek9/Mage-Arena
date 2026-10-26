@@ -152,6 +152,14 @@ input::placeholder{color:#b9add8;opacity:.8}input:focus{box-shadow:0 0 0 2px var
 @keyframes ultpulse{50%{box-shadow:0 0 0 2px var(--gold),0 0 30px var(--gold),0 0 60px var(--el)}}
 #buffs{display:flex;gap:6px;min-height:18px;flex-wrap:wrap;justify-content:center}
 #buffs span{font-size:10px;letter-spacing:.12em;padding:2px 7px;border-radius:7px;border:1px solid;background:rgba(0,0,0,.45);text-shadow:0 0 6px currentColor}
+/* element resource: Heat, Souls, Arcane charges, Swords, Bone plates, Rune count */
+#res{display:flex;align-items:center;gap:8px;font-size:10px;letter-spacing:.16em;color:#f6ecd0;text-shadow:0 1px 2px #000}
+#res .meter{width:150px;height:7px;border-radius:4px;background:rgba(0,0,0,.6);border:1px solid color-mix(in srgb,var(--el) 70%,transparent);overflow:hidden}
+#res .meter i{display:block;height:100%;background:linear-gradient(90deg,color-mix(in srgb,var(--el) 55%,white),var(--el));box-shadow:0 0 10px var(--el);transition:width .12s}
+#res .pip{width:11px;height:11px;border-radius:3px;transform:rotate(45deg);border:1.5px solid var(--el);background:rgba(0,0,0,.5)}
+#res .pip.on{background:var(--el);box-shadow:0 0 8px var(--el)}
+#res.hot .meter i{background:linear-gradient(90deg,#fff,#ff3ca8);animation:breathe2 .2s infinite}
+#res.hot{color:#ff8ad0}
 #charge{position:absolute;left:50%;top:calc(50% + 34px);transform:translateX(-50%);width:120px;height:6px;border-radius:4px;background:rgba(0,0,0,.6);border:1px solid color-mix(in srgb,var(--el) 70%,transparent);overflow:hidden}
 #charge i{display:block;height:100%;width:0;background:linear-gradient(90deg,color-mix(in srgb,var(--el) 60%,white),var(--el));box-shadow:0 0 10px var(--el)}
 #charge.full{box-shadow:0 0 14px var(--el);animation:breathe2 .25s infinite}
@@ -210,7 +218,7 @@ body.touching #me{top:14px;bottom:auto;left:14px}body.touching #lock{display:non
   <div id="combo"></div>
   <div id="comboCt" class="hidden"></div>
   <div id="me" class="hudbox"><div id="meName" class="who"></div><div class="bar"><i id="meHp"></i></div><div id="dash"><i id="dashBar"></i></div></div>
-  <div id="bar"><div id="buffs"></div><div id="elName"></div><div id="slots"></div></div>
+  <div id="bar"><div id="buffs"></div><div id="res" class="hidden"></div><div id="elName"></div><div id="slots"></div></div>
   <div id="mate" class="hudbox hidden"><div id="mateName" class="who"></div><div class="bar"><i id="mateHp"></i></div><i id="mateUlt"></i></div>
   <div id="downMsg" class="hidden"></div>
   <div id="lock" class="hidden">Click to aim</div>
@@ -259,6 +267,7 @@ body.touching #me{top:14px;bottom:auto;left:14px}body.touching #lock{display:non
     <label class="ck">Shadows<input id="cShadows" type="checkbox"></label>
     <label class="ck">Film filter<input id="cFilm" type="checkbox"></label>
   </div>
+  <button id="leaveBtn" class="ghost hidden">Leave to menu</button>
   <button id="setClose" class="ghost">Close</button>
 </div>
 

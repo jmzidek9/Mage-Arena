@@ -1,6 +1,6 @@
 # Elements
 
-20 elements, each with its own passive and 5 moves on **LMB, RMB, Q, E** and **R** (the ultimate, which charges as you deal damage and kill).
+29 elements, each with its own passive and 5 moves on **LMB, RMB, Q, E** and **R** (the ultimate, which charges as you deal damage and kill).
 Each element applies its own status on hit; hitting an enemy that carries a *different* element's status triggers a reaction (see [[Combos]]).
 Everything here is generated from `js/elements.js` (the `ELEMENTS` table), so it matches the game.
 
@@ -28,6 +28,15 @@ Move modes: **tap** casts on press (LMB repeats while held), **hold to aim** sho
 | 👻 Spirit | haunted | POSSESSION (stun) |
 | 🌠 Cosmic | starstruck | STARFALL (blast) |
 | 💣 Explosion | primed | DETONATION (blast) |
+| 🎭 Illusion | beguiled | MIRAGE (echo) |
+| 💀 Bone | brittle | SPLINTER (shatter) |
+| 📜 Rune | inscribed | GLYPHBURST (blast) |
+| ⚛️ Plasma | ionized | FUSION (blast) |
+| 🪔 Soul | soulburned | SOUL RIP (drain) |
+| 🐙 Abyss | drowned | UNDERTOW (pull) |
+| 📡 Laser | targeted | REFRACTION (chain) |
+| 🔮 Arcane | spellbound | ARCANE SURGE (overload) |
+| 🗡️ Blades | lacerated | THOUSAND CUTS (chain) |
 
 ## 🔥 Fire
 Raw destruction. Stack burns on everything, then blow it all up.
@@ -128,7 +137,7 @@ An assassin. Pin enemies down, vanish from sight and strike from the dark.
 | Key | Move | Cooldown | What it does |
 |---|---|---|---|
 | LMB | 🗡️ **Shadow Daggers** | 0.45 s | Throw a fan of three shadow daggers. |
-| RMB | 🖐️ **Umbral Grasp** | 6 s | A shadow hand seizes the first enemy it touches and yanks it to you, stunned. |
+| RMB | 🥷 **Shadow Step** *(hold to aim, release to cast)* | 6 s | Melt into the shadows and step out at the target. Enemies around where you land are stunned for 1 s and spun round, their backs wide open to your Assassin bonus. |
 | Q | 🕸️ **Shadow Snare** *(hold to aim, release to cast)* | 7 s | Shadow tendrils burst from the ground, pinning every enemy in the area and dragging them together. Your next hit within 2.5 s deals double damage. |
 | E | 🌫️ **Veil** | 14 s | Vanish for 4 seconds. Enemies lose track of you, you move 30% faster, and your first hit deals 2.5x damage. |
 | R | 🌘 **Eclipse** | ultimate | Blot out the sun. Enemies in the darkness are slowed and cursed, while you steal life and cast 30% faster. |
@@ -288,6 +297,126 @@ Pure demolition. Grenades, sticky bombs, mines, rocket jumps and a carpet-bombin
 | Q | 🚀 **Rocket Jump** | 6 s | Blast the ground under your feet to rocket up and forward, flattening whatever is nearby. |
 | E | 🎯 **Proximity Mines** | 12 s | Toss four mines ahead of you. Each one blows when an enemy walks over it. |
 | R | ✈️ **Carpet Bomb** | ultimate | Call in a bombing run: fourteen bombs drop in a line ahead of you, one after another. |
+
+## 🎭 Illusion
+Smoke and mirrors. Fool monsters into fighting phantoms, and each other.
+
+**Passive.** Misdirection: Beguiled enemies deal 20% less damage, and 1 in 3 of their attacks strikes a phantom instead of you.
+
+| Key | Move | Cooldown | What it does |
+|---|---|---|---|
+| LMB | 🦋 **Phantom Moths** | 0.45 s | Release a glowing moth flanked by two phantom moths that flutter off to hunt enemies. Phantoms deal half damage. |
+| RMB | 🪞 **Decoy** *(hold to aim, release to cast)* | 8 s | Conjure a phantom double of yourself at the target. Monsters within 12 m attack it instead of you for 5 s. Once it is struck 3 times, or time runs out, it shatters, damaging and beguiling everything around it. |
+| Q | 😵‍💫 **Mesmerize** | 10 s | A hypnotic pulse charms every monster in front of you for 4 s: they turn on each other and attack the nearest monster instead of you. Bosses resist it. |
+| E | 👥 **Mirror Images** | 16 s | Two mirror images of you stand at your sides for 8 s, copying your basic attack at 40% power, whichever element you are using. |
+| R | 🎪 **Phantasmagoria** | ultimate | Trap everything within 14 m in a hall of mirrors: monsters are charmed and fight each other for 5 s, then the mirrors shatter for 120 damage to every one of them. |
+
+## 💀 Bone
+A necromancer. Bone spears, cackling skulls, armor of the dead, and the slain rising to fight for you.
+
+**Passive.** Raise Dead: monsters you kill with Bone rise as skeleton warriors that fight for you for 12 s (up to 3 at once). Brittle enemies take 12% more damage.
+
+| Key | Move | Cooldown | What it does |
+|---|---|---|---|
+| LMB | 🦴 **Bone Spear** | 0.5 s | Hurl a jagged bone spear that pierces 2 enemies and pins the last one it hits for a moment. |
+| RMB | ☠️ **Cackling Skull** | 4 s | Hurl a burning skull that bites an enemy, then leaps on to the next one, up to 5 times. |
+| Q | 🛡️ **Bone Armor** | 14 s | Four bone plates orbit you for 10 s. Each one completely blocks a hit, then flies back into the attacker. |
+| E | ⛓️ **Bone Cage** *(hold to aim, release to cast)* | 9 s | Ribs of bone burst from the ground at the target, caging every enemy inside for 2.5 s. Anything that touches the bars is gashed. |
+| R | 🐉 **Bone Dragon** *(hold to aim, release to cast)* | ultimate | Raise a skeletal dragon that circles the target for 7 s, breathing ghostfire on everything beneath it. |
+
+## 📜 Rune
+Ancient script. Ward traps, falling runestones and binding circles, with every third spell Empowered.
+
+**Passive.** Rune Mastery: every third spell you cast is Empowered and deals 60% more damage. Inscribed enemies take 10% more damage.
+
+| Key | Move | Cooldown | What it does |
+|---|---|---|---|
+| LMB | 🔹 **Rune Bolt** | 0.4 s | Fire a spinning rune that pierces through an enemy. |
+| RMB | 🔯 **Glyph Trap** *(hold to aim, release to cast)* | 2.5 s | Inscribe a ward glyph at the target (up to 3 at once). It arms after a second, and the first enemy to step on it is blasted into the air and stunned. |
+| Q | 🪨 **Sigilfall** *(hold to aim, release to cast)* | 7 s | Three runestones crash down on the target one after another. The last and largest stuns everything it hits. |
+| E | 🔘 **Binding Circle** *(hold to aim, release to cast)* | 13 s | Draw a great binding circle for 6 s. Enemies inside are slowed by 40%, take 25% more damage from everything, and are scorched by the runes every second. |
+| R | 📖 **Word of Ruin** | ultimate | Speak the word of ruin: a great rune ignites over every enemy within 20 m (up to 12), then each one slams down for 80 damage and a 1.5 s stun. |
+
+## ⚛️ Plasma
+Raw, unstable power. Every Plasma spell builds Heat that makes you hit harder, right up until you overheat.
+
+**Passive.** Heat: Plasma spells build Heat, which adds up to 50% damage. At 100 Heat you overheat: you vent in a burst and your Plasma spells lock for 2.5 s. Heat cools off on its own. Ionized enemies burn.
+
+| Key | Move | Cooldown | What it does |
+|---|---|---|---|
+| LMB | 🔴 **Plasma Bolt** | 0.28 s | Rapid bolts of superheated plasma that splash on impact. Builds Heat. |
+| RMB | 🟣 **Plasma Cannon** *(hold to charge)* | 3.5 s | Hold to charge a sphere of plasma, then release to fire it. It detonates in a blast that grows with the charge. Builds a lot of Heat. |
+| Q | 🌡️ **Vent** | 7 s | Dump all your Heat in a shockwave around you. The more Heat you vent, the harder it hits (up to 110 damage) and the further it throws. |
+| E | 🗡️ **Thermal Lance** | 6 s | Sweep a blade of plasma in a wide arc in front of you, cutting every enemy within 7 m and hurling them back. |
+| R | ☢️ **Fusion Beam** | ultimate | Fire a colossal beam of plasma for 4 s that follows your aim and melts everything in its path. You cannot overheat meanwhile. |
+
+## 🪔 Soul
+A reaper. Harvest a soul from every kill to grow stronger, and cut down the weak in a single swing.
+
+**Passive.** Soulbound: every kill gives you a Soul (up to 15; elites give 2, bosses 5). Each Soul makes your spells 4% stronger, but getting hit makes you drop 2. Soulburned enemies burn.
+
+| Key | Move | Cooldown | What it does |
+|---|---|---|---|
+| LMB | 💙 **Soulfire** | 0.42 s | Fire bolts of pale soulfire that burn whatever they touch. |
+| RMB | 🌒 **Reap** | 5 s | Swing a spectral scythe through everything in front of you (6.5 m). Monsters left under 20% health are reaped outright (not bosses). |
+| Q | 🫀 **Soul Rend** | 8 s | Hurl a hook of soulfire that tears the soul half out of the first enemy it hits: 35 damage and a 1 s stun, and the torn soul flies back to heal you for 10. |
+| E | 🌀 **Soulstorm** | 10 s | Unleash your Souls as shrieking soul missiles that hunt down enemies: 2 for every Soul you hold (at least 4), 14 damage each. Spends your Souls. |
+| R | 💀 **The Reaper** *(hold to aim, release to cast)* | ultimate | Summon the Reaper at the target. Its scythe sweeps round three times, cutting everything within 9 m for 50 and reaping any monster left under 25% health. |
+
+## 🐙 Abyss
+Something ancient lives below. Tentacles erupt from the floor to seize, crush and drag your enemies under.
+
+**Passive.** Lurker Below: each Abyss hit has a 20% chance to make a tentacle burst up under the enemy and lash it for 18 more damage. Drowned enemies are 25% slower.
+
+| Key | Move | Cooldown | What it does |
+|---|---|---|---|
+| LMB | 🔵 **Void Bolt** | 0.42 s | Fire a bolt of black water that bursts on impact, splashing the enemies around it. |
+| RMB | 🦑 **Grasp of the Deep** *(hold to aim, release to cast)* | 6 s | A great tentacle erupts at the target and seizes every enemy there, hoisting them into the air, then slams them into the floor. |
+| Q | 👄 **Maw of the Deep** *(hold to aim, release to cast)* | 10 s | Tear open a toothed maw in the floor. It drags enemies toward its centre for 2 s, then snaps shut for 70 damage. |
+| E | 🐙 **Tentacle Ring** | 14 s | Eight tentacles burst up around you for 6 s and lash any enemy that comes within 6 m, three at a time. |
+| R | 👁️ **Kraken** *(hold to aim, release to cast)* | ultimate | The Kraken stirs: colossal tentacles burst from the floor around the target and thrash for 6 s, crushing enemies and dragging them in, then haul everything down for 100 damage. |
+
+## 📡 Laser
+Precision light. Instant beams that ricochet off pillars, walls and the floor, hitting harder with every bounce.
+
+**Passive.** Ricochet: every bounce makes a Laser hit 25% harder, and Laser hits to the head always crit. Targeted enemies take 12% more damage.
+
+| Key | Move | Cooldown | What it does |
+|---|---|---|---|
+| LMB | 🟢 **Pulse Laser** | 0.3 s | An instant laser pulse that bounces once off whatever it meets. |
+| RMB | ✳️ **Ricochet Beam** *(hold to charge)* | 4 s | Hold to charge a thick beam that bounces up to 4 times off pillars, walls and the floor, piercing everything it touches. |
+| Q | 〽️ **Laser Sweep** | 8 s | Sweep a laser across 120° in front of you, cutting every enemy within 22 m. |
+| E | 🛸 **Laser Drone** | 15 s | Deploy a hovering drone that follows you for 12 s and fires a bouncing laser at the nearest enemy every 0.4 s. |
+| R | 🔺 **Prism Nova** | ultimate | A great prism rises above you and spins for 4 s, firing eight lasers in a star that bounce off everything and shred whatever they cross. |
+
+## 🔮 Arcane
+Pure magic. Homing missiles, blinks and polymorphs, and charges that build into a devastating barrage.
+
+**Passive.** Arcane Charges: every Arcane spell except Barrage gives you a charge (up to 4; they fade 8 s after your last cast). Each charge makes your spells 12% stronger. Spellbound enemies take 10% more damage.
+
+| Key | Move | Cooldown | What it does |
+|---|---|---|---|
+| LMB | 🌟 **Arcane Missiles** | 0.55 s | Fire three arcane missiles in quick succession that weave toward enemies. |
+| RMB | 🎆 **Arcane Barrage** | 3 s | Spend all your Arcane Charges on a barrage of heavy arcane bolts: 2, plus 2 for every charge spent. |
+| Q | 💨 **Blink** | 6 s | Teleport 10 m in the direction you are looking. Enemies where you stood are blasted and stunned for a moment. |
+| E | 🐑 **Polymorph** | 12 s | Turn the first enemy you hit, and up to 2 more near it, into harmless sheep for 4 s. Bosses resist it. |
+| R | 🪄 **Arcane Torrent** | ultimate | Open an arcane rift above you that rains 38 homing missiles on enemies within 22 m over 4 s. |
+
+## 🗡️ Blades
+A sword saint. Summoned swords orbit you, guard you, and fly wherever you point.
+
+**Passive.** Sword Halo: a spectral sword forms around you every 2.5 s (up to 6), and an orbiting sword strikes any enemy that gets within 3 m. Lacerated enemies bleed.
+
+| Key | Move | Cooldown | What it does |
+|---|---|---|---|
+| LMB | 🔪 **Flying Daggers** | 0.35 s | Throw a pair of spectral daggers that curve toward enemies. Each hit has a 25% chance to forge a new orbiting sword. |
+| RMB | 🏹 **Sword Volley** | 2.5 s | Launch every orbiting sword at your crosshair. Each one pierces through enemies for 24 damage. With no swords ready, you conjure two. |
+| Q | 💃 **Blade Dance** | 8 s | Dash 9 m forward in a whirl of blades, cutting everything you pass through for 32 damage, and forge 2 new swords. |
+| E | ☔ **Rain of Blades** *(hold to aim, release to cast)* | 11 s | Twelve swords rain down on the target area, 20 damage each, and the ground they pierce slows enemies by 30% for 4 s. |
+| R | ⚜️ **Colossal Blade** *(hold to aim, release to cast)* | ultimate | A colossal sword falls from the heavens onto the target: 160 damage and a huge launch. It stands for 5 s sending out shockwaves, and your halo fills with 6 swords. |
+
+## Element resources
+Some elements build up something you can see above your ability bar and around your wizard: Plasma's **Heat** (a bar that turns into OVERHEATED), Soul's **Souls** (pale flames circling you), Arcane's **charges** (orbs whirling round you), Blades' **swords** (orbiting your waist), Bone's armor **plates** and Rune's count toward the next **Empowered** spell.
 
 ## Switching mid-game
 Press **Esc** (or ⚙ on touch) during a run and pick any element under *General > Switch element*. It replaces the loadout you are using (your Tab loadout stays). Works solo and online. Solo, the menu pauses the game; online it keeps running for your partner and the enemies.

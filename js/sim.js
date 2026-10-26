@@ -85,7 +85,7 @@ function stats(p) {
   return {
     cdMul: .85 ** n('swift') * (bf.pact > 0 ? .8 : 1) * (el === 'chrono' ? .82 : 1) * (bf.eclipse > 0 ? .7 : 1),
     skillCd: .8 ** n('quick'),
-    dmgMul: (1 + .2 * n('potency')) * (bf.pact > 0 ? 1.6 : 1) * comboB * lowHp,
+    dmgMul: (1 + .2 * n('potency')) * (bf.pact > 0 ? 1.6 : 1) * comboB * lowHp * elementPower(p, el),
     speed: 7.5 * (1 + .12 * n('fleet')) * (bf.tempest > 0 ? 1.6 : 1) * (bf.veil > 0 ? 1.3 : 1) * (bf.phase > 0 ? 1.3 : 1) * (el === 'wind' ? 1.15 : 1),
     aoe: (1 + .25 * n('wide')) * (el === 'explosion' ? 1.2 : 1),
     dur: 1 + .5 * n('linger'), multi: 1 + n('twin'), chain: 2 + n('twin'), pierce: n('pierce'), bounce: n('ricochet'),
@@ -94,6 +94,11 @@ function stats(p) {
     over: n('over') > 0, nova: n('nova'), ultMul: 1 + .35 * n('surge'), echo: n('echo') * .25,
     dr: (el === 'earth' ? .85 : 1) * (bf.molten > 0 ? .6 : 1) * (bf.quake > 0 ? .5 : 1),
   };
+}
+// resources some elements build up: Plasma's Heat, Soul's Souls, Arcane's charges
+function elementPower(p, el) {
+  const bd = p.bd || {};
+  return el === 'plasma' ? 1 + (bd.heat || 0) / 200 : el === 'soul' ? 1 + .04 * (bd.souls || 0) : el === 'arcane' ? 1 + .12 * (bd.arc || 0) : 1;
 }
 function bondMul(p) { if (!stats(p).bond) return 1; const m = mate(p); return m && !m.down && Math.hypot(m.x - p.x, m.z - p.z) < 8 ? 1.15 : 1; }
 const buff = (p, k, t) => { p.bf[k] = Math.max(p.bf[k] || 0, t); };
@@ -127,6 +132,36 @@ function collide(o, r, sol = solids()) {
   for (const c of sol) { const dx = o.x - c.x, dz = o.z - c.z, dd = Math.hypot(dx, dz), m = r + c.r; if (dd < m && dd > 0) { o.x = c.x + dx / dd * m; o.z = c.z + dz / dd * m; } }
 }
 const clampArena = (v, pad = .5) => confine(v, pad);
+// a laser from o along d, bouncing off pillars, the dungeon's walls and the floor; returns its corner points.
+// Only uses the map (not walls that moves raise), so host and guest draw the same path.
+function laserPath(o, d, len, bounces) {
+  const pts = [o.clone()], p = o.clone(), v = d.clone().normalize();
+  let left = len;
+  for (let b = 0; b <= bounces && left > .05; b++) {
+    let t = left, n = null;
+    if (v.y < -1e-4 && -p.y / v.y < t) { t = -p.y / v.y; n = V(0, 1, 0); }
+    const a = v.x * v.x + v.z * v.z;
+    if (a > 1e-6) for (const c of PILLARS) {
+      const fx = p.x - c.x, fz = p.z - c.z, bq = fx * v.x + fz * v.z, cq = fx * fx + fz * fz - c.r * c.r, disc = bq * bq - a * cq;
+      if (cq < 0 || disc < 0) continue;
+      const tc = (-bq - Math.sqrt(disc)) / a;
+      if (tc > 1e-3 && tc < t) { t = tc; const hx = fx + v.x * tc, hz = fz + v.z * tc, L = Math.hypot(hx, hz); n = V(hx / L, 0, hz / L); }
+    }
+    if (MAP.rects && a > 1e-6) { // dungeon: march to the first wall, then bounce off the side it crossed
+      for (let s = .25; s < t; s += .25) {
+        const x = p.x + v.x * s, z = p.z + v.z * s;
+        if (inRects(x, z)) continue;
+        const px = p.x + v.x * (s - .25), pz = p.z + v.z * (s - .25);
+        t = s - .25; n = inRects(x, pz) ? V(0, 0, -Math.sign(v.z)) : inRects(px, z) ? V(-Math.sign(v.x), 0, 0) : V(-v.x, 0, -v.z).normalize();
+        break;
+      }
+    }
+    p.addScaledVector(v, t); pts.push(p.clone()); left -= t;
+    if (!n) break;
+    v.reflect(n);
+  }
+  return pts;
+}
 const eyeOf = p => V(p.x, 1.65 + p.y, p.z);
 const aimOf = p => { const c = Math.cos(p.pitch); return V(-Math.sin(p.yaw) * c, Math.sin(p.pitch), -Math.cos(p.yaw) * c); };
 const flatAim = p => V(-Math.sin(p.yaw), 0, -Math.cos(p.yaw));
@@ -177,13 +212,14 @@ const HARD = new Set(['stun', 'freeze', 'bubble', 'lift', 'stasis', 'encase']);
 function cc(e, type, t, p) {
   if (!e || e.dead) return false;
   const tp = ET[e.type];
-  if (tp.boss) { if (['bubble', 'lift', 'stasis', 'encase', 'fear'].includes(type)) return false; t *= .35; }
+  if (tp.boss) { if (['bubble', 'lift', 'stasis', 'encase', 'fear', 'charm', 'poly'].includes(type)) return false; t *= .35; }
   else if (e.elite) t *= .6;
+  if (e.pid && (type === 'charm' || type === 'poly')) { type = 'stun'; t = Math.min(t, 1.5); } // a duel wizard is only dazed
   t *= p ? stats(p).dur ** .5 : 1;
   if (e.cc && e.cc.t > t && e.cc.type === type) return false;
   if (e.cc?.type === 'stasis') return false;
   e.cc = { type, t, max: t, src: p?.id };
-  if (HARD.has(type) || type === 'fear' || type === 'blind') e.atk = null;
+  if (HARD.has(type) || ['fear', 'blind', 'charm', 'poly'].includes(type)) e.atk = null;
   if (type === 'stasis') e.stored = 0;
   if (type === 'bubble' || type === 'lift') { e.vy = 0; e.kx = e.kz = 0; }
   return true;
@@ -284,7 +320,7 @@ function damage(e, amount, el, p, o = {}) {
   if (e.dead || amount <= 0) return 0;
   if (e.cc?.type === 'stasis' && !o.raw) { e.stored += amount; return 0; }
   if (S.tstop > 0 && !o.raw) { e.tsd = (e.tsd || 0) + amount; e.tsBy = p?.id; return 0; }
-  amount *= (1 + (e.m?.vuln || 0)) * (e.cc?.type === 'freeze' ? 1.4 : 1) * (e.cc?.type === 'bubble' ? 1.3 : 1);
+  amount *= (1 + (e.m?.vuln || 0)) * (e.cc?.type === 'freeze' ? 1.4 : 1) * (e.cc?.type === 'bubble' ? 1.3 : 1) * (e.fvU > S.t ? 1 + e.fv : 1); // fv: a field's extra damage taken (Binding Circle)
   if (e.sh > 0) { const a = Math.min(e.sh, amount); e.sh -= a; amount -= a; }
   amount = Math.round(amount);
   if (amount <= 0) return 0;
@@ -344,6 +380,7 @@ function kill(e, el, p) {
   if (p) {
     const st = stats(p);
     addUlt(p, t.boss ? .5 : e.elite ? .2 : .01); p.stats.kills++;
+    if (p.cur === 'soul') { p.bd.souls = Math.min(15, (p.bd.souls || 0) + (t.boss ? 5 : e.elite ? 2 : 1)); ev({ k: 'fx', m: 'soul.0', f: 'harvest', id: p.id, x: r2(e.x), y: r2(e.y + 1), z: r2(e.z) }); }
     if (el) EL[el].onKill?.(e, p);
     if (st.detonate) { aoe(e.x, e.z, 2.5 * st.aoe, 15 * st.detonate * st.dmgMul, p.cur, p, e.id); ev({ k: 'fx', m: p.cur + '.0', f: 'det', x: r2(e.x), y: r2(e.y + .8), z: r2(e.z) }); }
   }
@@ -351,11 +388,19 @@ function kill(e, el, p) {
 }
 function hurt(p, n, src = null) {
   if (p.down || p.dashT > 0 || p.bf.phase > 0 || p.bf.phoenix > 0 || p.bf.inv > 0 || S.phase !== 'fight') return false;
+  if (p.bd.bones > 0) { // Bone Armor: a plate takes the whole hit, then flies back at the attacker
+    p.bd.bones--;
+    const o = V(p.x, p.y + 1.2, p.z);
+    ev({ k: 'fx', m: 'bone.2', f: 'block', x: r2(o.x), y: r2(o.y), z: r2(o.z) });
+    if (src && !src.dead) shoot(p, { p, el: 'bone', m: MOVE['bone.2'], dmg: stats(p).dmgMul, o, d: center(src).sub(o).normalize() }, 30, { r: .4, dmg: 30 * stats(p).dmgMul, kb: 6 });
+    return true;
+  }
   n *= stats(p).dr;
   if (p.bd.shell > 0) { const a = Math.min(p.bd.shell, n); p.bd.shell -= a; n -= a; if (p.bd.shell <= 0) { p.bf.shell = 0; shellBurst(p); } }
   if (src && (p.cur === 'magma' || p.bf.molten > 0) && !src.dead) applyStatus(src, 'magma', p);
   if (n <= 0) return true;
   p.hp -= n; ev({ k: 'hurt', id: p.id, n: Math.round(n) });
+  if (p.cur === 'soul' && p.bd.souls > 0) p.bd.souls = Math.max(0, p.bd.souls - 2);
   if (p.hp <= 0) { p.hp = 0; p.down = true; p.rev = 0; p.ch = null; p.chg = null; ev({ k: 'down', id: p.id }); }
   return true;
 }
@@ -366,6 +411,7 @@ function enemyHits(p, dmg, e) {
     if (S.t - p.dashAt < .4 && !(p.pdCd > S.t)) { p.pdCd = S.t + 1; S.slowmo = .55; addUlt(p, .12); p.stats.dodges++; ev({ k: 'dodge', id: p.id }); }
     return;
   }
+  if (e?.st?.illusion > 0 && Math.random() < 1 / 3) { ev({ k: 'miss', x: r2(p.x), y: r2(p.y + 1.6), z: r2(p.z), id: p.id }); return; } // Misdirection: it struck a phantom
   hurt(p, dmg * (1 - (e?.m?.weak || 0)), e);
 }
 function shellBurst(p) {
@@ -550,6 +596,7 @@ function canCast(p, m) {
   if (m.slot === 4) return p.ult >= 1;
   if ((p.cds[m.el]?.[m.slot] || 0) > 0) return false;
   if (m.cost && p.hp <= m.cost(p) + 1) return false;
+  if (m.el === 'plasma' && p.bf.overheat > 0) return false;
   return m.can ? m.can(p) : true;
 }
 function fire(p, m, k, host) {
@@ -560,8 +607,15 @@ function fire(p, m, k, host) {
     if (m.slot === 4) { p.ult = 0; ev({ k: 'ult', id: p.id, el: m.el, name: m.name }); }
     if (m.cost) p.hp = Math.max(1, p.hp - m.cost(p));
     if ((m.slot === 2 || m.slot === 3) && Math.random() < c.st.echo) { cds[m.slot] = 0; ev({ k: 'echo', id: p.id }); }
+    EL[m.el].onCast?.(p, m, c);
     ev(castEv(p, m, c));
     m.cast?.(p, c);
+    if (m.slot === 0 && p.bf.mirror > 0) for (const side of [-1, 1]) { // Mirror Images copy the basic attack from beside you, at 40%
+      const o = c.o.clone().add(V(Math.cos(p.yaw), 0, -Math.sin(p.yaw)).multiplyScalar(side * 1.6)), aimPt = c.eye.clone().addScaledVector(c.aim, 40);
+      const d = aimPt.sub(o).normalize();
+      ev({ k: 'fx', m: 'illusion.3', f: 'mimic', x: r2(o.x), y: r2(o.y), z: r2(o.z) });
+      m.cast?.(p, { ...c, o, d, eye: o.clone(), aim: d, dmg: c.dmg * .4, multi: 1 });
+    }
   }
   if (!host || p.id === 'h') m.self?.(p, c);   // movement belongs to whoever owns the player
   if (!host) castFx(castEv(p, m, c));          // the guest draws its own cast at once (prediction)
@@ -631,7 +685,7 @@ function bomberBlast(e, p, early) {
 function startAttack(e, tgt) {
   const t = ET[e.type], dx = tgt.x - e.x, dz = tgt.z - e.z, yaw = Math.atan2(dx, dz), R = t.r * e.sc;
   const wind = t.wind * (e.enraged ? .75 : 1);
-  e.atk = { k: t.atk, t: wind, max: wind, yaw, tx: tgt.x, tz: tgt.z };
+  e.atk = { k: t.atk, t: wind, max: wind, yaw, tx: tgt.x, tz: tgt.z, lure: tgt.lure };
   e.yaw = yaw;
   let tele;
   switch (t.atk) {
@@ -652,6 +706,7 @@ function resolveAttack(e) {
   const t = ET[e.type], a = e.atk, sc = 1 + .06 * (S.wave - 1), dmg = t.dmg * sc * (e.elite ? 1.5 : 1), ps = players().filter(p => !p.down);
   e.atk = null; e.acd = t.cd * rand(.85, 1.15) * (e.enraged ? .7 : 1);
   ev({ k: 'strike', id: e.id, a: a.k });
+  if (a.lure) for (const n of S.ents) if (n.lure && Math.hypot(n.x - a.tx, n.z - a.tz) < 1.5) n.hits = (n.hits || 0) + 1; // a decoy took the blow
   switch (a.k) {
     case 'swipe': for (const p of ps) if (inCone(p, e.x, e.z, a.yaw, t.reach * e.sc + .5, 115) && p.y < 1.6) enemyHits(p, dmg, e); break;
     case 'slam': for (const p of ps) if (Math.hypot(p.x - e.x, p.z - e.z) < t.reach * e.sc + .3 && p.y < 1.2) enemyHits(p, dmg, e); break;
@@ -669,7 +724,7 @@ function resolveAttack(e) {
       break;
     }
     case 'orb': {
-      const tgt = ps.reduce((b, p) => !b || Math.hypot(p.x - e.x, p.z - e.z) < Math.hypot(b.x - e.x, b.z - e.z) ? p : b, null);
+      const tgt = a.lure ? { x: a.tx, y: 0, z: a.tz } : ps.reduce((b, p) => !b || Math.hypot(p.x - e.x, p.z - e.z) < Math.hypot(b.x - e.x, b.z - e.z) ? p : b, null);
       if (!tgt) break;
       const o = V(e.x, e.y + 1.75 * e.sc, e.z), v = V(tgt.x, tgt.y + 1.2, tgt.z).sub(o).normalize().multiplyScalar(15);
       S.shots.push({ id: S.nid++, foe: 1, mv: 'foe', el: 'foe', x: o.x, y: o.y, z: o.z, vx: v.x, vy: v.y, vz: v.z, life: 3, dmg, sc: 1 });
@@ -686,7 +741,7 @@ function stepEnemies(dt) {
     if (S.tstop <= 0) { ev({ k: 'fx', m: 'chrono.4', f: 'resume' }); for (const e of S.enemies) if (e.tsd > 0 && !e.dead) { const d = e.tsd * 1.5; e.tsd = 0; damage(e, d, 'chrono', S.players[e.tsBy], { raw: true }); } }
     return;
   }
-  const sol = solids();
+  const sol = solids(), lures = S.ents.filter(n => n.lure);
   for (const e of S.enemies) {
     if (e.dead) continue;
     const t = ET[e.type], R = t.r * e.sc;
@@ -741,13 +796,24 @@ function stepEnemies(dt) {
     const vis = ps.filter(p => !(p.bf.veil > 0));
     let tgt = null, bd = 1e9;
     for (const p of vis) { const d = Math.hypot(p.x - e.x, p.z - e.z); if (d < bd) { bd = d; tgt = p; } }
+    for (const n of lures) { const d = Math.hypot(n.x - e.x, n.z - e.z); if (d < n.r && d * .5 < bd) { bd = d * .5; tgt = { x: n.x, y: 0, z: n.z, lure: 1 }; } } // Illusion decoys draw them in
     const spd = t.spd * rate;
+    if (ctype === 'charm') { // turned against their own: hunt the nearest other monster and hit it
+      const o = nearest(e.x, e.z, 30, [e.id]);
+      if (o) {
+        const dx = o.x - e.x, dz = o.z - e.z, d = Math.hypot(dx, dz) || 1;
+        e.yaw = Math.atan2(dx, dz);
+        if (d > R + ET[o.type].r * o.sc + .5) { e.x += dx / d * spd * dt; e.z += dz / d * spd * dt; }
+        else if ((e.acd -= dt * rate) <= 0) { e.acd = t.cd; ev({ k: 'strike', id: e.id, a: t.atk }); damage(o, Math.max(10, t.dmg) * 1.6 * (e.elite ? 1.5 : 1), 'illusion', S.players[e.cc.src] || null); }
+        continue;
+      }
+    }
     if (ctype === 'fear' && ps.length) { // run from the nearest player
       const p = ps.reduce((b, q) => Math.hypot(q.x - e.x, q.z - e.z) < Math.hypot(b.x - e.x, b.z - e.z) ? q : b);
       const dx = e.x - p.x, dz = e.z - p.z, d = Math.hypot(dx, dz) || 1;
       e.x += dx / d * spd * 1.2 * dt; e.z += dz / d * spd * 1.2 * dt; e.yaw = Math.atan2(dx, dz); continue;
     }
-    if (ctype === 'blind' || !tgt) { // stumble around
+    if (ctype === 'blind' || ctype === 'poly' || ctype === 'charm' || !tgt) { // stumble around (a sheep just grazes)
       e.wander += rand(-2, 2) * dt;
       e.x += Math.sin(e.wander) * spd * .4 * dt; e.z += Math.cos(e.wander) * spd * .4 * dt; e.yaw = e.wander;
       if (e.atk) e.atk = null;
@@ -815,6 +881,13 @@ function stepPlayers(dt) {
       if (p.bf.bloom > 0) heal(p, 3.75);
     }
     if (p.bf.shell <= 0 && p.bd.shell > 0) { p.bd.shell = 0; shellBurst(p); }
+    if (p.bd.heat > 0) p.bd.heat = Math.max(0, p.bd.heat - 15 * dt); // Plasma Heat cools off
+    if (p.bd.arc > 0 && (p.bd.arcT -= dt) <= 0) p.bd.arc = 0;      // Arcane charges fade when you stop casting
+    if (p.cur === 'blades') { // Sword Halo: a sword forms every 2.5 s, and an orbiting sword cuts down anything that gets close
+      if ((p.bd.swordT = (p.bd.swordT ?? 2.5) - dt) <= 0) { p.bd.swordT = 2.5; p.bd.swords = Math.min(6, (p.bd.swords || 0) + 1); }
+      const e = p.bd.swords > 0 && (p.bd.guardT = (p.bd.guardT || 0) - dt) <= 0 && nearest(p.x, p.z, 3);
+      if (e) { p.bd.guardT = .35; p.bd.swords--; const q = center(e); ev({ k: 'fx', m: 'blades.0', f: 'guard', id: p.id, x: r2(q.x), y: r2(q.y), z: r2(q.z) }); hitEnemy(e, 'blades', 18 * st.dmgMul, p, e.x - p.x, e.z - p.z, 4); }
+    }
     if (p.dashes !== p.novaN) { p.novaN = p.dashes; if (st.nova) { blast(p.x, p.z, 4.5, 15 * st.dmgMul, { p, el: p.cur }, { kb: 6 }); ev({ k: 'fx', m: p.cur + '.0', f: 'nova', x: r2(p.x), z: r2(p.z) }); } }
     if (st.storm && (p.stormT = (p.stormT ?? 3) - dt) <= 0) {
       p.stormT = 3 / st.storm;

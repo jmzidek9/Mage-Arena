@@ -219,7 +219,7 @@ const CIRCLE_PARTS = ['ring_outer', 'runes', 'ring_inner', 'sigil'];
 // elements.glb names everything "<element>__<part>" (unique, so no dedupe suffixes)
 const NODE = {};
 for (const o of [...elementsG.children]) { NODE[o.name] = o; o.position.set(0, 0, 0); }
-const CTPL = { arcane: CIRCLE_PARTS.map(n => { const o = arena.getObjectByName('sigil_' + n).clone(); o.position.set(0, 0, 0); o.scale.set(1, 1, 1); return o; }) };
+const CTPL = { sigil: CIRCLE_PARTS.map(n => { const o = arena.getObjectByName('sigil_' + n).clone(); o.position.set(0, 0, 0); o.scale.set(1, 1, 1); return o; }) };
 for (const n in NODE) { const m = n.match(/^(\w+?)__ring_outer$/); if (m) CTPL[m[1]] = CIRCLE_PARTS.map(p => NODE[m[1] + '__' + p]); }
 const sp = n => grab(spellsG, n);
 const T = {
@@ -509,7 +509,7 @@ function comboText(name, color) { const c = $('combo'); c.textContent = name + '
 // so nothing repeats exactly. Layers can be filtered, delayed, reversed, trimmed and sent to a shared reverb.
 let AC = null, master, sfxBus, revBus, musicBus;
 const lastSfx = {}, SAMPLES = {}, POOLS = {};
-let sfxVol = .35, musicVol = .5, voices = 0;
+let sfxVol = .35, musicVol = .4, voices = 0;
 function initAudio() {
   if (AC) { if (AC.state === 'suspended') AC.resume(); return; } // Safari / iOS start audio suspended until a tap
   const Ctx = window.AudioContext || window.webkitAudioContext; if (!Ctx) return;
@@ -522,101 +522,125 @@ function initAudio() {
   const len = AC.sampleRate * 2.2 | 0, ir = AC.createBuffer(2, len, AC.sampleRate);
   for (let c = 0; c < 2; c++) { const d = ir.getChannelData(c); let lp = 0; for (let i = 0; i < len; i++) { const k = i / len; lp += (Math.random() * 2 - 1 - lp) * (.5 - .42 * k); d[i] = lp * Math.pow(1 - k, 2.6); } }
   const conv = AC.createConvolver(); conv.buffer = ir; revBus = AC.createGain(); revBus.gain.value = .5; revBus.connect(conv); conv.connect(sfxBus);
-  musicBus = AC.createGain(); musicBus.gain.value = musicVol; musicBus.connect(AC.destination);
+  const lim = AC.createDynamicsCompressor(); lim.threshold.value = -6; lim.knee.value = 3; lim.ratio.value = 12; lim.attack.value = .002; lim.release.value = .2; // music never clips, even at 150%
+  musicBus = AC.createGain(); musicBus.gain.value = musicVol; musicBus.connect(lim); lim.connect(AC.destination);
   const b64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0)).buffer;
   for (const [n, s] of Object.entries(window.MAGE_AUDIO?.sfx || {})) {
     // older Safari can't decode Ogg: those layers are simply skipped
-    AC.decodeAudioData(b64(s), buf => { // normalize every sample to the same peak, so recipe volumes mean the same thing
-      let pk = 0; for (let c = 0; c < buf.numberOfChannels; c++) for (const v of buf.getChannelData(c)) pk = Math.max(pk, Math.abs(v));
-      if (pk > 0) for (let c = 0; c < buf.numberOfChannels; c++) { const d = buf.getChannelData(c); for (let i = 0; i < d.length; i++) d[i] /= pk; }
+    AC.decodeAudioData(b64(s), buf => { // level every sample by its loudest moment (not its peak), so recipe volumes mean the same thing
+      const d0 = buf.getChannelData(0); let pk = 0, loud = 0;
+      for (let i = 0; i < d0.length; i += 512) { let q = 0; const e = Math.min(d0.length, i + 1024); for (let j = i; j < e; j++) q += d0[j] * d0[j]; loud = Math.max(loud, Math.sqrt(q / (e - i))); }
+      for (let c = 0; c < buf.numberOfChannels; c++) for (const v of buf.getChannelData(c)) pk = Math.max(pk, Math.abs(v));
+      const k = Math.min(.3 / loud, 1.5 / pk); // ...but never push a spiky sample's peak far past full scale
+      if (loud > 0) for (let c = 0; c < buf.numberOfChannels; c++) { const d = buf.getChannelData(c); for (let i = 0; i < d.length; i++) d[i] *= k; }
       SAMPLES[n] = buf; for (const k in POOLS) delete POOLS[k];
     }, () => {});
   }
 }
-// layer: [pool, volume, { r: rate or [lo, hi], d: delay, lp / hp: filter Hz, rev: reverb send, rv: reversed, len: trim seconds }]
+// layer: [pool (a sample-name prefix, or a list of them), volume, { r: rate or [lo, hi], d: delay, lp / hp: filter Hz, rev: reverb send, rv: reversed, len: trim seconds }]
 const SFX = {
-  hit: [['impactPunch_medium', .5, { r: [.9, 1.15] }], ['impactGeneric_light', .2, { r: [1, 1.3] }]],
-  crit: [['impactPunch_heavy', .65], ['impactMetal_light', .3, { r: [1.2, 1.5] }], ['impactGlass_light', .18, { r: [1.3, 1.6], rev: .3 }]],
-  die: [['creature_hurt', .4, { r: [.6, .9] }], ['impactSoft_heavy', .55, { r: [.8, 1] }], ['creature_die', .3, { r: [.8, 1.1], d: .04 }]],
-  hurt: [['impactPunch_heavy', .8, { r: [.75, .9] }], ['impactSoft_heavy', .5, { r: [.7, .8], lp: 900 }]],
-  smash: [['impactMining', .7, { r: [.6, .75], rev: .25 }], ['lowFrequency_explosion_001', .8, { r: [.9, 1.1] }], ['stones', .35, { d: .05 }]],
-  boom: [['explosionCrunch', .7, { r: [.85, 1.05], rev: .3 }], ['lowFrequency_explosion', .7]],
-  ring: [['creature_roar', .7, { r: [.45, .55], rev: .5 }], ['lowFrequency_explosion_000', .9], ['explosionCrunch', .35, { r: [.6, .7], lp: 1200 }]],
-  spawn: [['creature_monster', .3, { r: [.6, .8], rev: .3 }], ['slime_000', .2, { r: .6 }]],
-  combo: [['explosionCrunch', .65, { r: [1, 1.15], rev: .4 }], ['impactBell_heavy_000', .5, { r: [.9, 1.1], rev: .6 }], ['magical_3', .55, { rev: .4 }], ['lowFrequency_explosion_001', .8]],
-  wave: [['impactBell_heavy_001', .75, { r: .5, rev: .7 }], ['lowFrequency_explosion_000', .55, { r: .8 }]],
-  pick: [['item_gem', .45, { r: [1, 1.15] }], ['impactBell_heavy_004', .22, { r: 2, rev: .4 }]],
-  swap: [['cloth', .45, { r: [1.1, 1.3] }], ['item_gem_02', .3, { r: [1.2, 1.4], rev: .3 }]],
-  dash: [['blade', .4, { r: [.55, .7], lp: 3000 }], ['cloth1', .3, { r: [1.3, 1.5] }]],
-  dodge: [['blade', .45, { r: [.8, .9] }], ['magical_5', .45, { r: [1.2, 1.3], rev: .5 }], ['impactBell_heavy_004', .22, { r: 2.5, rev: .6 }]],
-  ult: [['magical_3', .75, { r: [.8, .9], rev: .5 }], ['forceField', .45, { r: .7 }], ['lowFrequency_explosion_000', .8], ['explosionCrunch', .35, { d: .08, rev: .4 }]],
-  ready: [['impactBell_heavy_004', .35, { r: 2, rev: .5 }], ['item_gem_04', .3, { r: 1.2 }]],
-  heal: [['magical_1_0', .5, { r: [1.1, 1.2], rev: .5 }], ['item_gem_04', .28, { r: 1.3, rev: .4 }]],
-  pickup: [['item_coins_01', .4], ['item_gem_01', .28, { r: 1.2 }]],
-  stagger: [['impactPlate_heavy', .55, { r: .7 }], ['impactMetal_heavy', .35, { r: .8, rev: .3 }]],
-  block: [['impactMetal_heavy', .55], ['impactPlate_medium', .35, { r: 1.2 }]],
-  tele: [['creature_misc_05', .18, { r: .6, lp: 1500 }]],
-  fuse: [['metalClick', .22, { r: [1.4, 1.6] }]],
-  tink: [['impactGlass_light', .4, { r: [1, 1.25], rev: .25 }]],
-  resume: [['forceField', .45, { r: 1.3 }], ['magical_2', .45, { rev: .4 }]],
-  orb: [['magical_6_0', .35, { r: 1.3 }]],
-  step: [['footstep_concrete', .2, { r: [.85, 1.1], lp: 2500 }]],
-  stepD: [['footstep0', .18, { r: [.85, 1.05], rev: .15 }]],
-  jump: [['cloth', .25, { r: [1.2, 1.4] }]],
-  land: [['footstep_concrete', .35, { r: .7 }], ['impactSoft_medium', .25, { r: .8, lp: 600 }]],
+  hit: [['impactPunch_medium', .81, { r: [.9, 1.15] }], ['impactGeneric_light', .32, { r: [1, 1.3] }]],
+  crit: [['impactPunch_heavy', 1.13], ['impactMetal_light', .52, { r: [1.2, 1.5] }], ['impactGlass_light', .31, { r: [1.3, 1.6], rev: .3 }]],
+  die: [['creature_hurt', .54, { r: [.6, .9] }], ['impactSoft_heavy', .74, { r: [.8, 1] }], ['creature_die', .41, { r: [.8, 1.1], d: .04 }]],
+  hurt: [['impactPunch_heavy', 1.17, { r: [.75, .9] }], ['impactSoft_heavy', .73, { r: [.7, .8], lp: 900 }]],
+  smash: [['impactMining', .84, { r: [.6, .75], rev: .25 }], ['lowFrequency_explosion_001', .96, { r: [.9, 1.1] }], ['stones', .42, { d: .05 }]],
+  boom: [['explosionCrunch', .83, { r: [.85, 1.05], rev: .3 }], ['lowFrequency_explosion', .83]],
+  ring: [['creature_roar', .83, { r: [.45, .55], rev: .5 }], ['lowFrequency_explosion_000', 1.06], ['explosionCrunch', .41, { r: [.6, .7], lp: 1200 }]],
+  spawn: [[['creature_monster_03', 'creature_monster_04'], .23, { r: [.6, .8], rev: .3 }], ['slime_000', .15, { r: .6 }]],
+  combo: [['explosionCrunch', .87, { r: [1, 1.15], rev: .4 }], ['impactBell_heavy_000', .67, { r: [.9, 1.1], rev: .6 }], ['magical_3', .74, { rev: .4 }], ['lowFrequency_explosion_001', 1.07]],
+  wave: [['impactBell_heavy_001', .89, { r: .5, rev: .7 }], ['lowFrequency_explosion_000', .65, { r: .8 }]],
+  pick: [[['item_gem_01', 'item_gem_04'], 1.17, { r: [1, 1.15] }], ['impactBell_heavy_004', .57, { r: 2, rev: .4 }]],
+  swap: [['cloth', .5, { r: [1.1, 1.3] }], ['item_gem_02', .33, { r: [1.2, 1.4], rev: .3 }]],
+  dash: [['blade', .41, { r: [.55, .7], lp: 3000 }], ['cloth1', .31, { r: [1.3, 1.5] }]],
+  dodge: [['blade', .57, { r: [.8, .9] }], ['magical_5', .57, { r: [1.2, 1.3], rev: .5 }], ['impactBell_heavy_004', .28, { r: 2.5, rev: .6 }]],
+  ult: [['magical_3', 1, { r: [.8, .9], rev: .5 }], ['forceField', .6, { r: .7 }], ['lowFrequency_explosion_000', 1.06], ['explosionCrunch', .47, { d: .08, rev: .4 }]],
+  ready: [['impactBell_heavy_004', .96, { r: 2, rev: .5 }], ['item_gem_04', .82, { r: 1.2 }]],
+  heal: [['magical_1_0', .49, { r: [1.1, 1.2], rev: .5 }], ['item_gem_04', .28, { r: 1.3, rev: .4 }]],
+  pickup: [['item_coins_01', .82], ['item_gem_01', .58, { r: 1.2 }]],
+  stagger: [['impactPlate_heavy', 1.12, { r: .7 }], ['impactMetal_heavy', .71, { r: .8, rev: .3 }]],
+  block: [['impactMetal_heavy', 1.55], ['impactPlate_medium', .98, { r: 1.2 }]],
+  tele: [['creature_misc_05', .16, { r: .6, lp: 1500 }]],
+  fuse: [['metalClick', .21, { r: [1.4, 1.6] }]],
+  tink: [['impactGlass_light', 1.24, { r: [1, 1.25], rev: .25 }]],
+  resume: [['forceField', .54, { r: 1.3 }], ['magical_2', .54, { rev: .4 }]],
+  orb: [['magical_6_0', .29, { r: 1.3 }]],
+  step: [['footstep_concrete', .57, { r: [.85, 1.1], lp: 2500 }]],
+  stepD: [['footstep_concrete', .62, { r: [.85, 1.05], rev: .15 }]],
+  jump: [['cloth', .3, { r: [1.2, 1.4] }]],
+  land: [['footstep_concrete', .72, { r: .7 }], ['impactSoft_medium', .51, { r: .8, lp: 600 }]],
   // elements: <el> for the basic attack, <el>_big for everything heavier
-  fire: [['spell_fire', .65, { r: [1, 1.2], len: .5 }], ['thrusterFire', .2, { len: .3, hp: 500 }]],
-  fire_big: [['spell_fire', .85, { r: [.8, .9], rev: .3 }], ['explosionCrunch', .4, { r: .8, rev: .3 }], ['lowFrequency_explosion_001', .55]],
-  frost: [['impactGlass_medium', .45, { r: [1.1, 1.3], rev: .3 }], ['magical_5', .3, { r: 1.4, len: .5 }]],
-  frost_big: [['impactGlass_heavy', .65, { r: [.8, .9], rev: .4 }], ['impactGlass_medium', .45, { d: .06, r: .7 }], ['forceField', .25, { r: 1.5, hp: 800 }]],
-  storm: [['explosionCrunch_002', .45, { r: [1.6, 1.9], hp: 1500 }], ['impactMetal_light', .25, { r: [1.5, 1.8] }], ['chain', .2, { r: 1.5 }]],
-  storm_big: [['explosionCrunch', .65, { r: [1.3, 1.5], hp: 900, rev: .4 }], ['lowFrequency_explosion_000', .55, { d: .12, lp: 300, rev: .6 }], ['chain', .25, { r: 1.3 }]],
-  water: [['creature_slime', .45, { r: [.7, .9] }], ['slime_000', .3, { r: .8 }]],
-  water_big: [['creature_slime', .55, { r: .5, rev: .4 }], ['impactSoft_heavy', .45, { r: .6 }], ['thrusterFire', .3, { len: .9, lp: 1200, rev: .3 }]],
-  earth: [['stones', .5, { r: [.8, 1] }], ['impactMining', .3, { r: .7 }]],
-  earth_big: [['impactMining', .75, { r: [.5, .6], rev: .3 }], ['stones_03', .55, { r: .8 }], ['lowFrequency_explosion_001', .8]],
-  wind: [['thrusterFire', .28, { len: .4, hp: 1200 }], ['cloth', .3, { r: 1.4 }]],
-  wind_big: [['thrusterFire', .45, { len: 1.2, hp: 500, rev: .4 }], ['blade', .3, { r: .5 }]],
-  nature: [['wood_0', .4, { r: [.9, 1.2] }], ['cloth', .22, { r: 1.6 }]],
-  nature_big: [['creak', .45, { r: .8, rev: .3 }], ['impactWood_heavy', .55, { r: .7 }], ['wood_0', .35, { d: .05 }]],
-  shadow: [['magical_4', .45, { r: [.6, .7], len: .8, rev: .4 }], ['cloth', .22, { r: .6 }]],
+  fire: [[['spell_fire_01', 'spell_fire_02', 'spell_fire_05', 'spell_fire_06', 'spell_fire_07'], .53, { r: [1, 1.2], len: .5 }], ['thrusterFire', .16, { len: .3, hp: 500 }]],
+  fire_big: [['spell_fire', .93, { r: [.8, .9], rev: .3 }], ['explosionCrunch', .44, { r: .8, rev: .3 }], ['lowFrequency_explosion_001', .6]],
+  frost: [['impactGlass_medium', .52, { r: [1.1, 1.3], rev: .3 }], ['magical_5', .35, { r: 1.4, len: .5 }]],
+  frost_big: [['impactGlass_heavy', 1.92, { r: [.8, .9], rev: .4 }], ['impactGlass_medium', 1.33, { d: .06, r: .7 }], ['forceField', .74, { r: 1.5, hp: 800 }]],
+  storm: [['explosionCrunch_002', .71, { r: [1.6, 1.9], hp: 1500 }], ['impactMetal_light', .4, { r: [1.5, 1.8] }], ['chain', .32, { r: 1.5 }]],
+  storm_big: [['explosionCrunch', .82, { r: [1.3, 1.5], hp: 900, rev: .4 }], ['lowFrequency_explosion_000', .69, { d: .12, lp: 300, rev: .6 }], ['chain', .32, { r: 1.3 }]],
+  water: [['creature_slime', .43, { r: [.7, .9] }], ['slime_000', .28, { r: .8 }]],
+  water_big: [['creature_slime', .71, { r: .5, rev: .4 }], ['impactSoft_heavy', .58, { r: .6 }], ['thrusterFire', .39, { len: .9, lp: 1200, rev: .3 }]],
+  earth: [['stones', .86, { r: [.8, 1] }], ['impactMining', .52, { r: .7 }]],
+  earth_big: [['impactMining', .76, { r: [.5, .6], rev: .3 }], ['stones_03', .56, { r: .8 }], ['lowFrequency_explosion_001', .81]],
+  wind: [['thrusterFire', .53, { len: .4, hp: 1200 }], ['cloth', .56, { r: 1.4 }]],
+  wind_big: [['thrusterFire', 1.15, { len: 1.2, hp: 500, rev: .4 }], ['blade', .77, { r: .5 }]],
+  nature: [[['wood_03', 'wood_04', 'wood_05'], 1.04, { r: [.9, 1.2] }], ['cloth', .57, { r: 1.6 }]],
+  nature_big: [['creak', .66, { r: .8, rev: .3 }], ['impactWood_heavy', .81, { r: .7 }], ['wood_0', .51, { d: .05 }]],
+  shadow: [['magical_4', .34, { r: [.6, .7], len: .7, rev: .25 }], ['cloth', .17, { r: .6 }]],
   shadow_big: [['magical_4', .65, { r: .5, rev: .6 }], ['creature_monster_03', .3, { r: .5, rev: .5 }], ['lowFrequency_explosion_000', .45]],
-  light: [['magical_7_0', .5, { r: [1.2, 1.3], len: .7, rev: .4 }], ['impactBell_heavy_004', .22, { r: 3, rev: .5 }]],
-  light_big: [['impactBell_heavy_000', .5, { r: 1.6, rev: .7 }], ['magical_7_0', .55, { rev: .5 }], ['magical_2', .35, { r: 1.3 }]],
-  venom: [['creature_slime', .4, { r: [1.1, 1.3] }], ['slime_000', .22, { r: 1.3 }]],
-  venom_big: [['slime_001', .4, { len: .9, r: .8, rev: .3 }], ['creature_slime', .45, { r: .8 }], ['impactSoft_medium', .35]],
-  steel: [['blade', .5, { r: [1, 1.15] }], ['impactMetal_light', .28, { r: [1.1, 1.3], d: .03 }]],
-  steel_big: [['knifeSlice', .55], ['impactMetal_heavy', .55, { r: .8, rev: .3 }], ['chain', .3]],
-  magma: [['spell_fire', .5, { r: .7 }], ['stones_04', .35, { r: .8 }]],
-  magma_big: [['explosionCrunch', .65, { r: [.6, .7], rev: .4 }], ['stones_03', .45, { r: .7 }], ['lowFrequency_explosion_000', .75], ['spell_fire', .45, { r: .6 }]],
-  crystal: [['item_gem', .5, { r: [1.1, 1.3], rev: .3 }], ['impactGlass_light', .28, { r: 1.5 }]],
-  crystal_big: [['impactGlass_heavy', .55, { r: 1.1, rev: .5 }], ['item_gem_04', .45, { r: 1.4, rev: .4 }], ['impactBell_heavy_002', .28, { r: 2.2, rev: .6 }]],
-  sonic: [['impactBell_heavy_003', .35, { r: [1.4, 1.6], rev: .3 }], ['forceField', .28, { r: 1.8, len: .3 }]],
-  sonic_big: [['forceField', .55, { r: 1.1, rev: .4 }], ['impactBell_heavy_002', .45, { r: .9, rev: .5 }], ['lowFrequency_explosion_001', .55]],
-  gravity: [['forceField', .4, { r: [.5, .55], rev: .3 }], ['lowFrequency_explosion_001', .35, { r: .7 }]],
-  gravity_big: [['lowFrequency_explosion_000', .85, { r: .7, rev: .5 }], ['magical_4', .45, { r: .45, rv: 1, rev: .5 }], ['forceField', .35, { r: .4 }]],
-  chrono: [['lock', .35, { r: [1.2, 1.4] }], ['magical_6_0', .35, { r: 1.2, rv: 1 }]],
-  chrono_big: [['impactBell_heavy_001', .45, { rv: 1, r: 1.2, rev: .6 }], ['lock', .35, { d: .1 }], ['magical_3', .35, { rv: 1 }]],
-  blood: [['impactSoft_medium', .45, { r: [.8, 1] }], ['creature_slime', .28, { r: .7 }]],
-  blood_big: [['impactSoft_heavy', .55, { r: .7 }], ['creature_hurt', .3, { r: .5, rev: .4 }], ['slime_000', .35, { r: .6 }]],
-  spirit: [['magical_1_0', .4, { r: [1.2, 1.4], len: .7, rev: .5 }], ['creature_misc_03', .18, { r: 1.5, rev: .6 }]],
-  spirit_big: [['magical_1_0', .55, { r: .8, rev: .6 }], ['impactBell_heavy_000', .28, { rv: 1, r: 1.4, rev: .6 }], ['forceField', .28, { r: 1.2 }]],
-  cosmic: [['magical_7_0', .45, { r: [.8, .9], len: .6, rev: .5 }], ['forceField', .28, { r: 1.6, len: .3 }]],
-  cosmic_big: [['magical_3', .55, { r: .7, rev: .6 }], ['lowFrequency_explosion_000', .65], ['impactBell_heavy_000', .35, { r: .8, rev: .7 }]],
-  explosion: [['explosionCrunch', .6, { r: [1, 1.2] }], ['lowFrequency_explosion_001', .45]],
-  explosion_big: [['explosionCrunch', .85, { r: [.75, .85], rev: .4 }], ['lowFrequency_explosion_000', .85], ['stones', .35, { d: .1 }]],
+  light: [['magical_7_0', .48, { r: [1.2, 1.3], len: .7, rev: .4 }], ['impactBell_heavy_004', .21, { r: 3, rev: .5 }]],
+  light_big: [['impactBell_heavy_000', .67, { r: 1.6, rev: .7 }], ['magical_7_0', .73, { rev: .5 }], ['magical_2', .47, { r: 1.3 }]],
+  venom: [['creature_slime', .46, { r: [1.1, 1.3] }], ['slime_000', .26, { r: 1.3 }]],
+  venom_big: [['slime_001', .68, { len: .9, r: .8, rev: .3 }], ['creature_slime', .76, { r: .8 }], ['impactSoft_medium', .59]],
+  steel: [['blade', .61, { r: [1, 1.15] }], ['impactMetal_light', .34, { r: [1.1, 1.3], d: .03 }]],
+  steel_big: [['knifeSlice', 1.05], ['impactMetal_heavy', 1.05, { r: .8, rev: .3 }], ['chain', .57]],
+  magma: [['spell_fire', .44, { r: .7 }], ['stones_04', .31, { r: .8 }]],
+  magma_big: [['explosionCrunch', .63, { r: [.6, .7], rev: .4 }], ['stones_03', .44, { r: .7 }], ['lowFrequency_explosion_000', .73], ['spell_fire', .44, { r: .6 }]],
+  crystal: [[['item_gem_01', 'item_gem_04'], 1.61, { r: [1.1, 1.3], rev: .3 }], ['impactGlass_light', .9, { r: 1.5 }]],
+  crystal_big: [['impactGlass_heavy', 3.06, { r: 1.1, rev: .5 }], ['item_gem_04', 2.51, { r: 1.4, rev: .4 }], ['impactBell_heavy_002', 1.57, { r: 2.2, rev: .6 }]],
+  sonic: [['impactBell_heavy_003', .52, { r: [1.4, 1.6], rev: .3 }], ['forceField', .42, { r: 1.8, len: .3 }]],
+  sonic_big: [['forceField', .51, { r: 1.1, rev: .4 }], ['impactBell_heavy_002', .41, { r: .9, rev: .5 }], ['lowFrequency_explosion_001', .51]],
+  gravity: [['forceField', .25, { r: [.5, .55], rev: .2, len: .7 }], ['lowFrequency_explosion_001', .22, { r: .7, len: .6 }]],
+  gravity_big: [['lowFrequency_explosion_000', .71, { r: .7, rev: .5 }], ['magical_4', .37, { r: .45, rv: 1, rev: .5 }], ['forceField', .29, { r: .4 }]],
+  chrono: [['lock', .33, { r: [1.2, 1.4] }], ['magical_6_0', .33, { r: 1.2, rv: 1 }]],
+  chrono_big: [['impactBell_heavy_001', .74, { rv: 1, r: 1.2, rev: .6 }], ['lock', .57, { d: .1 }], ['magical_3', .57, { rv: 1 }]],
+  blood: [['impactSoft_medium', .56, { r: [.8, 1] }], ['creature_slime', .35, { r: .7 }]],
+  blood_big: [['impactSoft_heavy', 1.04, { r: .7 }], ['creature_hurt', .57, { r: .5, rev: .4 }], ['slime_000', .66, { r: .6 }]],
+  spirit: [['magical_1_0', .42, { r: [1.2, 1.4], len: .7, rev: .5 }], ['creature_misc_03', .19, { r: 1.5, rev: .6 }]],
+  spirit_big: [['magical_1_0', .78, { r: .8, rev: .6 }], ['impactBell_heavy_000', .39, { rv: 1, r: 1.4, rev: .6 }], ['forceField', .39, { r: 1.2 }]],
+  cosmic: [['magical_7_0', .47, { r: [.8, .9], len: .6, rev: .3 }], ['forceField', .29, { r: 1.6, len: .3 }]],
+  cosmic_big: [['magical_3', .61, { r: .7, rev: .6 }], ['lowFrequency_explosion_000', .72], ['impactBell_heavy_000', .39, { r: .8, rev: .7 }]],
+  explosion: [['explosionCrunch', .38, { r: [1, 1.2] }], ['lowFrequency_explosion_001', .28]],
+  explosion_big: [['explosionCrunch', .77, { r: [.75, .85], rev: .4 }], ['lowFrequency_explosion_000', .77], ['stones', .32, { d: .1 }]],
+  illusion: [['magical_5', .4, { r: [1.3, 1.5], len: .6, rev: .5 }], ['item_gem_02', .45, { r: [1.6, 1.9], rev: .4 }]],
+  illusion_big: [['magical_5', .6, { r: .85, rv: 1, rev: .6 }], ['impactGlass_light', .8, { r: .8, rev: .6 }], ['forceField', .35, { r: 1.9, len: .6 }]],
+  bone: [['impactWood_medium', .75, { r: [1.25, 1.45] }], ['blade', .3, { r: [1.3, 1.5] }]],
+  bone_big: [['impactWood_heavy', .85, { r: .8, rev: .3 }], ['impactPlank_medium', .75, { r: .7 }], ['creature_monster_03', .25, { r: .7, rev: .4 }]],
+  rune: [['bookFlip', .7, { r: [1.1, 1.3] }], ['magical_7_0', .35, { r: [1.4, 1.6], len: .5, rev: .4 }]],
+  rune_big: [['book_0', .75, { r: .9, rev: .3 }], ['impactBell_heavy_001', .55, { r: 1.3, rev: .6 }], ['impactMining', .4, { r: .8 }]],
+  plasma: [['laserRetro', .45, { r: [.8, .95] }], ['thrusterFire', .2, { len: .25, hp: 800 }]],
+  plasma_big: [['laserLarge', .7, { r: .7, rev: .3 }], ['explosionCrunch', .45, { r: 1.2, rev: .3 }], ['spaceEngineSmall', .3, { len: .6, r: 1.5 }]],
+  soul: [['magical_4', .35, { r: [.9, 1], len: .6, rev: .5 }], ['forceField', .22, { r: 2, len: .3 }]],
+  soul_big: [['magical_1_0', .7, { r: .6, rev: .7 }], ['creature_roar', .25, { r: .8, rev: .6 }], ['lowFrequency_explosion_000', .5]],
+  abyss: [['creature_slime', .45, { r: [.55, .7] }], ['magical_4', .28, { r: .45, len: .5, rev: .4 }]],
+  abyss_big: [['creature_monster', .4, { r: .55, rev: .5 }], ['slime_001', .6, { r: .6, len: .9 }], ['lowFrequency_explosion_000', .6, { r: .7 }]],
+  laser: [['laserSmall', .5, { r: [.95, 1.1] }]],
+  laser_big: [['laserLarge', .8, { r: [.9, 1] }], ['laserRetro', .35, { r: 1.3, d: .03 }], ['forceField', .3, { r: 1.6, len: .4 }]],
+  arcane: [['magical_6_0', .38, { r: [1.1, 1.3], rev: .4 }], ['spell_0', .32, { r: [1.2, 1.4], len: .4 }]],
+  arcane_big: [['magical_3', .7, { r: 1.1, rev: .6 }], ['spell_0', .6, { r: .9, rev: .4 }], ['impactBell_heavy_002', .4, { r: 1.6, rev: .6 }]],
+  blades: [['drawKnife', .6, { r: [1.05, 1.25] }], ['blade', .3, { r: [1.2, 1.4] }]],
+  blades_big: [['drawKnife', .9, { r: .85, rev: .3 }], ['metal_0', .6, { r: .9 }], ['impactBell_heavy_004', .35, { r: 1.5, rev: .5 }]],
 };
 const REV = new WeakMap(); // reversed copies, made on first use
+const live = {}; // per sound: the copies still ringing, oldest first
 function pickSample(pool) {
-  const list = POOLS[pool] ||= Object.keys(SAMPLES).filter(n => n.startsWith(pool));
+  const list = POOLS[pool] ||= Object.keys(SAMPLES).filter(n => [].concat(pool).some(p => n.startsWith(p)));
   const b = list[Math.random() * list.length | 0]; return b && SAMPLES[b];
 }
 function sfx(type) {
   if (!AC || !SFX[type] || AC.state !== 'running') return;
   const t = AC.currentTime;
-  if (t - (lastSfx[type] || 0) < .04 || voices > 40) return; // same sound re-fired within a frame, or too many at once
+  if (t - (lastSfx[type] || 0) < .06 || voices > 40) return; // same sound re-fired within a few frames, or too many at once
   lastSfx[type] = t;
-  const drift = 1 + (Math.random() - .5) * .08;
+  const drift = 1 + (Math.random() - .5) * .08, inst = { gs: [], srcs: [] }, L = live[type] ||= [];
+  if (L.length >= 2) { const o = L.shift(); for (const g of o.gs) { g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(g.gain.value, t); g.gain.linearRampToValueAtTime(0, t + .08); } for (const x of o.srcs) try { x.stop(t + .1); } catch {} } // spammed: fade the oldest copy instead of stacking a third
   for (const [pool, v, o = {}] of SFX[type]) {
     let buf = pickSample(pool); if (!buf) continue;
     if (o.rv) { if (!REV.has(buf)) { const r = AC.createBuffer(buf.numberOfChannels, buf.length, buf.sampleRate); for (let c = 0; c < buf.numberOfChannels; c++) r.getChannelData(c).set(buf.getChannelData(c).slice().reverse()); REV.set(buf, r); } buf = REV.get(buf); }
@@ -629,8 +653,10 @@ function sfx(type) {
     node.connect(g); g.connect(sfxBus);
     if (o.rev) { const s = AC.createGain(); s.gain.value = o.rev; g.connect(s); s.connect(revBus); }
     src.start(at); if (o.len) src.stop(at + o.len + .01);
-    voices++; src.onended = () => voices--;
+    voices++; inst.gs.push(g); inst.srcs.push(src);
+    src.onended = () => { voices--; if (inst.srcs.every(x => x.done || x === src)) { const i = L.indexOf(inst); if (i >= 0) L.splice(i, 1); } src.done = true; };
   }
+  if (inst.srcs.length) L.push(inst);
 }
 // ---- music: real CC0 tracks per situation, crossfaded; each list shuffles without repeating the track just heard ----
 const MUSIC = {
@@ -641,11 +667,15 @@ const MUSIC = {
   boss: ['weltherrscher.ogg', 'mythica.mp3'],
   over: ['dark_shrine.ogg'],
 };
+// per-track level in dB: the tracks were mastered 28 dB apart, measured and evened out (battle a bit louder than ambience)
+const MUSIC_DB = { 'battle_theme_a.mp3': -4.4, 'cave_explorer.mp3': 3.2, 'dark_shrine.ogg': 3.9, 'dungeon_ambience.ogg': 20.7, 'dungeon_theme.mp3': -5.7, 'fantasy_orchestral_theme.mp3': -1.1,
+  'forgotten_tombs.mp3': -1.6, 'heartfelt_battle.ogg': 5.4, 'mythica.mp3': -3.5, 'random_battle.mp3': -3.9, 'swordfight.ogg': -1.7, 'weltherrscher.ogg': 1 };
 const tracks = {}; let musicMood = null, musicNow = null;
 function track(name) { // an <audio> element streamed from the packed bytes, routed through its own fade gain
   if (tracks[name]) return tracks[name];
   const s = window.MAGE_AUDIO?.music?.[name]; if (!s || !AC) return null;
-  const el = new Audio(URL.createObjectURL(new Blob([Uint8Array.from(atob(s), c => c.charCodeAt(0))], { type: name.endsWith('.ogg') ? 'audio/ogg' : 'audio/mpeg' })));
+  const el = new Audio(); // fetch() unpacks the base64 off the main thread: no stutter when a big track starts mid-fight
+  fetch(`data:${name.endsWith('.ogg') ? 'audio/ogg' : 'audio/mpeg'};base64,${s}`).then(r => r.blob()).then(b => { el.src = URL.createObjectURL(b); if (el.want) el.play().catch(() => {}); });
   const g = AC.createGain(); g.gain.value = 0; AC.createMediaElementSource(el).connect(g); g.connect(musicBus);
   el.onended = () => { if (musicNow === name) playMood(musicMood, name); };
   el.onerror = () => { el.bad = true; if (musicNow === name) playMood(musicMood, name); }; // e.g. Ogg on older Safari: try the next one
@@ -656,16 +686,17 @@ function playMood(mood, avoid) {
   const name = list[Math.random() * list.length | 0], t = AC.currentTime;
   for (const [n, tr] of Object.entries(tracks)) if (n !== name && !tr.el.paused) { // fade out whatever else is playing
     tr.g.gain.cancelScheduledValues(t); tr.g.gain.setValueAtTime(tr.g.gain.value, t); tr.g.gain.linearRampToValueAtTime(0, t + 2.5);
-    clearTimeout(tr.stop); tr.stop = setTimeout(() => tr.el.pause(), 2600);
+    tr.el.want = false; clearTimeout(tr.stop); tr.stop = setTimeout(() => tr.el.pause(), 2600);
   }
   musicMood = mood; musicNow = name;
   const tr = name && track(name); if (!tr) return;
   clearTimeout(tr.stop); if (tr.el.ended) tr.el.currentTime = 0;
-  tr.el.play().catch(() => {});
-  tr.g.gain.cancelScheduledValues(t); tr.g.gain.setValueAtTime(tr.g.gain.value, t); tr.g.gain.linearRampToValueAtTime(1, t + 2.5);
+  tr.el.want = true; tr.el.play().catch(() => {}); // before the bytes are unpacked this fails quietly, and the fetch above starts it
+  tr.g.gain.cancelScheduledValues(t); tr.g.gain.setValueAtTime(tr.g.gain.value, t); tr.g.gain.linearRampToValueAtTime(Math.pow(10, (MUSIC_DB[name] || 0) / 20), t + 2.5);
 }
 function music(mood) { // call every frame with what's happening; switches only when the mood changes
   if (!AC || mood === musicMood) return;
+  if (!musicMood) for (const n in window.MAGE_AUDIO?.music) track(n); // first call: unpack every track in the background, so later switches are instant
   if (musicNow && MUSIC[mood]?.includes(musicNow)) { musicMood = mood; return; } // the current track fits the new mood too: keep it
   playMood(mood);
 }
