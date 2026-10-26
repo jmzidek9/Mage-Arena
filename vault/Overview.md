@@ -36,7 +36,7 @@ A first-person magic game for 1–2 players in the browser, with three modes: Ar
 - Elemental-Battlegrounds-style spell circles (a unique design per element) at your feet and in your hand
 - Bloom, pooled additive particles, hit-stop, screen shake, FOV kick, damage numbers, headshot crits and a combo counter
 - Articulated enemies that wind up, flinch, stagger and break apart when they die
-- Synthesized WebAudio sound for every action
+- Real recorded CC0 sound effects, layered and varied per hit, and 12 CC0 music tracks that follow the situation: menu, Arena, Duel, Dungeon, boss fights (credits in `audio/CREDITS.md`)
 - Knocking enemies off the floating island sends them falling to their death
 
 See also: [[Netcode]].

@@ -193,10 +193,11 @@ input::placeholder{color:#b9add8;opacity:.8}input:focus{box-shadow:0 0 0 2px var
 body.touching #me{top:14px;bottom:auto;left:14px}body.touching #lock{display:none}body.touching #bar{bottom:auto;top:62px;transform:translateX(-50%) scale(.8)}
 @media (max-width:900px){.slot{width:50px;height:50px}.slot.ult{width:58px;height:58px}.slot .ico{font-size:22px}#me .bar,#me #dash{width:150px}#mate .bar{width:120px}}
 </style>
-<!-- pack.py inlines these (and the models) so index.html is one self-contained file that runs in every browser, Safari included -->
+<!-- pack.py inlines these (and the models and audio) so index.html is one self-contained file that runs in every browser, Safari included -->
 <script src="js/vendor/three.min.js"></script>
 <script src="js/vendor/peerjs.min.js"></script>
 <script src="assets/models.js"></script>
+<script src="audio/audio.js"></script>
 </head>
 <body>
 <div id="hud" class="hidden">
@@ -246,7 +247,8 @@ body.touching #me{top:14px;bottom:auto;left:14px}body.touching #lock{display:non
   <div class="tabs"><button class="ghost on" data-tab="general">General</button><button class="ghost" data-tab="visuals">Visuals</button></div>
   <div class="pane" data-pane="general">
     <label>Sensitivity<input id="sSens" type="range" min=".2" max="3" step=".05"><span id="sSensV"></span></label>
-    <label>Volume<input id="sVol" type="range" min="0" max="1.5" step=".05"><span id="sVolV"></span></label>
+    <label>Sound<input id="sVol" type="range" min="0" max="1.5" step=".05"><span id="sVolV"></span></label>
+    <label>Music<input id="sMus" type="range" min="0" max="1.5" step=".05"><span id="sMusV"></span></label>
     <div id="elSwap" class="hidden">Switch element<div id="swapGrid"></div></div>
   </div>
   <div class="pane hidden" data-pane="visuals">

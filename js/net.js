@@ -43,22 +43,22 @@ $('gfxBtn').onclick = () => { try { localStorage.setItem('magepact_gfx', HQ ? 'l
 // settings (remembered per browser). General: sensitivity, volume. Visuals: field of view, brightness, bloom, shadows, film filter
 let baseFov = 75;
 function applySettings(o) {
-  sens = .0022 * o.sens; sfxVol = .35 * o.vol; if (master) master.gain.value = sfxVol; baseFov = o.fov;
+  sens = .0022 * o.sens; sfxVol = .35 * o.vol; if (master) master.gain.value = sfxVol; musicVol = .5 * o.mus; if (musicBus) musicBus.gain.value = musicVol; baseFov = o.fov;
   renderer.toneMappingExposure = 1.1 * o.bright;
   const pr = (HQ ? Math.min(devicePixelRatio, 2) : 1) * o.scale; // render scale: fewer pixels for slow laptops, live
   if (renderer.getPixelRatio() !== pr) { renderer.setPixelRatio(pr); composer.setSize(innerWidth, innerHeight); }
   if (bloomPass) bloomPass.enabled = o.bloom && HQ;
   if (renderer.shadowMap.enabled !== o.shadows) { renderer.shadowMap.enabled = moon.castShadow = o.shadows; scene.traverse(m => { if (m.material) m.material.needsUpdate = true; }); }
   filmPass.uniforms.uFilm.value = o.film ? 1 : 0;
-  $('sSens').value = o.sens; $('sVol').value = o.vol; $('sFov').value = o.fov; $('sBright').value = o.bright; $('sScale').value = o.scale;
+  $('sSens').value = o.sens; $('sVol').value = o.vol; $('sMus').value = o.mus; $('sFov').value = o.fov; $('sBright').value = o.bright; $('sScale').value = o.scale;
   $('cBloom').checked = o.bloom; $('cBloom').disabled = !bloomPass || !HQ; $('cShadows').checked = o.shadows; $('cFilm').checked = o.film;
-  $('sSensV').textContent = o.sens.toFixed(2); $('sVolV').textContent = Math.round(o.vol * 100) + '%'; $('sFovV').textContent = o.fov; $('sBrightV').textContent = Math.round(o.bright * 100) + '%'; $('sScaleV').textContent = Math.round(o.scale * 100) + '%';
+  $('sSensV').textContent = o.sens.toFixed(2); $('sVolV').textContent = Math.round(o.vol * 100) + '%'; $('sMusV').textContent = Math.round(o.mus * 100) + '%'; $('sFovV').textContent = o.fov; $('sBrightV').textContent = Math.round(o.bright * 100) + '%'; $('sScaleV').textContent = Math.round(o.scale * 100) + '%';
 }
-let settings = { sens: 1, vol: 1, fov: 75, bright: 1, scale: 1, bloom: true, shadows: HQ, film: true };
+let settings = { sens: 1, vol: 1, mus: 1, fov: 75, bright: 1, scale: 1, bloom: true, shadows: HQ, film: true };
 try { settings = { ...settings, ...JSON.parse(localStorage.getItem('magepact_settings') || '{}') }; } catch {}
 applySettings(settings);
 const saveSettings = () => { applySettings(settings); try { localStorage.setItem('magepact_settings', JSON.stringify(settings)); } catch {} };
-for (const [id, k] of [['sSens', 'sens'], ['sVol', 'vol'], ['sFov', 'fov'], ['sBright', 'bright'], ['sScale', 'scale']]) $(id).oninput = () => { settings[k] = +$(id).value; saveSettings(); };
+for (const [id, k] of [['sSens', 'sens'], ['sVol', 'vol'], ['sMus', 'mus'], ['sFov', 'fov'], ['sBright', 'bright'], ['sScale', 'scale']]) $(id).oninput = () => { settings[k] = +$(id).value; saveSettings(); };
 for (const [id, k] of [['cBloom', 'bloom'], ['cShadows', 'shadows'], ['cFilm', 'film']]) $(id).onchange = () => { settings[k] = $(id).checked; saveSettings(); };
 for (const b of document.querySelectorAll('#settings .tabs button')) b.onclick = () => {
   for (const x of document.querySelectorAll('#settings .tabs button')) x.classList.toggle('on', x === b);
@@ -326,6 +326,8 @@ function frame(now, manual = false) {
   if (AC && (AC.state === 'running') === paused()) paused() ? AC.suspend() : AC.resume(); // sound freezes with a solo pause
   if (!manual) autoQuality();
   const src = role === 'guest' ? R : (playing ? snap() : null), mp = me();
+  music(!playing || !src ? 'menu' : src.phase === 'over' ? 'over' : src.enemies.some(e => ET[e.type].boss) ? 'boss' : src.mode);
+  if (playing && mp) footsteps(mp, src?.mode, dt);
   animateArena(dt, t, src?.mod === 'darkness' && src?.phase === 'fight');
   updateDungeonView(dt, t);
   if (playing && mp && src) {
@@ -362,6 +364,15 @@ function frame(now, manual = false) {
   skyU.uFlare.value += (flare - skyU.uFlare.value) * Math.min(1, dt * 3);
   stepParticles(dt); stepFx(dt); stepFlashes(dt); stepNums(dt);
   composer.render();
+}
+// your own wizard's feet: a step every couple of metres on the ground, plus jump and landing sounds
+let stepD = 0, wasGr = true, lastVy = 0, lastX = 0, lastZ = 0;
+function footsteps(mp, mode, dt) {
+  const d = Math.hypot(mp.x - lastX, mp.z - lastZ); lastX = mp.x; lastZ = mp.z;
+  if (mp.gr && !mp.down && d < 2) { stepD += d; if (stepD > 2.3) { stepD = 0; sfx(mode === 'dungeon' ? 'stepD' : 'step'); } }
+  if (!mp.gr && wasGr && mp.vy > 3) sfx('jump');
+  if (mp.gr && !wasGr && lastVy < -7) { sfx('land'); stepD = 0; }
+  wasGr = mp.gr; lastVy = mp.vy || 0;
 }
 // one bad frame (a broken effect) is logged and skipped instead of killing the loop for good
 let frameErrs = 0;

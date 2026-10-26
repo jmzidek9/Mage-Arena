@@ -101,7 +101,6 @@ fire: {
   blurb: 'Raw destruction. Stack burns on everything, then blow it all up.',
   passive: 'Kindling: burns stack up to 3 times, and burning enemies explode when they die.',
   st: { dot: 7, stacks: 3, dotStacks: 1 },
-  snd: [[{ w: 'sawtooth', f: 300, f2: 90, d: .25, v: .2 }, { w: 'noise', f: 2500, f2: 300, d: .3, v: .3 }], [{ w: 'sawtooth', f: 160, f2: 50, d: .5, v: .22 }, { w: 'noise', f: 3000, f2: 200, d: .6, v: .45 }]],
   onKill(e, p) { if (e.st.fire > 0) boomAt({ p, el: 'fire', m: MOVE['fire.0'], dmg: 1 }, e.x, e.y + .8, e.z, 2.6, 20 * stats(p).dmgMul, { kb: 5, noStatus: true }); },
   moves: [
     { name: 'Fireball', icon: '☄️', cd: .5, desc: 'Hurl a fireball that explodes on impact.',
@@ -177,7 +176,6 @@ frost: {
   blurb: 'Control the battlefield. Slow everything down, freeze it solid, then shatter it.',
   passive: 'Permafrost: 4 Frost hits freeze an enemy solid. Frozen enemies take 40% more damage.',
   st: { slow: .45, stacks: 4 },
-  snd: [[{ w: 'triangle', f: 1400, f2: 700, d: .18, v: .25 }, { w: 'sine', f: 2100, f2: 1800, d: .12, v: .12 }], [{ w: 'triangle', f: 900, f2: 300, d: .5, v: .25 }, { w: 'noise', f: 9000, f2: 2000, d: .5, v: .25 }]],
   onStatus(e, p, n) { if (n >= 4) { e.stk.frost = 0; if (cc(e, 'freeze', 1.8, p)) fxe('frost.3', 'freeze', { x: e.x, z: e.z, s: ET[e.type].r * e.sc }); } },
   moves: [
     { name: 'Ice Shard', icon: '🧊', cd: .28, desc: 'Rapid crystal shards that pierce one enemy.',
@@ -235,7 +233,6 @@ storm: {
   blurb: 'Speed and chaos. Lightning that leaps from foe to foe.',
   passive: 'Static: every 6th Storm hit calls down a free lightning strike. Shocked enemies take 20% more damage.',
   st: { vuln: .2 },
-  snd: [[{ w: 'square', f: 900, f2: 120, d: .14, v: .1 }, { w: 'noise', f: 8000, f2: 1500, d: .2, v: .35 }], [{ w: 'square', f: 400, f2: 60, d: .3, v: .12 }, { w: 'noise', f: 9000, f2: 600, d: .45, v: .5 }]],
   onHit(e, p) { p.bd.static = (p.bd.static || 0) + 1; if (p.bd.static % 6 === 0 && !e.dead) { const q = center(e); ev({ k: 'bolt', el: 'storm', sky: 1, pts: [[q.x, q.y + 14, q.z], [q.x, q.y, q.z]].map(a => a.map(r2)) }); damage(e, 24 * stats(p).dmgMul, 'storm', p); } },
   moves: [
     { name: 'Chain Lightning', icon: '⚡', cd: .36, desc: 'An instant bolt that chains to 2 more enemies.',
@@ -294,7 +291,6 @@ water: {
   blurb: 'Push and pull. Wash enemies off the island, trap them, and keep your team alive.',
   passive: 'Tidal Force: your knockback is 40% stronger. Soaked enemies fly even further.',
   st: { kb: 1.6 },
-  snd: [[{ w: 'sine', f: 600, f2: 200, d: .15, v: .2 }, { w: 'noise', f: 1500, f2: 400, d: .2, v: .2 }], [{ w: 'sine', f: 300, f2: 80, d: .5, v: .25 }, { w: 'noise', f: 1200, f2: 150, d: .7, v: .4 }]],
   moves: [
     { name: 'Aqua Bullets', icon: '💧', cd: .14, desc: 'Rapid-fire water bullets with heavy knockback.',
       cast(p, c) { for (let k = 0; k < c.multi; k++) shoot(p, c, 38, { d: spread(c.d.clone().add(V(rand(-.02, .02), rand(-.02, .02), rand(-.02, .02))).normalize(), k, c.multi, .07), r: .25, dmg: 6.5 * c.dmg, kb: 4.5, sc: c.mega ? 2 : 1 }); },
@@ -354,7 +350,6 @@ earth: {
   blurb: 'Heavy and unstoppable. Launch enemies into the air and stagger even the biggest brutes.',
   passive: 'Bedrock: you take 15% less damage, and your hits stagger enemies twice as fast.',
   st: { vuln: .1 },
-  snd: [[{ w: 'sine', f: 180, f2: 60, d: .2, v: .3 }, { w: 'noise', f: 900, f2: 200, d: .2, v: .3 }], [{ w: 'sine', f: 90, f2: 30, d: .6, v: .55 }, { w: 'noise', f: 1200, f2: 80, d: .6, v: .5 }]],
   moves: [
     { name: 'Stone Shot', icon: '🪨', cd: .7, desc: 'A shotgun blast of stone pebbles. Devastating up close.',
       cast(p, c) { const n = 5 + 2 * (c.multi - 1); for (let k = 0; k < n; k++) shoot(p, c, 36, { d: c.d.clone().applyAxisAngle(UP, rand(-.13, .13)).add(V(0, rand(-.06, .06), 0)).normalize(), life: .5, r: .22, dmg: 7.5 * c.dmg, kb: 2.2, sc: c.mega ? 1.8 : 1 }); },
@@ -396,7 +391,6 @@ wind: {
   blurb: 'Mobility and crowd control. Fly over the fight and hurl enemies off the edge.',
   passive: 'Tailwind: move 15% faster and double jump.',
   st: { kb: 1.4 },
-  snd: [[{ w: 'noise', f: 3000, f2: 800, d: .2, v: .3 }, { w: 'sine', f: 900, f2: 1400, d: .15, v: .08 }], [{ w: 'noise', f: 1500, f2: 4000, d: .6, v: .45 }, { w: 'sine', f: 200, f2: 500, d: .5, v: .12 }]],
   moves: [
     { name: 'Wind Blades', icon: '🌀', cd: .42, desc: 'Wide crescent blades of air that slice through every enemy in a line.',
       cast(p, c) { for (let k = 0; k < c.multi; k++) shoot(p, c, 34, { d: spread(c.d, k, c.multi, .12), life: .75, r: .9, pierce: 99, dmg: 13 * c.dmg, kb: 3, sc: c.mega ? 1.8 : 1 }); },
@@ -455,7 +449,6 @@ nature: {
   blurb: 'Patient and resilient. Root enemies in place, plant guardians and heal your team.',
   passive: 'Regrowth: regenerate 1.5 HP per second.',
   st: { slow: .3 },
-  snd: [[{ w: 'triangle', f: 500, f2: 300, d: .15, v: .18 }, { w: 'noise', f: 2000, f2: 900, d: .12, v: .15 }], [{ w: 'sine', f: 220, f2: 110, d: .6, v: .3 }, { w: 'noise', f: 900, f2: 200, d: .6, v: .3 }]],
   moves: [
     { name: 'Thorn Volley', icon: '🌵', cd: .5, desc: 'Fire a quick burst of three barbed thorns.',
       cast(p, c) { for (let i = 0; i < 3; i++) later(i * .07, () => { if (p.down) return; const c2 = ctxOf(p, c.m); for (let k = 0; k < c.multi; k++) shoot(p, c2, 42, { d: spread(c2.d, k, c.multi, .08), r: .25, dmg: 8 * c.dmg, kb: 1.2, sc: c.mega ? 1.8 : 1 }); }); },
@@ -511,7 +504,6 @@ shadow: {
   blurb: 'An assassin. Pin enemies down, vanish from sight and strike from the dark.',
   passive: 'Assassin: hits on an enemy\'s back deal 50% more damage. Cursed enemies take 15% more damage.',
   st: { vuln: .15 },
-  snd: [[{ w: 'sine', f: 700, f2: 200, d: .14, v: .18 }, { w: 'noise', f: 4000, f2: 1000, d: .1, v: .2 }], [{ w: 'sawtooth', f: 120, f2: 60, d: .5, v: .15 }, { w: 'noise', f: 800, f2: 3000, d: .4, v: .3 }]],
   moves: [
     { name: 'Shadow Daggers', icon: '🗡️', cd: .45, desc: 'Throw a fan of three shadow daggers.',
       cast(p, c) { const n = 3 + 2 * (c.multi - 1); for (let k = 0; k < n; k++) shoot(p, c, 48, { d: spread(c.d, k, n, .07), r: .22, dmg: 8 * c.dmg, kb: 1.5, sc: c.mega ? 1.8 : 1 }); },
@@ -562,7 +554,6 @@ light: {
   blurb: 'Holy power. Burn enemies with beams of sunlight and keep your partner standing.',
   passive: 'Radiance: your damage heals your partner for 8% of it (or you for 4% when alone). Radiant enemies deal 30% less damage.',
   st: { weak: .3 },
-  snd: [[{ w: 'sine', f: 1200, f2: 1800, d: .15, v: .15 }, { w: 'triangle', f: 2400, f2: 3000, d: .12, v: .08 }], [{ w: 'sine', f: 440, f2: 880, d: .6, v: .2 }, { w: 'sine', f: 660, f2: 1320, d: .6, v: .15 }, { w: 'noise', f: 9000, f2: 4000, d: .4, v: .15 }]],
   moves: [
     { name: 'Radiant Orbs', icon: '✨', cd: .4, desc: 'Orbs of light that home in on enemies.',
       cast(p, c) { for (let k = 0; k < c.multi; k++) shoot(p, c, 30, { d: spread(c.d, k, c.multi, .15), r: .35, dmg: 13 * c.dmg, home: 4, sc: c.mega ? 1.8 : 1 }); },
@@ -615,7 +606,6 @@ venom: {
   blurb: 'A slow, nasty death. Stack poison on everything, then make it erupt and spread.',
   passive: 'Virulence: poison stacks up to 8 times, and poisoned enemies spread their poison when they die.',
   st: { dot: 2.5, stacks: 8, dotStacks: 1 },
-  snd: [[{ w: 'sawtooth', f: 260, f2: 180, d: .15, v: .12 }, { w: 'noise', f: 1800, f2: 500, d: .18, v: .22 }], [{ w: 'sawtooth', f: 140, f2: 70, d: .5, v: .15 }, { w: 'noise', f: 1200, f2: 300, d: .6, v: .35 }]],
   onKill(e, p) { const n = Math.ceil((e.stk.venom || 0) / 2); if (!n) return; for (const o of enemiesNear(e.x, e.z, 4.5)) for (let i = 0; i < n; i++) applyStatus(o, 'venom', p); fxe('venom.3', 'pop', { x: e.x, y: e.y + 1, z: e.z }); },
   moves: [
     { name: 'Venom Spit', icon: '🤮', cd: .55, desc: 'Lob a glob of venom that splashes and leaves a toxic puddle.',
@@ -673,7 +663,6 @@ steel: {
   blurb: 'A blade master. Boomerang saws, railguns and a storm of swords. Shields mean nothing to you.',
   passive: 'Armor Breaker: Rend stacks 3 times (+6% damage taken each). At 3 stacks your hits go straight through shields.',
   st: { vuln: .06, vulnStacks: 1, stacks: 3 },
-  snd: [[{ w: 'triangle', f: 2200, f2: 1600, d: .12, v: .14 }, { w: 'noise', f: 7000, f2: 3000, d: .1, v: .2 }], [{ w: 'square', f: 300, f2: 120, d: .3, v: .12 }, { w: 'noise', f: 6000, f2: 800, d: .4, v: .35 }]],
   moves: [
     { name: 'Saw Blade', icon: '🪚', cd: .6, desc: 'Throw a spinning saw that slices through enemies, then comes back and slices them again.',
       cast(p, c) { for (let k = 0; k < c.multi; k++) shoot(p, c, 30, { d: spread(c.d, k, c.multi, .15), r: .55, life: 2.4, pierce: 99, dmg: 14 * c.dmg, ret: .42, rspd: 34, kb: 1.5, sc: c.mega ? 1.8 : 1 }); },
@@ -734,7 +723,6 @@ magma: {
   blurb: 'Slow and devastating. Flood the island with lava and drop a meteor on anything left standing.',
   passive: 'Molten Core: molten enemies burn and take 10% more damage, and anything that hits you turns molten.',
   st: { dot: 6, vuln: .1 },
-  snd: [[{ w: 'sawtooth', f: 200, f2: 70, d: .3, v: .2 }, { w: 'noise', f: 1500, f2: 200, d: .35, v: .35 }], [{ w: 'sine', f: 70, f2: 25, d: .8, v: .6 }, { w: 'noise', f: 2000, f2: 60, d: .8, v: .5 }]],
   moves: [
     { name: 'Magma Glob', icon: '🔴', cd: .7, desc: 'Lob a heavy glob of magma that splashes and leaves a burning pool of lava.',
       cast(p, c) { for (let k = 0; k < c.multi; k++) shoot(p, c, 26, { d: lob(spread(c.d, k, c.multi, .12), .1), grav: 14, r: .4, dmg: 18 * c.dmg, sc: c.mega ? 1.8 : 1 }); },
@@ -803,7 +791,6 @@ crystal: {
   blurb: 'Precision and geometry. Shards that split and refract, turrets, and diamond-hard defence.',
   passive: 'Prismatic: enemies killed by Crystal shatter into shards that strike nearby foes.',
   st: { slow: .2 },
-  snd: [[{ w: 'triangle', f: 2600, f2: 2200, d: .15, v: .14 }, { w: 'sine', f: 3900, f2: 3300, d: .12, v: .07 }], [{ w: 'triangle', f: 1300, f2: 2600, d: .5, v: .16 }, { w: 'noise', f: 9000, f2: 5000, d: .3, v: .2 }]],
   onKill(e, p) { const c = { p, el: 'crystal', m: MOVE['crystal.0'], dmg: stats(p).dmgMul }; for (let i = 0; i < 4; i++) { const a = rand(0, TAU); shoot(p, c, 26, { o: center(e), d: V(Math.sin(a), .05, Math.cos(a)), life: .5, dmg: 10 * c.dmg, child: 1, sc: .6, hit: [e.id] }); } },
   moves: [
     { name: 'Prism Shard', icon: '🔷', cd: .45, desc: 'A crystal shard that splits into three smaller shards when it hits.',
@@ -862,7 +849,6 @@ sonic: {
   blurb: 'Rhythm and resonance. Waves of sound that build up until enemies burst.',
   passive: 'Resonance: 5 Sonic hits make an enemy resonate and burst, damaging and stunning everything around it.',
   st: { stacks: 5 },
-  snd: [[{ w: 'sine', f: 440, f2: 880, d: .12, v: .18 }, { w: 'square', f: 220, f2: 440, d: .1, v: .05 }], [{ w: 'sine', f: 55, f2: 40, d: .6, v: .6 }, { w: 'square', f: 110, f2: 55, d: .4, v: .1 }, { w: 'noise', f: 4000, f2: 400, d: .3, v: .2 }]],
   onStatus(e, p, n) {
     if (n < 5) return;
     e.stk.sonic = 0;
@@ -915,7 +901,6 @@ gravity: {
   blurb: 'Bend space. Pull enemies together, lift them helplessly into the air, then slam them down.',
   passive: 'Crushing Weight: your hits deal double damage to airborne enemies, and slammed enemies take 50% more fall damage.',
   st: { slow: .3 },
-  snd: [[{ w: 'sine', f: 160, f2: 60, d: .25, v: .3 }, { w: 'sawtooth', f: 80, f2: 40, d: .2, v: .06 }], [{ w: 'sine', f: 50, f2: 20, d: 1, v: .6 }, { w: 'sawtooth', f: 100, f2: 30, d: .8, v: .1 }]],
   moves: [
     { name: 'Graviton', icon: '⚫', cd: .55, desc: 'A slow, heavy orb that drags nearby enemies toward its path and implodes on impact.',
       cast(p, c) { for (let k = 0; k < c.multi; k++) shoot(p, c, 20, { d: spread(c.d, k, c.multi, .12), r: .45, life: 1.6, dmg: 16 * c.dmg, sc: c.mega ? 1.8 : 1 }); },
@@ -958,7 +943,6 @@ chrono: {
   blurb: 'Master of time. Echoing attacks, frozen moments, rewinds, and stopping time itself.',
   passive: 'Time Dilation: all your cooldowns run 18% faster. Timeworn enemies are 35% slower.',
   st: { slow: .35 },
-  snd: [[{ w: 'triangle', f: 1500, f2: 1500, d: .05, v: .15 }, { w: 'triangle', f: 1000, f2: 1000, d: .08, v: .1 }], [{ w: 'sine', f: 800, f2: 200, d: .6, v: .2 }, { w: 'sine', f: 200, f2: 800, d: .6, v: .15 }]],
   moves: [
     { name: 'Chrono Bolt', icon: '🕐', cd: .45, desc: 'A bolt of frozen time. Each hit echoes 1.2 seconds later for the same damage again.',
       cast(p, c) { for (let k = 0; k < c.multi; k++) shoot(p, c, 36, { d: spread(c.d, k, c.multi), r: .3, dmg: 12 * c.dmg, sc: c.mega ? 1.8 : 1 }); },
@@ -1000,7 +984,6 @@ blood: {
   blurb: 'Power at a price. Spend your own health for brutal damage, and drink it back from your enemies.',
   passive: 'Bloodlust: heal for 6% of damage dealt, and hit up to 50% harder the lower your health. Blood moves cost HP. Bleeding enemies feed you.',
   st: { dot: 6, leech: .5 },
-  snd: [[{ w: 'sawtooth', f: 330, f2: 110, d: .18, v: .14 }, { w: 'noise', f: 1200, f2: 400, d: .15, v: .2 }], [{ w: 'sine', f: 60, f2: 40, d: .5, v: .5 }, { w: 'sine', f: 60, f2: 40, d: .5, v: .5 }, { w: 'sawtooth', f: 220, f2: 55, d: .6, v: .12 }]],
   moves: [
     { name: 'Blood Bolt', icon: '🩸', cd: .4, cost: () => 1.5, desc: 'Costs 1.5 HP. A fast bolt of blood magic that hits hard.',
       cast(p, c) { for (let k = 0; k < c.multi; k++) shoot(p, c, 38, { d: spread(c.d, k, c.multi), r: .3, dmg: 16 * c.dmg, sc: c.mega ? 1.8 : 1 }); },
@@ -1058,7 +1041,6 @@ spirit: {
   blurb: 'Commander of the dead. Haunting wisps, a spectral wolf, and an army of ghost knights.',
   passive: 'Soul Harvest: enemies you kill release a wisp that heals you for 4. Haunted enemies deal 25% less damage.',
   st: { slow: .15, weak: .25 },
-  snd: [[{ w: 'sine', f: 600, f2: 900, d: .25, v: .12 }, { w: 'sine', f: 605, f2: 905, d: .25, v: .12 }], [{ w: 'sawtooth', f: 300, f2: 900, d: .6, v: .1 }, { w: 'sine', f: 150, f2: 100, d: .6, v: .25 }, { w: 'noise', f: 3000, f2: 6000, d: .5, v: .15 }]],
   onKill(e, p) { heal(p, 4); fxe('spirit.0', 'soul', { x: e.x, y: e.y + 1, z: e.z, id: p.id }); },
   moves: [
     { name: 'Soul Wisps', icon: '🕯️', cd: .45, desc: 'Release wisps that hunt down enemies on their own.',
@@ -1110,7 +1092,6 @@ cosmic: {
   blurb: 'The power of the stars. Constellations, orbiting moons, meteor showers and a supernova.',
   passive: 'Stellar Rhythm: every 4th Star Shot is a giant piercing star. Starstruck enemies take 12% more damage.',
   st: { vuln: .12 },
-  snd: [[{ w: 'sine', f: 1046, f2: 1568, d: .18, v: .12 }, { w: 'triangle', f: 2093, f2: 2637, d: .14, v: .06 }], [{ w: 'sine', f: 262, f2: 1046, d: .8, v: .2 }, { w: 'sine', f: 392, f2: 1568, d: .8, v: .14 }, { w: 'noise', f: 8000, f2: 2000, d: .6, v: .15 }]],
   moves: [
     { name: 'Star Shot', icon: '⭐', cd: .38, desc: 'Fire shooting stars. Every 4th one is a giant star that pierces 3 enemies.',
       cast(p, c) { p.bd.star = (p.bd.star || 0) + 1; const big = p.bd.star % 4 === 0; for (let k = 0; k < c.multi; k++) shoot(p, c, 34, { d: spread(c.d, k, c.multi), r: big ? .7 : .3, dmg: (big ? 40 : 11) * c.dmg, pierce: c.st.pierce + (big ? 3 : 0), sc: (big ? 2.2 : 1) * (c.mega ? 1.6 : 1) }); },
@@ -1165,7 +1146,6 @@ explosion: {
   blurb: 'Pure demolition. Grenades, sticky bombs, mines, rocket jumps and a carpet-bombing run.',
   passive: 'Demolitions: your explosions are 20% bigger. Primed enemies get knocked back 50% further.',
   st: { kb: 1.5 },
-  snd: [[{ w: 'square', f: 600, f2: 300, d: .08, v: .08 }, { w: 'noise', f: 2000, f2: 800, d: .08, v: .15 }], [{ w: 'sine', f: 100, f2: 30, d: .7, v: .65 }, { w: 'noise', f: 2500, f2: 80, d: .7, v: .55 }]],
   moves: [
     { name: 'Grenade', icon: '💣', cd: .6, desc: 'Lob a bouncing grenade that explodes after a short fuse, or instantly when it hits an enemy.',
       cast(p, c) { for (let k = 0; k < c.multi; k++) shoot(p, c, 22, { d: lob(spread(c.d, k, c.multi, .12), .15), grav: 16, r: .25, dmg: 28 * c.dmg, rest: .45, fuse: .9, sc: c.mega ? 1.8 : 1, big: c.mega }); },
@@ -1211,4 +1191,3 @@ explosion: {
 };
 
 // each element's cast sounds plug into the synth table (slot LMB/RMB use <el>, skills and ultimates use <el>_big)
-for (const k in ELEMENTS) { SFX[k] = ELEMENTS[k].snd[0]; SFX[k + '_big'] = ELEMENTS[k].snd[1]; }

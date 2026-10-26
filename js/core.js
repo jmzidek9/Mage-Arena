@@ -503,65 +503,175 @@ function banner(text, color = '#fff', dur = 1800) {
 }
 function comboText(name, color) { const c = $('combo'); c.textContent = name + '!'; c.style.color = css(color); c.style.textShadow = `0 0 30px ${css(color)}, 0 0 8px #fff`; c.classList.remove('pop'); void c.offsetWidth; c.classList.add('pop'); }
 
-// ===================== sound (all synthesized) =====================
-let AC = null, master, NOISE;
-const lastSfx = {};
+// ===================== sound: real CC0 recordings (see audio/CREDITS.md), layered and varied =====================
+// window.MAGE_AUDIO = { sfx: { name: base64 }, music: { 'file.ogg': base64 } } is packed in by pack.py.
+// Every sound is 1-4 layers; each layer picks a random sample whose name starts with its pool, with a little pitch drift,
+// so nothing repeats exactly. Layers can be filtered, delayed, reversed, trimmed and sent to a shared reverb.
+let AC = null, master, sfxBus, revBus, musicBus;
+const lastSfx = {}, SAMPLES = {}, POOLS = {};
+let sfxVol = .35, musicVol = .5, voices = 0;
 function initAudio() {
   if (AC) { if (AC.state === 'suspended') AC.resume(); return; } // Safari / iOS start audio suspended until a tap
   const Ctx = window.AudioContext || window.webkitAudioContext; if (!Ctx) return;
-  AC = new Ctx(); master = AC.createGain(); master.gain.value = sfxVol; master.connect(AC.destination);
-  NOISE = AC.createBuffer(1, AC.sampleRate, AC.sampleRate); const d = NOISE.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
-}
-const SFX = {
-  fire: [{ w: 'sawtooth', f: 300, f2: 90, d: .25, v: .2 }, { w: 'noise', f: 2500, f2: 300, d: .3, v: .3 }],
-  ice: [{ w: 'triangle', f: 1400, f2: 700, d: .18, v: .25 }, { w: 'sine', f: 2100, f2: 1800, d: .12, v: .12 }],
-  lightning: [{ w: 'square', f: 900, f2: 120, d: .14, v: .1 }, { w: 'noise', f: 8000, f2: 1500, d: .2, v: .35 }],
-  boom: [{ w: 'sine', f: 120, f2: 35, d: .45, v: .6 }, { w: 'noise', f: 1800, f2: 100, d: .5, v: .45 }],
-  tink: [{ w: 'triangle', f: 2600, f2: 1900, d: .1, v: .15 }],
-  hit: [{ w: 'noise', f: 3000, f2: 600, d: .08, v: .18 }],
-  combo: [{ w: 'sawtooth', f: 220, f2: 880, d: .5, v: .18 }, { w: 'sine', f: 330, f2: 1320, d: .55, v: .2 }, { w: 'noise', f: 5000, f2: 200, d: .6, v: .4 }, { w: 'sine', f: 70, f2: 30, d: .6, v: .6 }],
-  die: [{ w: 'sine', f: 180, f2: 50, d: .25, v: .3 }, { w: 'noise', f: 1200, f2: 200, d: .2, v: .2 }],
-  hurt: [{ w: 'square', f: 160, f2: 60, d: .2, v: .22 }],
-  wave: [{ w: 'sine', f: 110, f2: 108, d: 1.6, v: .4 }, { w: 'sine', f: 165, f2: 163, d: 1.4, v: .25 }, { w: 'sine', f: 220, f2: 218, d: 1.2, v: .15 }],
-  pick: [{ w: 'sine', f: 660, f2: 1320, d: .25, v: .25 }, { w: 'triangle', f: 990, f2: 1980, d: .3, v: .15 }],
-  spawn: [{ w: 'sine', f: 70, f2: 140, d: .5, v: .12 }],
-  dash: [{ w: 'noise', f: 600, f2: 3000, d: .18, v: .2 }],
-  ring: [{ w: 'sine', f: 60, f2: 25, d: .9, v: .7 }, { w: 'noise', f: 800, f2: 60, d: .8, v: .4 }],
-  crit: [{ w: 'triangle', f: 1800, f2: 2600, d: .09, v: .18 }, { w: 'noise', f: 6000, f2: 2000, d: .08, v: .2 }],
-  block: [{ w: 'square', f: 900, f2: 700, d: .07, v: .1 }, { w: 'triangle', f: 2400, f2: 1600, d: .15, v: .16 }],
-  tele: [{ w: 'sawtooth', f: 160, f2: 240, d: .3, v: .07 }],
-  dodge: [{ w: 'sine', f: 400, f2: 1600, d: .35, v: .25 }, { w: 'triangle', f: 1200, f2: 3200, d: .3, v: .12 }],
-  ult: [{ w: 'sawtooth', f: 110, f2: 440, d: .8, v: .15 }, { w: 'sine', f: 55, f2: 110, d: 1, v: .5 }, { w: 'noise', f: 4000, f2: 300, d: .9, v: .3 }],
-  ready: [{ w: 'sine', f: 880, f2: 1760, d: .2, v: .12 }, { w: 'sine', f: 1320, f2: 2640, d: .25, v: .08 }],
-  swap: [{ w: 'triangle', f: 500, f2: 1000, d: .15, v: .15 }],
-  heal: [{ w: 'sine', f: 520, f2: 780, d: .3, v: .12 }, { w: 'sine', f: 780, f2: 1170, d: .35, v: .08 }],
-  stagger: [{ w: 'sine', f: 90, f2: 40, d: .3, v: .4 }, { w: 'noise', f: 2500, f2: 400, d: .2, v: .25 }],
-  fuse: [{ w: 'square', f: 1200, f2: 1200, d: .05, v: .06 }],
-  orb: [{ w: 'sine', f: 300, f2: 600, d: .2, v: .1 }],
-  smash: [{ w: 'sine', f: 80, f2: 30, d: .5, v: .6 }, { w: 'noise', f: 1500, f2: 80, d: .45, v: .45 }],
-  pickup: [{ w: 'sine', f: 700, f2: 1400, d: .12, v: .14 }],
-  resume: [{ w: 'sawtooth', f: 60, f2: 400, d: .6, v: .15 }, { w: 'noise', f: 300, f2: 6000, d: .5, v: .2 }],
-};
-let sfxVol = .35;
-function sfx(type) {
-  if (!AC || !SFX[type]) return;
-  const t = AC.currentTime;
-  if (t - (lastSfx[type] || 0) < .04) return;
-  lastSfx[type] = t;
-  for (const s of SFX[type]) {
-    const g = AC.createGain(); g.connect(master);
-    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(s.v, t + .005); g.gain.exponentialRampToValueAtTime(.001, t + s.d);
-    let src;
-    if (s.w === 'noise') {
-      src = AC.createBufferSource(); src.buffer = NOISE;
-      const f = AC.createBiquadFilter(); f.type = 'lowpass'; f.frequency.setValueAtTime(s.f, t); f.frequency.exponentialRampToValueAtTime(Math.max(40, s.f2), t + s.d);
-      src.connect(f); f.connect(g);
-    } else {
-      src = AC.createOscillator(); src.type = s.w; src.frequency.setValueAtTime(s.f, t); src.frequency.exponentialRampToValueAtTime(Math.max(20, s.f2), t + s.d); src.connect(g);
-    }
-    src.start(t); src.stop(t + s.d + .05);
+  AC = new Ctx();
+  master = AC.createGain(); master.gain.value = sfxVol;
+  const comp = AC.createDynamicsCompressor(); // big moments stack many layers: squash peaks instead of clipping
+  comp.threshold.value = -16; comp.knee.value = 12; comp.ratio.value = 4; comp.attack.value = .003; comp.release.value = .25;
+  sfxBus = AC.createGain(); sfxBus.connect(comp); comp.connect(master); master.connect(AC.destination);
+  // reverb: a generated stone-hall impulse (decaying, darkening noise)
+  const len = AC.sampleRate * 2.2 | 0, ir = AC.createBuffer(2, len, AC.sampleRate);
+  for (let c = 0; c < 2; c++) { const d = ir.getChannelData(c); let lp = 0; for (let i = 0; i < len; i++) { const k = i / len; lp += (Math.random() * 2 - 1 - lp) * (.5 - .42 * k); d[i] = lp * Math.pow(1 - k, 2.6); } }
+  const conv = AC.createConvolver(); conv.buffer = ir; revBus = AC.createGain(); revBus.gain.value = .5; revBus.connect(conv); conv.connect(sfxBus);
+  musicBus = AC.createGain(); musicBus.gain.value = musicVol; musicBus.connect(AC.destination);
+  const b64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0)).buffer;
+  for (const [n, s] of Object.entries(window.MAGE_AUDIO?.sfx || {})) {
+    // older Safari can't decode Ogg: those layers are simply skipped
+    AC.decodeAudioData(b64(s), buf => { // normalize every sample to the same peak, so recipe volumes mean the same thing
+      let pk = 0; for (let c = 0; c < buf.numberOfChannels; c++) for (const v of buf.getChannelData(c)) pk = Math.max(pk, Math.abs(v));
+      if (pk > 0) for (let c = 0; c < buf.numberOfChannels; c++) { const d = buf.getChannelData(c); for (let i = 0; i < d.length; i++) d[i] /= pk; }
+      SAMPLES[n] = buf; for (const k in POOLS) delete POOLS[k];
+    }, () => {});
   }
 }
+// layer: [pool, volume, { r: rate or [lo, hi], d: delay, lp / hp: filter Hz, rev: reverb send, rv: reversed, len: trim seconds }]
+const SFX = {
+  hit: [['impactPunch_medium', .5, { r: [.9, 1.15] }], ['impactGeneric_light', .2, { r: [1, 1.3] }]],
+  crit: [['impactPunch_heavy', .65], ['impactMetal_light', .3, { r: [1.2, 1.5] }], ['impactGlass_light', .18, { r: [1.3, 1.6], rev: .3 }]],
+  die: [['creature_hurt', .4, { r: [.6, .9] }], ['impactSoft_heavy', .55, { r: [.8, 1] }], ['creature_die', .3, { r: [.8, 1.1], d: .04 }]],
+  hurt: [['impactPunch_heavy', .8, { r: [.75, .9] }], ['impactSoft_heavy', .5, { r: [.7, .8], lp: 900 }]],
+  smash: [['impactMining', .7, { r: [.6, .75], rev: .25 }], ['lowFrequency_explosion_001', .8, { r: [.9, 1.1] }], ['stones', .35, { d: .05 }]],
+  boom: [['explosionCrunch', .7, { r: [.85, 1.05], rev: .3 }], ['lowFrequency_explosion', .7]],
+  ring: [['creature_roar', .7, { r: [.45, .55], rev: .5 }], ['lowFrequency_explosion_000', .9], ['explosionCrunch', .35, { r: [.6, .7], lp: 1200 }]],
+  spawn: [['creature_monster', .3, { r: [.6, .8], rev: .3 }], ['slime_000', .2, { r: .6 }]],
+  combo: [['explosionCrunch', .65, { r: [1, 1.15], rev: .4 }], ['impactBell_heavy_000', .5, { r: [.9, 1.1], rev: .6 }], ['magical_3', .55, { rev: .4 }], ['lowFrequency_explosion_001', .8]],
+  wave: [['impactBell_heavy_001', .75, { r: .5, rev: .7 }], ['lowFrequency_explosion_000', .55, { r: .8 }]],
+  pick: [['item_gem', .45, { r: [1, 1.15] }], ['impactBell_heavy_004', .22, { r: 2, rev: .4 }]],
+  swap: [['cloth', .45, { r: [1.1, 1.3] }], ['item_gem_02', .3, { r: [1.2, 1.4], rev: .3 }]],
+  dash: [['blade', .4, { r: [.55, .7], lp: 3000 }], ['cloth1', .3, { r: [1.3, 1.5] }]],
+  dodge: [['blade', .45, { r: [.8, .9] }], ['magical_5', .45, { r: [1.2, 1.3], rev: .5 }], ['impactBell_heavy_004', .22, { r: 2.5, rev: .6 }]],
+  ult: [['magical_3', .75, { r: [.8, .9], rev: .5 }], ['forceField', .45, { r: .7 }], ['lowFrequency_explosion_000', .8], ['explosionCrunch', .35, { d: .08, rev: .4 }]],
+  ready: [['impactBell_heavy_004', .35, { r: 2, rev: .5 }], ['item_gem_04', .3, { r: 1.2 }]],
+  heal: [['magical_1_0', .5, { r: [1.1, 1.2], rev: .5 }], ['item_gem_04', .28, { r: 1.3, rev: .4 }]],
+  pickup: [['item_coins_01', .4], ['item_gem_01', .28, { r: 1.2 }]],
+  stagger: [['impactPlate_heavy', .55, { r: .7 }], ['impactMetal_heavy', .35, { r: .8, rev: .3 }]],
+  block: [['impactMetal_heavy', .55], ['impactPlate_medium', .35, { r: 1.2 }]],
+  tele: [['creature_misc_05', .18, { r: .6, lp: 1500 }]],
+  fuse: [['metalClick', .22, { r: [1.4, 1.6] }]],
+  tink: [['impactGlass_light', .4, { r: [1, 1.25], rev: .25 }]],
+  resume: [['forceField', .45, { r: 1.3 }], ['magical_2', .45, { rev: .4 }]],
+  orb: [['magical_6_0', .35, { r: 1.3 }]],
+  step: [['footstep_concrete', .2, { r: [.85, 1.1], lp: 2500 }]],
+  stepD: [['footstep0', .18, { r: [.85, 1.05], rev: .15 }]],
+  jump: [['cloth', .25, { r: [1.2, 1.4] }]],
+  land: [['footstep_concrete', .35, { r: .7 }], ['impactSoft_medium', .25, { r: .8, lp: 600 }]],
+  // elements: <el> for the basic attack, <el>_big for everything heavier
+  fire: [['spell_fire', .65, { r: [1, 1.2], len: .5 }], ['thrusterFire', .2, { len: .3, hp: 500 }]],
+  fire_big: [['spell_fire', .85, { r: [.8, .9], rev: .3 }], ['explosionCrunch', .4, { r: .8, rev: .3 }], ['lowFrequency_explosion_001', .55]],
+  frost: [['impactGlass_medium', .45, { r: [1.1, 1.3], rev: .3 }], ['magical_5', .3, { r: 1.4, len: .5 }]],
+  frost_big: [['impactGlass_heavy', .65, { r: [.8, .9], rev: .4 }], ['impactGlass_medium', .45, { d: .06, r: .7 }], ['forceField', .25, { r: 1.5, hp: 800 }]],
+  storm: [['explosionCrunch_002', .45, { r: [1.6, 1.9], hp: 1500 }], ['impactMetal_light', .25, { r: [1.5, 1.8] }], ['chain', .2, { r: 1.5 }]],
+  storm_big: [['explosionCrunch', .65, { r: [1.3, 1.5], hp: 900, rev: .4 }], ['lowFrequency_explosion_000', .55, { d: .12, lp: 300, rev: .6 }], ['chain', .25, { r: 1.3 }]],
+  water: [['creature_slime', .45, { r: [.7, .9] }], ['slime_000', .3, { r: .8 }]],
+  water_big: [['creature_slime', .55, { r: .5, rev: .4 }], ['impactSoft_heavy', .45, { r: .6 }], ['thrusterFire', .3, { len: .9, lp: 1200, rev: .3 }]],
+  earth: [['stones', .5, { r: [.8, 1] }], ['impactMining', .3, { r: .7 }]],
+  earth_big: [['impactMining', .75, { r: [.5, .6], rev: .3 }], ['stones_03', .55, { r: .8 }], ['lowFrequency_explosion_001', .8]],
+  wind: [['thrusterFire', .28, { len: .4, hp: 1200 }], ['cloth', .3, { r: 1.4 }]],
+  wind_big: [['thrusterFire', .45, { len: 1.2, hp: 500, rev: .4 }], ['blade', .3, { r: .5 }]],
+  nature: [['wood_0', .4, { r: [.9, 1.2] }], ['cloth', .22, { r: 1.6 }]],
+  nature_big: [['creak', .45, { r: .8, rev: .3 }], ['impactWood_heavy', .55, { r: .7 }], ['wood_0', .35, { d: .05 }]],
+  shadow: [['magical_4', .45, { r: [.6, .7], len: .8, rev: .4 }], ['cloth', .22, { r: .6 }]],
+  shadow_big: [['magical_4', .65, { r: .5, rev: .6 }], ['creature_monster_03', .3, { r: .5, rev: .5 }], ['lowFrequency_explosion_000', .45]],
+  light: [['magical_7_0', .5, { r: [1.2, 1.3], len: .7, rev: .4 }], ['impactBell_heavy_004', .22, { r: 3, rev: .5 }]],
+  light_big: [['impactBell_heavy_000', .5, { r: 1.6, rev: .7 }], ['magical_7_0', .55, { rev: .5 }], ['magical_2', .35, { r: 1.3 }]],
+  venom: [['creature_slime', .4, { r: [1.1, 1.3] }], ['slime_000', .22, { r: 1.3 }]],
+  venom_big: [['slime_001', .4, { len: .9, r: .8, rev: .3 }], ['creature_slime', .45, { r: .8 }], ['impactSoft_medium', .35]],
+  steel: [['blade', .5, { r: [1, 1.15] }], ['impactMetal_light', .28, { r: [1.1, 1.3], d: .03 }]],
+  steel_big: [['knifeSlice', .55], ['impactMetal_heavy', .55, { r: .8, rev: .3 }], ['chain', .3]],
+  magma: [['spell_fire', .5, { r: .7 }], ['stones_04', .35, { r: .8 }]],
+  magma_big: [['explosionCrunch', .65, { r: [.6, .7], rev: .4 }], ['stones_03', .45, { r: .7 }], ['lowFrequency_explosion_000', .75], ['spell_fire', .45, { r: .6 }]],
+  crystal: [['item_gem', .5, { r: [1.1, 1.3], rev: .3 }], ['impactGlass_light', .28, { r: 1.5 }]],
+  crystal_big: [['impactGlass_heavy', .55, { r: 1.1, rev: .5 }], ['item_gem_04', .45, { r: 1.4, rev: .4 }], ['impactBell_heavy_002', .28, { r: 2.2, rev: .6 }]],
+  sonic: [['impactBell_heavy_003', .35, { r: [1.4, 1.6], rev: .3 }], ['forceField', .28, { r: 1.8, len: .3 }]],
+  sonic_big: [['forceField', .55, { r: 1.1, rev: .4 }], ['impactBell_heavy_002', .45, { r: .9, rev: .5 }], ['lowFrequency_explosion_001', .55]],
+  gravity: [['forceField', .4, { r: [.5, .55], rev: .3 }], ['lowFrequency_explosion_001', .35, { r: .7 }]],
+  gravity_big: [['lowFrequency_explosion_000', .85, { r: .7, rev: .5 }], ['magical_4', .45, { r: .45, rv: 1, rev: .5 }], ['forceField', .35, { r: .4 }]],
+  chrono: [['lock', .35, { r: [1.2, 1.4] }], ['magical_6_0', .35, { r: 1.2, rv: 1 }]],
+  chrono_big: [['impactBell_heavy_001', .45, { rv: 1, r: 1.2, rev: .6 }], ['lock', .35, { d: .1 }], ['magical_3', .35, { rv: 1 }]],
+  blood: [['impactSoft_medium', .45, { r: [.8, 1] }], ['creature_slime', .28, { r: .7 }]],
+  blood_big: [['impactSoft_heavy', .55, { r: .7 }], ['creature_hurt', .3, { r: .5, rev: .4 }], ['slime_000', .35, { r: .6 }]],
+  spirit: [['magical_1_0', .4, { r: [1.2, 1.4], len: .7, rev: .5 }], ['creature_misc_03', .18, { r: 1.5, rev: .6 }]],
+  spirit_big: [['magical_1_0', .55, { r: .8, rev: .6 }], ['impactBell_heavy_000', .28, { rv: 1, r: 1.4, rev: .6 }], ['forceField', .28, { r: 1.2 }]],
+  cosmic: [['magical_7_0', .45, { r: [.8, .9], len: .6, rev: .5 }], ['forceField', .28, { r: 1.6, len: .3 }]],
+  cosmic_big: [['magical_3', .55, { r: .7, rev: .6 }], ['lowFrequency_explosion_000', .65], ['impactBell_heavy_000', .35, { r: .8, rev: .7 }]],
+  explosion: [['explosionCrunch', .6, { r: [1, 1.2] }], ['lowFrequency_explosion_001', .45]],
+  explosion_big: [['explosionCrunch', .85, { r: [.75, .85], rev: .4 }], ['lowFrequency_explosion_000', .85], ['stones', .35, { d: .1 }]],
+};
+const REV = new WeakMap(); // reversed copies, made on first use
+function pickSample(pool) {
+  const list = POOLS[pool] ||= Object.keys(SAMPLES).filter(n => n.startsWith(pool));
+  const b = list[Math.random() * list.length | 0]; return b && SAMPLES[b];
+}
+function sfx(type) {
+  if (!AC || !SFX[type] || AC.state !== 'running') return;
+  const t = AC.currentTime;
+  if (t - (lastSfx[type] || 0) < .04 || voices > 40) return; // same sound re-fired within a frame, or too many at once
+  lastSfx[type] = t;
+  const drift = 1 + (Math.random() - .5) * .08;
+  for (const [pool, v, o = {}] of SFX[type]) {
+    let buf = pickSample(pool); if (!buf) continue;
+    if (o.rv) { if (!REV.has(buf)) { const r = AC.createBuffer(buf.numberOfChannels, buf.length, buf.sampleRate); for (let c = 0; c < buf.numberOfChannels; c++) r.getChannelData(c).set(buf.getChannelData(c).slice().reverse()); REV.set(buf, r); } buf = REV.get(buf); }
+    const src = AC.createBufferSource(); src.buffer = buf;
+    src.playbackRate.value = (Array.isArray(o.r) ? o.r[0] + Math.random() * (o.r[1] - o.r[0]) : o.r || 1) * drift;
+    let node = src;
+    for (const [type, f] of [['lowpass', o.lp], ['highpass', o.hp]]) if (f) { const q = AC.createBiquadFilter(); q.type = type; q.frequency.value = f; node.connect(q); node = q; }
+    const g = AC.createGain(), at = t + (o.d || 0); g.gain.value = v;
+    if (o.len) { g.gain.setValueAtTime(v, at + o.len * .7); g.gain.linearRampToValueAtTime(0, at + o.len); }
+    node.connect(g); g.connect(sfxBus);
+    if (o.rev) { const s = AC.createGain(); s.gain.value = o.rev; g.connect(s); s.connect(revBus); }
+    src.start(at); if (o.len) src.stop(at + o.len + .01);
+    voices++; src.onended = () => voices--;
+  }
+}
+// ---- music: real CC0 tracks per situation, crossfaded; each list shuffles without repeating the track just heard ----
+const MUSIC = {
+  menu: ['fantasy_orchestral_theme.mp3', 'dark_shrine.ogg'],
+  arena: ['battle_theme_a.mp3', 'swordfight.ogg', 'heartfelt_battle.ogg', 'random_battle.mp3', 'mythica.mp3'],
+  duel: ['swordfight.ogg', 'random_battle.mp3', 'battle_theme_a.mp3', 'heartfelt_battle.ogg'],
+  dungeon: ['dungeon_ambience.ogg', 'dungeon_theme.mp3', 'cave_explorer.mp3', 'forgotten_tombs.mp3'],
+  boss: ['weltherrscher.ogg', 'mythica.mp3'],
+  over: ['dark_shrine.ogg'],
+};
+const tracks = {}; let musicMood = null, musicNow = null;
+function track(name) { // an <audio> element streamed from the packed bytes, routed through its own fade gain
+  if (tracks[name]) return tracks[name];
+  const s = window.MAGE_AUDIO?.music?.[name]; if (!s || !AC) return null;
+  const el = new Audio(URL.createObjectURL(new Blob([Uint8Array.from(atob(s), c => c.charCodeAt(0))], { type: name.endsWith('.ogg') ? 'audio/ogg' : 'audio/mpeg' })));
+  const g = AC.createGain(); g.gain.value = 0; AC.createMediaElementSource(el).connect(g); g.connect(musicBus);
+  el.onended = () => { if (musicNow === name) playMood(musicMood, name); };
+  el.onerror = () => { el.bad = true; if (musicNow === name) playMood(musicMood, name); }; // e.g. Ogg on older Safari: try the next one
+  return tracks[name] = { el, g };
+}
+function playMood(mood, avoid) {
+  const list = (MUSIC[mood] || []).filter(n => n !== avoid && !tracks[n]?.el.bad);
+  const name = list[Math.random() * list.length | 0], t = AC.currentTime;
+  for (const [n, tr] of Object.entries(tracks)) if (n !== name && !tr.el.paused) { // fade out whatever else is playing
+    tr.g.gain.cancelScheduledValues(t); tr.g.gain.setValueAtTime(tr.g.gain.value, t); tr.g.gain.linearRampToValueAtTime(0, t + 2.5);
+    clearTimeout(tr.stop); tr.stop = setTimeout(() => tr.el.pause(), 2600);
+  }
+  musicMood = mood; musicNow = name;
+  const tr = name && track(name); if (!tr) return;
+  clearTimeout(tr.stop); if (tr.el.ended) tr.el.currentTime = 0;
+  tr.el.play().catch(() => {});
+  tr.g.gain.cancelScheduledValues(t); tr.g.gain.setValueAtTime(tr.g.gain.value, t); tr.g.gain.linearRampToValueAtTime(1, t + 2.5);
+}
+function music(mood) { // call every frame with what's happening; switches only when the mood changes
+  if (!AC || mood === musicMood) return;
+  if (musicNow && MUSIC[mood]?.includes(musicNow)) { musicMood = mood; return; } // the current track fits the new mood too: keep it
+  playMood(mood);
+}
+// browsers only allow sound after a click or key press: start the audio (and the menu music) on the first one
+const wake = () => { initAudio(); if (AC) { removeEventListener('pointerdown', wake); removeEventListener('keydown', wake); } };
+addEventListener('pointerdown', wake); addEventListener('keydown', wake);
 
 // ===================== input (keyboard + mouse, touch, gamepad) =====================
 const keys = {};
