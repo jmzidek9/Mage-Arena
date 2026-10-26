@@ -1,14 +1,19 @@
 # Graph Report - Test Game  (2026-10-25)
 
 ## Corpus Check
-- 22 files · ~95,977 words
+- 23 files · ~96,682 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 2 file(s) not represented in the graph (top: (none) 2)
 
 ## Summary
-- 552 nodes · 1047 edges · 21 communities (19 shown, 2 thin omitted)
+- 558 nodes · 1052 edges · 22 communities (19 shown, 3 thin omitted)
 - Extraction: 97% EXTRACTED · 3% INFERRED · 0% AMBIGUOUS · INFERRED: 36 edges (avg confidence: 0.88)
 - Token cost: 0 input · 0 output
+
+## Graph Freshness
+- Built from commit: `4dc2cf6f`
+- Run `git rev-parse HEAD` and compare to check if the graph is stale.
+- Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
 - sim.js
@@ -31,6 +36,7 @@
 - clamp
 - css
 - lockMouse
+- Mage Arena
 
 ## God Nodes (most connected - your core abstractions)
 1. `ev()` - 24 edges
@@ -59,7 +65,7 @@
 ## Import Cycles
 - None detected.
 
-## Communities (21 total, 2 thin omitted)
+## Communities (22 total, 3 thin omitted)
 
 ### Community 0 - "sim.js"
 Cohesion: 0.07
@@ -74,8 +80,8 @@ Cohesion: 0.07
 Nodes (55): add(), anchor(), ARRIVE, block(), BUCKET, buildDungeonView(), buildFloor(), buildHall() (+47 more)
 
 ### Community 3 - "view.js"
-Cohesion: 0.08
-Nodes (42): animEnemy(), bestFor(), buildBar(), castFx(), CC_OV, COMBO_FX, distTo(), ETPL (+34 more)
+Cohesion: 0.07
+Nodes (44): animEnemy(), bestFor(), buildBar(), castFx(), CC_OV, COMBO_FX, distTo(), ETPL (+36 more)
 
 ### Community 4 - "build_enemies.py"
 Cohesion: 0.11
@@ -138,22 +144,22 @@ Cohesion: 0.67
 Nodes (3): comboText(), css(), tintRig()
 
 ## Knowledge Gaps
-- **2 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **3 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `Blender Assets` connect `Blender Assets` to `Elements.md`, `Mesh`?**
-  _High betweenness centrality (0.281) - this node is a cross-community bridge._
+  _High betweenness centrality (0.277) - this node is a cross-community bridge._
 - **Are the 2 inferred relationships involving `react()` (e.g. with `r2()` and `Combos (reactions)`) actually correct?**
   _`react()` has 2 INFERRED edges - model-reasoned connections that need verification._
 - **Should `sim.js` be split into smaller, more focused modules?**
   _Cohesion score 0.06741321388577827 - nodes in this community are weakly interconnected._
 - **Why does `Mesh` connect `Mesh` to `lib.py`, `build_elements.py`, `Blender Assets`?**
-  _High betweenness centrality (0.258) - this node is a cross-community bridge._
+  _High betweenness centrality (0.254) - this node is a cross-community bridge._
 - **Should `core.js` be split into smaller, more focused modules?**
   _Cohesion score 0.025 - nodes in this community are weakly interconnected._
 - **Why does `r2()` connect `sim.js` to `core.js`, `elements.js`?**
-  _High betweenness centrality (0.244) - this node is a cross-community bridge._
+  _High betweenness centrality (0.241) - this node is a cross-community bridge._
 - **Should `dungeon.js` be split into smaller, more focused modules?**
   _Cohesion score 0.07486338797814207 - nodes in this community are weakly interconnected._

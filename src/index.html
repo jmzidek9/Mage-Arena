@@ -64,22 +64,33 @@ input::placeholder{color:#b9add8;opacity:.8}input:focus{box-shadow:0 0 0 2px var
 #code-big{font-family:Cinzel,Georgia,serif;font-weight:900;font-size:46px;letter-spacing:.35em;color:#fff6d8;text-shadow:0 0 20px var(--glow);margin:6px 0}
 @keyframes rise{from{opacity:0;transform:translateY(30px) scale(.9)}}
 /* ---- lobby: element grid + detail ---- */
-#modes{justify-content:flex-start;gap:12px;padding:24px 16px}
-#modes h1{font-size:clamp(34px,6vh,72px)}
-#modeCols{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;width:min(1240px,100%);flex:1;min-height:0}
-@media (max-width:760px){#modeCols{grid-template-columns:1fr;overflow:auto}}
-.mode{--c:#e9c46a;display:flex;flex-direction:column;padding:0;overflow:hidden;text-align:left;border-radius:20px;border-color:color-mix(in srgb,var(--c) 60%,transparent);background:rgba(10,6,22,.85);min-height:260px}
-.mode:hover{transform:translateY(-4px);box-shadow:0 0 0 2px var(--c),0 0 40px color-mix(in srgb,var(--c) 60%,transparent)}
-.mode .art{flex:none;height:clamp(90px,26vh,300px);display:grid;place-items:center;font-size:clamp(56px,9vh,96px);position:relative}
-.mode .art span{filter:drop-shadow(0 0 22px var(--c))}
-.mode .art.arena{background:radial-gradient(circle at 62% 34%,#fff8ee 0 2.5%,#151820 3% 7%,#fff1d0 7.6% 8.6%,rgba(255,170,90,.55) 9%,transparent 24%),radial-gradient(ellipse at 20% 120%,#3a3428,transparent 60%),linear-gradient(#04050a,#14161d 70%,#2a2620)}
-.mode .art.duel{background:radial-gradient(circle at 30% 40%,rgba(255,106,42,.55),transparent 40%),radial-gradient(circle at 72% 40%,rgba(76,180,255,.55),transparent 40%),linear-gradient(#05060c,#151a26 65%,#242833)}
-.mode .art.dungeon::before{content:'';position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:38%;height:68%;border:7px solid #5a4a3a;border-bottom:0;border-radius:50% 50% 0 0/38% 38% 0 0;background:repeating-linear-gradient(90deg,#3a3634 0 5px,transparent 5px 20px),repeating-linear-gradient(0deg,#3a3634 0 5px,transparent 5px 22px),radial-gradient(ellipse at 50% 100%,#2a1408,#050302 70%);box-shadow:0 0 30px #000}
-.mode .art.dungeon{background:radial-gradient(circle at 18% 40%,rgba(255,150,60,.7),transparent 16%),radial-gradient(circle at 82% 40%,rgba(255,150,60,.7),transparent 16%),repeating-linear-gradient(0deg,transparent 0 30px,rgba(0,0,0,.55) 30px 33px),repeating-linear-gradient(90deg,transparent 0 58px,rgba(0,0,0,.45) 58px 61px),linear-gradient(#2a2420,#140f0c)}
-.mode .body{flex:1;padding:16px 18px 18px;display:grid;gap:8px;align-content:start;box-sizing:border-box}
-.mode h2{margin:0;font-size:26px;letter-spacing:.14em;color:#fff6d8}
-.mode p{margin:0;font-family:Spectral,Georgia,serif;font-weight:400;font-size:16px;letter-spacing:0;color:var(--dim)}
-.mode ul{margin:0;padding-left:18px;font-family:Spectral,Georgia,serif;font-weight:400;font-size:14px;letter-spacing:0;color:#d8cfe8;display:grid;gap:3px}
+#modes{justify-content:flex-start;gap:clamp(10px,2vh,20px);padding:clamp(16px,3vh,32px) 16px;overflow:auto;background:radial-gradient(ellipse at 50% 35%,rgba(40,16,80,.25),rgba(3,2,10,.72) 70%)}
+#modes .eyebrow{font-family:Cinzel,Georgia,serif;font-size:clamp(11px,1.4vh,14px);letter-spacing:clamp(.12em,.6vw,.42em);color:var(--gold);text-transform:uppercase;opacity:.9}
+#modes h1{font-size:clamp(32px,min(8.5vh,11vw),104px);line-height:1}
+#modes .sub{font-size:clamp(14px,1.9vh,18px)}
+#modeCols{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(12px,1.6vw,22px);width:min(1180px,100%);margin-top:clamp(4px,1.5vh,16px)}
+#modes>:first-child{margin-top:auto}#modes>:last-child{margin-bottom:auto}
+@media (max-width:760px){#modeCols{grid-template-columns:1fr}.mode .art{height:140px}}
+.mode{--c:#e9c46a;display:flex;flex-direction:column;padding:0;overflow:hidden;text-align:left;border-radius:20px;border-color:color-mix(in srgb,var(--c) 45%,transparent);background:linear-gradient(180deg,rgba(16,10,32,.92),rgba(8,5,18,.96));animation:rise .7s cubic-bezier(.2,.9,.3,1) backwards}
+.mode:hover,.mode:focus-visible{transform:translateY(-6px);border-color:var(--c);box-shadow:0 0 0 1px var(--c),0 18px 50px rgba(0,0,0,.55),0 0 46px color-mix(in srgb,var(--c) 45%,transparent);outline:none}
+.mode .art{position:relative;height:clamp(120px,30vh,270px);overflow:hidden}
+.mode .art svg{display:block;width:100%;height:100%;transition:transform .8s cubic-bezier(.2,.9,.3,1)}
+.mode:hover .art svg{transform:scale(1.07)}
+.mode .art::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,transparent 55%,rgba(16,10,32,.95));pointer-events:none}
+.mode .art kbd{position:absolute;top:12px;left:12px;z-index:1;font-family:Cinzel,Georgia,serif;font-size:12px;width:24px;height:24px;display:grid;place-items:center;border-radius:7px;background:rgba(0,0,0,.55);border:1px solid color-mix(in srgb,var(--c) 60%,transparent);color:#fff6d8}
+.mode .body{flex:1;padding:4px 20px 14px;display:grid;gap:9px;align-content:start}
+.mode h2{margin:0;font-size:clamp(22px,2.9vh,30px);letter-spacing:.14em;color:#fff6d8;text-shadow:0 0 18px color-mix(in srgb,var(--c) 60%,transparent)}
+.mode p{margin:0;font-family:Spectral,Georgia,serif;font-weight:400;font-size:clamp(14px,1.8vh,17px);line-height:1.45;letter-spacing:0;color:var(--dim)}
+.mode ul{margin:2px 0 0;padding:0;list-style:none;display:flex;flex-wrap:wrap;gap:6px}
+.mode li{font-family:Spectral,Georgia,serif;font-weight:600;font-size:12.5px;letter-spacing:.02em;color:color-mix(in srgb,var(--c) 45%,white);padding:3px 10px;border-radius:999px;background:color-mix(in srgb,var(--c) 12%,transparent);border:1px solid color-mix(in srgb,var(--c) 35%,transparent)}
+.mode .go{display:flex;justify-content:space-between;align-items:center;padding:12px 20px;border-top:1px solid color-mix(in srgb,var(--c) 22%,transparent);font-size:13px;letter-spacing:.22em;text-transform:uppercase;color:var(--c)}
+.mode .go span{transition:transform .25s;font-size:18px}.mode:hover .go span{transform:translateX(6px)}
+.mode:hover .go{background:color-mix(in srgb,var(--c) 10%,transparent)}
+.spin{animation:spin 40s linear infinite}.pulse{animation:pulse 1.6s ease-in-out infinite}.flick{animation:flick 1.4s ease-in-out infinite}
+@keyframes pulse{50%{transform:scale(1.18);opacity:.8}}
+@keyframes flick{0%,100%{opacity:1;transform:scale(1)}30%{opacity:.8;transform:scale(.94,1.06)}60%{opacity:.95;transform:scale(1.04,.96)}}
+#modes .hint{font-size:13px;color:var(--dim);letter-spacing:.06em}#modes .hint kbd{font-family:Cinzel,Georgia,serif;font-size:11px;padding:1px 6px;border-radius:5px;border:1px solid rgba(233,196,106,.4);color:#fff6d8;margin:0 2px}
+@media (prefers-reduced-motion:reduce){.mode,.spin,.pulse,.flick,h1{animation:none}}
 #modeBar{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;width:100%}
 #modeBar>button{justify-self:start}@media (max-width:560px){#modeBar{grid-template-columns:auto 1fr;row-gap:8px}#modeBar h2{grid-row:2;grid-column:1/-1}#modeBar .row{flex-wrap:nowrap}#modeBar .row button{padding:6px 10px}}#modeBar .row{justify-self:end;gap:8px}
 #modeBar h2{margin:0;font-family:Cinzel,Georgia,serif;font-size:clamp(24px,4vh,40px);letter-spacing:.16em;color:#fff6d8;text-shadow:0 0 16px rgba(154,92,255,.8)}
@@ -112,6 +123,15 @@ input::placeholder{color:#b9add8;opacity:.8}input:focus{box-shadow:0 0 0 2px var
 .mv .mi{font-size:20px;text-align:center}
 .mv b{font-family:Cinzel,Georgia,serif;font-size:14px;color:#fff6d8}.mv i{font-size:11px;color:var(--el);font-style:normal;letter-spacing:.05em}
 .mv small{font-size:13px!important}
+.play{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;align-items:stretch;width:100%}
+#soloBtn{min-width:220px;font-size:19px;padding:14px 28px;animation:ultpulse 2.4s ease-in-out infinite;--el:#e9c46a}
+.online{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center;padding:8px 10px 8px 16px;border-radius:14px;background:rgba(0,0,0,.28);border:1px solid rgba(233,196,106,.2)}
+.online .lbl{font-family:Cinzel,Georgia,serif;font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--dim);margin-right:4px}
+.online i{width:1px;align-self:stretch;margin:4px 4px;background:rgba(233,196,106,.25)}
+.online button,.online input{padding:10px 18px;font-size:15px}.online input{width:120px}
+#startBtn{border-color:var(--gold);box-shadow:0 0 20px rgba(233,196,106,.45)}
+#lobby .panel{animation:rise .5s cubic-bezier(.2,.9,.3,1)}
+.elc{transition:transform .15s,box-shadow .2s}.elc:hover{transform:translateY(-3px)}
 .pickinfo{margin-top:12px;padding:10px 12px;border-radius:12px;background:rgba(0,0,0,.25);font-size:13px;color:var(--dim);display:grid;gap:6px}.pickinfo label{font-family:Cinzel,Georgia,serif;color:#fff6d8;letter-spacing:.06em}.pickinfo select{margin-left:8px;font:inherit;padding:4px 8px;border-radius:8px;background:#160d30;color:#fff;border:1px solid rgba(233,196,106,.45)}
 /* ---- ability bar ---- */
 #bar{position:absolute;bottom:18px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:6px}
@@ -202,10 +222,12 @@ body.touching #me{top:14px;bottom:auto;left:14px}body.touching #lock{display:non
 </div>
 
 <div id="modes" class="overlay">
+  <div class="eyebrow">First-person elemental magic · 1–2 players</div>
   <h1>MAGE ARENA</h1>
   <div class="rule"></div>
   <div class="sub">Choose how you want to play</div>
   <div id="modeCols"></div>
+  <div class="hint">Press <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> · Keyboard &amp; mouse, gamepad or touch</div>
 </div>
 
 <div id="lobby" class="overlay hidden">
@@ -213,7 +235,7 @@ body.touching #me{top:14px;bottom:auto;left:14px}body.touching #lock{display:non
     <div id="modeBar"><button id="modeBack" class="ghost">← Modes</button><h2 id="modeName"></h2><div class="row"><button id="gfxBtn" class="ghost">Graphics: High</button><button id="setBtn" class="ghost">Settings</button></div></div>
     <div class="rule"></div>
     <div class="pick"><div><div id="grid"></div><div id="pickinfo" class="pickinfo"></div></div><div id="detail"></div></div>
-    <div class="row"><button id="soloBtn" class="el sel" style="--c:#e9c46a;color:#fff6d8;min-width:200px">⚔ Play Solo</button><span class="display" style="color:var(--dim)">or</span><button id="hostBtn">Host game</button><input id="code" maxlength="5" placeholder="CODE"><button id="joinBtn">Join</button><button id="startBtn" class="hidden">Start</button></div>
+    <div class="play"><button id="soloBtn" class="el sel" style="--c:#e9c46a;color:#fff6d8">⚔ Play Solo</button><div class="online"><span class="lbl">With a friend</span><button id="hostBtn">Host game</button><i></i><input id="code" maxlength="5" placeholder="CODE" aria-label="Room code"><button id="joinBtn">Join</button><button id="startBtn" class="hidden">Start</button></div></div>
     <div id="status">Loading Blender assets…</div>
     <details class="foot"><summary>Controls</summary><div class="sub">WASD move · Mouse aim · <b>LMB / RMB / Q / E</b> moves · <b>R</b> ultimate · Space jump · Shift dash (dash through a red attack just before it lands for a perfect dodge) · Tab swap element · Esc settings &amp; switch element</div></details>
   </div>

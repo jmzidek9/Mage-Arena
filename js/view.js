@@ -518,20 +518,65 @@ function showOver(e) {
 }
 
 // ===================== mode browser: Arena / 1v1 Duel / Dungeon =====================
+// card art: small inline SVG scenes (ids are prefixed per card so they don't clash)
+const svg = body => `<svg viewBox="0 0 400 240" preserveAspectRatio="xMidYMid slice" aria-hidden="true">${body}</svg>`;
+const STARS = [[30, 30], [70, 62], [120, 22], [160, 50], [345, 28], [375, 70], [330, 120], [20, 110], [95, 100], [380, 150]].map(([x, y], i) => `<circle cx="${x}" cy="${y}" r="${i % 3 ? .8 : 1.4}" fill="#fff" opacity="${i % 2 ? .5 : .85}"/>`).join('');
+const MODE_ART = {
+  arena: svg(`<defs><radialGradient id="aSky" cx="62%" cy="30%" r="85%"><stop offset="0" stop-color="#3d1f63"/><stop offset=".45" stop-color="#160b2b"/><stop offset="1" stop-color="#05040b"/></radialGradient>
+    <radialGradient id="aGlow"><stop offset=".28" stop-color="#ffe2b0"/><stop offset=".42" stop-color="#ff9a4a" stop-opacity=".55"/><stop offset="1" stop-color="#ff7a2a" stop-opacity="0"/></radialGradient>
+    <linearGradient id="aRock" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3e3756"/><stop offset="1" stop-color="#0b0912"/></linearGradient></defs>
+    <rect width="400" height="240" fill="url(#aSky)"/>${STARS}
+    <g class="spin" style="transform-origin:250px 78px"><circle cx="250" cy="78" r="78" fill="url(#aGlow)"/></g>
+    <ellipse cx="250" cy="78" rx="70" ry="13" fill="none" stroke="#ffd59a" stroke-width="2.5" opacity=".8" transform="rotate(-14 250 78)"/>
+    <circle cx="250" cy="78" r="25" fill="#000" stroke="#fff3d6" stroke-width="2"/>
+    <path d="M181,93 A70,13 0 0 0 319,63" fill="none" stroke="#fff1d0" stroke-width="3.5" transform="rotate(-14 250 78)" opacity=".95"/>
+    <path d="M30,184 L370,184 L338,200 L300,226 L238,240 L160,240 L100,222 L60,202 Z" fill="url(#aRock)"/>
+    <ellipse cx="200" cy="184" rx="170" ry="13" fill="#4b4566"/><ellipse cx="200" cy="184" rx="90" ry="6" fill="none" stroke="#b48cff" stroke-width="1.5" opacity=".7"/>
+    <rect x="70" y="128" width="12" height="56" fill="#5a5470"/><rect x="66" y="124" width="20" height="6" fill="#6a6482"/>
+    <path d="M300,184 v-40 l4,-6 l3,5 l5,-3 v44 z" fill="#5a5470"/>
+    <path d="M140,184 v-34 a22,22 0 0 1 44,0 v34 h-8 v-34 a14,14 0 0 0 -28,0 v34 z" fill="#4e4864"/>
+    <circle cx="112" cy="176" r="10" fill="#ff9a4a" opacity=".35"/><path d="M112,166 l4,9 h-8 z" fill="#ffd9a8"/>
+    <circle cx="262" cy="176" r="10" fill="#ff9a4a" opacity=".35"/><path d="M262,166 l4,9 h-8 z" fill="#ffd9a8"/>
+    <path d="M40,120 l14,-6 l10,8 l-12,8 z" fill="#2c2840"/><path d="M350,110 l12,-4 l8,7 l-10,6 z" fill="#2c2840"/>`),
+  duel: svg(`<defs><linearGradient id="dSky" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#3a140c"/><stop offset=".5" stop-color="#120a1e"/><stop offset="1" stop-color="#0a1c3a"/></linearGradient>
+    <radialGradient id="dBurst"><stop offset="0" stop-color="#fff"/><stop offset=".3" stop-color="#ffe9ff" stop-opacity=".9"/><stop offset="1" stop-color="#b48cff" stop-opacity="0"/></radialGradient>
+    <filter id="dBlur" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="5"/></filter></defs>
+    <rect width="400" height="240" fill="url(#dSky)"/>${STARS}
+    <ellipse cx="200" cy="200" rx="185" ry="22" fill="#2a2638"/><ellipse cx="200" cy="196" rx="185" ry="20" fill="#3c3752"/>
+    <ellipse cx="200" cy="196" rx="60" ry="6" fill="none" stroke="#e9c46a" stroke-width="1.2" opacity=".6"/>
+    <g class="beam"><path d="M108,118 Q150,104 200,116" stroke="#ff7a2a" stroke-width="10" fill="none" filter="url(#dBlur)"/><path d="M108,118 Q150,104 200,116" stroke="#ffd2a8" stroke-width="3" fill="none"/>
+    <path d="M292,118 Q250,130 200,116" stroke="#3aa8ff" stroke-width="10" fill="none" filter="url(#dBlur)"/><path d="M292,118 Q250,130 200,116" stroke="#cfeeff" stroke-width="3" fill="none"/></g>
+    <circle class="pulse" cx="200" cy="116" r="34" fill="url(#dBurst)" style="transform-origin:200px 116px"/>
+    <path d="M200,92 l5,17 l17,-5 l-12,13 l12,13 l-17,-5 l-5,17 l-5,-17 l-17,5 l12,-13 l-12,-13 l17,5 z" fill="#fff" opacity=".9"/>
+    <g stroke="#ff9a5a" stroke-width="1.6" stroke-opacity=".85"><path d="M70,196 L80,140 L64,140 L86,92 L106,140 L92,140 L102,196 Z" fill="#14101f"/><circle cx="86" cy="128" r="8" fill="#14101f"/></g><path d="M98,150 L110,116" stroke="#14101f" stroke-width="4"/><circle cx="109" cy="117" r="5" fill="#ffb070"/>
+    <g stroke="#7cc8ff" stroke-width="1.6" stroke-opacity=".85"><path d="M330,196 L320,140 L336,140 L314,92 L294,140 L308,140 L298,196 Z" fill="#14101f"/><circle cx="314" cy="128" r="8" fill="#14101f"/></g><path d="M302,150 L290,116" stroke="#14101f" stroke-width="4"/><circle cx="291" cy="117" r="5" fill="#9ad8ff"/>`),
+  dungeon: svg(`<defs><pattern id="gBrick" width="48" height="24" patternUnits="userSpaceOnUse"><rect width="48" height="24" fill="#2b2420"/><path d="M0,23.5 H48 M24,0 V12 M0,11.5 H48 M12,12 V24 M36,12 V24" stroke="#120d0b" stroke-width="2"/></pattern>
+    <radialGradient id="gTorch"><stop offset="0" stop-color="#ffb35a" stop-opacity=".75"/><stop offset="1" stop-color="#ff7a2a" stop-opacity="0"/></radialGradient>
+    <linearGradient id="gDeep" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#050302"/><stop offset="1" stop-color="#2a160a"/></linearGradient></defs>
+    <rect width="400" height="240" fill="url(#gBrick)"/><rect width="400" height="240" fill="#000" opacity=".25"/>
+    <circle class="flick" cx="78" cy="96" r="70" fill="url(#gTorch)"/><circle class="flick" cx="322" cy="96" r="70" fill="url(#gTorch)" style="animation-delay:-.7s"/>
+    <path d="M128,240 V118 A72,72 0 0 1 272,118 V240 Z" fill="#4a3f36"/><path d="M142,240 V120 A58,58 0 0 1 258,120 V240 Z" fill="url(#gDeep)"/>
+    <path d="M160,240 L176,214 H224 L240,240 Z M180,208 L190,192 H210 L220,208 Z M194,186 L198,178 H202 L206,186 Z" fill="#5a3a22" opacity=".85"/>
+    <g stroke="#6a5a48" stroke-width="3.5"><path d="M156,82 V150 M171,68 V150 M186,63 V150 M200,62 V150 M214,63 V150 M229,68 V150 M244,82 V150"/><path d="M144,100 H256 M143,125 H257 M143,148 H257"/></g>
+    <g fill="#8a7a66"><path d="M153,150 l3,8 l3,-8 z M168,150 l3,8 l3,-8 z M183,150 l3,8 l3,-8 z M197,150 l3,8 l3,-8 z M211,150 l3,8 l3,-8 z M226,150 l3,8 l3,-8 z M241,150 l3,8 l3,-8 z"/></g>
+    <rect x="74" y="104" width="8" height="30" fill="#3a2a1c"/><path class="flick" d="M78,80 q10,14 0,26 q-10,-12 0,-26" fill="#ffcf7a" style="transform-origin:78px 106px"/>
+    <rect x="318" y="104" width="8" height="30" fill="#3a2a1c"/><path class="flick" d="M322,80 q10,14 0,26 q-10,-12 0,-26" fill="#ffcf7a" style="transform-origin:322px 106px;animation-delay:-.7s"/>`),
+};
 const MODES = {
-  arena: { name: 'Arena', glyph: '', c: '#e9c46a', play: '⚔ Play Solo', tag: 'Hold the floating ruins under the black hole against endless waves.',
-    info: ['Endless waves, a boss every 5', 'Solo, or co-op with a friend online'] },
-  duel: { name: '1v1 Duel', glyph: '⚔️', c: '#ff8a5a', play: '⚔ Duel the AI', tag: 'Wizard against wizard on a floating platform. Burn them down or knock them off.',
-    info: ['Best of 3 rounds', 'Online against a friend, or solo against an AI wizard'] },
-  dungeon: { name: 'Dungeon', glyph: '', c: '#ffa040', play: '⚔ Enter Alone', tag: 'Descend through torchlit medieval halls, floor after floor, as deep as you dare.',
-    info: ['Clear each room to open the doors, find the stairs down', 'A boss every 5 floors, endless depth', 'Solo, or co-op with a friend online'] },
+  arena: { name: 'Arena', c: '#e9c46a', play: '⚔ Play Solo', tag: 'Hold the floating ruins under the black hole against endless waves.',
+    info: ['Endless waves', 'Boss every 5', 'Solo or co-op'] },
+  duel: { name: '1v1 Duel', c: '#ff8a5a', play: '⚔ Duel the AI', tag: 'Wizard against wizard on a floating platform. Burn them down or knock them off.',
+    info: ['Best of 3', 'Vs a friend online', 'Or vs an AI wizard'] },
+  dungeon: { name: 'Dungeon', c: '#ffa040', play: '⚔ Enter Alone', tag: 'Descend through torchlit medieval halls, floor after floor, as deep as you dare.',
+    info: ['Endless floors', 'Boss every 5', 'Solo or co-op'] },
 };
 let myMode = 'arena';
 function renderModes() {
-  $('modeCols').innerHTML = Object.entries(MODES).map(([k, m]) => `<button class="mode" data-mode="${k}" style="--c:${m.c}"><div class="art ${k}"><span>${m.glyph}</span></div>
-    <div class="body"><h2>${m.name}</h2><p>${m.tag}</p><ul>${m.info.map(i => `<li>${i}</li>`).join('')}</ul></div></button>`).join('');
+  $('modeCols').innerHTML = Object.entries(MODES).map(([k, m], i) => `<button class="mode" data-mode="${k}" style="--c:${m.c};animation-delay:${i * .08}s"><div class="art">${MODE_ART[k]}<kbd>${i + 1}</kbd></div>
+    <div class="body"><h2>${m.name}</h2><p>${m.tag}</p><ul>${m.info.map(t => `<li>${t}</li>`).join('')}</ul></div><div class="go">Choose <span>→</span></div></button>`).join('');
   for (const b of $('modeCols').children) b.onclick = () => pickMode(b.dataset.mode);
 }
+addEventListener('keydown', e => { const k = Object.keys(MODES)[+e.key - 1]; if (k && !$('modes').classList.contains('hidden')) pickMode(k); });
 function pickMode(k) {
   myMode = k; $('modes').classList.add('hidden'); $('lobby').classList.remove('hidden');
   $('modeName').textContent = MODES[k].name; $('soloBtn').textContent = MODES[k].play; sfx('pick'); renderLobby();
