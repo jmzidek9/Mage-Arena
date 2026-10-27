@@ -68,12 +68,12 @@ Control the battlefield. Slow everything down, freeze it solid, then shatter it.
 ## ⚡ Storm
 Speed and chaos. Lightning that leaps from foe to foe.
 
-**Passive.** Static: every 6th Storm hit calls down a free lightning strike. Shocked enemies take 20% more damage.
+**Passive.** Static: every 8th Storm hit calls down a free lightning strike. Shocked enemies take 15% more damage.
 
 | Key | Move | Cooldown | What it does |
 |---|---|---|---|
 | LMB | ⚡ **Chain Lightning** | 0.36 s | An instant bolt that chains to 2 more enemies. |
-| RMB | 🔮 **Ball Lightning** | 4 s | A slow orb of lightning that zaps nearby enemies as it drifts, then bursts. |
+| RMB | 🔮 **Ball Lightning** | 6 s | A slow orb of lightning that zaps nearby enemies as it drifts, then bursts. |
 | Q | 🌩️ **Thunderclap** *(hold to aim, release to cast)* | 7 s | Mark a spot: a moment later a huge bolt slams it, stunning everything there, then jumps to up to 3 enemies nearby. |
 | E | 🗼 **Tesla Coil** *(hold to aim, release to cast)* | 13 s | Plant a tesla coil that zaps the nearest enemy every half second. |
 | R | ⛈️ **Thunderstorm** | ultimate | A storm cloud follows you, hurling a lightning bolt at a nearby enemy four times a second. |
@@ -270,7 +270,7 @@ Commander of the dead. Haunting wisps, a spectral wolf, and an army of ghost kni
 | LMB | 🕯️ **Soul Wisps** | 0.45 s | Release wisps that hunt down enemies on their own. |
 | RMB | 😱 **Banshee Wail** | 8 s | A terrifying wail. Enemies in front of you flee in fear for 2.5 seconds. |
 | Q | 🌫️ **Phase Walk** | 10 s | Become a ghost for 3 seconds: invulnerable, 30% faster, and you haunt every enemy you pass through. |
-| E | 🐺 **Spirit Wolf** | 18 s | Summon a spectral wolf for 16 seconds. It hunts the enemies closest to you and savages them. |
+| E | 🐺 **Spirit Wolf** | 14 s | Summon a spectral wolf for 16 seconds. It hunts the enemies closest to you and savages them. |
 | R | ⚔️ **Army of the Dead** | ultimate | Six spectral knights rise around you and cut down your enemies for 9 seconds. |
 
 ## 🌠 Cosmic
@@ -282,7 +282,7 @@ The power of the stars. Constellations, orbiting moons, meteor showers and a sup
 |---|---|---|---|
 | LMB | ⭐ **Star Shot** | 0.38 s | Fire shooting stars. Every 4th one is a giant star that pierces 3 enemies. |
 | RMB | 🌙 **Orbiting Moons** | 9 s | Three moons orbit you. Whenever an enemy comes close, a moon slams into it and explodes. |
-| Q | ✴️ **Constellation** *(hold to aim, release to cast)* | 1.2 s | Place up to 3 stars. Stars link to each other with beams of starlight that burn enemies crossing them. |
+| Q | ✴️ **Constellation** *(hold to aim, release to cast)* | 2.5 s | Place up to 3 stars. Stars link to each other with beams of starlight that burn enemies crossing them. |
 | E | 🌠 **Meteor Shower** *(hold to aim, release to cast)* | 12 s | Rain twelve shooting stars down on the target area. |
 | R | 💥 **Supernova** | ultimate | A star ignites above you and grows for 2 seconds, then goes supernova, obliterating and blinding everything nearby. |
 
@@ -294,7 +294,7 @@ Pure demolition. Grenades, sticky bombs, mines, rocket jumps and a carpet-bombin
 | Key | Move | Cooldown | What it does |
 |---|---|---|---|
 | LMB | 💣 **Grenade** | 0.6 s | Lob a bouncing grenade that explodes after a short fuse, or instantly when it hits an enemy. |
-| RMB | 🧨 **Sticky Bomb** | 0.6 s | Throw a sticky bomb that clings to whatever it hits. Press again to detonate it (it also blows on its own after 3 s). |
+| RMB | 🧨 **Sticky Bomb** | 3 s | Throw a sticky bomb that clings to whatever it hits and blows a moment later in a big blast. |
 | Q | 🚀 **Rocket Jump** | 6 s | Blast the ground under your feet to rocket up and forward, flattening whatever is nearby. |
 | E | 🎯 **Proximity Mines** | 12 s | Toss four mines ahead of you. Each one blows when an enemy walks over it. |
 | R | ✈️ **Carpet Bomb** | ultimate | Call in a bombing run: fourteen bombs drop in a line ahead of you, one after another. |
@@ -333,7 +333,7 @@ Ancient script. A trapper: every spell but the bolt is a ward on the ground that
 | Key | Move | Cooldown | What it does |
 |---|---|---|---|
 | LMB | 🔹 **Rune Bolt** | 0.4 s | Fire a spinning rune that pierces through an enemy. |
-| RMB | 🔯 **Glyph Trap** *(hold to aim, release to cast)* | 2.5 s | Inscribe a ward glyph at the target (up to 3 at once). It arms after a second, and the first enemy to step on it is blasted into the air and stunned. |
+| RMB | 🔯 **Glyph Trap** *(hold to aim, release to cast)* | 4 s | Inscribe a ward glyph at the target (up to 3 at once). It arms after a second, and the first enemy to step on it is blasted into the air and stunned. |
 | Q | 🪨 **Sigilfall** *(hold to aim, release to cast)* | 6 s | Inscribe a sigil ward (up to 2 at once). When an enemy steps on it, runic chains hold everything nearby and three runestones crash down, the last and largest stunning everything it hits. |
 | E | 🔘 **Binding Circle** *(hold to aim, release to cast)* | 12 s | Inscribe a binding ward. When an enemy steps on it, a great binding circle springs up for 6 s. Enemies inside are slowed by 40%, take 25% more damage from everything, and are scorched by the runes every second. |
 | R | 📖 **Word of Ruin** *(hold to aim, release to cast)* | ultimate | Inscribe the word of ruin as a great ward. When an enemy steps on it, a great rune ignites over every enemy within 20 m of it (up to 12), then each one slams down for 90 damage and a 1.5 s stun. |
@@ -380,7 +380,7 @@ Something ancient lives below. Tentacles erupt from the floor to seize, crush an
 ## 📡 Laser
 Precision light. Instant beams that ricochet off pillars, walls, the floor and your own crystal lenses, hitting harder with every bounce.
 
-**Passive.** Ricochet and Focus: every bounce makes a Laser hit 25% harder, and Laser hits to the head always crit. Hitting the same enemy again within 1.5 s builds Focus, +10% damage per stack (up to 6). Targeted enemies take 12% more damage.
+**Passive.** Ricochet and Focus: every bounce makes a Laser hit 25% harder, and Laser hits to the head always crit. Hitting the same enemy again within 1.5 s builds Focus, +6% damage per stack (up to 6). Targeted enemies take 12% more damage.
 
 | Key | Move | Cooldown | What it does |
 |---|---|---|---|
@@ -393,7 +393,7 @@ Precision light. Instant beams that ricochet off pillars, walls, the floor and y
 ## 🔮 Arcane
 Pure magic. Homing missiles, an owl familiar and polymorphs, and charges that build into a devastating barrage.
 
-**Passive.** Arcane Charges: every Arcane spell except Barrage gives you a charge (up to 4; they fade 8 s after your last cast). Each charge makes your spells 12% stronger. Spellbound enemies take 10% more damage.
+**Passive.** Arcane Charges: every Arcane spell except Barrage gives you a charge (up to 4; they fade 8 s after your last cast). Each charge makes your spells 8% stronger. Spellbound enemies take 10% more damage.
 
 | Key | Move | Cooldown | What it does |
 |---|---|---|---|
@@ -430,6 +430,9 @@ A calligrapher. Living ink: brush strokes that mire, koi that hunt, and a dragon
 | R | 🐉 **Ink Dragon** *(hold to aim, release to cast)* | ultimate | Paint a great ink dragon that bursts from the floor and coils around the target for 4 s, raining ink on everything beneath it, then dives into the centre: 90 damage and a 1.2 s stun. |
 
 Ink splats are real geometry (glossy black PBR with an indigo energy rim) laid at `INK_Y` = 0.09 m, just above the arena's raised tiles. The dragon's body is 30 segments that follow the trail its head has drawn.
+
+## Balance
+Tuned with an automated bench (a bot plays every element through the same fights: 40 s against 8 respawning mixed monsters, 30 s against a boss, and each ultimate on its own). After the pass every element's core kit lands within about 0.85–1.2x of the median damage, the spread the bench's own run-to-run noise allows. Elements built for control, defence or bosses (Wind, Sonic, Soul, Gravity) sit lower against crowds or bosses on purpose; Blood sits higher because it pays for it in health. Fixed along the way: Graviton, Venom Spit and Magma Glob ignored their listed damage; Sticky Bomb could be thrown and detonated every 0.6 s (now it sticks and blows on its own).
 
 ## Element resources
 Some elements build up something you can see above your ability bar and around your wizard: Plasma's **Heat** (a bar that turns into OVERHEATED), Soul's **Souls** (pale flames circling you), Arcane's **charges** (orbs whirling round you), Blades' **swords** (orbiting your waist), Bone's armor **plates**, Rune's count toward the next **Empowered** spell and Laser's **Focus** pips.

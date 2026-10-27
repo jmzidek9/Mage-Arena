@@ -99,7 +99,7 @@ function stats(p) {
 // resources some elements build up: Plasma's Heat, Soul's Souls, Arcane's charges
 function elementPower(p, el) {
   const bd = p.bd || {};
-  return el === 'plasma' ? 1 + (bd.heat || 0) / 200 : el === 'soul' ? 1 + .04 * (bd.souls || 0) : el === 'arcane' ? 1 + .12 * (bd.arc || 0) : 1;
+  return el === 'plasma' ? 1 + (bd.heat || 0) / 200 : el === 'soul' ? 1 + .04 * (bd.souls || 0) : el === 'arcane' ? 1 + .08 * (bd.arc || 0) : 1;
 }
 function bondMul(p) { if (!stats(p).bond) return 1; const m = mate(p); return m && !m.down && Math.hypot(m.x - p.x, m.z - p.z) < 8 ? 1.15 : 1; }
 const buff = (p, k, t) => { p.bf[k] = Math.max(p.bf[k] || 0, t); };
