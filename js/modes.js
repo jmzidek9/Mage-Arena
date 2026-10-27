@@ -12,6 +12,7 @@ function applyMap(mode) {
   MAP.rects = MAP.erects = null;
   PILLARS.length = 0; PILLARS.push(...(mode === 'duel' ? DUEL_PILLARS : ARENA_PILLARS));
   if (mode === 'dungeon') dunMap(); // the floor itself is in dungeon.js
+  if (mode === 'city') cityMap(); // and the city in city.js
   if (mapMode !== mode) { mapMode = mode; showScenery(mode); }
 }
 
@@ -115,15 +116,19 @@ function startMode() {
   applyMap(S.mode);
   if (S.mode === 'duel') startDuel();
   if (S.mode === 'dungeon') startDungeon();
+  if (S.mode === 'city') { cityReset(); ev({ k: 'cityreset' }); } // every block back in place, on both machines
 }
 function showScenery(mode) {
   const under = mode === 'dungeon';
-  arena.visible = mode === 'arena'; duelG.visible = mode === 'duel'; dunView.visible = under;
+  arena.visible = mode === 'arena'; duelG.visible = mode === 'duel'; dunView.visible = under; cityG.visible = mode === 'city';
+  for (const l of cityLights) l.visible = false; // cityFrame lights the nearest braziers
+  if (mode !== 'city') { moon.position.copy(BH).multiplyScalar(70); moon.target.position.set(0, 0, 0); moon.target.updateMatrixWorld(); }
+  Object.assign(moon.shadow.camera, mode === 'city' ? { left: -42, right: 42, top: 42, bottom: -42 } : { left: -27, right: 27, top: 27, bottom: -27 }); moon.shadow.camera.updateProjectionMatrix();
   for (const l of amb.lights) l.visible = mode === 'arena';
   for (const l of duelAmb.lights) l.visible = mode === 'duel';
   for (const l of dunLights) l.visible = under;
   for (const o of skyBits) o.visible = !under;
   moon.intensity = under ? 0 : 2; rim.intensity = under ? 0 : .35; // underground: torchlight only
   hemi.color.set(under ? 0x8a6a50 : 0x8d94a8); hemi.groundColor.set(under ? 0x141010 : 0x2b241d); hemi.intensity = under ? .8 : .35; lantern.visible = under;
-  scene.fog.color.set(under ? 0x060505 : 0x0e0f13); scene.fog.density = under ? .022 : .007;
+  scene.fog.color.set(under ? 0x060505 : 0x0e0f13); scene.fog.density = under ? .022 : mode === 'city' ? .0055 : .007;
 }

@@ -235,6 +235,7 @@ function nodeAt(x, z) {
 }
 // where a monster should walk to reach t: straight at it in the same room or hall, otherwise the next doorway on the way
 function navTo(e, t) {
+  if (S.mode === 'city') return cityNav(e, t);
   if (S.mode !== 'dungeon' || !DUN) return t;
   const a = nodeAt(e.x, e.z), b = nodeAt(t.x, t.z), R0 = DUN.rooms.length;
   if (a === b) return t;

@@ -25,7 +25,7 @@ function startGame() {
   S.players = { h: withTalents(newPlayer('h', myEl, myEl2), PROG.tal) };
   if (myEl2) S.players.h.up.second = 1;
   if (conn && guestEl) { S.players.g = withTalents(newPlayer('g', guestEl, guestEl2), guestTal); if (guestEl2) S.players.g.up.second = 1; }
-  timeFx = 0;
+  timeFx = 0; $('mod').textContent = ''; // no wave or dungeon note left over from the last game
   startMode();
   showGame();
 }
@@ -379,7 +379,7 @@ function frame(now, manual = false) {
   // the sky's black hole flares while a Singularity is open, and burns brighter through boss waves
   const flare = src?.ents?.some(n => n.mv === 'gravity.4') ? 1 : src?.enemies?.some(e => e.type === 'boss') ? .45 : 0;
   skyU.uFlare.value += (flare - skyU.uFlare.value) * Math.min(1, dt * 3);
-  stepParticles(dt); stepFx(dt); stepFlashes(dt); stepNums(dt);
+  stepParticles(dt); stepFx(dt); stepFlashes(dt); stepNums(dt); cityFrame(dt, t);
   composer.render();
 }
 // your own wizard's feet: a step every couple of metres on the ground, plus jump and landing sounds

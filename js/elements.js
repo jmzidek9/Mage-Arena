@@ -14,7 +14,7 @@ const ctxS = s => ({ p: S.players[s.own], el: s.el, m: MOVE[s.mv], dmg: s.mul ??
 const ctxN = n => ({ p: own(n), el: n.el, m: MOVE[n.mv], dmg: n.mul ?? 1 });
 // blast + matching 'boom'-style event with the real (Wide Blast scaled) radius
 function boomAt(c, x, y, z, r, dmg, o = {}, f = 'boom') {
-  const R = r * (c.p ? stats(c.p).aoe : 1), hit = blast(x, z, R, dmg, c, { ...o, raw: true });
+  const R = r * (c.p ? stats(c.p).aoe : 1), hit = blast(x, z, R, dmg, c, { ...o, raw: true, y });
   fxe(c.m.key, f, { x, y, z, r: R, ...(o.fx || {}) });
   return hit;
 }

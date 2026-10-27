@@ -101,6 +101,9 @@ function onEvent(e) {
       sfx(e.boss ? 'ring' : 'die');
       break;
     }
+    case 'blk': cityApply(e); break; // Mage City: blocks blasted out or collapsing
+    case 'prop': cityPropFx(e); break;
+    case 'cityreset': if (role === 'guest') cityReset(); break;
     case 'spawn': {
       circleFx('sigil', V(e.x, .06, e.z), 1.6 * Math.max(1, e.s * 1.4), { life: 1.1, color: 0xff3050 });
       for (let k = 0; k < 16; k++) emit(e.x + rand(-1, 1), .1, e.z + rand(-1, 1), 0, rand(2, 5), 0, 0xff3050, .25, .8);
@@ -569,6 +572,20 @@ function showOver(e) {
 const svg = body => `<svg viewBox="0 0 400 240" preserveAspectRatio="xMidYMid slice" aria-hidden="true">${body}</svg>`;
 const STARS = [[30, 30], [70, 62], [120, 22], [160, 50], [345, 28], [375, 70], [330, 120], [20, 110], [95, 100], [380, 150]].map(([x, y], i) => `<circle cx="${x}" cy="${y}" r="${i % 3 ? .8 : 1.4}" fill="#fff" opacity="${i % 2 ? .5 : .85}"/>`).join('');
 const MODE_ART = {
+  city: svg(`<defs><radialGradient id="cSky" cx="70%" cy="26%" r="90%"><stop offset="0" stop-color="#3d1f63"/><stop offset=".45" stop-color="#160b2b"/><stop offset="1" stop-color="#05040b"/></radialGradient>
+    <radialGradient id="cHole"><stop offset=".3" stop-color="#000"/><stop offset=".36" stop-color="#ffd9a0"/><stop offset=".55" stop-color="#ff8a3a" stop-opacity=".45"/><stop offset="1" stop-color="#ff7a2a" stop-opacity="0"/></radialGradient>
+    <linearGradient id="cStone" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8f8a9c"/><stop offset="1" stop-color="#3c3752"/></linearGradient>
+    <linearGradient id="cRock" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3e3756"/><stop offset="1" stop-color="#0b0912"/></linearGradient></defs>
+    <rect width="400" height="240" fill="url(#cSky)"/>${STARS}<circle class="pulse" cx="300" cy="62" r="46" fill="url(#cHole)" style="transform-origin:300px 62px"/>
+    <path d="M10,196 L390,196 L330,236 L70,236 Z" fill="url(#cRock)"/>
+    <g fill="url(#cStone)"><rect x="40" y="150" width="34" height="46"/><rect x="82" y="128" width="26" height="68"/><rect x="118" y="88" width="22" height="108"/><rect x="150" y="140" width="46" height="56"/><rect x="206" y="104" width="30" height="92"/><rect x="246" y="150" width="40" height="46"/><rect x="296" y="120" width="24" height="76"/><rect x="330" y="158" width="36" height="38"/></g>
+    <g fill="#5c5769"><path d="M118,88 h22 v-6 h-4 v4 h-5 v-4 h-4 v4 h-5 v-4 h-4 z"/><path d="M206,104 h30 v-6 h-4 v4 h-5 v-4 h-4 v4 h-4 v-4 h-4 v4 h-5 v-4 h-4 z"/><path d="M82,128 h26 v-5 h-4 v3 h-5 v-3 h-4 v3 h-5 v-3 h-4 z"/></g>
+    <g fill="#e9c46a"><rect x="118" y="92" width="22" height="3"/><rect x="206" y="108" width="30" height="3"/></g>
+    <g fill="#14101f"><rect x="125" y="110" width="4" height="9"/><rect x="132" y="140" width="4" height="9"/><rect x="214" y="126" width="4" height="9"/><rect x="225" y="150" width="4" height="9"/><rect x="160" y="168" width="10" height="28"/><rect x="90" y="150" width="4" height="8"/><rect x="304" y="140" width="4" height="8"/></g>
+    <path d="M129,82 l5,-14 l5,14 z M221,98 l4,-12 l4,12 z" fill="#daa0ff"/><circle class="pulse" cx="134" cy="72" r="10" fill="#daa0ff" opacity=".35" style="transform-origin:134px 72px"/>
+    <path d="M150,140 l-8,-8 l14,-6 l6,10 z M246,150 l6,-9 l10,4 l-3,7 z" fill="#8f8a9c" opacity=".9"/>
+    <g fill="#ff9a4a"><circle cx="58" cy="146" r="2.5"/><circle cx="268" cy="146" r="2.5"/></g>
+    <g fill="#733895"><path d="M100,136 h6 v18 l-3,-3 l-3,3 z"/><path d="M308,130 h6 v18 l-3,-3 l-3,3 z"/></g>`),
   arena: svg(`<defs><radialGradient id="aSky" cx="62%" cy="30%" r="85%"><stop offset="0" stop-color="#3d1f63"/><stop offset=".45" stop-color="#160b2b"/><stop offset="1" stop-color="#05040b"/></radialGradient>
     <radialGradient id="aGlow"><stop offset=".28" stop-color="#ffe2b0"/><stop offset=".42" stop-color="#ff9a4a" stop-opacity=".55"/><stop offset="1" stop-color="#ff7a2a" stop-opacity="0"/></radialGradient>
     <linearGradient id="aRock" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3e3756"/><stop offset="1" stop-color="#0b0912"/></linearGradient></defs>
@@ -616,6 +633,8 @@ const MODES = {
     info: ['Best of 3', 'Vs a friend online', 'Or vs an AI wizard'] },
   dungeon: { name: 'Dungeon', c: '#ffa040', play: '⚔ Enter Alone', tag: 'Descend through torchlit medieval halls, floor after floor, as deep as you dare.',
     info: ['Endless floors', 'Boss every 5', 'Solo or co-op'] },
+  city: { name: 'Mage City', c: '#c9a0ff', play: '⚔ Play Solo', tag: 'Endless waves through a floating city of towers and halls. Every wall can be blasted apart.',
+    info: ['Huge map', 'Everything breaks', 'Solo or co-op'] },
 };
 let myMode = 'arena';
 function renderModes() {

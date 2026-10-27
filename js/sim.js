@@ -131,6 +131,7 @@ const offMap = (x, z, pad = 0) => MAP.rects ? !inRects(x, z, -pad) : Math.hypot(
 function collide(o, r, sol = solids()) {
   if (S.mode !== 'duel') confine(o, r);
   for (const c of sol) { const dx = o.x - c.x, dz = o.z - c.z, dd = Math.hypot(dx, dz), m = r + c.r; if (dd < m && dd > 0) { o.x = c.x + dx / dd * m; o.z = c.z + dz / dd * m; } }
+  if (S.mode === 'city') cityCollide(o, r);
 }
 const clampArena = (v, pad = .5) => confine(v, pad);
 // a laser from o along d, bouncing off pillars, the dungeon's walls and the floor; returns its corner points.
@@ -346,6 +347,7 @@ function damage(e, amount, el, p, o = {}) {
 }
 // area damage without status (reactions and explosions of enemies)
 function aoe(x, z, r, amount, el, p, skipId = -1, knock = 0) {
+  if (S.mode === 'city') cityHit(x, 1, z, r, amount);
   for (const e of [...S.enemies]) {
     if (!alive(e) || e.id === skipId) continue;
     const dx = e.x - x, dz = e.z - z, d = Math.hypot(dx, dz), t = ET[e.type];
@@ -357,6 +359,7 @@ function aoe(x, z, r, amount, el, p, skipId = -1, knock = 0) {
 // area hit WITH status, knockback away from the centre, optional launch / crowd control. Radius scales with Wide Blast.
 function blast(x, z, r, dmg, c, o = {}) {
   const p = c.p, R = o.raw ? r : r * (p ? stats(p).aoe : 1), hit = [];
+  if (S.mode === 'city') cityHit(x, o.y ?? 1, z, R, dmg);
   for (const e of [...S.enemies]) {
     if (!alive(e) || (o.skip && o.skip.includes(e.id))) continue;
     const dx = e.x - x, dz = e.z - z, d = Math.hypot(dx, dz);
@@ -453,6 +456,7 @@ function stepShots(dt) {
         else { endShot(s, 'ground'); continue; }
       }
       if (offMap(s.x, s.z, MAP.rects ? 0 : 8)) { endShot(s, MAP.rects ? 'ground' : 'life'); continue; } // dungeon walls stop shots
+      if (S.mode === 'city' && blockAt(s.x, s.y, s.z)) { cityHit(s.x, s.y, s.z, Math.max(.9, s.r * 2), s.dmg * (s.child ? .5 : 1)); if (s.rest) { s.vx *= -.4; s.vz *= -.4; } else { endShot(s, 'ground'); continue; } } // Mage City: walls stop (and chip) shots
     }
     H.tick?.(s, dt);
     if (s.dead) continue;
@@ -479,6 +483,7 @@ function stepShots(dt) {
 }
 function stepFoeShot(s, dt) {
   if (S.tstop > 0) return;
+  if (S.mode === 'city' && blockAt(s.x, s.y, s.z)) { cityHit(s.x, s.y, s.z, .9, s.dmg * .5); s.dead = true; return; } // Mage City: walls are cover
   let k = 1;
   for (const n of S.ents) {
     const d = Math.hypot(s.x - n.x, s.z - n.z);
@@ -910,13 +915,14 @@ function stepSpawner(dt) {
   if ((S.spawnT -= dt) <= 0 && (S.budget > 0 || S.bossLeft)) {
     S.spawnT = rand(1.3, 2.6) * (S.mod === 'swarm' ? .6 : 1);
     const a = rand(0, TAU);
-    if (S.bossLeft) { S.bossLeft = 0; spawnEnemy('boss', Math.sin(a) * 15, Math.cos(a) * 15); }
+    const city = S.mode === 'city', at = city ? citySpawnSpot() : null; // Mage City: somewhere on the streets, 34-70 m from every player
+    if (S.bossLeft) { S.bossLeft = 0; const q = city ? citySpawnSpot(40, 75) : { x: Math.sin(a) * 15, z: Math.cos(a) * 15 }; spawnEnemy('boss', q.x, q.z); }
     for (let n = 1 + Math.floor(Math.random() * 4); n > 0 && S.budget > 0; n--) {
       const pool = Object.keys(ET).filter(k => ET[k].cost && !ET[k].zone && ET[k].from <= S.wave && ET[k].cost <= S.budget);
       if (!pool.length) { S.budget = 0; break; }
       const type = weighted(pool, k => 1 / ET[k].cost), b = a + rand(-.4, .4), elite = S.eliteLeft > 0;
       S.budget -= ET[type].cost; if (elite) S.eliteLeft--;
-      spawnEnemy(type, Math.sin(b) * 19.5, Math.cos(b) * 19.5, elite);
+      if (city) { const q = confine({ x: at.x + rand(-2, 2), z: at.z + rand(-2, 2) }, 1); spawnEnemy(type, q.x, q.z, elite); } else spawnEnemy(type, Math.sin(b) * 19.5, Math.cos(b) * 19.5, elite);
     }
   }
   if (S.budget <= 0 && !S.bossLeft && !S.enemies.length) endWave();
@@ -944,7 +950,7 @@ function hostStep(dt) {
   for (let k = 0, n = Math.ceil(dt / .017); k < n; k++) stepShots(dt / n); // ~60 Hz projectile steps even on a slow host, so fast shots can't skip past enemies
   stepEnts(dt); stepEnemies(dt); stepRings(dt); stepPlayers(dt);
   if (S.mode === 'duel') stepDuel(dt);
-  else { stepRevive(dt); if (S.mode === 'dungeon') stepDungeon(dt); else stepSpawner(dt); }
+  else { stepRevive(dt); if (S.mode === 'dungeon') stepDungeon(dt); else stepSpawner(dt); if (S.mode === 'city') cityStep(dt); }
 }
 // look around but nothing pressed: the press counters are the player's own, so nothing reads as a new dash / jump / swap
 const idleInput = (i, p) => ({ yaw: i?.yaw ?? p.yaw, pitch: i?.pitch ?? p.pitch, k: [], mx: 0, mz: 0, jump: false, dashN: p.dashN, jumpN: p.jumpN, swapN: p.swapN });
