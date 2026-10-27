@@ -1,17 +1,17 @@
 # Graph Report - Test Game  (2026-10-27)
 
 ## Corpus Check
-- 26 files · ~134,681 words
+- 26 files · ~138,167 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 2 file(s) not represented in the graph (top: (none) 2)
 
 ## Summary
-- 653 nodes · 1198 edges · 28 communities (21 shown, 7 thin omitted)
+- 653 nodes · 1201 edges · 26 communities (20 shown, 6 thin omitted)
 - Extraction: 96% EXTRACTED · 4% INFERRED · 0% AMBIGUOUS · INFERRED: 46 edges (avg confidence: 0.89)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `42d5dca9`
+- Built from commit: `f5485829`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -31,7 +31,6 @@
 - boltFx
 - modes.js
 - rand
-- To-do (noted 2026-10-26)
 - addShader
 - clamp
 - css
@@ -39,7 +38,6 @@
 - playMood
 - Mage Arena
 - initAudio
-- Similar moves (reviewed 2026-10-27)
 - pol
 - Elements
 - keyName
@@ -71,7 +69,7 @@
 ## Import Cycles
 - None detected.
 
-## Communities (28 total, 7 thin omitted)
+## Communities (26 total, 6 thin omitted)
 
 ### Community 0 - "sim.js"
 Cohesion: 0.07
@@ -106,8 +104,8 @@ Cohesion: 0.05
 Nodes (32): energyMat(), model(), aimBeam(), beamFx(), beamMesh(), _bgeo, blastFx(), boomAt() (+24 more)
 
 ### Community 8 - "Elements.md"
-Cohesion: 0.08
-Nodes (22): grab(), sp(), Blender Assets, Conventions, Combos (reactions), Named reactions, Reaction kinds (for every other pair), Enemies (+14 more)
+Cohesion: 0.06
+Nodes (28): grab(), sp(), Blender Assets, Conventions, Combos (reactions), Named reactions, Reaction kinds (for every other pair), Enemies (+20 more)
 
 ### Community 9 - "lib.py"
 Cohesion: 0.10
@@ -149,31 +147,27 @@ Nodes (3): comboText(), css(), tintRig()
 Cohesion: 1.00
 Nodes (3): MUSIC, playMood(), track()
 
-### Community 24 - "Similar moves (reviewed 2026-10-27)"
-Cohesion: 0.40
-Nodes (4): Alike within one element, Similar moves (reviewed 2026-10-27), Similar (same role, different twist), Very similar (near-duplicates)
-
 ### Community 26 - "Elements"
 Cohesion: 0.06
 Nodes (36): 🐙 Abyss, 🔮 Arcane, Balance, 🗡️ Blades, 🩸 Blood, 💀 Bone, ⏳ Chrono, 🌠 Cosmic (+28 more)
 
 ## Knowledge Gaps
-- **7 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **6 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `Blender Assets` connect `Elements.md` to `lib.py`, `build_elements.py`, `Mesh`, `elements.js`?**
-  _High betweenness centrality (0.278) - this node is a cross-community bridge._
+  _High betweenness centrality (0.289) - this node is a cross-community bridge._
 - **Are the 2 inferred relationships involving `react()` (e.g. with `r2()` and `Combos (reactions)`) actually correct?**
   _`react()` has 2 INFERRED edges - model-reasoned connections that need verification._
 - **Should `sim.js` be split into smaller, more focused modules?**
   _Cohesion score 0.06535087719298245 - nodes in this community are weakly interconnected._
 - **Why does `r2()` connect `sim.js` to `core.js`, `elements.js`?**
-  _High betweenness centrality (0.224) - this node is a cross-community bridge._
+  _High betweenness centrality (0.225) - this node is a cross-community bridge._
 - **Should `core.js` be split into smaller, more focused modules?**
   _Cohesion score 0.023255813953488372 - nodes in this community are weakly interconnected._
 - **Why does `Mesh` connect `Mesh` to `Elements.md`, `lib.py`, `build_elements.py`, `pol`?**
-  _High betweenness centrality (0.183) - this node is a cross-community bridge._
+  _High betweenness centrality (0.186) - this node is a cross-community bridge._
 - **Should `dungeon.js` be split into smaller, more focused modules?**
   _Cohesion score 0.07486338797814207 - nodes in this community are weakly interconnected._

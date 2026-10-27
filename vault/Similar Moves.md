@@ -1,6 +1,6 @@
 # Similar moves (reviewed 2026-10-27)
 
-Every group below is moves that work or look alike. Nothing has been changed yet. Strongest overlaps come first.
+Every group below is moves that worked or looked alike **before the rework**. All of it has since been handled (2026-10-27): the Rune wards were kept as they are, the buff, heal and shield moves in groups 9, 26, 32 and 35 were replaced outright, 23 moves got a new effect and 14 a new look. The current moves are in [[Elements]]; this note is kept as the record of what overlapped.
 
 ## Very similar (near-duplicates)
 
