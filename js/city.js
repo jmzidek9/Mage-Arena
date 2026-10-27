@@ -183,10 +183,15 @@ function cityReset() {
   for (let i = 0, n = 0; i < B.length; i += 5, n++) { const k = cKey(B[i], B[i + 1], B[i + 2]); CITY.occ[B[i] * CN + B[i + 1]] |= 1 << B[i + 2]; CITY.blk.set(k, { hp: B[i + 2] === 0 ? 45 : 32, n, gone: 0 }); }
   for (const p of CITY.props) p.hp = p.max;
   PILLARS.length = 0; for (const p of CITY.props) if (p.solid) PILLARS.push(p.solid);
-  cityViewReset(); CITY.dist = null;
+  cityPropMask(); cityViewReset(); CITY.dist = null;
+}
+// cells that solid props (fountains, statues, lamps, trees...) stand on, so the monsters route round them
+function cityPropMask() {
+  const M = CITY.pmask ??= new Uint8Array(CN * CN); M.fill(0);
+  for (const p of CITY.props) { if (!p.solid || p.hp <= 0) continue; const r = p.solid.r + .3; for (let ix = cIx(p.x - r); ix <= cIx(p.x + r); ix++) for (let iz = cIx(p.z - r); iz <= cIx(p.z + r); iz++) if (ix >= 0 && iz >= 0 && ix < CN && iz < CN && Math.hypot(cX(ix) - p.x, cX(iz) - p.z) < r + CB * .5) M[ix * CN + iz] = 1; }
 }
 const blockAt = (x, y, z) => { if (y < 0) return false; const ix = cIx(x), iz = cIx(z), lv = Math.floor(y / CB); return ix >= 0 && iz >= 0 && ix < CN && iz < CN && lv < 32 && (CITY.occ[ix * CN + iz] >> lv & 1) === 1; };
-function killProp(p) { if (p.hp <= 0 && p.dead) return; p.hp = 0; p.dead = 1; if (p.solid) { const i = PILLARS.indexOf(p.solid); if (i >= 0) PILLARS.splice(i, 1); } ev({ k: 'prop', i: CITY.props.indexOf(p) }); }
+function killProp(p) { if (p.hp <= 0 && p.dead) return; p.hp = 0; p.dead = 1; if (p.solid) { const i = PILLARS.indexOf(p.solid); if (i >= 0) PILLARS.splice(i, 1); cityPropMask(); CITY.dist = null; } ev({ k: 'prop', i: CITY.props.indexOf(p) }); }
 // host: damage blocks (and props) within r of a point; whatever breaks, and whatever that leaves hanging, goes out as one 'blk' event
 function cityHit(x, y, z, r, dmg) {
   if (S.mode !== 'city' || role === 'guest' || !CITY.ready || dmg <= 0) return;
@@ -260,7 +265,7 @@ function cityField() {
     const c = q[h++], ix = (c / CN) | 0, iz = c % CN, d = dist[c] + 1;
     for (let s = 0; s < 4; s++) {
       const x = ix + (s === 0 ? 1 : s === 1 ? -1 : 0), z = iz + (s === 2 ? 1 : s === 3 ? -1 : 0); if (x < 0 || z < 0 || x >= CN || z >= CN) continue;
-      const n = x * CN + z; if (dist[n] <= d || (CITY.occ[n] & 3)) continue;
+      const n = x * CN + z; if (dist[n] <= d || (CITY.occ[n] & 3) || CITY.pmask?.[n]) continue;
       const wx = cX(x), wz = cX(z); if (wx * wx + wz * wz > (CITY_R + 1) ** 2) continue;
       dist[n] = d; q[t++] = n;
     }
@@ -273,7 +278,7 @@ function cityNav(e, tgt) {
   if (best === 65535) return tgt;
   for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) {
     const x = ix + dx, z = iz + dz; if ((!dx && !dz) || x < 0 || z < 0 || x >= CN || z >= CN) continue;
-    if (dx && dz && ((CITY.occ[(ix + dx) * CN + iz] | CITY.occ[ix * CN + iz + dz]) & 3)) continue; // no corner cutting
+    if (dx && dz && (((CITY.occ[(ix + dx) * CN + iz] | CITY.occ[ix * CN + iz + dz]) & 3) || CITY.pmask?.[(ix + dx) * CN + iz] || CITY.pmask?.[ix * CN + iz + dz])) continue; // no corner cutting
     const v = D[x * CN + z]; if (v < best) { best = v; bx = dx; bz = dz; }
   }
   return bx || bz ? { x: cX(ix + bx), z: cX(iz + bz) } : tgt;
@@ -288,7 +293,8 @@ function cityStep(dt) {
     const moved = Math.hypot(e.x - (e.lx ?? e.x + 9), e.z - (e.lz ?? e.z + 9)); e.lx = e.x; e.lz = e.z; e.stT = 1.2;
     if (moved > .4 || e.cc || e.atk) continue;
     const f = V(Math.sin(e.yaw), 0, Math.cos(e.yaw)), R = ET[e.type].r * e.sc, px = e.x + f.x * (R + .9), pz = e.z + f.z * (R + .9);
-    if (blockAt(px, .8, pz) || blockAt(px, 2.2, pz)) cityHit(px, 1.4, pz, 1.4 + R * .5, 70);
+    const prop = CITY.props.find(q => q.solid && q.hp > 0 && Math.hypot(q.x - px, q.z - pz) < q.solid.r + 1);
+    if (blockAt(px, .8, pz) || blockAt(px, 2.2, pz) || prop) cityHit(px, 1.4, pz, 1.4 + R * .5, 70);
   }
 }
 // circle vs the cells a body overlaps (from its feet to head height)

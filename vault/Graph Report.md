@@ -1,17 +1,17 @@
 # Graph Report - Test Game  (2026-10-27)
 
 ## Corpus Check
-- 28 files · ~151,946 words
+- 28 files · ~152,123 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 2 file(s) not represented in the graph (top: (none) 2)
 
 ## Summary
-- 729 nodes · 1354 edges · 34 communities (26 shown, 8 thin omitted)
+- 730 nodes · 1359 edges · 39 communities (31 shown, 8 thin omitted)
 - Extraction: 96% EXTRACTED · 4% INFERRED · 0% AMBIGUOUS · INFERRED: 52 edges (avg confidence: 0.9)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `b8f005dd`
+- Built from commit: `ce10fa70`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -39,16 +39,21 @@
 - playMood
 - Mage Arena
 - initAudio
-- grab
 - Blender Assets
+- In-game look
 - Elements
 - keyName
 - Mage Arena
 - Enemies
 - Netcode
 - Similar moves (reviewed 2026-10-27)
-- Previewer
+- r2
 - Combos (reactions)
+- rand
+- beamFx
+- wardView
+- modelFx
+- puffTex
 
 ## God Nodes (most connected - your core abstractions)
 1. `Elements` - 36 edges
@@ -63,21 +68,21 @@
 10. `damage()` - 15 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `Finishing pass` --references--> `bake_ao()`  [INFERRED]
-  vault/Blender Assets.md → blender/lib.py
 - `Blender Assets` --references--> `sigil()`  [INFERRED]
   vault/Blender Assets.md → blender/build_elements.py
 - `Blender Assets` --references--> `Mesh`  [INFERRED]
   vault/Blender Assets.md → blender/lib.py
+- `Finishing pass` --references--> `bake_ao()`  [INFERRED]
+  vault/Blender Assets.md → blender/lib.py
 - `Layout` --references--> `cityLayout()`  [INFERRED]
   vault/Mage City.md → js/city.js
-- `In-game look` --references--> `energyMat()`  [INFERRED]
-  vault/Blender Assets.md → js/core.js
+- `Combos (reactions)` --references--> `reactionOf()`  [INFERRED]
+  vault/Combos.md → js/sim.js
 
 ## Import Cycles
 - None detected.
 
-## Communities (34 total, 8 thin omitted)
+## Communities (39 total, 8 thin omitted)
 
 ### Community 0 - "sim.js"
 Cohesion: 0.07
@@ -105,19 +110,19 @@ Nodes (32): applySettings(), autoQuality(), bfSnap(), bgTick(), BIND_NAMES, drop
 
 ### Community 6 - "Mesh"
 Cohesion: 0.10
-Nodes (4): spell_circle(), part(), area(), Mesh
+Nodes (5): spell_circle(), part(), apply_subsurf(), area(), Mesh
 
 ### Community 7 - "elements.js"
-Cohesion: 0.06
-Nodes (31): r2(), aimBeam(), beamFx(), beamMesh(), _bgeo, blastFx(), boomAt(), boomFx() (+23 more)
+Cohesion: 0.07
+Nodes (4): _bgeo, ELEMENTS, REAP_ARC, SUMMONS
 
 ### Community 8 - "Elements.md"
 Cohesion: 0.23
 Nodes (4): Spells, Done (2026-10-27), To-do (noted 2026-10-26), Upgrades (removed)
 
 ### Community 9 - "lib.py"
-Cohesion: 0.11
-Nodes (7): apply_bevel(), apply_subsurf(), bake_ao(), basis(), pack_bundle(), runes(), uv_ribbon()
+Cohesion: 0.10
+Nodes (8): apply_bevel(), bake_ao(), basis(), pack_bundle(), Previewer, runes(), uv_ribbon(), Finishing pass
 
 ### Community 10 - "Audio credits"
 Cohesion: 0.33
@@ -128,8 +133,8 @@ Cohesion: 0.14
 Nodes (14): arcpts(), crescent(), crescent_blade(), lens(), M(), mirror_shard(), plated_rock(), put() (+6 more)
 
 ### Community 12 - "boltFx"
-Cohesion: 0.18
-Nodes (18): addFx(), animateArena(), boltFx(), burst(), circleFx(), easeOut(), easeOutBack(), emit() (+10 more)
+Cohesion: 0.27
+Nodes (12): addFx(), boltFx(), circleFx(), easeOut(), easeOutBack(), glowify(), glowMats(), makeCircle() (+4 more)
 
 ### Community 13 - "modes.js"
 Cohesion: 0.27
@@ -137,11 +142,11 @@ Nodes (7): applyMap(), DUEL_SPOTS, duelReset(), showScenery(), startDuel(), star
 
 ### Community 15 - "city.js"
 Cohesion: 0.05
-Nodes (69): arenaMat(), arenaObj(), blockAt(), buildCityView(), buildKit(), cboxGeo(), CBX, CITY (+61 more)
+Nodes (70): arenaMat(), arenaObj(), blockAt(), buildCityView(), buildKit(), cboxGeo(), CBX, CITY (+62 more)
 
 ### Community 16 - "addShader"
-Cohesion: 0.29
-Nodes (8): addShader(), beamMat(), discMat(), energyMat(), flameMat(), model(), pillarFx(), waveMat()
+Cohesion: 0.40
+Nodes (6): addShader(), beamMat(), discMat(), flameMat(), pillarFx(), waveMat()
 
 ### Community 18 - "clamp"
 Cohesion: 0.50
@@ -155,9 +160,13 @@ Nodes (3): comboText(), css(), tintRig()
 Cohesion: 1.00
 Nodes (3): MUSIC, playMood(), track()
 
-### Community 24 - "grab"
-Cohesion: 0.67
-Nodes (3): grab(), sp(), Conventions
+### Community 24 - "Blender Assets"
+Cohesion: 0.50
+Nodes (4): grab(), sp(), Blender Assets, Conventions
+
+### Community 25 - "In-game look"
+Cohesion: 0.33
+Nodes (10): energyMat(), model(), blastFx(), boomFx(), debrisFx(), dustFx(), fxRoom(), scarFx() (+2 more)
 
 ### Community 26 - "Elements"
 Cohesion: 0.06
@@ -179,9 +188,25 @@ Nodes (3): Cross-platform, Known ceilings (`ponytail:` comments in the code), Ne
 Cohesion: 0.50
 Nodes (4): Alike within one element, Similar moves (reviewed 2026-10-27), Similar (same role, different twist), Very similar (near-duplicates)
 
+### Community 32 - "r2"
+Cohesion: 0.29
+Nodes (7): r2(), boomAt(), chainBolt(), ctxS(), fxe(), inkSplash(), laserShot()
+
 ### Community 33 - "Combos (reactions)"
 Cohesion: 0.67
 Nodes (3): Combos (reactions), Named reactions, Reaction kinds (for every other pair)
+
+### Community 34 - "rand"
+Cohesion: 0.40
+Nodes (6): animateArena(), burst(), emit(), popNum(), rand(), V()
+
+### Community 35 - "beamFx"
+Cohesion: 0.50
+Nodes (4): aimBeam(), beamFx(), beamMesh(), laserFx()
+
+### Community 36 - "wardView"
+Cohesion: 0.50
+Nodes (4): dropFade(), wardMake(), wardUpd(), wardView()
 
 ## Knowledge Gaps
 - **8 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
@@ -189,17 +214,17 @@ Nodes (3): Combos (reactions), Named reactions, Reaction kinds (for every other 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `Blender Assets` connect `Blender Assets` to `Mesh`, `elements.js`, `Elements.md`, `build_elements.py`, `grab`?**
+- **Why does `Blender Assets` connect `Blender Assets` to `Mesh`, `Elements.md`, `lib.py`, `build_elements.py`, `In-game look`?**
   _High betweenness centrality (0.311) - this node is a cross-community bridge._
 - **Are the 2 inferred relationships involving `react()` (e.g. with `r2()` and `Combos (reactions)`) actually correct?**
   _`react()` has 2 INFERRED edges - model-reasoned connections that need verification._
 - **Should `sim.js` be split into smaller, more focused modules?**
   _Cohesion score 0.06629339305711086 - nodes in this community are weakly interconnected._
-- **Why does `r2()` connect `elements.js` to `sim.js`, `core.js`?**
-  _High betweenness centrality (0.191) - this node is a cross-community bridge._
+- **Why does `r2()` connect `r2` to `sim.js`, `core.js`?**
+  _High betweenness centrality (0.190) - this node is a cross-community bridge._
 - **Should `core.js` be split into smaller, more focused modules?**
   _Cohesion score 0.023255813953488372 - nodes in this community are weakly interconnected._
-- **Why does `Mesh` connect `Mesh` to `lib.py`, `build_elements.py`, `pol`, `Blender Assets`?**
+- **Why does `Mesh` connect `Mesh` to `Blender Assets`, `lib.py`, `build_elements.py`, `pol`?**
   _High betweenness centrality (0.175) - this node is a cross-community bridge._
 - **Should `dungeon.js` be split into smaller, more focused modules?**
   _Cohesion score 0.07486338797814207 - nodes in this community are weakly interconnected._
