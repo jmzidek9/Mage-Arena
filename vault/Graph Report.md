@@ -1,17 +1,17 @@
 # Graph Report - Test Game  (2026-10-27)
 
 ## Corpus Check
-- 28 files · ~156,699 words
+- 28 files · ~156,881 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 2 file(s) not represented in the graph (top: (none) 2)
 
 ## Summary
-- 740 nodes · 1384 edges · 32 communities (25 shown, 7 thin omitted)
+- 740 nodes · 1385 edges · 32 communities (25 shown, 7 thin omitted)
 - Extraction: 96% EXTRACTED · 4% INFERRED · 0% AMBIGUOUS · INFERRED: 52 edges (avg confidence: 0.9)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `393af71c`
+- Built from commit: `9622c043`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -78,8 +78,8 @@
 ## Communities (32 total, 7 thin omitted)
 
 ### Community 0 - "sim.js"
-Cohesion: 0.06
-Nodes (94): r2(), addUlt(), aimOf(), alive(), aoe(), applyStatus(), blast(), bomberBlast() (+86 more)
+Cohesion: 0.07
+Nodes (90): r2(), addUlt(), aimOf(), alive(), aoe(), applyStatus(), blast(), bomberBlast() (+82 more)
 
 ### Community 1 - "core.js"
 Cohesion: 0.02
@@ -110,8 +110,8 @@ Cohesion: 0.06
 Nodes (32): aimBeam(), beamFx(), beamMesh(), _bgeo, blastFx(), boomAt(), boomFx(), chainBolt() (+24 more)
 
 ### Community 8 - "Elements.md"
-Cohesion: 0.08
-Nodes (21): Enemies, Fighting them, Wave budget, Wave modifiers, Cross-platform, Known ceilings (`ponytail:` comments in the code), Netcode, Controls (+13 more)
+Cohesion: 0.07
+Nodes (25): reactionOf(), Combos (reactions), Named reactions, Reaction kinds (for every other pair), Enemies, Fighting them, Wave budget, Wave modifiers (+17 more)
 
 ### Community 9 - "lib.py"
 Cohesion: 0.11
@@ -188,7 +188,7 @@ _Questions this graph is uniquely positioned to answer:_
 - **Are the 2 inferred relationships involving `react()` (e.g. with `r2()` and `Combos (reactions)`) actually correct?**
   _`react()` has 2 INFERRED edges - model-reasoned connections that need verification._
 - **Should `sim.js` be split into smaller, more focused modules?**
-  _Cohesion score 0.061153174140943505 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.06522196507468966 - nodes in this community are weakly interconnected._
 - **Why does `r2()` connect `sim.js` to `core.js`, `elements.js`?**
   _High betweenness centrality (0.193) - this node is a cross-community bridge._
 - **Should `core.js` be split into smaller, more focused modules?**

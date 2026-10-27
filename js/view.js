@@ -150,7 +150,7 @@ function onEvent(e) {
       sfx('spawn');
       break;
     }
-    case 'tele': teleFx(e); if (e.a === 'meteor') meteorFall(e); { const v = views.e.get(e.id); if (v) v.wind = e.d; } break;
+    case 'tele': teleFx(e); if (e.a === 'meteor') meteorFall(e); { const v = views.e.get(e.id); if (v) { v.wind = e.d; if (e.a === 'swipe') v.side = !v.side; } } break;
     case 'strike': {
       const v = views.e.get(e.id); if (!v) break;
       v.strike = 1; v.ak = e.a; const near = distTo(v.g.position.x, v.g.position.z) < 15;
@@ -289,7 +289,8 @@ function animEnemy(v, e, dt, t) {
   const shiver = w0 > .75 ? Math.sin(t * 70 + e.id) * (w0 - .75) * .3 : 0; // trembling with effort just before the blow
   const q = i => pose.w[i] * wind + pose.s[i] * str;
   const stun = e.cc === 'stun', rising = e.y < -.05, breath = Math.sin(t * 2.2 + e.id), fd = v.fdir || 1;
-  const bp = q(0), tw = q(1), cr = q(2) + v.squash * .22 - Math.min(.16, Math.abs(vy) * .02) * v.airK;
+  const sw = ak === 'swipe' && v.side; // combo swipes alternate claws
+  const bp = q(0), tw = q(1) * (sw ? -1 : 1), cr = q(2) + v.squash * .22 - Math.min(.16, Math.abs(vy) * .02) * v.airK;
   // whole body: bob, lean, crouch / stretch, flinch from hits, wobble when stunned, claw up out of the ground on spawn
   g.rotation.x = bp + shiver * .3 - v.flinch * .22 + (tp.boss ? 0 : walk * .06) + (rising ? .35 : 0) + v.airK * .2;
   g.rotation.z = (stun ? Math.sin(t * 13) * .14 : 0) - clamp(v.turn * .035, -.18, .18) * Math.min(1, walk + .3) + v.flinch * .12 * fd;
@@ -309,7 +310,7 @@ function animEnemy(v, e, dt, t) {
   if (e.type === 'splitter' && P.body) { const k = Math.sin(t * 6 + e.id) * .06 + Math.abs(S1) * .08 * walk + wind * .18 - v.flinch * .1; P.body.o.scale.set(1 + k, 1 - k * 1.4, 1 + k); P.body.o.rotation.x = 0; }
   set('legL', S1 * .75 * walk * (1 - tuck) - tuck * .9); set('legR', -S1 * .75 * walk * (1 - tuck) - tuck * .6 - q(5));
   for (let i = 0; i < 4; i++) set('leg' + i, Math.sin(v.ph + (i % 2 ? Math.PI : 0) + (i > 1 ? Math.PI / 2 : 0)) * .8 * walk * (1 - tuck) + tuck * (i < 2 ? -.7 : .7));
-  const armL = q(3) + claw + tuck * 1.2 - limp, armR = q(4) + (rising ? 4.4 - claw : 0) + tuck * 1.2 - limp;
+  const armL = q(sw ? 4 : 3) + claw + tuck * 1.2 - limp, armR = q(sw ? 3 : 4) + (rising ? 4.4 - claw : 0) + tuck * 1.2 - limp;
   set('armL', -S1 * .5 * walk - armL, 0, breath * .05 + tuck * .5 + limp * .3);
   set('armR', S1 * .5 * walk - armR, 0, -breath * .05 - tuck * .5 - limp * .3);
   // the head eyes you up while it isn't busy attacking (and droops when stunned)

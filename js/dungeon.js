@@ -10,8 +10,8 @@
 // by STAIR_D with everything around you, and nobody is moved.
 const CELL = 50, HALL_W = 5, HALL_H = 4.8, STAIR_D = 6, ROOM_ACTIVE = 1, ROOM_CLEAR = 2;
 Object.assign(ET, { // medieval foes (zone: dungeon keeps them out of the Arena's spawn pool)
-  skeleton: { hp: 46,   spd: 3.7, r: .45, h: 1.85, dmg: 11, reach: 2.0, cost: 1, from: 1, kb: 1,   poise: 30,  atk: 'swipe',  wind: .5,  cd: 1.3, zone: 'dungeon' },
-  rat:      { hp: 18,   spd: 7.4, r: .42, h: .7,  dmg: 7,  reach: 3.0, cost: 1, from: 1, kb: 1.5, poise: 10,  atk: 'lunge',  wind: .35, cd: 1.4, zone: 'dungeon' },
+  skeleton: { hp: 46,   spd: 3.7, r: .45, h: 1.85, dmg: 11, reach: 2.0, cost: 1, from: 1, kb: 1,   poise: 30,  atk: 'swipe',  wind: .5,  cd: 1.3, zone: 'dungeon', alt: { atk: 'swipe', min: 0, max: 2.3, wind: .5, cd: 5, dmg: 9, chain: 2 } },
+  rat:      { hp: 18,   spd: 7.4, r: .42, h: .7,  dmg: 7,  reach: 3.0, cost: 1, from: 1, kb: 1.5, poise: 10,  atk: 'lunge',  wind: .35, cd: 1.4, zone: 'dungeon', alt: { atk: 'lunge', min: 0, max: 3.2, wind: .38, cd: 6, dmg: 6, chain: 1 } },
   archer:   { hp: 32,   spd: 3,   r: .45, h: 1.85, dmg: 9,  reach: 26,  cost: 2, from: 2, kb: 1,   poise: 22,  atk: 'orb',    wind: .7,  cd: 2.1, ranged: 1, keep: [7, 13], zone: 'dungeon', alt: { atk: 'volley', min: 0, max: 22, wind: .9, cd: 9, dmg: 6 } },
   ghoul:    { hp: 75,   spd: 4.4, r: .6,  h: 1.7, dmg: 14, reach: 2.2, cost: 2, from: 3, kb: .8,  poise: 45,  atk: 'slam',   wind: .55, cd: 1.5, zone: 'dungeon', alt: { atk: 'leap', min: 4, max: 9, wind: .5, cd: 7, dmg: 14 } },
   dknight:  { hp: 150,  spd: 3.1, r: .65, h: 2.2, dmg: 18, reach: 3.6, cost: 4, from: 4, kb: .35, poise: 90,  atk: 'thrust', wind: .6,  cd: 1.8, shield: 1, zone: 'dungeon', alt: { atk: 'bash', min: 4, max: 9, wind: .7, cd: 7, dmg: 16 } },

@@ -37,10 +37,10 @@ function reactionOf(stEl, byEl) {
 const ET = {
   // alt: a second move with its own range band and cooldown, so no monster is one-note
   grunt:    { hp: 40,   spd: 3.8, r: .5,  h: 1.8, dmg: 10, reach: 1.9, cost: 1, from: 1, kb: 1,   poise: 30,  atk: 'swipe',  wind: .5,  cd: 1.3, alt: { atk: 'leap', min: 4.5, max: 9, wind: .55, cd: 8, dmg: 12 } },
-  runner:   { hp: 22,   spd: 7,   r: .45, h: 1.0, dmg: 8,  reach: 3.2, cost: 1, from: 2, kb: 1.4, poise: 15,  atk: 'lunge',  wind: .38, cd: 1.5 },
+  runner:   { hp: 22,   spd: 7,   r: .45, h: 1.0, dmg: 8,  reach: 3.2, cost: 1, from: 2, kb: 1.4, poise: 15,  atk: 'lunge',  wind: .38, cd: 1.5, alt: { atk: 'lunge', min: 0, max: 3.5, wind: .4, cd: 6, dmg: 7, chain: 1 } },
   shooter:  { hp: 34,   spd: 3,   r: .6,  h: 2.3, dmg: 9,  reach: 26,  cost: 3, from: 3, kb: 1,   poise: 25,  atk: 'orb',    wind: .65, cd: 2.2, ranged: 1, keep: [9, 15], alt: { atk: 'volley', min: 0, max: 24, wind: .9, cd: 9, dmg: 6 } },
   bomber:   { hp: 24,   spd: 6.2, r: .5,  h: 1.25, dmg: 26, reach: 2.4, cost: 2, from: 3, kb: 1.2, poise: 10, atk: 'fuse',   wind: .95, cd: 9 },
-  splitter: { hp: 70,   spd: 2.6, r: .65, h: 1.0, dmg: 12, reach: 2.0, cost: 2, from: 4, kb: .8,  poise: 40,  atk: 'slam',   wind: .55, cd: 1.4, split: 1 },
+  splitter: { hp: 70,   spd: 2.6, r: .65, h: 1.0, dmg: 12, reach: 2.0, cost: 2, from: 4, kb: .8,  poise: 40,  atk: 'slam',   wind: .55, cd: 1.4, split: 1, alt: { atk: 'leap', min: 3.5, max: 8, wind: .55, cd: 6, dmg: 12 } },
   stalker:  { hp: 48,   spd: 4.6, r: .45, h: 1.9, dmg: 12, reach: 1.9, cost: 3, from: 4, kb: 1,   poise: 25,  atk: 'swipe',  wind: .45, cd: 1.4, alt: { atk: 'blink', min: 5, max: 18, wind: .6, cd: 5.5, dmg: 15 } },
   brute:    { hp: 190,  spd: 2.3, r: 1.1, h: 2.7, dmg: 24, reach: 3.4, cost: 5, from: 5, kb: .25, poise: 130, atk: 'smash',  wind: .95, cd: 2.1, alt: { atk: 'quake', min: 4, max: 15, wind: 1.1, cd: 8, dmg: 20 } },
   knight:   { hp: 120,  spd: 3.3, r: .6,  h: 2.1, dmg: 17, reach: 3.6, cost: 4, from: 6, kb: .4,  poise: 80,  atk: 'thrust', wind: .6,  cd: 1.7, shield: 1, alt: { atk: 'bash', min: 4, max: 9, wind: .7, cd: 7, dmg: 15 } },
@@ -679,7 +679,7 @@ function startAttack(e, tgt, al = null) {
     e.x = q.x; e.z = q.z;
     return startAttack(e, tgt, { atk: 'swipe', wind: al.wind, dmg: al.dmg });
   }
-  e.atk = { k, t: wind, max: wind, yaw, tx: tgt.x, tz: tgt.z, lure: tgt.lure, dmg: al?.dmg };
+  e.atk = { k, t: wind, max: wind, yaw, tx: tgt.x, tz: tgt.z, lure: tgt.lure, dmg: al?.dmg, chain: al?.chain || 0 };
   e.yaw = yaw;
   let tele;
   switch (k) {
@@ -766,6 +766,11 @@ function resolveAttack(e) {
       break;
     case 'fuse': e.blown = 1; bomberBlast(e, null, false); kill(e, null, null); break;
     case 'mend': for (const o of enemiesNear(e.x, e.z, 9)) if (o !== e && !ET[o.type].boss) { o.hp = Math.min(o.max, o.hp + o.max * .25); o.sh = Math.max(o.sh, 25 * sc); } ev({ k: 'fx', m: 'foe', f: 'mend', x: r2(e.x), z: r2(e.z) }); break;
+  }
+  // combos: follow straight up with a quicker blow at whoever is nearest (each one telegraphed again)
+  if (a.chain > 0 && !e.dead && !e.cc && !e.leap) {
+    const p = ps.reduce((b, q) => !b || Math.hypot(q.x - e.x, q.z - e.z) < Math.hypot(b.x - e.x, b.z - e.z) ? q : b, null);
+    if (p && Math.hypot(p.x - e.x, p.z - e.z) < t.reach * e.sc + 3) startAttack(e, p, { atk: a.k, wind: a.max * .6, dmg: a.dmg, chain: a.chain - 1 });
   }
 }
 function stepEnemies(dt) {

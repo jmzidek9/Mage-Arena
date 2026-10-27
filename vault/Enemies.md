@@ -7,17 +7,17 @@ Enemies rise out of red summoning circles near the arena edge and chase the near
 | Enemy | HP | Speed | Cost | From wave | Attack (telegraphed) | Second move |
 |---|---|---|---|---|---|---|
 | Grunt | 40 | 3.8 | 1 | 1 | Horned imp: claw swipe in a cone | **Leap** (4.5–9 m): pounces onto a marked circle where you stand |
-| Runner | 22 | 7.0 | 1 | 2 | Feral hound: lunges along a line | |
+| Runner | 22 | 7.0 | 1 | 2 | Feral hound: lunges along a line | **Double pounce** (close): lunges, then lunges again straight away |
 | Shooter | 34 | 3.0 | 3 | 3 | Floating eye: keeps its distance, fires green orbs | **Volley**: a fan of 5 slower orbs, step into a gap |
 | Bomber | 24 | 6.2 | 2 | 3 | Living powder keg: lights its fuse and explodes. Kill it first and its blast hurts the other enemies instead | |
-| Splitter | 70 | 2.6 | 2 | 4 | Slime with a skull inside: ground slam, splits in two on death | |
+| Splitter | 70 | 2.6 | 2 | 4 | Slime with a skull inside: ground slam, splits in two on death | **Hop** (3.5–8 m): bounces onto a marked circle where you stand |
 | Stalker | 48 | 4.6 | 3 | 4 | Shadow imp: claw swipe | **Blink** (5–18 m): vanishes and steps out right behind you, then swipes |
 | Brute | 190 | 2.3 | 5 | 5 | Rock golem: overhead smash on a marked circle | **Quake** (4–15 m): a stomp that rips a rolling line of stone spikes toward you |
 | Knight | 120 | 3.3 | 4 | 6 | Death knight: sword thrust. **Its shield blocks 85% of frontal hits.** Flank it, use area attacks, or hit it with Steel at 3 Rend stacks | **Shield bash** (4–9 m): charges down a marked lane |
 | Shaman | 60 | 2.9 | 4 | 7 | Hooded cultist: hangs back and heals nearby enemies, giving them a shield. Kill it first | **Hex**: a curse ring at your feet that bursts when the chant ends |
 | Boss (Obsidian Tyrant) | 1500+ | 2.1 | – | every 5th | Smash, charges, shockwave rings you have to jump | **Meteor rain**: three burning rocks on each player, the first right where you stand |
 
-Dungeon foes share these second moves: the archer volleys, the ghoul leaps, the death knight bashes and the Warden calls meteors.
+Dungeon foes share these second moves: the archer volleys, the ghoul leaps, the death knight bashes and the Warden calls meteors. The skeleton has a 3-hit sword combo (each blow marked, claws alternating) and the rat double-pounces like the runner.
 
 Each second move has its own cooldown and range band, so it comes on top of the normal attack instead of replacing it.
 
