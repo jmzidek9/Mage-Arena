@@ -319,7 +319,7 @@ function damage(e, amount, el, p, o = {}) {
   if (e.dead || amount <= 0) return 0;
   if (e.cc?.type === 'stasis' && !o.raw) { e.stored += amount; return 0; }
   if (S.tstop > 0 && !o.raw) { e.tsd = (e.tsd || 0) + amount; e.tsBy = p?.id; return 0; }
-  amount *= (1 + (e.m?.vuln || 0)) * (e.cc?.type === 'freeze' ? 1.4 : 1) * (e.cc?.type === 'bubble' ? 1.3 : 1) * (e.fvU > S.t ? 1 + e.fv : 1); // fv: a field's extra damage taken (Binding Circle)
+  amount *= (1 + (e.m?.vuln || 0)) * (e.cc?.type === 'freeze' ? 1.4 : 1) * (e.cc?.type === 'bubble' ? 1.3 : 1) * (e.fvU > S.t ? 1 + e.fv : 1) * (el === 'soul' && e.hol > S.t ? 1.25 : 1); // fv: extra damage taken (Binding Circle, Snare, Levitate, marks); hol: Soul Rend's Hollowed
   if (e.sh > 0) { const a = Math.min(e.sh, amount); e.sh -= a; amount -= a; }
   amount = Math.round(amount);
   if (amount <= 0) return 0;
