@@ -109,6 +109,16 @@ input::placeholder{color:#b9add8;opacity:.8}input:focus{box-shadow:0 0 0 2px var
 .elc .best{position:absolute;top:3px;right:5px;font-size:9px;color:var(--gold);letter-spacing:.05em}
 .elc .tab{position:absolute;top:3px;left:5px;font-size:9px;color:#fff;background:color-mix(in srgb,var(--c) 70%,black);padding:1px 4px;border-radius:4px}
 .elc.sel{box-shadow:0 0 0 2px var(--c),0 0 26px var(--c);background:radial-gradient(circle at 50% 110%,color-mix(in srgb,var(--c) 60%,transparent),#160d30 75%)}
+.elc.lock{filter:grayscale(.85) brightness(.6)}.elc.lock.can{filter:grayscale(.3) brightness(.85);animation:canGlow 1.6s ease-in-out infinite}@keyframes canGlow{50%{box-shadow:0 0 0 1px var(--gold),0 0 18px rgba(233,196,106,.6)}}
+.elc .st{position:absolute;bottom:2px;right:4px;font-size:8px;color:var(--gold);letter-spacing:-1px}
+#unlockAll{padding:6px 14px;font-size:12px}
+#prog{margin-bottom:10px;display:grid;gap:6px}#prog .pr{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px;color:var(--dim)}#prog .key{color:var(--gold)}#prog button{padding:4px 10px;font-size:12px}
+.xpbar{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px;font-family:Cinzel,Georgia,serif;font-size:12px;color:#fff6d8}.xpbar i{height:8px;border-radius:5px;background:rgba(255,255,255,.1);overflow:hidden;display:block}.xpbar i b{display:block;height:100%;background:linear-gradient(90deg,#9a6a20,#e9c46a,#fff6d8);box-shadow:0 0 10px #e9c46a}
+.xpgain{margin-top:12px;display:grid;gap:6px}.xpgain>b{font-family:Cinzel,Georgia,serif;color:var(--gold);font-size:18px}.lvlup{font-family:Cinzel,Georgia,serif;color:#fff6d8;letter-spacing:.08em;animation:breathe 2s ease-in-out infinite}
+#detail{position:relative}#pvc{float:right;width:200px;height:150px;margin:-6px -8px 0 8px}@media (max-width:700px){#pvc{width:140px;height:105px}}
+#detail .tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;font-size:11px;letter-spacing:.05em}#detail .tags span{padding:3px 8px;border-radius:20px;background:rgba(0,0,0,.3);border:1px solid color-mix(in srgb,var(--el) 45%,transparent);color:#efe8ff}
+#detail .tags .d1{color:#8affc0}#detail .tags .d2{color:#ffd36a}#detail .tags .d3{color:#ff8a8a}#detail .tags .mast{color:var(--gold);letter-spacing:1px}#detail .tags .lk{color:var(--gold)}
+#talents .panel{max-width:460px}#talList{display:grid;gap:8px;text-align:left}.tal{display:grid;grid-template-columns:32px 1fr auto 36px;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;background:rgba(0,0,0,.25)}.tal .ti{font-size:22px}.tal b{font-family:Cinzel,Georgia,serif;color:#fff6d8}.tal small{display:block;color:var(--dim);font-size:12px}.tal .pips{display:flex;gap:3px}.tal .pips i{width:9px;height:9px;border-radius:50%;border:1px solid var(--gold)}.tal .pips i.on{background:var(--gold);box-shadow:0 0 6px var(--gold)}.tal button{padding:4px 0}
 .elc.sel2{box-shadow:0 0 0 2px color-mix(in srgb,var(--c) 60%,white) inset}
 #detail{border-radius:16px;padding:14px 16px;background:linear-gradient(180deg,color-mix(in srgb,var(--el) 14%,rgba(18,10,38,.9)),rgba(10,6,24,.92));border:1px solid color-mix(in srgb,var(--el) 50%,transparent);box-shadow:0 0 30px color-mix(in srgb,var(--el) 25%,transparent);min-height:0;box-sizing:border-box}
 #detail .dh{display:flex;gap:12px;align-items:center}
@@ -182,6 +192,7 @@ input::placeholder{color:#b9add8;opacity:.8}input:focus{box-shadow:0 0 0 2px var
 #settings .pane{display:grid;gap:10px}
 #settings .tabs{display:flex;gap:6px}#settings .tabs button{flex:1;padding:6px}#settings .tabs button.on{border-color:var(--gold);color:#fff6d8}
 #settings label.ck input{width:auto;justify-self:start}
+#binds{display:grid;grid-template-columns:1fr 1fr;gap:4px 10px}#binds div{display:flex;justify-content:space-between;align-items:center;gap:8px}#binds button{min-width:70px;padding:4px 8px;font-size:12px;text-transform:none}#binds button.wait{border-color:var(--gold);color:var(--gold)}
 #pauseTag{text-align:center;font-size:18px;letter-spacing:.2em;color:#fff6d8}#pauseTag small{display:block;font-size:11px;letter-spacing:.05em;color:var(--dim)}
 #swapGrid{display:grid;grid-template-columns:repeat(5,44px);gap:6px;margin-top:6px}
 #swapGrid .elc{padding:6px 0}#swapGrid .elc .g{font-size:20px}
@@ -243,20 +254,23 @@ body.touching #me{top:14px;bottom:auto;left:14px}body.touching #lock{display:non
   <div class="panel">
     <div id="modeBar"><button id="modeBack" class="ghost">← Modes</button><h2 id="modeName"></h2><div class="row"><button id="gfxBtn" class="ghost">Graphics: High</button><button id="setBtn" class="ghost">Settings</button></div></div>
     <div class="rule"></div>
-    <div class="pick"><div><div id="grid"></div><div id="pickinfo" class="pickinfo"></div></div><div id="detail"></div></div>
+    <div class="pick"><div><div id="prog"></div><div id="grid"></div><div id="pickinfo" class="pickinfo"></div></div><div id="detail"><canvas id="pvc" width="200" height="150"></canvas><div id="detailBody"></div></div></div>
     <div class="play"><button id="soloBtn" class="el sel" style="--c:#e9c46a;color:#fff6d8">⚔ Play Solo</button><div class="online"><span class="lbl">With a friend</span><button id="hostBtn">Host game</button><i></i><input id="code" maxlength="5" placeholder="CODE" aria-label="Room code"><button id="joinBtn">Join</button><button id="startBtn" class="hidden">Start</button></div></div>
     <div id="status">Loading Blender assets…</div>
+    <button id="unlockAll" class="ghost">🔓 Unlock all elements</button>
     <details class="foot"><summary>Controls</summary><div class="sub">WASD move · Mouse aim · <b>LMB / RMB / Q / E</b> moves · <b>R</b> ultimate · Space jump · Shift dash (dash through a red attack just before it lands for a perfect dodge) · Tab swap element · Esc settings &amp; switch element</div></details>
   </div>
 </div>
 
 <div id="settings" class="hidden">
   <div id="pauseTag" class="hidden"></div>
-  <div class="tabs"><button class="ghost on" data-tab="general">General</button><button class="ghost" data-tab="visuals">Visuals</button></div>
+  <div class="tabs"><button class="ghost on" data-tab="general">General</button><button class="ghost" data-tab="visuals">Visuals</button><button class="ghost" data-tab="controls">Controls</button></div>
   <div class="pane" data-pane="general">
     <label>Sensitivity<input id="sSens" type="range" min=".2" max="3" step=".05"><span id="sSensV"></span></label>
     <label>Sound<input id="sVol" type="range" min="0" max="1.5" step=".05"><span id="sVolV"></span></label>
     <label>Music<input id="sMus" type="range" min="0" max="1.5" step=".05"><span id="sMusV"></span></label>
+    <label>Screen shake<input id="sShake" type="range" min="0" max="1.5" step=".05"><span id="sShakeV"></span></label>
+    <label class="ck">Damage numbers<input id="cNums" type="checkbox"></label>
     <div id="elSwap" class="hidden">Switch element<div id="swapGrid"></div></div>
   </div>
   <div class="pane hidden" data-pane="visuals">
@@ -267,8 +281,21 @@ body.touching #me{top:14px;bottom:auto;left:14px}body.touching #lock{display:non
     <label class="ck">Shadows<input id="cShadows" type="checkbox"></label>
     <label class="ck">Film filter<input id="cFilm" type="checkbox"></label>
   </div>
+  <div class="pane hidden" data-pane="controls">
+    <label class="ck">Invert mouse Y<input id="cInvert" type="checkbox"></label>
+    <div id="binds"></div>
+    <button id="bindReset" class="ghost">Reset keys</button>
+  </div>
   <button id="leaveBtn" class="ghost hidden">Leave to menu</button>
   <button id="setClose" class="ghost">Close</button>
+</div>
+
+<div id="talents" class="overlay hidden">
+  <div class="panel">
+    <h2>✦ Talents</h2>
+    <div id="talList"></div>
+    <div class="row"><button id="talReset" class="ghost">Refund all</button><button id="talClose">Done</button></div>
+  </div>
 </div>
 
 <div id="over" class="overlay hidden">

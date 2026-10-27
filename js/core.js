@@ -480,8 +480,9 @@ function stepFlashes(dt) { for (const f of flashes) { f.t -= dt; f.l.intensity =
 
 // floating damage numbers
 const nums = [];
+let showNums = true, shakeMul = 1; // Settings: damage numbers on/off, screen shake strength
 function popNum(x, y, z, text, color, cls = '') {
-  if (nums.length > 70) return;
+  if (nums.length > 70 || (!showNums && typeof text === 'number')) return;
   const el = document.createElement('div'); el.className = (text >= 40 ? 'num big ' : 'num ') + cls; el.textContent = text; el.style.color = color; $('hud').appendChild(el);
   nums.push({ el, p: V(x, y, z), t: 0, vx: rand(-.8, .8) });
 }
@@ -496,7 +497,7 @@ function stepNums(dt) {
   }
 }
 let trauma = 0, fovKick = 0, hurtT = 0;
-const shake = a => trauma = Math.min(1, trauma + a);
+const shake = a => trauma = Math.min(1, trauma + a * shakeMul);
 function banner(text, color = '#fff', dur = 1800) {
   const b = $('banner'); b.textContent = text; b.style.color = color; b.style.opacity = 1;
   clearTimeout(banner.t); banner.t = setTimeout(() => b.style.opacity = 0, dur);
@@ -709,6 +710,12 @@ addEventListener('pointerdown', wake); addEventListener('keydown', wake);
 // ===================== input (keyboard + mouse, touch, gamepad) =====================
 const keys = {};
 const inp = { yaw: 0, pitch: 0, jumpN: 0, dashN: 0, swapN: 0, p: false, s: false };
+// rebindable keys (Settings > Controls); alt is a keyboard stand-in for RMB
+const BIND_DEF = { fwd: 'KeyW', back: 'KeyS', left: 'KeyA', right: 'KeyD', jump: 'Space', dash: 'ShiftLeft', swap: 'Tab', alt: 'KeyF', q: 'KeyQ', e: 'KeyE', r: 'KeyR' };
+const BIND = { ...BIND_DEF };
+let invertY = false;
+const keyName = c => c.replace(/^Key|^Digit/, '').replace(/Left$|Right$/, '').replace('Arrow', '') || c;
+const slotKey = i => i === 0 ? 'LMB' : i === 1 ? 'RMB' : keyName(BIND[['', '', 'q', 'e', 'r'][i]]);
 // virtual controls from touch / gamepad: analog stick + held move slots
 const virt = { mx: 0, mz: 0, k: [false, false, false, false, false], jump: false, t: -1e9 };
 let sens = .0022;
@@ -717,14 +724,14 @@ const usingVirt = () => performance.now() - virt.t < 8000; // touch or a control
 addEventListener('keydown', e => {
   keys[e.code] = true;
   if (e.repeat) return;
-  if (e.code === 'Space') inp.jumpN++;
-  if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') inp.dashN++;
-  if (e.code === 'Tab') { e.preventDefault(); inp.swapN++; }
+  if (e.code === BIND.jump) inp.jumpN++;
+  if (e.code === BIND.dash || (BIND.dash === 'ShiftLeft' && e.code === 'ShiftRight')) inp.dashN++;
+  if (e.code === BIND.swap) { e.preventDefault(); inp.swapN++; }
 });
 addEventListener('keyup', e => keys[e.code] = false);
 addEventListener('mousemove', e => {
   if (!locked()) return;
-  inp.yaw -= e.movementX * sens; inp.pitch = clamp(inp.pitch - e.movementY * sens, -1.45, 1.45);
+  inp.yaw -= e.movementX * sens; inp.pitch = clamp(inp.pitch - e.movementY * sens * (invertY ? -1 : 1), -1.45, 1.45);
 });
 // Mac trackpads: Ctrl+click is a right click (F also works as right click everywhere)
 addEventListener('mousedown', e => { if (!locked()) return; if (e.button === 0 && !e.ctrlKey) inp.p = true; if (e.button === 2 || (e.button === 0 && e.ctrlKey)) inp.s = true; });
@@ -736,9 +743,9 @@ const lockMouse = () => { if (usingVirt()) return; try { renderer.domElement.req
 const unlockMouse = () => { try { document.exitPointerLock?.(); } catch {} };
 renderer.domElement.addEventListener('click', () => { if (playing) lockMouse(); });
 // k = held state of the 5 move slots: LMB, RMB, Q, E, R. mx / mz = analog strafe / forward (-1..1)
-const localInput = () => ({ yaw: inp.yaw, pitch: inp.pitch, jumpN: inp.jumpN, dashN: inp.dashN, swapN: inp.swapN, jump: !!keys.Space || virt.jump,
-  mx: clamp((keys.KeyD ? 1 : 0) - (keys.KeyA ? 1 : 0) + virt.mx, -1, 1), mz: clamp((keys.KeyW ? 1 : 0) - (keys.KeyS ? 1 : 0) + virt.mz, -1, 1),
-  k: [inp.p || virt.k[0], inp.s || !!keys.KeyF || virt.k[1], !!keys.KeyQ || virt.k[2], !!keys.KeyE || virt.k[3], !!keys.KeyR || virt.k[4]] });
+const localInput = () => ({ yaw: inp.yaw, pitch: inp.pitch, jumpN: inp.jumpN, dashN: inp.dashN, swapN: inp.swapN, jump: !!keys[BIND.jump] || virt.jump,
+  mx: clamp((keys[BIND.right] ? 1 : 0) - (keys[BIND.left] ? 1 : 0) + virt.mx, -1, 1), mz: clamp((keys[BIND.fwd] ? 1 : 0) - (keys[BIND.back] ? 1 : 0) + virt.mz, -1, 1),
+  k: [inp.p || virt.k[0], inp.s || !!keys[BIND.alt] || virt.k[1], !!keys[BIND.q] || virt.k[2], !!keys[BIND.e] || virt.k[3], !!keys[BIND.r] || virt.k[4]] });
 
 // ---- touch: left side = move stick, right side = look, buttons for moves / jump / dash / swap ----
 function setupTouch() {

@@ -484,7 +484,7 @@ let healT = 0, dodgeFx = 0, hudKey = '';
 const touchBtns = [0, 1, 2, 3, 4].map(i => document.querySelector(`#touch .tb[data-k="${i}"]`));
 function buildBar(kit) {
   document.querySelectorAll('#touch .tb').forEach(b => { const i = +b.dataset.k; if (!isNaN(i)) b.textContent = kit.moves[i].icon; });
-  $('slots').innerHTML = kit.moves.map((m, i) => `<div class="slot${i === 4 ? ' ult' : ''}" title="${m.name}: ${m.desc.replace(/"/g, '&quot;')}"><div class="ico">${m.icon}</div><i class="cdv"></i><b>${SLOT_KEYS[i]}</b><span>${m.name}</span></div>`).join('');
+  $('slots').innerHTML = kit.moves.map((m, i) => `<div class="slot${i === 4 ? ' ult' : ''}" title="${m.name}: ${m.desc.replace(/"/g, '&quot;')}"><div class="ico">${m.icon}</div><i class="cdv"></i><b>${slotKey(i)}</b><span>${m.name}</span></div>`).join('');
 }
 function hud(src, mp) {
   const sp = src.players[myId];
@@ -550,22 +550,29 @@ function hud(src, mp) {
 function showGame() {
   for (const id of ['modes', 'lobby', 'over']) $(id).classList.add('hidden');
   $('hud').classList.remove('hidden');
-  hudKey = ''; tintRig(myEl);
+  hudKey = ''; tintRig(myEl); xpGiven = false;
   playing = true;
   lockMouse();
 }
+let xpGiven = false;
+// XP for the run that just ended (once per run): waves or floors reached, kills, and duel results
+function runXP(e, mp) {
+  if (xpGiven) return ''; xpGiven = true;
+  const kills = mp?.stats?.kills || 0, xp = e.duel ? (e.w === myId ? 250 : 100) : Math.round((srcState()?.mode === 'dungeon' ? 80 : 60) * (e.wave || 0) + 3 * kills);
+  return gainXP(xp, [...new Set([mp?.el || myEl, mp?.el2].filter(k => k && unlocked(k)))]);
+}
 function showOver(e) {
-  const mp = srcState()?.players[myId], el = mp?.el || myEl;
+  const mp = srcState()?.players[myId], el = mp?.el || myEl, xpHtml = runXP(e, mp);
   $('overTitle').textContent = 'FALLEN';
   if (e.duel) { // 1v1 result
     const won = e.w === myId, opp = myId === 'h' ? 'g' : 'h';
     $('overTitle').textContent = won ? 'VICTORY' : 'DEFEAT';
-    $('overTxt').innerHTML = `${won ? 'You won' : 'You lost'} the duel <b>${e[myId]} – ${e[opp]}</b> as <b style="color:${css(EL[el].color)}">${EL[el].name}</b>.` + (role === 'guest' ? '<br>Waiting for the host to play again…' : '');
+    $('overTxt').innerHTML = `${won ? 'You won' : 'You lost'} the duel <b>${e[myId]} – ${e[opp]}</b> as <b style="color:${css(EL[el].color)}">${EL[el].name}</b>.` + xpHtml + (role === 'guest' ? '<br>Waiting for the host to play again…' : '');
     $('againBtn').classList.toggle('hidden', role !== 'host'); $('over').classList.remove('hidden'); unlockMouse(); return;
   }
   if (srcState()?.mode === 'dungeon') { // how deep you got, best per element
     let best = 0; try { const per = JSON.parse(localStorage.getItem('magepact_best_floor') || '{}'); best = per[el] = Math.max(per[el] || 0, e.wave); localStorage.setItem('magepact_best_floor', JSON.stringify(per)); } catch {}
-    $('overTxt').innerHTML = `You fell on floor ${e.wave} as <b style="color:${css(EL[el].color)}">${EL[el].name}</b>. Deepest: floor ${best}.` + (role === 'guest' ? '<br>Waiting for the host to play again…' : '');
+    $('overTxt').innerHTML = `You fell on floor ${e.wave} as <b style="color:${css(EL[el].color)}">${EL[el].name}</b>. Deepest: floor ${best}.` + xpHtml + (role === 'guest' ? '<br>Waiting for the host to play again…' : '');
     $('againBtn').classList.toggle('hidden', role !== 'host'); $('over').classList.remove('hidden'); unlockMouse(); return;
   }
   const wave = e.wave;
@@ -575,7 +582,7 @@ function showOver(e) {
     const per = JSON.parse(localStorage.getItem('magepact_best_el') || '{}'); per[el] = Math.max(per[el] || 0, wave); localStorage.setItem('magepact_best_el', JSON.stringify(per));
   } catch {}
   const st = mp?.stats;
-  $('overTxt').innerHTML = `You held out until wave ${wave} as <b style="color:${css(EL[el].color)}">${EL[el].name}</b>. Best: wave ${best}.` + (st ? `<div class="stats"><span><b>${st.kills}</b>kills</span><span><b>${Math.round(st.dmg).toLocaleString()}</b>damage</span><span><b>${st.combos}</b>reactions</span><span><b>${st.dodges}</b>perfect dodges</span><span><b>${st.best}</b>best combo</span></div>` : '') + (role === 'guest' ? '<br>Waiting for the host to play again…' : '');
+  $('overTxt').innerHTML = `You held out until wave ${wave} as <b style="color:${css(EL[el].color)}">${EL[el].name}</b>. Best: wave ${best}.` + (st ? `<div class="stats"><span><b>${st.kills}</b>kills</span><span><b>${Math.round(st.dmg).toLocaleString()}</b>damage</span><span><b>${st.combos}</b>reactions</span><span><b>${st.dodges}</b>perfect dodges</span><span><b>${st.best}</b>best combo</span></div>` : '') + xpHtml + (role === 'guest' ? '<br>Waiting for the host to play again…' : '');
   $('againBtn').classList.toggle('hidden', role !== 'host');
   $('over').classList.remove('hidden');
   unlockMouse();
@@ -650,28 +657,119 @@ $('modeBack').onclick = () => { $('lobby').classList.add('hidden'); $('modes').c
 $('menuBtn').onclick = () => location.reload(); // back to the mode browser (also leaves any online room)
 renderModes();
 
+// ===================== progression: levels, element unlocks, talents, mastery (saved per browser) =====================
+const STARTERS = ['fire', 'frost', 'storm', 'water', 'earth', 'wind', 'nature', 'shadow', 'light', 'venom'];
+const TALENTS = { // 5 ranks each; they apply in the Arena and the Dungeon, never in Duels (withTalents)
+  vit: { n: 'Vitality', i: '❤️', d: r => `+${6 * r}% max health` },
+  power: { n: 'Power', i: '🔥', d: r => `+${4 * r}% damage` },
+  haste: { n: 'Haste', i: '⏳', d: r => `${4 * r}% faster cooldowns` },
+  swift: { n: 'Swiftness', i: '👟', d: r => `+${3 * r}% move speed` },
+  focus: { n: 'Focus', i: '✨', d: r => `+${8 * r}% ultimate charge` },
+};
+const MASTERY = [400, 1200, 2500, 4500, 7500]; // element XP for each mastery star
+const needXP = lvl => 200 + 60 * lvl;
+const cleanTal = t => Object.fromEntries(Object.keys(TALENTS).map(k => [k, clamp(Math.floor(+t?.[k] || 0), 0, 5)]));
+let PROG = { xp: 0, lvl: 1, keys: 0, pts: 0, unl: STARTERS.slice(), tal: {}, mast: {} };
+try { PROG = { ...PROG, ...JSON.parse(localStorage.getItem('magepact_prog') || '{}') }; } catch {}
+PROG.tal = cleanTal(PROG.tal); PROG.unl = PROG.unl.filter(k => EL[k]);
+const saveProg = () => { try { localStorage.setItem('magepact_prog', JSON.stringify(PROG)); } catch {} };
+const unlocked = k => PROG.unl.includes(k);
+const stars = k => MASTERY.filter(x => (PROG.mast[k] || 0) >= x).length;
+// end of a run: XP for you and the elements you carried; every level gives an unlock key (while any element is locked) and a talent point
+function gainXP(xp, els) {
+  const before = { lvl: PROG.lvl, stars: els.map(stars) };
+  PROG.xp += xp;
+  while (PROG.xp >= needXP(PROG.lvl)) { PROG.xp -= needXP(PROG.lvl); PROG.lvl++; if (PROG.unl.length + PROG.keys < ELIST.length) PROG.keys++; PROG.pts++; }
+  for (const k of els) PROG.mast[k] = (PROG.mast[k] || 0) + xp;
+  saveProg();
+  const ups = PROG.lvl - before.lvl, newStars = els.filter((k, i) => stars(k) > before.stars[i]);
+  return `<div class="xpgain"><b>+${xp} XP</b>${xpBar()}${ups ? `<div class="lvlup">LEVEL UP! Level ${PROG.lvl}${PROG.keys ? ' · 🔓 unlock an element' : ''} · ✦ talent point${ups > 1 ? 's' : ''}</div>` : ''}${newStars.map(k => `<div class="lvlup" style="color:${css(EL[k].color)}">${EL[k].glyph} ${EL[k].name} mastery ${'★'.repeat(stars(k))}</div>`).join('')}</div>`;
+}
+const xpBar = () => `<div class="xpbar"><span>Level ${PROG.lvl}</span><i><b style="width:${Math.round(100 * PROG.xp / needXP(PROG.lvl))}%"></b></i><span>${PROG.xp} / ${needXP(PROG.lvl)} XP</span></div>`;
+function renderProg() {
+  $('unlockAll').classList.toggle('hidden', PROG.unl.length >= ELIST.length);
+  const spent = Object.values(PROG.tal).reduce((a, b) => a + b, 0);
+  $('prog').innerHTML = `${xpBar()}<div class="pr">${PROG.keys ? `<span class="key">🔓 ${PROG.keys} unlock${PROG.keys > 1 ? 's' : ''}: click a locked element</span>` : `<span>${PROG.unl.length} / ${ELIST.length} elements</span>`}<button id="talBtn" class="ghost">✦ Talents${PROG.pts - spent > 0 ? ` (${PROG.pts - spent})` : ''}</button></div>`;
+  $('talBtn').onclick = () => { $('talents').classList.remove('hidden'); renderTalents(); };
+}
+function renderTalents() {
+  const free = PROG.pts - Object.values(PROG.tal).reduce((a, b) => a + b, 0);
+  $('talList').innerHTML = `<p class="sub">${free} point${free === 1 ? '' : 's'} to spend · one per level · Arena &amp; Dungeon only (Duels stay fair)</p>` + Object.entries(TALENTS).map(([k, t]) => { const r = PROG.tal[k];
+    return `<div class="tal"><span class="ti">${t.i}</span><div><b>${t.n}</b><small>${r ? t.d(r) : t.d(1) + ' a rank'}</small></div><span class="pips">${[0, 1, 2, 3, 4].map(i => `<i class="${i < r ? 'on' : ''}"></i>`).join('')}</span><button class="ghost" data-k="${k}"${free > 0 && r < 5 ? '' : ' disabled'}>+</button></div>`; }).join('');
+  for (const b of $('talList').querySelectorAll('button[data-k]')) b.onclick = () => { PROG.tal[b.dataset.k]++; saveProg(); sfx('pick'); renderTalents(); renderProg(); };
+}
+$('unlockAll').onclick = () => { PROG.unl = ELIST.slice(); PROG.keys = 0; saveProg(); sfx('ready'); renderLobby(); };
+$('talReset').onclick = () => { PROG.tal = cleanTal({}); saveProg(); renderTalents(); renderProg(); };
+$('talClose').onclick = () => $('talents').classList.add('hidden');
+
 // ===================== lobby: 30 elements =====================
+// picker info per element: playstyle tags, difficulty (1-3) and the model its preview shows
+const ELMETA = {
+  fire: ['Burst', 'Area', 1, 'fire__phoenix'], frost: ['Control', 'Burst', 1, 'frost__lance'], storm: ['Chain', 'Burst', 2, 'storm__coil'],
+  water: ['Control', 'Area', 1, 'water__wave'], earth: ['Tank', 'Control', 1, 'earth__boulder'], wind: ['Mobility', 'Control', 2, 'wind__tornado'],
+  nature: ['Sustain', 'Control', 1, 'nature__flower'], shadow: ['Assassin', 'Mobility', 3, 'shadow__dagger'], light: ['Sustain', 'Support', 1, 'light__spear'],
+  venom: ['Damage over time', 'Area', 2, 'venom__wasp'], steel: ['Tank', 'Burst', 2, 'steel__sword'], magma: ['Area', 'Burst', 2, 'magma__volcano'],
+  crystal: ['Defense', 'Burst', 2, 'crystal__spire'], sonic: ['Control', 'Area', 2, 'sonic__rings'], gravity: ['Control', 'Area', 2, 'gravity__hole'],
+  chrono: ['Utility', 'Control', 3, 'chrono__hourglass'], blood: ['Sustain', 'High risk', 3, 'blood__scythe'], spirit: ['Summoner', 'Control', 2, 'spirit__wolf'],
+  cosmic: ['Area', 'Burst', 2, 'cosmic__comet'], explosion: ['Burst', 'Mobility', 2, 'explosion__bomb'], illusion: ['Trickster', 'Control', 3, 'illusion__mask'],
+  bone: ['Summoner', 'Tank', 2, 'bone__skull'], rune: ['Trapper', 'Burst', 3, 'rune__stone'], plasma: ['Burst', 'High risk', 3, 'plasma__orb'],
+  soul: ['Snowball', 'Execute', 2, 'soul__reaper'], abyss: ['Control', 'Area', 2, 'abyss__tentacle'], laser: ['Precision', 'Burst', 3, 'laser__drone'],
+  arcane: ['Combo', 'Burst', 2, 'arcane__owl'], blades: ['Melee', 'Mobility', 2, 'blades__sword'], ink: ['Control', 'Area', 2, 'ink__koi'],
+};
+const DIFF = ['', 'Easy', 'Medium', 'Hard'];
 let myEl = 'fire', myEl2 = null, hoverEl = null;
 try { const s = JSON.parse(localStorage.getItem('magepact_pick') || '{}'); if (EL[s.el]) myEl = s.el; if (EL[s.el2] && s.el2 !== myEl) myEl2 = s.el2; } catch {}
+if (!unlocked(myEl)) myEl = PROG.unl[0]; if (myEl2 && !unlocked(myEl2)) myEl2 = null;
 function bestFor(el) { try { return JSON.parse(localStorage.getItem(myMode === 'dungeon' ? 'magepact_best_floor' : 'magepact_best_el') || '{}')[el] || 0; } catch { return 0; } }
 function renderLobby() {
-  $('grid').innerHTML = ELIST.map(k => { const e = EL[k], b = bestFor(k); return `<button class="elc${k === myEl ? ' sel' : ''}${k === myEl2 ? ' sel2' : ''}" data-el="${k}" style="--c:${css(e.color)}"><span class="g">${e.glyph}</span><span class="n">${e.name}</span>${b && myMode !== 'duel' ? `<span class="best">${myMode === 'dungeon' ? 'F' : 'W'}${b}</span>` : ''}${k === myEl2 ? '<span class="tab">TAB</span>' : ''}</button>`; }).join('');
+  $('grid').innerHTML = ELIST.map(k => { const e = EL[k], b = bestFor(k), lock = !unlocked(k), st = stars(k); return `<button class="elc${k === myEl ? ' sel' : ''}${k === myEl2 ? ' sel2' : ''}${lock ? ' lock' : ''}${lock && PROG.keys ? ' can' : ''}" data-el="${k}" style="--c:${css(e.color)}"><span class="g">${lock ? '🔒' : e.glyph}</span><span class="n">${e.name}</span>${st ? `<span class="st">${'★'.repeat(st)}</span>` : ''}${b && myMode !== 'duel' ? `<span class="best">${myMode === 'dungeon' ? 'F' : 'W'}${b}</span>` : ''}${k === myEl2 ? '<span class="tab">TAB</span>' : ''}</button>`; }).join('');
   for (const b of $('grid').children) {
-    b.onclick = () => { myEl = b.dataset.el; if (myEl2 === myEl) myEl2 = null; savePick(); renderLobby(); sfx('pick'); };
-    b.oncontextmenu = ev => { ev.preventDefault(); const k = b.dataset.el; myEl2 = k === myEl2 || k === myEl ? null : k; savePick(); renderLobby(); sfx('swap'); };
+    b.onclick = () => {
+      const k = b.dataset.el;
+      if (!unlocked(k)) { if (!PROG.keys) { sfx('swap'); return; } PROG.keys--; PROG.unl.push(k); saveProg(); sfx('pick'); sfx('ready'); } // spend an unlock key
+      myEl = k; if (myEl2 === myEl) myEl2 = null; savePick(); renderLobby(); sfx('pick');
+    };
+    b.oncontextmenu = ev => { ev.preventDefault(); const k = b.dataset.el; if (!unlocked(k)) return; myEl2 = k === myEl2 || k === myEl ? null : k; savePick(); renderLobby(); sfx('swap'); };
     b.onmouseenter = () => { hoverEl = b.dataset.el; renderDetail(); };
     b.onmouseleave = () => { hoverEl = null; renderDetail(); };
   }
-  $('pickinfo').innerHTML = `<label>Second element<select id="el2Sel"><option value="">none</option>${ELIST.filter(x => x !== myEl).map(x => `<option value="${x}"${x === myEl2 ? ' selected' : ''}>${EL[x].name}</option>`).join('')}</select></label><span>Click an element to make it your main one. Right-click one (or pick it here) to carry a second element; Tab swaps between them in battle.</span>`;
+  $('pickinfo').innerHTML = `<label>Second element<select id="el2Sel"><option value="">none</option>${ELIST.filter(x => x !== myEl && unlocked(x)).map(x => `<option value="${x}"${x === myEl2 ? ' selected' : ''}>${EL[x].name}</option>`).join('')}</select></label><span>Click an element to make it your main one. Right-click one (or pick it here) to carry a second element; Tab swaps between them in battle.</span>`;
   $('el2Sel').onchange = ev => { myEl2 = ev.target.value || null; savePick(); renderLobby(); };
-  renderDetail();
+  renderProg(); renderDetail();
+}
+// a live 3D preview in the detail panel: the element's spell circle under its signature model, turning (own small renderer)
+const PV = { el: null, g: null, r: null };
+function pvShow(el) {
+  if (!PV.r) {
+    PV.r = new THREE.WebGLRenderer({ canvas: $('pvc'), alpha: true, antialias: true }); PV.r.setPixelRatio(Math.min(devicePixelRatio, 2)); PV.r.setSize(200, 150, false);
+    PV.r.toneMapping = renderer.toneMapping; PV.r.toneMappingExposure = 1.2; PV.r.outputColorSpace = renderer.outputColorSpace;
+    PV.sc = new THREE.Scene(); PV.sc.add(new THREE.HemisphereLight(0xc8d4ff, 0x3a2050, 2)); const dl = new THREE.DirectionalLight(0xfff0e0, 2.5); dl.position.set(2, 4, 3); PV.sc.add(dl);
+    PV.cam = new THREE.PerspectiveCamera(32, 200 / 150, .1, 50); PV.cam.position.set(0, 1.6, 4.6); PV.cam.lookAt(0, .75, 0);
+    let last = performance.now();
+    const tick = now => { requestAnimationFrame(tick); const dt = Math.min(.05, (now - last) / 1000); last = now;
+      if (!PV.g || $('lobby').classList.contains('hidden')) return;
+      PV.g.userData.m.rotation.y += dt * .8; spinCircle(PV.g.userData.c, dt, .6); PV.r.render(PV.sc, PV.cam); };
+    requestAnimationFrame(tick);
+  }
+  if (PV.el === el) return;
+  PV.el = el; if (PV.g) PV.sc.remove(PV.g);
+  const g = new THREE.Group(), c = makeCircle(el), m = model(ELMETA[el][3], EL[el].color, { flat: true }), w = new THREE.Group(), tilt = new THREE.Group();
+  c.scale.setScalar(1.25); w.add(tilt); tilt.add(m); // w spins, tilt tips it toward you
+  if (el === 'abyss') curlTentacle(m, 1.2, 1, .15);
+  const b = new THREE.Box3().setFromObject(m), s = b.getSize(V()), flat = s.y < .45 * Math.max(s.x, s.z), k = (flat ? 1.9 : 1.5) / Math.max(s.x, s.y, s.z, .01); // fit any model to about 1.5 m
+  m.scale.multiplyScalar(k); b.setFromObject(m); m.position.set(-(b.min.x + b.max.x) / 2, .15 - b.min.y, -(b.min.z + b.max.z) / 2);
+  if (flat) { w.position.y = .55; tilt.rotation.x = .3; } // projectiles fly level: float them and tip them toward you, rather than lying on the circle
+  g.add(c, w); g.userData = { c, m: w }; PV.sc.add(g); PV.g = g;
+  if (!unlocked(el)) w.traverse(o => { if (o.isMesh && !o.material.uniforms) { o.material = o.material.clone(); o.material.color.setScalar(.05); o.material.emissive?.setScalar(0); } }); // locked: a silhouette
 }
 function savePick() { try { localStorage.setItem('magepact_pick', JSON.stringify({ el: myEl, el2: myEl2 })); } catch {} }
 function renderDetail() {
-  const k = hoverEl || myEl, e = EL[k];
+  const k = hoverEl || myEl, e = EL[k], [t1, t2, dif] = ELMETA[k], st = stars(k), mx = PROG.mast[k] || 0, nxt = MASTERY[st];
   document.documentElement.style.setProperty('--el', css(e.color));
-  $('detail').innerHTML = `<div class="dh"><span class="g">${e.glyph}</span><div><b>${e.name}</b><small>${e.blurb}</small></div></div>
+  pvShow(k);
+  $('detailBody').innerHTML = `<div class="dh"><div><b>${e.glyph} ${e.name}</b><small>${e.blurb}</small></div></div>
+    <div class="tags"><span>${t1}</span><span>${t2}</span><span class="dif d${dif}">${'●'.repeat(dif)}${'○'.repeat(3 - dif)} ${DIFF[dif]}</span>${unlocked(k) ? `<span class="mast" title="Mastery: ${mx}${nxt ? ' / ' + nxt : ''} XP">${'★'.repeat(st)}${'☆'.repeat(5 - st)}</span>` : `<span class="lk">🔒 ${PROG.keys ? 'Click to unlock' : 'Locked: level up to unlock'}</span>`}</div>
     <div class="passive"><em>Passive</em> ${e.passive}</div>
-    <div class="moves">${e.moves.map((m, i) => `<div class="mv"><kbd>${SLOT_KEYS[i]}</kbd><span class="mi">${m.icon}</span><div><b>${m.name}</b>${m.mode === 'charge' ? ' <i>hold to charge</i>' : m.mode === 'channel' ? ' <i>hold</i>' : m.mode === 'aim' ? ' <i>hold to aim</i>' : ''}<small>${m.desc}</small></div></div>`).join('')}</div>`;
+    <div class="moves">${e.moves.map((m, i) => `<div class="mv"><kbd>${slotKey(i)}</kbd><span class="mi">${m.icon}</span><div><b>${m.name}</b>${m.mode === 'charge' ? ' <i>hold to charge</i>' : m.mode === 'channel' ? ' <i>hold</i>' : m.mode === 'aim' ? ' <i>hold to aim</i>' : ''}<small>${m.desc}</small></div></div>`).join('')}</div>`;
 }
 

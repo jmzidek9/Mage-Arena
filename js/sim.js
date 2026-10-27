@@ -8,7 +8,6 @@ const EL = ELEMENTS;
 const ELIST = Object.keys(EL);
 const MOVE = {};
 for (const el of ELIST) EL[el].moves.forEach((m, i) => { Object.assign(m, { key: el + '.' + i, el, slot: i }); m.mode ??= 'tap'; MOVE[m.key] = m; });
-const SLOT_KEYS = ['LMB', 'RMB', 'Q', 'E', 'R'];
 
 // status on an enemy (from element A) hit by a different element B -> reaction. Named pairs get their own effect,
 // everything else is "<A adjective> <B reaction>" with B's reaction kind, so all 380 ordered pairs do something.
@@ -69,6 +68,8 @@ function setElement(p, el) {
   }
   p.cur = el; p.ch = null; p.chg = null;
 }
+// permanent talents from progression (Arena and Dungeon only): Vitality adds 6% max HP a rank
+function withTalents(p, tal) { p.tal = S.mode === 'duel' ? {} : { ...tal }; p.max = p.hp = Math.round(100 * (1 + .06 * (p.tal.vit || 0))); return p; }
 function newPlayer(id, el, el2 = null) {
   return { id, el, el2, cur: el, x: id === 'h' ? -2 : 2, y: 0, z: 8, vy: 0, yaw: 0, pitch: 0, hp: 100, max: 100, down: false, rev: 0,
     cds: {}, ult: 0, bf: {}, bd: {}, dcd: 0, dashT: 0, dx: 0, dz: 0, dashAt: -9, jumpN: 0, dashN: 0, swapN: 0, dashes: 0, novaN: 0,
@@ -79,19 +80,19 @@ const players = () => Object.values(S.players);
 const mate = p => S.mode === 'duel' ? null : players().find(q => q !== p); // no partner heals for your duel opponent
 const own = n => S.players[n.own];
 function stats(p) {
-  const n = k => p.up[k] || 0, bf = p.bf || {}, el = p.cur || p.el;
+  const n = k => p.up[k] || 0, bf = p.bf || {}, el = p.cur || p.el, tl = k => p.tal?.[k] || 0; // tl: permanent talents (empty in Duels)
   const comboB = 1 + Math.min(.3, Math.floor((p.combo || 0) / 10) * .05);
   const lowHp = el === 'blood' ? 1 + Math.max(0, 1 - p.hp / p.max) * .5 : 1;
   return {
-    cdMul: .85 ** n('swift') * (bf.pact > 0 ? .8 : 1) * (el === 'chrono' ? .82 : 1) * (bf.eclipse > 0 ? .7 : 1),
+    cdMul: (1 - .04 * tl('haste')) * .85 ** n('swift') * (bf.pact > 0 ? .8 : 1) * (el === 'chrono' ? .82 : 1) * (bf.eclipse > 0 ? .7 : 1),
     skillCd: .8 ** n('quick'),
-    dmgMul: (1 + .2 * n('potency')) * (bf.pact > 0 ? 1.6 : 1) * comboB * lowHp * elementPower(p, el),
-    speed: 7.5 * (1 + .12 * n('fleet')) * (bf.tempest > 0 ? 1.6 : 1) * (bf.veil > 0 ? 1.3 : 1) * (bf.phase > 0 ? 1.3 : 1) * (bf.haste > 0 ? 1.35 : 1) * (el === 'wind' ? 1.15 : 1),
+    dmgMul: (1 + .04 * tl('power')) * (1 + .2 * n('potency')) * (bf.pact > 0 ? 1.6 : 1) * comboB * lowHp * elementPower(p, el),
+    speed: 7.5 * (1 + .03 * tl('swift')) * (1 + .12 * n('fleet')) * (bf.tempest > 0 ? 1.6 : 1) * (bf.veil > 0 ? 1.3 : 1) * (bf.phase > 0 ? 1.3 : 1) * (bf.haste > 0 ? 1.35 : 1) * (el === 'wind' ? 1.15 : 1),
     aoe: (1 + .25 * n('wide')) * (el === 'explosion' ? 1.2 : 1),
     dur: 1 + .5 * n('linger'), multi: 1 + n('twin'), chain: 2 + n('twin'), pierce: n('pierce'), bounce: n('ricochet'),
     steal: .04 * n('siphon') + (el === 'blood' ? .06 : 0) + (bf.eclipse > 0 ? .25 : 0),
     combo: 1 + .4 * n('combo'), dashCd: 1.2 * .6 ** n('blink'), detonate: n('detonate'), storm: n('storm'), bond: n('bond'),
-    over: n('over') > 0, nova: n('nova'), ultMul: 1 + .35 * n('surge'), echo: n('echo') * .25,
+    over: n('over') > 0, nova: n('nova'), ultMul: (1 + .35 * n('surge')) * (1 + .08 * tl('focus')), echo: n('echo') * .25,
     dr: (el === 'earth' ? .85 : 1) * (bf.molten > 0 ? .6 : 1) * (bf.quake > 0 ? .5 : 1),
   };
 }

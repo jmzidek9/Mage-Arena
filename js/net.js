@@ -22,9 +22,9 @@ const snap = () => ({
 function startGame() {
   initAudio();
   Object.assign(S, { duel: null, dun: null, phase: 'rest', mode: myMode, t: 0, wave: 0, enemies: [], shots: [], ents: [], rings: [], timers: [], events: [], restT: 2.5, hitstop: 0, slowmo: 0, tstop: 0, mod: null });
-  S.players = { h: newPlayer('h', myEl, myEl2) };
+  S.players = { h: withTalents(newPlayer('h', myEl, myEl2), PROG.tal) };
   if (myEl2) S.players.h.up.second = 1;
-  if (conn && guestEl) { S.players.g = newPlayer('g', guestEl, guestEl2); if (guestEl2) S.players.g.up.second = 1; }
+  if (conn && guestEl) { S.players.g = withTalents(newPlayer('g', guestEl, guestEl2), guestTal); if (guestEl2) S.players.g.up.second = 1; }
   timeFx = 0;
   startMode();
   showGame();
@@ -51,16 +51,31 @@ function applySettings(o) {
   if (bloomPass) bloomPass.enabled = o.bloom && HQ;
   if (renderer.shadowMap.enabled !== o.shadows) { renderer.shadowMap.enabled = moon.castShadow = o.shadows; scene.traverse(m => { if (m.material) m.material.needsUpdate = true; }); }
   filmPass.uniforms.uFilm.value = o.film ? 1 : 0;
+  shakeMul = o.shake; showNums = o.nums; invertY = o.invert; Object.assign(BIND, BIND_DEF, o.keys); hudKey = '';
   $('sSens').value = o.sens; $('sVol').value = o.vol; $('sMus').value = o.mus; $('sFov').value = o.fov; $('sBright').value = o.bright; $('sScale').value = o.scale;
-  $('cBloom').checked = o.bloom; $('cBloom').disabled = !bloomPass || !HQ; $('cShadows').checked = o.shadows; $('cFilm').checked = o.film;
+  $('cBloom').checked = o.bloom; $('cBloom').disabled = !bloomPass || !HQ; $('cShadows').checked = o.shadows; $('cFilm').checked = o.film; $('cNums').checked = o.nums; $('cInvert').checked = o.invert; $('sShake').value = o.shake; $('sShakeV').textContent = Math.round(o.shake * 100) + '%'; renderBinds();
   $('sSensV').textContent = o.sens.toFixed(2); $('sVolV').textContent = Math.round(o.vol * 100) + '%'; $('sMusV').textContent = Math.round(o.mus * 100) + '%'; $('sFovV').textContent = o.fov; $('sBrightV').textContent = Math.round(o.bright * 100) + '%'; $('sScaleV').textContent = Math.round(o.scale * 100) + '%';
 }
-let settings = { sens: 1, vol: 1, mus: 1, fov: 75, bright: 1, scale: 1, bloom: true, shadows: HQ, film: true };
+// Settings > Controls: click a key, press the new one (Esc cancels). Stored as settings.keys
+const BIND_NAMES = { fwd: 'Forward', back: 'Back', left: 'Left', right: 'Right', jump: 'Jump', dash: 'Dash', swap: 'Swap element', alt: 'Right click (key)', q: 'Skill 1', e: 'Skill 2', r: 'Ultimate' };
+let rebinding = null;
+function renderBinds() {
+  $('binds').innerHTML = Object.entries(BIND_NAMES).map(([k, n]) => `<div>${n}<button class="ghost${rebinding === k ? ' wait' : ''}" data-k="${k}">${rebinding === k ? 'press…' : keyName(BIND[k])}</button></div>`).join('');
+  for (const b of $('binds').querySelectorAll('button')) b.onclick = () => { rebinding = b.dataset.k; renderBinds(); };
+}
+addEventListener('keydown', e => { // capture phase: the key goes to the binding, not the game (or Esc's menu toggle)
+  if (!rebinding) return;
+  e.preventDefault(); e.stopImmediatePropagation();
+  if (e.code !== 'Escape') { for (const k in BIND) if (k !== rebinding && BIND[k] === e.code) settings.keys[k] = BIND[rebinding]; settings.keys[rebinding] = e.code; } // taking a used key swaps the two
+  rebinding = null; saveSettings();
+}, true);
+$('bindReset').onclick = () => { settings.keys = {}; saveSettings(); };
+let settings = { sens: 1, vol: 1, mus: 1, fov: 75, bright: 1, scale: 1, bloom: true, shadows: HQ, film: true, shake: 1, nums: true, invert: false, keys: {} };
 try { settings = { ...settings, ...JSON.parse(localStorage.getItem('magepact_settings') || '{}') }; } catch {}
 applySettings(settings);
 const saveSettings = () => { applySettings(settings); try { localStorage.setItem('magepact_settings', JSON.stringify(settings)); } catch {} };
-for (const [id, k] of [['sSens', 'sens'], ['sVol', 'vol'], ['sMus', 'mus'], ['sFov', 'fov'], ['sBright', 'bright'], ['sScale', 'scale']]) $(id).oninput = () => { settings[k] = +$(id).value; saveSettings(); };
-for (const [id, k] of [['cBloom', 'bloom'], ['cShadows', 'shadows'], ['cFilm', 'film']]) $(id).onchange = () => { settings[k] = $(id).checked; saveSettings(); };
+for (const [id, k] of [['sSens', 'sens'], ['sVol', 'vol'], ['sMus', 'mus'], ['sFov', 'fov'], ['sBright', 'bright'], ['sScale', 'scale'], ['sShake', 'shake']]) $(id).oninput = () => { settings[k] = +$(id).value; saveSettings(); };
+for (const [id, k] of [['cBloom', 'bloom'], ['cShadows', 'shadows'], ['cFilm', 'film'], ['cNums', 'nums'], ['cInvert', 'invert']]) $(id).onchange = () => { settings[k] = $(id).checked; saveSettings(); };
 for (const b of document.querySelectorAll('#settings .tabs button')) b.onclick = () => {
   for (const x of document.querySelectorAll('#settings .tabs button')) x.classList.toggle('on', x === b);
   for (const p of document.querySelectorAll('#settings .pane')) p.classList.toggle('hidden', p.dataset.pane !== b.dataset.tab);
@@ -75,7 +90,7 @@ function renderSwap() {
   $('pauseTag').innerHTML = paused() ? 'PAUSED' : 'MENU<small>Online: the game keeps running</small>';
   $('elSwap').classList.toggle('hidden', !playing || !p);
   if (!playing || !p) return;
-  $('swapGrid').innerHTML = ELIST.map(k => `<button class="elc${k === p.cur ? ' sel' : ''}" data-el="${k}" title="${EL[k].name}" style="--c:${css(EL[k].color)}"><span class="g">${EL[k].glyph}</span></button>`).join('');
+  $('swapGrid').innerHTML = ELIST.filter(k => unlocked(k) || k === p.cur).map(k => `<button class="elc${k === p.cur ? ' sel' : ''}" data-el="${k}" title="${EL[k].name}" style="--c:${css(EL[k].color)}"><span class="g">${EL[k].glyph}</span></button>`).join('');
   for (const b of $('swapGrid').children) b.onclick = () => pickEl(b.dataset.el);
 }
 function pickEl(el) {
@@ -98,7 +113,7 @@ addEventListener('keydown', e => { if (e.code === 'Escape' && playing) toggleSet
 // ponytail: STUN-only via PeerJS's free cloud broker; strict NATs (school/office wifi) may need a TURN server.
 // ponytail: JSON snapshots over the reliable channel at 20Hz; switch to packed arrays + unreliable if bandwidth bites.
 // ponytail: the guest owns its own position (no server reconciliation). Fine between friends, not for strangers.
-let peer = null, conn = null, guestEl = null, guestEl2 = null, R = null, G = null, snapT = 0, sendT = 0, lastPhase = null, lastSeen = 0;
+let peer = null, conn = null, guestEl = null, guestEl2 = null, guestTal = {}, R = null, G = null, snapT = 0, sendT = 0, lastPhase = null, lastSeen = 0;
 const OUT = [];
 function dropGuest() {
   if (!conn && !guestEl) return;
@@ -151,7 +166,7 @@ $('joinBtn').onclick = () => {
   peer = new Peer();
   peer.on('open', () => {
     conn = peer.connect('magepact-' + code);
-    conn.on('open', () => { conn.send({ t: 'hello', el: myEl, el2: myEl2, v: GAME_VERSION }); say('Connected! Waiting for the host to press Start…'); setInterval(() => conn?.open && conn.send({ t: 'hb' }), 1000); });
+    conn.on('open', () => { conn.send({ t: 'hello', el: myEl, el2: myEl2, tal: PROG.tal, v: GAME_VERSION }); say('Connected! Waiting for the host to press Start…'); setInterval(() => conn?.open && conn.send({ t: 'hb' }), 1000); });
     conn.on('data', onGuestData);
     conn.on('close', () => { playing = false; R = null; $('hud').classList.add('hidden'); $('lobby').classList.remove('hidden'); say('The host left the game.'); unlockMouse(); });
   });
@@ -160,9 +175,9 @@ $('joinBtn').onclick = () => {
 function onHostData(m) {
   if (m.t === 'hello') {
     if (m.v !== GAME_VERSION) { conn.send({ t: 'bad', v: GAME_VERSION }); say(`A partner tried to join with a different game version (${m.v || 'old'} vs ${GAME_VERSION}). Both of you need the same files: refresh or re-download.`); setTimeout(() => conn?.close(), 500); return; }
-    guestEl = EL[m.el] ? m.el : 'frost'; guestEl2 = EL[m.el2] && m.el2 !== guestEl ? m.el2 : null;
+    guestEl = EL[m.el] ? m.el : 'frost'; guestEl2 = EL[m.el2] && m.el2 !== guestEl ? m.el2 : null; guestTal = cleanTal(m.tal);
     say(`Partner joined as <b style="color:${css(EL[guestEl].color)}">${EL[guestEl].name}</b>. Press Start!`);
-    if (S.phase !== 'lobby' && !S.players.g) { S.players.g = newPlayer('g', guestEl, guestEl2); banner('PARTNER JOINED', '#8affc0'); }
+    if (S.phase !== 'lobby' && !S.players.g) { S.players.g = withTalents(newPlayer('g', guestEl, guestEl2), guestTal); banner('PARTNER JOINED', '#8affc0'); }
   }
   const g = S.players.g;
   if (!g) return;
@@ -192,7 +207,7 @@ function onGuestData(m) {
   const mine = R.players.g;
   if (mine) {
     const restart = lastPhase === 'over' && R.phase !== 'over';
-    if (!G || restart) G = Object.assign(newPlayer('g', mine.el, mine.el2), { x: mine.x, y: mine.y, z: mine.z });
+    if (!G || restart) G = Object.assign(newPlayer('g', mine.el, mine.el2), { x: mine.x, y: mine.y, z: mine.z, tal: R.mode === 'duel' ? {} : PROG.tal }); // talents too, so predicted movement matches the host
     if (G.cur !== mine.cur && !(G.swapAt > performance.now() - 600)) G.cur = mine.cur;
     Object.assign(G, { kick: mine.kick, spawn: mine.spawn, el: mine.el, el2: mine.el2, hp: mine.hp, max: mine.max, down: mine.down, rev: mine.rev, up: mine.up, ult: mine.ult, combo: mine.combo, stats: mine.stats });
     for (const k in mine.bf) G.bf[k] = mine.bf[k];
@@ -401,12 +416,12 @@ window.MP.setup = (el, types = ['grunt', 'grunt', 'brute', 'grunt', 'runner', 's
   inp.yaw = 0; inp.pitch = -.08; MP.frames(2); $('banner').style.opacity = 0;
 };
 window.MP.cast = (slot, frames = 20, holdFrames = 1) => {
-  const k = ['p', 's', 'KeyQ', 'KeyE', 'KeyR'][slot], set = v => { if (k === 'p') inp.p = v; else if (k === 's') inp.s = v; else keys[k] = v; };
+  const k = ['p', 's', BIND.q, BIND.e, BIND.r][slot], set = v => { if (k === 'p') inp.p = v; else if (k === 's') inp.s = v; else keys[k] = v; };
   for (let i = 0; i < holdFrames; i++) { set(true); MP.frames(1); }
   set(false); MP.frames(frames);
   return { shots: S.shots.length, ents: S.ents.map(n => n.mv), hp: S.enemies.map(e => Math.round(e.hp)) };
 };
 window.MP.play = (n, held = {}) => {
-  for (let i = 0; i < n; i++) { MP.aim(); inp.p = !!held.p; inp.s = !!held.s; for (const k of ['KeyQ', 'KeyE', 'KeyR']) keys[k] = !!held[k]; MP.frames(1); }
-  inp.p = inp.s = false; for (const k of ['KeyQ', 'KeyE', 'KeyR']) keys[k] = false;
+  for (let i = 0; i < n; i++) { MP.aim(); inp.p = !!held.p; inp.s = !!held.s; for (const k of ['KeyQ', 'KeyE', 'KeyR']) keys[BIND[k[3].toLowerCase()]] = !!held[k]; MP.frames(1); }
+  inp.p = inp.s = false; for (const k of ['q', 'e', 'r']) keys[BIND[k]] = false;
 };

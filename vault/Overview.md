@@ -24,7 +24,15 @@ A first-person magic game for 1–2 players in the browser, with three modes: Ar
 - **Keyboard + mouse:** WASD, mouse aim, LMB / RMB (or **F**, or **Ctrl+click** on a Mac trackpad) / Q / E / R, Space jump (hold to glide when a move allows it), Shift dash, Tab swap element, Esc settings.
 - **Touch** (iPad, touchscreen Chromebooks, phones): the controls appear after the first touch. Left side is a move stick, right side drags to look, buttons for the 5 moves, jump, dash and swap, and a gear for settings.
 - **Gamepad:** left stick move, right stick look, RT/LT/LB/RB/Y = LMB/RMB/Q/E/R, A jump, B dash, X swap, Start opens the menu.
-- **Settings:** mouse sensitivity, volume and field of view (saved per browser). **Graphics: Low** turns off bloom and shadows. Slow devices switch to low graphics on their own after a few seconds, unless the player chose a setting.
+- **Settings:** General (sensitivity, sound, music, screen shake, damage numbers), Visuals (field of view, brightness, render scale, bloom, shadows, film filter) and Controls (invert mouse Y, every key rebindable; taking a key that's already used swaps the two). All saved per browser. **Graphics: Low** turns off bloom and shadows. Slow devices switch to low graphics on their own after a few seconds, unless the player chose a setting.
+
+## Progression
+Saved per browser in `magepact_prog` (code at the top of the lobby section in `view.js`).
+- **XP** at the end of every run: Arena 60 per wave + 3 per kill, Dungeon 80 per floor + 3 per kill, Duel 250 for a win or 100 for a loss. Level n needs 200 + 60n XP.
+- **Unlocks:** you start with 10 elements (Fire, Frost, Storm, Water, Earth, Wind, Nature, Shadow, Light, Venom). Each level gives an unlock key; click any locked element to spend it. An **Unlock all** button sits at the bottom of the lobby.
+- **Talents:** a point per level, 5 ranks each: Vitality (+6% HP), Power (+4% damage), Haste (4% faster cooldowns), Swiftness (+3% speed), Focus (+8% ultimate charge). They apply in the Arena and Dungeon only; Duels stay fair. The guest sends theirs in the `hello` message. Refundable any time.
+- **Mastery:** the elements you carried earn the run's XP too: stars at 400 / 1,200 / 2,500 / 4,500 / 7,500, shown on the lobby cards.
+- **Element picker:** each element shows playstyle tags, a difficulty (Easy / Medium / Hard) and a live 3D preview of its spell circle and signature model (`ELMETA`, rendered by a small second WebGL renderer).
 
 ## Why it's replayable
 - 30 elements × a second element
