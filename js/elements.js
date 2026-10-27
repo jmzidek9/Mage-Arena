@@ -202,6 +202,21 @@ function scarFx(x, z, r, color, life = 4) {
   const yaw = rand(0, TAU);
   modelFx('ink__pool', color, V(x, INK_Y + rand(0, .01), z), life, (o, k) => { const s = r * easeOut(Math.min(1, k * life * 10)); o.rotation.y = yaw; o.scale.set(s, 1, s); fade(o, k < .6 ? 1 : 1 - (k - .6) / .4); }, { flat: true });
 }
+// Fire's explosions: a ball of flame that swells and burns out, tongues of fire licking outward, embers flung up that fall,
+// a puff of dark smoke, a shockwave and a scorch. A Flare (hot) burns whiter.
+function fireBoom(x, y, z, r, k = 1, hot = false) {
+  const c1 = hot ? 0xffe2a0 : 0xff6a1a, P = V(x, Math.max(y, .3), z), n = Math.round(8 * k + 2);
+  flash(x, y + .6, z, c1, 40 * k, .3); shake(clamp((.5 - distTo(x, z) * .03) * Math.min(1.6, r / 2.6), .03, .45) * k);
+  modelFx('fire__ball', c1, P.clone(), .32, (o, q) => { o.scale.setScalar(r * (.35 + .75 * easeOut(q))); o.rotation.z += .2; fade(o, (1 - q) ** 1.5); });
+  for (let i = 0; i < n; i++) { const a = TAU * i / n + rand(-.2, .2), d = V(Math.cos(a), rand(.2, .9), Math.sin(a)).normalize(), s = rand(.6, 1) * r * .45;
+    modelFx('fire__flame', 0xff5a1a, P.clone(), rand(.35, .5), (o, q) => { o.position.copy(P).addScaledVector(d, r * .8 * easeOut(q)); o.lookAt(o.position.clone().add(d)); o.rotateX(Math.PI / 2); o.scale.set(s * .6, s * (1.3 - q), s * .6); fade(o, 1 - q); }, { flame: true }); }
+  for (let i = 0; i < Math.round(30 * k); i++) { const a = rand(0, TAU), sp = rand(3, 9) * Math.sqrt(r / 2.5); emit(x, P.y, z, Math.cos(a) * sp, rand(3, 9), Math.sin(a) * sp, Math.random() < .3 ? 0xffe8b0 : flameColor(), rand(.06, .16), rand(.8, 1.4), 9, .6); } // embers
+  burst(x, P.y, z, Math.round(26 * k), hot ? 0xffe8c0 : 0xffb040, 7 * Math.sqrt(r / 2.6), .4 * k, .45, -2, 2);
+  ringFx(x, .08, z, r, c1, .4); if (k >= .8) ringFx(x, .12, z, r * 1.25, 0xffd27a, .3);
+  smokeFx(x, P.y + .3, z, r * .45, 0x2e2428, 1.3, Math.round(2 + 2 * k), 1.6);
+  if (y < 1.2) scarFx(x, z, r * .55, 0xff4a10, 3.5);
+  sfx(hot ? 'fire_flare' : 'fire_boom'); cityPush(x, y, z, r + 2.5, 7 * k);
+}
 // Explosion's booms: a burst of fire-lit smoke rolling into grey, flying debris, embers and a scorch mark
 function blastFx(e, k = 1) {
   boomFx(e.x, e.y, e.z, e.r, 0xffa020, .8 * k);
@@ -243,75 +258,99 @@ const ELEMENTS = {
 fire: {
   name: 'Fire', color: 0xff5a1a, glyph: '🔥', adj: 'BURNING', react: { name: 'IGNITION', kind: 'blast' },
   blurb: 'Raw destruction. Stack burns on everything, then blow it all up.',
-  passive: 'Kindling: burns stack up to 3 times, and burning enemies explode when they die.',
+  passive: 'Kindling: burns stack up to 3 times, and burning enemies explode when they die. A Fireball that hits an enemy already burning 3 times makes it Flare: a second, hotter blast.',
   st: { dot: 7, stacks: 3, dotStacks: 1 },
-  onKill(e, p) { if (e.st.fire > 0) boomAt({ p, el: 'fire', m: MOVE['fire.0'], dmg: 1 }, e.x, e.y + .8, e.z, 2.6, 20 * stats(p).dmgMul, { kb: 5, noStatus: true }); },
+  onKill(e, p) { if (e.st.fire > 0) boomAt({ p, el: 'fire', m: MOVE['fire.0'], dmg: 1 }, e.x, e.y + .8, e.z, 2.6, 20 * stats(p).dmgMul, { kb: 5, noStatus: true, fx: { s: .7 } }); }, // fx.s: a smaller blast (k is the event's own routing key)
   moves: [
-    { name: 'Fireball', icon: '☄️', cd: .5, desc: 'Hurl a fireball that explodes on impact.',
+    { name: 'Fireball', icon: '☄️', cd: .5, desc: 'Hurl a fireball that explodes on impact. Hitting an enemy that is already burning 3 times makes it Flare for 15 more around it.',
       cast(p, c) { for (let k = 0; k < c.multi; k++) shoot(p, c, 30, { d: spread(c.d, k, c.multi), r: .35, dmg: 18 * c.dmg, sc: c.mega ? 1.8 : 1, big: c.mega }); },
-      shot: { hit: () => 'end', end(s) { boomAt(ctxS(s), s.x, Math.max(s.y, .1), s.z, 2.5 * (s.big ? 1.6 : 1), s.dmg, { kb: 5 }); } },
-      look: { m: 'fire__ball', spin: [0, 0, 9], trail: [flameColor, .35, .35, -1, 3], light: 9 },
-      fx: { boom: e => boomFx(e.x, e.y, e.z, e.r, 0xff6a1a), det: e => boomFx(e.x, e.y, e.z, 2.5, 0xff6a1a, .6), nova: e => boomFx(e.x, .5, e.z, 4.5, 0xff6a1a, .8) } },
-    { name: 'Flamethrower', icon: '🌋', cd: 4, mode: 'channel', max: 2.6, desc: 'Hold to pour a cone of fire. Stacks burns and ramps up the longer you hold.',
+      shot: { hit: () => 'end', end(s, why, e) {
+        const c = ctxS(s), hot = e && !e.dead && (e.stk?.fire || 0) >= 3; // Flare: the third burn was already there
+        boomAt(c, s.x, Math.max(s.y, .1), s.z, 2.5 * (s.big ? 1.6 : 1), s.dmg, { kb: 5 });
+        if (hot) later(.12, () => { if (!e.dead) { const q = center(e); boomAt(c, q.x, q.y, q.z, 2.4, 15 * s.mul, { kb: 6, noStatus: true }, 'flare'); } });
+      } },
+      look: { m: 'fire__ball', s: 1.15, spin: [0, 0, 9], trail: [flameColor, .42, .3, -1.5, 4], flames: 1, light: 10 },
+      fx: { boom: e => fireBoom(e.x, e.y, e.z, e.r, e.s ?? 1), flare: e => { fireBoom(e.x, e.y, e.z, e.r, .8, true); popNum(e.x, e.y + 1.2, e.z, 'FLARE', '#ffd27a', 'tag'); },
+        det: e => fireBoom(e.x, e.y, e.z, 2.5, .6), nova: e => fireBoom(e.x, .5, e.z, 4.5, .9) } },
+    { name: 'Flamethrower', icon: '🌋', cd: 4, mode: 'channel', max: 2.6, desc: 'Hold to pour a roaring cone of fire. It stacks burns and ramps up the longer you hold, burning white-hot at full heat.',
       tick(p, c, dt) { if (pulse(p.bd, dt, .1, 'ft')) for (const e of coneHits(p, 7.5, 50)) hitEnemy(e, 'fire', 3.8 * c.dmg * (1 + p.chT * .45), p, e.x - p.x, e.z - p.z, .8, { src: p }); },
       chv: {
-        make() { const o = model('gen__cone', 0xff6a1a); fade(o, .25); return o; },
-        upd(o, a, d, dt) {
-          o.position.copy(a); o.lookAt(a.clone().add(d)); o.scale.set(3.4, 3.4, 7.5); o.rotation.z += dt * 3;
-          for (let k = 0; k < 7; k++) { const s = rand(10, 16); emit(a.x + d.x * .3, a.y + d.y * .3, a.z + d.z * .3, d.x * s + rand(-2.5, 2.5), d.y * s + rand(-1.5, 2.5), d.z * s + rand(-2.5, 2.5), flameColor(), rand(.25, .55), rand(.35, .55), -2.5, 1.2); }
-          if (Math.random() < .3) flash(a.x + d.x * 3, a.y, a.z + d.z * 3, 0xff6a1a, 8, .1);
+        make() { const g = new THREE.Group(), core = model('gen__cone', 0xffd27a), outer = model('gen__cone', 0xff5a1a); g.add(outer, core); g.userData.mats = [...core.userData.mats, ...outer.userData.mats]; Object.assign(g.userData, { core, outer, snd: 0 }); return g; },
+        upd(o, a, d, dt, t, p, T) {
+          const u = o.userData, heat = Math.min(1, (T || 0) / 2.2), mine = p?.id === myId; // 0 at the start, 1 when white-hot
+          o.position.copy(a); o.lookAt(a.clone().add(d));
+          u.outer.scale.set(3.2 + heat * .8, 3.2 + heat * .8, 7.5); u.outer.rotation.z += dt * 3; fade(u.outer, (.2 + heat * .12) * (mine ? .7 : 1));
+          u.core.scale.set(1.2 + heat * .6, 1.2 + heat * .6, 6.5); u.core.rotation.z -= dt * 5; fade(u.core, (.12 + heat * .3) * (mine ? .6 : 1));
+          const hot = () => heat > .65 && Math.random() < heat - .5 ? 0xfff1d0 : flameColor();
+          for (let k = 0; k < 8 + heat * 6; k++) { const s = rand(10, 16), sp = 2.5 + heat; emit(a.x + d.x * .3, a.y + d.y * .3, a.z + d.z * .3, d.x * s + rand(-sp, sp), d.y * s + rand(-1.5, 2.5), d.z * s + rand(-sp, sp), hot(), rand(.28, .62) * (1 + heat * .3), rand(.35, .55), -2.5, 1.2); }
+          for (let k = 0; k < 2; k++) { const q = a.clone().addScaledVector(d, rand(1.5, 7)); emit(q.x + rand(-.5, .5), q.y + rand(-.3, .3), q.z + rand(-.5, .5), rand(-1, 1), rand(2, 4), rand(-1, 1), 0xffe0a0, rand(.04, .08), rand(.6, 1), 3, .5); } // sparks
+          if (Math.random() < .35) flash(a.x + d.x * 3, a.y, a.z + d.z * 3, heat > .7 ? 0xffd8a0 : 0xff6a1a, 9 + heat * 8, .1);
+          if (d.y < -.05) { const L = Math.min(7.5, -a.y / d.y), g = a.clone().addScaledVector(d, L); if (L < 7.4 && Math.random() < .12) scarFx(g.x, g.z, rand(.5, .9), 0xff4a10, 2.5); if (L < 7.4 && Math.random() < .3) smokeFx(g.x, .3, g.z, .7, 0x3a2a24, 1.1, 1, 1.4); } // it scorches the floor it licks
+          if ((u.snd -= dt) <= 0) { u.snd = .3; sfx('fire_roar'); }
         } } },
     { name: 'Fire Brand', icon: '🔥', cd: 6, desc: 'Brand the first enemy you hit with 3 burns. A moment later the brand detonates, blasting everything around it and setting every enemy caught in the blast burning with 3 burns of its own.',
       cast(p, c) { shoot(p, c, 34, { r: .45, life: 1, dmg: 10 * c.dmg }); },
       shot: { hit(s, e) {
         const c = ctxS(s); hitEnemy(e, 'fire', s.dmg, c.p, 0, 0, 0); for (let i = 0; i < 2; i++) applyStatus(e, 'fire', c.p);
-        fxe(s.mv, 'brand', { x: e.x, y: e.y + 1, z: e.z });
+        fxe(s.mv, 'brand', { id: e.id, x: e.x, y: e.y + 1, z: e.z });
         later(1.2, () => { const hit = boomAt(c, e.x, e.y + .8, e.z, 3.5, 40 * s.mul, { kb: 7 }); for (const o of hit) if (!o.dead) { for (let i = 0; i < 2; i++) applyStatus(o, 'fire', c.p); if (o !== e) fxe(s.mv, 'spread', { x: e.x, y: e.y + 1, z: e.z, x2: o.x, y2: o.y + 1, z2: o.z }); } });
         return 'end';
       } },
-      look: { m: 'fire__ball', s: .5, spin: [0, 0, 12], trail: [flameColor, .2, .3, -1, 2], light: 5 },
-      fx: { brand(e) { burst(e.x, e.y, e.z, 20, 0xffb040, 4, .25, .6, -1); ringFx(e.x, e.y, e.z, 1, 0xff6a1a, .4); sfx('fire'); },
-        spread(e) { const a = V(e.x, e.y, e.z), b = V(e.x2, e.y2, e.z2); for (let i = 0; i <= 10; i++) { const q = a.clone().lerp(b, i / 10); q.y += Math.sin(i / 10 * Math.PI) * 1.2; emit(q.x, q.y, q.z, 0, rand(.5, 2), 0, flameColor(), rand(.15, .3), .45, -1); } burst(b.x, b.y, b.z, 12, 0xffb040, 4, .2, .4, -1); },
-        boom: e => { boomFx(e.x, e.y, e.z, e.r, 0xff6a1a); shake(.2); } } },
-    { name: 'Ring of Fire', icon: '⭕', cd: 12, desc: 'Raise a wall of flame around you. Enemies that cross it are scorched and thrown back.',
+      look: { m: 'fire__ball', s: .55, spin: [0, 0, 14], trail: [flameColor, .22, .3, -1.5, 3], light: 6 },
+      fx: { brand(e) { // a burning sigil hangs over the branded enemy and flickers faster until it blows
+          burst(e.x, e.y, e.z, 24, 0xffb040, 4, .25, .6, -1); sfx('fire_sizzle');
+          const c = makeCircle('fire'); addFx(c, 1.2, (o, k, dt) => { const v = views.e.get(e.id); if (v) o.position.copy(v.g.position).add(V(0, 2.5 + k * .3, 0)); o.scale.setScalar(.9 - k * .25); spinCircle(o, dt, 2 + k * 8); setOpacity(o.userData.mats, (.55 + .45 * Math.sin(k * k * 60)) * (1 - k * .2)); if (Math.random() < .5) emit(o.position.x + rand(-.4, .4), o.position.y, o.position.z + rand(-.4, .4), 0, 1.5, 0, flameColor(), .2, .4, -1); });
+        },
+        spread(e) { const a = V(e.x, e.y, e.z), b = V(e.x2, e.y2, e.z2); for (let i = 0; i <= 14; i++) { const q = a.clone().lerp(b, i / 14); q.y += Math.sin(i / 14 * Math.PI) * 1.4; emit(q.x, q.y, q.z, 0, rand(.5, 2), 0, flameColor(), rand(.18, .34), .5, -1); } burst(b.x, b.y, b.z, 16, 0xffb040, 4, .22, .4, -1); },
+        boom: e => { fireBoom(e.x, e.y, e.z, e.r, 1.25); shake(.2); } } },
+    { name: 'Ring of Fire', icon: '⭕', cd: 12, desc: 'Raise a roaring wall of flame around you. Enemies that cross it are scorched and thrown back.',
       cast(p, c) { ent(p, c, p.x, p.z, { r: 5.5 * c.st.aoe, life: 5 }); },
       ent: { tick(n, dt) {
         for (const e of enemiesNear(n.x, n.z, n.r + 1.5)) {
           const dx = e.x - n.x, dz = e.z - n.z, d = Math.hypot(dx, dz) || 1;
-          if (Math.abs(d - n.r) < 1 + ET[e.type].r * e.sc && ready(n, e, .3)) { const out = d > n.r - .2 ? 1 : -1; hitEnemy(e, 'fire', 11 * n.mul, own(n), dx * out, dz * out, 9, { aoe: true }); }
+          if (Math.abs(d - n.r) < 1 + ET[e.type].r * e.sc && ready(n, e, .3)) { const out = d > n.r - .2 ? 1 : -1; hitEnemy(e, 'fire', 11 * n.mul, own(n), dx * out, dz * out, 9, { aoe: true }); fxe(n.mv, 'lick', { x: n.x + dx / d * n.r, z: n.z + dz / d * n.r }); }
         } } },
       view: {
-        make(n) { const g = ringOf('fire__flame', 0xff5a1a, 36, n.r, 1.6, { flame: true }); g.userData.circle = zoneCircle('fire', n.r + .4, .6); g.add(g.userData.circle); return g; },
+        make(n) { const g = ringOf('fire__flame', 0xff5a1a, 40, n.r, 1.6, { flame: true }); g.children.forEach(f => f.userData.h = rand(.85, 1.35)); g.userData.circle = zoneCircle('fire', n.r + .4, .6); g.add(g.userData.circle); sfx('fire_whoosh'); burst(n.x, .4, n.z, 60, 0xffb040, 9, .3, .5, -1); return g; },
         upd(o, n, dt, t) {
-          const grow = Math.min(1, n.t * 4);
-          o.children.forEach((f, i) => { if (f !== o.userData.circle) f.scale.set(.75, (1 + .3 * Math.sin(t * 13 + i * 1.7)) * grow * 1.3, .75); });
+          const grow = easeOutBack(Math.min(1, n.t * 3.5));
+          o.children.forEach((f, i) => { if (f !== o.userData.circle) f.scale.set(.8, (1 + .35 * Math.sin(t * 13 + i * 1.7)) * grow * 1.35 * f.userData.h, .8); });
           spinCircle(o.userData.circle, dt, .4);
-          if (Math.random() < .7) { const a = rand(0, TAU); emit(n.x + Math.cos(a) * n.r, rand(.2, 1.5), n.z + Math.sin(a) * n.r, 0, rand(2, 4), 0, flameColor(), rand(.2, .4), .7, -1.5); }
-        }, drop: dropFade() } },
-    { name: 'Phoenix Dive', icon: '🐦‍🔥', mode: 'aim', range: 26, aimR: 7, desc: 'ULTIMATE. Rise as a phoenix and crash onto the target, setting the ground ablaze.',
-      self(p, c) { p.mo = { arc: 1, t: 0, T: 1.1, x0: p.x, z0: p.z, x1: c.tgt.x, z1: c.tgt.z, h: 9 }; },
+          for (let k = 0; k < 2; k++) { const a = rand(0, TAU) + t * .8; emit(n.x + Math.cos(a) * n.r, rand(.2, 1.8), n.z + Math.sin(a) * n.r, -Math.sin(a) * 2, rand(2.5, 5), Math.cos(a) * 2, Math.random() < .2 ? 0xffe0a0 : flameColor(), rand(.18, .4), .8, -1.5); } // embers swirl up the wall
+          if ((o.userData.snd = (o.userData.snd || 0) - dt) <= 0) { o.userData.snd = .55; sfx('fire_roar'); }
+        }, drop: dropFade() },
+      fx: { lick(e) { burst(e.x, 1, e.z, 22, 0xffb040, 6, .3, .4, -1.5); flash(e.x, 1, e.z, 0xff6a1a, 14, .15); } } },
+    { name: 'Conflagration', icon: '🎇', desc: 'ULTIMATE. A wall of fire rolls out from you across 22 m, setting everything it reaches burning 3 times over. A moment later every burning enemy within 30 m erupts in a pillar of flame: 40, plus 25 for each burn on it, and the eruption sets the enemies around it alight.',
       cast(p, c) {
-        buff(p, 'phoenix', 1.35); fxe(c.m.key, 'rise', { id: p.id, x: p.x, z: p.z, tx: c.tgt.x, tz: c.tgt.z });
-        const t = c.tgt.clone();
-        later(1.1, () => { boomAt(c, t.x, .3, t.z, 7, 65 * c.dmg, { kb: 12, lift: 8 }, 'land'); ent(p, c, t.x, t.z, { r: 6, life: 5, kind: 'pyre' }); });
+        const R = 22 * c.st.aoe; fxe(c.m.key, 'wave', { x: p.x, z: p.z, r: R });
+        for (const e of enemiesNear(p.x, p.z, R)) later(Math.hypot(e.x - p.x, e.z - p.z) / R * .75, () => { if (!alive(e)) return; hitEnemy(e, 'fire', 15 * c.dmg, p, e.x - p.x, e.z - p.z, 4, { aoe: true }); for (let i = 0; i < 2; i++) applyStatus(e, 'fire', p); });
+        later(1.55, () => { // then everything that's burning goes up, nearest first
+          const es = enemiesNear(p.x, p.z, 30).filter(e => e.st.fire > 0).sort((a, b) => Math.hypot(a.x - p.x, a.z - p.z) - Math.hypot(b.x - p.x, b.z - p.z));
+          es.forEach((e, i) => later(i * .07, () => {
+            if (!alive(e) || !(e.st.fire > 0)) return;
+            const n = e.stk.fire || 1; delete e.st.fire; delete e.stk.fire;
+            fxe(c.m.key, 'erupt', { x: e.x, z: e.z, n });
+            hitEnemy(e, 'fire', (40 + 25 * n) * c.dmg, p, 0, 0, 0, { aoe: true, noStatus: true, noCombo: true }); launch(e, 6 + n);
+            for (const o of enemiesNear(e.x, e.z, 3.5)) if (o !== e) applyStatus(o, 'fire', p);
+          }));
+        });
       },
-      ent: { tick(n, dt) { if (pulse(n, dt, .5)) for (const e of enemiesNear(n.x, n.z, n.r)) hitEnemy(e, 'fire', 6 * n.mul, own(n), 0, 0, 0, { aoe: true, noCombo: true }); } },
-      view: { make(n) { const g = ringOf('fire__flame', 0xff5a1a, 18, n.r * .7, .9, { flame: true }); g.userData.circle = zoneCircle('fire', n.r, .8); g.add(g.userData.circle); return g; },
-        upd(o, n, dt, t) { spinCircle(o.userData.circle, dt, .3); o.children.forEach((f, i) => { if (f !== o.userData.circle) f.scale.y = (.8 + .3 * Math.sin(t * 11 + i)) * Math.min(1, n.l * 4); });
-          for (let k = 0; k < 2; k++) { const a = rand(0, TAU), d = rand(0, n.r); emit(n.x + Math.cos(a) * d, .2, n.z + Math.sin(a) * d, 0, rand(1.5, 4), 0, flameColor(), rand(.2, .45), .8, -1.5); } }, drop: dropFade() },
       fx: {
-        rise(e) {
-          const o = model('fire__phoenix', 0xff6a1a), x0 = e.x, z0 = e.z, yaw = Math.atan2(e.tx - e.x, e.tz - e.z);
-          o.rotation.y = yaw; o.scale.setScalar(isMe(e.id) ? 1.6 : 2.2);
-          addFx(o, 1.15, (o, k) => {
-            const u = Math.min(1, k * 1.05); o.position.set(x0 + (e.tx - x0) * u, 4 * 9 * u * (1 - u) + (isMe(e.id) ? -1.2 : 1), z0 + (e.tz - z0) * u);
-            o.rotation.x = (u - .5) * 1.2; fade(o, k > .9 ? (1 - k) * 10 : 1);
-            for (let i = 0; i < 6; i++) emit(o.position.x + rand(-1.5, 1.5), o.position.y + rand(-.5, .5), o.position.z + rand(-1.5, 1.5), rand(-1, 1), rand(-2, 0), rand(-1, 1), flameColor(), rand(.3, .6), .6, -1);
-          });
-          if (isMe(e.id)) { fovKick = 2; shake(.2); }
-          sfx('fire_big'); circleFx('fire', V(e.tx, .08, e.tz), 7, { life: 1.2 });
+        wave(e) { // a ring of flame tongues racing outward over the ground
+          const g = ringOf('fire__flame', 0xff5a1a, 56, 1, 1, { flame: true }); g.position.set(e.x, 0, e.z); g.children.forEach(f => f.userData.h = rand(.7, 1.2));
+          addFx(g, 1.1, (o, k) => { const r = 3 + (e.r - 3) * easeOut(Math.min(1, k / .7)), cp = camera.position; // starts clear of the caster, and never fills your own view
+            o.children.forEach((f, i) => { const a = TAU * i / o.children.length; f.position.set(Math.cos(a) * r, 0, Math.sin(a) * r); f.visible = Math.hypot(e.x + f.position.x - cp.x, e.z + f.position.z - cp.z) > 3.5; f.scale.set(.9, f.userData.h * (1.4 - k) * (1 + .25 * Math.sin(k * 40 + i)), .9); }); fade(o, k > .7 ? (1 - k) / .3 : 1);
+            if (k < .7) for (let i = 0; i < 6; i++) { const a = rand(0, TAU); emit(e.x + Math.cos(a) * r, rand(.2, 1.2), e.z + Math.sin(a) * r, Math.cos(a) * 6, rand(2, 5), Math.sin(a) * 6, flameColor(), rand(.25, .5), .6, -1.5); } });
+          ringFx(e.x, .1, e.z, e.r, 0xff6a1a, .8, 1); ringFx(e.x, .15, e.z, e.r * .8, 0xffd27a, .6, 1); flash(e.x, 2, e.z, 0xff6a1a, 35, .5);
+          if (distTo(e.x, e.z) < 3) { fovKick = 1.6; shake(.35); } sfx('fire_ult');
         },
-        land(e) { boomFx(e.x, 1, e.z, e.r, 0xff6a1a, 2.4); pillarFx(e.x, .05, e.z, e.r * .6, 12, 0xff6a1a, .9); ringFx(e.x, .1, e.z, e.r * 1.4, 0xffb040, .7); shake(.7); sfx('ult'); },
+        erupt(e) { // a pillar of flame bursting up out of the burning enemy, taller with more burns on it
+          const h = 6 + e.n * 2.5;
+          pillarFx(e.x, .05, e.z, 1.1 + e.n * .25, h, 0xff6a1a, .9); pillarFx(e.x, .05, e.z, .5 + e.n * .12, h * 1.1, 0xffe0a0, .6);
+          for (let i = 0; i < 2 + e.n; i++) modelFx('fire__flame', 0xff5a1a, V(e.x + rand(-.4, .4), 0, e.z + rand(-.4, .4)), .85, (o, k) => { o.scale.set(.7, h * .22 * Math.sin(Math.min(1, k * 1.6) * Math.PI * .9), .7); o.rotation.y += .1; fade(o, 1 - k * k); }, { flame: true });
+          for (let i = 0; i < 16 + e.n * 6; i++) emit(e.x + rand(-.4, .4), rand(.2, 1), e.z + rand(-.4, .4), rand(-2, 2), rand(8, 15), rand(-2, 2), Math.random() < .3 ? 0xffe0a0 : flameColor(), rand(.18, .4), rand(.8, 1.2), 5, .6);
+          fireBoom(e.x, .6, e.z, 1.6 + e.n * .2, .5); smokeFx(e.x, h * .6, e.z, 1.3, 0x2a2024, 2, 2, 1.5);
+        },
       } },
   ],
 },

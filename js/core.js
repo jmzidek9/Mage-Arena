@@ -497,7 +497,7 @@ function stepNums(dt) {
   }
 }
 let trauma = 0, fovKick = 0, hurtT = 0;
-const shake = a => trauma = Math.min(1, trauma + a * shakeMul);
+const shake = a => trauma = Math.min(1, trauma + (Number.isFinite(a) ? a : 0) * shakeMul); // a bad value would turn the camera to NaN and black out the screen
 function banner(text, color = '#fff', dur = 1800) {
   const b = $('banner'); b.textContent = text; b.style.color = color; b.style.opacity = 1;
   clearTimeout(banner.t); banner.t = setTimeout(() => b.style.opacity = 0, dur);
@@ -570,8 +570,15 @@ const SFX = {
   jump: [['cloth', .3, { r: [1.2, 1.4] }]],
   land: [['footstep_concrete', .72, { r: .7 }], ['impactSoft_medium', .51, { r: .8, lp: 600 }]],
   // elements: <el> for the basic attack, <el>_big for everything heavier
-  fire: [[['spell_fire_01', 'spell_fire_02', 'spell_fire_05', 'spell_fire_06', 'spell_fire_07'], .53, { r: [1, 1.2], len: .5 }], ['thrusterFire', .16, { len: .3, hp: 500 }]],
-  fire_big: [['spell_fire', .93, { r: [.8, .9], rev: .3 }], ['explosionCrunch', .44, { r: .8, rev: .3 }], ['lowFrequency_explosion_001', .6]],
+  // Fire: a whoosh as it leaves your hand, a crunchy, roaring burst on impact, a held roar for the flamethrower and the ring
+  fire: [[['spell_fire_01', 'spell_fire_02', 'spell_fire_05', 'spell_fire_06', 'spell_fire_07'], .5, { r: [1.05, 1.25], len: .45 }], ['thrusterFire', .3, { r: [1.25, 1.45], len: .28, hp: 700 }], ['cloth1', .18, { r: [.55, .7], lp: 1400 }]],
+  fire_big: [['spell_fire', .85, { r: [.8, .9], rev: .3 }], ['thrusterFire', .4, { r: [.8, .95], len: .55, lp: 2400 }], ['explosionCrunch', .32, { r: .8, rev: .3 }], ['lowFrequency_explosion_001', .5]],
+  fire_boom: [['explosionCrunch', .62, { r: [.95, 1.15], rev: .25 }], ['spell_fire', .42, { r: [.7, .85], len: .8 }], ['thrusterFire', .28, { r: [.6, .7], len: .45, lp: 1600 }], ['lowFrequency_explosion', .45, { r: [1.1, 1.3] }]],
+  fire_flare: [['explosionCrunch', .7, { r: [1.2, 1.35], rev: .35 }], ['spell_fire', .5, { r: [1.15, 1.3], len: .5 }], ['impactBell_heavy_004', .18, { r: 2.2, rev: .5 }]],
+  fire_roar: [['thrusterFire', .42, { r: [.68, .8], len: .4, lp: 2600 }], [['spell_fire_03', 'spell_fire_04'], .16, { r: [.55, .65], len: .38 }]],
+  fire_sizzle: [[['spell_fire_02', 'spell_fire_06'], .38, { r: [1.5, 1.7], len: .35, hp: 1200 }], ['magical_1', .14, { r: [.9, 1], rev: .4 }]],
+  fire_whoosh: [['thrusterFire', .6, { r: [.55, .62], len: .9, lp: 1800 }], ['spell_fire', .55, { r: .7, rev: .4 }], ['cloth1', .3, { r: .45, lp: 900 }]],
+  fire_ult: [['spell_fire', .95, { r: .6, rev: .6 }], ['thrusterFire', .7, { r: .45, len: 1.4, lp: 1600 }], ['lowFrequency_explosion_000', 1, { r: .8 }], ['forceField', .28, { r: .55, rev: .5 }], ['explosionCrunch', .4, { r: .6, d: .25, rev: .5 }]],
   frost: [['impactGlass_medium', .52, { r: [1.1, 1.3], rev: .3 }], ['magical_5', .35, { r: 1.4, len: .5 }]],
   frost_big: [['impactGlass_heavy', 1.92, { r: [.8, .9], rev: .4 }], ['impactGlass_medium', 1.33, { d: .06, r: .7 }], ['forceField', .74, { r: 1.5, hp: 800 }]],
   storm: [['explosionCrunch_002', .71, { r: [1.6, 1.9], hp: 1500 }], ['impactMetal_light', .4, { r: [1.5, 1.8] }], ['chain', .32, { r: 1.5 }]],

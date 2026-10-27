@@ -12,6 +12,7 @@ const srcState = () => role === 'guest' ? R : S;
 let castFxN = 0;
 
 // ===================== cast + event VFX =====================
+const FIRE_I = ELIST.indexOf('fire');
 function castFx(e) {
   const m = MOVE[e.m]; if (!m) return;
   castFxN++;
@@ -268,6 +269,10 @@ function renderEnemies(src, dt, t, a) {
     if (e.cc === 'stun' && Math.random() < .5) { const ang = t * 6 + rand(0, .5); emit(px + Math.cos(ang) * r * .8, py + h + .3, pz + Math.sin(ang) * r * .8, 0, 0, 0, 0xffe36a, .12, .25); }
     if (e.cc === 'blind' && Math.random() < .4) emit(px + rand(-r, r), py + h * .85, pz + rand(-r, r), 0, .5, 0, 0xfff0b0, .15, .4);
     if (e.sh > 0 && Math.random() < .3) emit(px + rand(-r, r) * 1.2, py + rand(0, h), pz + rand(-r, r) * 1.2, 0, .3, 0, 0x40ff90, .15, .4);
+    if ((e.st || []).includes(FIRE_I)) { // burning: real flames lick up the body, with a little smoke
+      if (Math.random() < .55) emit(px + rand(-r, r) * .8, py + rand(.1, h * .8), pz + rand(-r, r) * .8, rand(-.4, .4), rand(1.5, 3), rand(-.4, .4), flameColor(), rand(.16, .32) * Math.max(1, r * 1.2), rand(.3, .5), -3);
+      if (Math.random() < .03) smokeFx(px, py + h, pz, .4 + r * .3, 0x2e2428, 1, 1, 1);
+    }
     for (const si of e.st || []) { const el = ELIST[si]; if (Math.random() < .28) emit(px + rand(-r, r), py + rand(0, h), pz + rand(-r, r), rand(-.5, .5), rand(.5, 2), rand(-.5, .5), EL[el].color, rand(.07, .16), .5, -1); }
     if (e.lk) (links[e.lk] ??= []).push(V(px, py + h * .6, pz));
     // health bar for wounded regular enemies
@@ -337,6 +342,9 @@ function renderShots(src, dt, t, a) {
       if (L.dust && v.o.position.y < 2.5 && Math.random() < .35) smokeFx(v.o.position.x, .3, v.o.position.z, .9, L.dust, 1, 1, .5); // kicks up real dust as it rolls
       if (L.suck) { const [c, R] = L.suck, p = v.o.position; for (let k = 0; k < 2; k++) { const a = rand(0, TAU), b = rand(-.6, .6), d = V(Math.cos(a) * Math.cos(b), Math.sin(b), Math.sin(a) * Math.cos(b)); emit(p.x + d.x * R, p.y + d.y * R, p.z + d.z * R, -d.x * R * 3.2, -d.y * R * 3.2, -d.z * R * 3.2, c, rand(.05, .1), .3, 0, 0); } } // matter dragged into it
       if (L.trail) { const [c, sz, life, grav, n] = L.trail; const p = v.o.position; for (let k = 0; k < n; k++) emit(p.x + rand(-.1, .1), p.y + rand(-.1, .1), p.z + rand(-.1, .1), rand(-.5, .5), rand(0, 1), rand(-.5, .5), typeof c === 'function' ? c() : c, sz * (s.sc || 1), life, grav); }
+      if (L.flames) { const p = v.o.position, sc = s.sc || 1; // a burning comet: a white-hot core, licking flames, sparks, a thin smoke wake
+        emit(p.x, p.y, p.z, 0, 0, 0, 0xfff0c8, .32 * sc, .08); for (let k = 0; k < 2; k++) emit(p.x + rand(-.15, .15), p.y + rand(-.15, .15), p.z + rand(-.15, .15), rand(-1.2, 1.2), rand(.5, 2.5), rand(-1.2, 1.2), flameColor(), rand(.18, .32) * sc, rand(.18, .3), -3);
+        if (Math.random() < .5) emit(p.x, p.y, p.z, rand(-3, 3), rand(1, 4), rand(-3, 3), 0xffe0a0, .05, rand(.4, .7), 6, .5); if (Math.random() < .06) smokeFx(p.x, p.y, p.z, .35 * sc, 0x2e2428, .8, 1, .8); }
     }
     if (v.light) v.light.position.copy(v.o.position);
   }, v => { v.o.removeFromParent(); if (v.light) { v.light.intensity = 0; v.light.userData.used = false; } });

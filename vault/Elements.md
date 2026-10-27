@@ -42,15 +42,17 @@ Move modes: **tap** casts on press (LMB repeats while held), **hold to aim** sho
 ## 🔥 Fire
 Raw destruction. Stack burns on everything, then blow it all up.
 
-**Passive.** Kindling: burns stack up to 3 times, and burning enemies explode when they die.
+**Passive.** Kindling: burns stack up to 3 times, and burning enemies explode when they die. A Fireball that hits an enemy already burning 3 times makes it Flare: a second, hotter blast.
 
 | Key | Move | Cooldown | What it does |
 |---|---|---|---|
-| LMB | ☄️ **Fireball** | 0.5 s | Hurl a fireball that explodes on impact. |
-| RMB | 🌋 **Flamethrower** *(hold)* | 4 s | Hold to pour a cone of fire. Stacks burns and ramps up the longer you hold. |
+| LMB | ☄️ **Fireball** | 0.5 s | Hurl a fireball that explodes on impact. Hitting an enemy that is already burning 3 times makes it Flare for 15 more around it. |
+| RMB | 🌋 **Flamethrower** *(hold)* | 4 s | Hold to pour a roaring cone of fire. It stacks burns and ramps up the longer you hold, burning white-hot at full heat. |
 | Q | 🔥 **Fire Brand** | 6 s | Brand the first enemy you hit with 3 burns. A moment later the brand detonates, blasting everything around it and setting every enemy caught in the blast burning with 3 burns of its own. |
-| E | ⭕ **Ring of Fire** | 12 s | Raise a wall of flame around you. Enemies that cross it are scorched and thrown back. |
-| R | 🐦‍🔥 **Phoenix Dive** *(hold to aim, release to cast)* | ultimate | Rise as a phoenix and crash onto the target, setting the ground ablaze. |
+| E | ⭕ **Ring of Fire** | 12 s | Raise a roaring wall of flame around you. Enemies that cross it are scorched and thrown back. |
+| R | 🎇 **Conflagration** | ultimate | A wall of fire rolls out from you across 22 m, setting everything it reaches burning 3 times over. A moment later every burning enemy within 30 m erupts in a pillar of flame: 40, plus 25 for each burn on it, and the eruption sets the enemies around it alight. |
+
+*Look and sound (2026-10-27):* fire explosions are their own effect (a swelling fireball, flame tongues, embers that rise and fall, smoke, a scorch); fireballs trail flame, sparks and smoke; the flamethrower is a two-layer stream that turns white-hot as it ramps and scorches the floor; burning enemies burn visibly. Fire has its own layered sounds: cast whoosh, impact roar, Flare crack, a held roar for the flamethrower and the ring, the brand's sizzle and the ultimate.
 
 ## ❄️ Frost
 Control the battlefield. Slow everything down, freeze it solid, then shatter it.
