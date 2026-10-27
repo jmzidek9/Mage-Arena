@@ -4,9 +4,9 @@ The fourth mode (key 4), next to [[Elements|Arena]], Duel and Dungeon. Same endl
 
 ## Layout
 - A round island (walkable radius 205 m) on a jagged rock underside, under the same black-hole sky as the Arena, with floating rocks around the rim and a low crenellated parapet at the edge.
-- **Plaza** in the middle (27 m): the Arena's gold sigil, a ring of eight monoliths, braziers and crystals.
-- **Roads:** two 12 m avenues crossing at the plaza (lined with braziers and colonnades), ring roads at 72 m and 142 m, and a side-street grid every 33 m.
-- **Districts by distance:** the core has grand halls with gold bands and crystal-topped towers; the middle ring has houses and halls; the outskirts are ruins with broken tops and more moss. Some lots are open grass courtyards.
+- **Plaza** in the middle (23 m): the Arena's gold sigil, a ring of eight monoliths, braziers, four wizard statues and benches.
+- **Roads:** two 10 m avenues crossing at the plaza (braziers, columns, lamps and market stalls), 7 m ring roads at 72 m and 142 m (fountains, trees), gateway arches where they cross, and a 6 m side-street grid every 30 m.
+- **Districts by distance:** the core has grand halls with gold bands and round towers (crystal-topped or slate-roofed); the middle ring has houses and halls; the outskirts are ruins with broken tops and more moss. Some lots are open grass courtyards.
 - Everything comes from a fixed seed (`cityLayout`), so host and guest build the same city.
 
 ## Look (2026-10-27 detail pass)
