@@ -379,7 +379,7 @@ function renderPartner(src, dt, t, a) {
     if (fresh) v.g.position.copy(tg); else v.g.position.lerp(tg, a);
     v.g.rotation.y = lerpAngle(v.g.rotation.y, p.yaw + Math.PI, fresh ? 1 : a);
     v.g.rotation.x += ((p.down ? -1.35 : 0) - v.g.rotation.x) * Math.min(1, dt * 8);
-    const ghost = p.bf?.veil > 0 ? .12 : p.bf?.phase > 0 ? .45 : 1;
+    const ghost = p.bf?.veil > 0 ? .12 : 1;
     for (const m of v.mats) { m.transparent = ghost < 1; m.opacity = ghost; }
     v.shell.visible = p.bf?.shell > 0; if (v.shell.visible) { v.shell.position.set(v.g.position.x, v.g.position.y + 1.1, v.g.position.z); v.shell.rotation.y += dt; }
     if (p.bf?.molten > 0 && Math.random() < .5) emit(v.g.position.x + rand(-.5, .5), v.g.position.y + rand(.2, 2), v.g.position.z + rand(-.5, .5), 0, 1, 0, 0xff5a10, .2, .5, -1);
@@ -516,7 +516,7 @@ function hud(src, mp) {
   if (sp.ult >= 1 && !hud.ultReady) sfx('ready');
   hud.ultReady = sp.ult >= 1;
   const bf = sp.bf || {}, tags = [];
-  for (const [k, n, c] of [['veil', 'VEILED', '#b08cff'], ['phase', 'PHASED', '#5effc8'], ['pact', 'BLOOD PACT', '#ff4060'], ['molten', 'MOLTEN', '#ff6a2a'], ['quake', 'BEDROCK', '#d9913a'], ['tempest', 'TEMPEST', '#9dffd6'], ['shell', 'SHELL', '#ff8ae8'], ['crit', 'NEXT HIT x2', '#ffd36a'], ['glide', 'GLIDE', '#9dffd6'], ['eclipse', 'ECLIPSE', '#9a4cff'], ['bloom', 'BLOOM', '#ff9ad8'], ['mirror', 'MIRRORED', '#f0a6ff'], ['fusion', 'FUSION', '#ff3ca8'], ['haste', 'ACCELERATED', '#ffb43a']])
+  for (const [k, n, c] of [['veil', 'VEILED', '#b08cff'], ['pact', 'BLOOD PACT', '#ff4060'], ['molten', 'MOLTEN', '#ff6a2a'], ['quake', 'BEDROCK', '#d9913a'], ['tempest', 'TEMPEST', '#9dffd6'], ['shell', 'SHELL', '#ff8ae8'], ['crit', 'NEXT HIT x2', '#ffd36a'], ['glide', 'GLIDE', '#9dffd6'], ['eclipse', 'ECLIPSE', '#9a4cff'], ['bloom', 'BLOOM', '#ff9ad8'], ['mirror', 'MIRRORED', '#f0a6ff'], ['fusion', 'FUSION', '#ff3ca8'], ['haste', 'ACCELERATED', '#ffb43a']])
     if (bf[k] > 0) tags.push(`<span style="color:${c};border-color:${c}">${n}${k === 'shell' ? '' : ' ' + Math.ceil(bf[k])}</span>`);
   const tagHtml = tags.join('');
   if (tagHtml !== hud.tags) { $('buffs').innerHTML = tagHtml; hud.tags = tagHtml; }
@@ -544,7 +544,7 @@ function hud(src, mp) {
   $('lock').classList.toggle('hidden', locked() || usingVirt());
   $('touch').classList.toggle('hidden', !document.body.classList.contains('touching'));
   hurtT = Math.max(0, hurtT - 1 / 60 * 2.5); healT = Math.max(0, healT - 1 / 60 * 2);
-  const veil = bf.veil > 0 || bf.phase > 0;
+  const veil = bf.veil > 0;
   $('vignette').style.boxShadow = `inset 0 0 ${120 + hurtT * 80}px rgba(255,20,50,${hurtT * .8})` + (healT > 0 ? `, inset 0 0 140px rgba(60,255,140,${healT * .35})` : '') + (veil ? ', inset 0 0 180px rgba(120,60,255,.45)' : '') + (bf.shell > 0 ? ', inset 0 0 90px rgba(255,120,230,.35)' : '') + (bf.pact > 0 ? `, inset 0 0 150px rgba(255,0,40,${.25 + .1 * Math.sin(performance.now() / 150)})` : '');
 }
 

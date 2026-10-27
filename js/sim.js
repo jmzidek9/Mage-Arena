@@ -87,7 +87,7 @@ function stats(p) {
     cdMul: (1 - .04 * tl('haste')) * .85 ** n('swift') * (bf.pact > 0 ? .8 : 1) * (el === 'chrono' ? .82 : 1) * (bf.eclipse > 0 ? .7 : 1),
     skillCd: .8 ** n('quick'),
     dmgMul: (1 + .04 * tl('power')) * (1 + .2 * n('potency')) * (bf.pact > 0 ? 1.6 : 1) * comboB * lowHp * elementPower(p, el),
-    speed: 7.5 * (1 + .03 * tl('swift')) * (1 + .12 * n('fleet')) * (bf.tempest > 0 ? 1.6 : 1) * (bf.veil > 0 ? 1.3 : 1) * (bf.phase > 0 ? 1.3 : 1) * (bf.haste > 0 ? 1.35 : 1) * (el === 'wind' ? 1.15 : 1),
+    speed: 7.5 * (1 + .03 * tl('swift')) * (1 + .12 * n('fleet')) * (bf.tempest > 0 ? 1.6 : 1) * (bf.veil > 0 ? 1.3 : 1) * (bf.haste > 0 ? 1.35 : 1) * (el === 'wind' ? 1.15 : 1),
     aoe: (1 + .25 * n('wide')) * (el === 'explosion' ? 1.2 : 1),
     dur: 1 + .5 * n('linger'), multi: 1 + n('twin'), chain: 2 + n('twin'), pierce: n('pierce'), bounce: n('ricochet'),
     steal: .04 * n('siphon') + (el === 'blood' ? .06 : 0) + (bf.eclipse > 0 ? .25 : 0),
@@ -388,7 +388,7 @@ function kill(e, el, p) {
   if (Math.random() < (t.boss ? 1 : e.elite ? 1 : .07)) dropOrb(e.x, e.z, t.boss ? 'big' : 'hp');
 }
 function hurt(p, n, src = null) {
-  if (p.down || p.dashT > 0 || p.bf.phase > 0 || p.bf.phoenix > 0 || p.bf.inv > 0 || S.phase !== 'fight') return false;
+  if (p.down || p.dashT > 0 || p.bf.phoenix > 0 || p.bf.inv > 0 || S.phase !== 'fight') return false;
   if (p.bd.bones > 0) { // Bone Armor: a plate takes the whole hit, then flies back at the attacker
     p.bd.bones--;
     const o = V(p.x, p.y + 1.2, p.z);

@@ -75,6 +75,9 @@ function summonAI(n, dt, spd, reach, period, attack, leash = 20) {
   const q = { x: n.x, z: n.z }; collide(q, .4); n.x = q.x; n.z = q.z;
   if (e && d <= reach + R + .3 && pulse(n, dt, period, 'atk')) { n.s = (n.s || 0) + 1; attack(e); }
 }
+// Spirit's summons that Command can send (wandering spirits, the wolf, the knights)
+const SUMMONS = new Set(['spirit.0', 'spirit.3', 'spirit.4']);
+const raiseSpirit = (p, x, z, dmg) => ent(p, { p, el: 'spirit', m: MOVE['spirit.0'], dmg }, x, z, { life: 8, r: .5 });
 
 // ---------- shared helpers (client visuals) ----------
 const isMe = id => id === myId;
@@ -90,6 +93,7 @@ function boomFx(x, y, z, r, color, k = 1) {
   flash(x, y + .5, z, color, 35 * k, .35);
   shake(clamp((.5 - distTo(x, z) * .03) * Math.min(1.6, r / 2.6), .04, .5)); sfx('boom');
 }
+const REAP_ARC = new THREE.RingGeometry(4.6, 6.4, 32, 1, -Math.PI / 2 - 1.35, 2.7).rotateX(-Math.PI / 2); // Reap's crescent, centred on +z
 const _bgeo = new THREE.CylinderGeometry(1, 1, 1, 10, 1, true).rotateX(Math.PI / 2).translate(0, 0, .5);
 function beamMesh(color, w, core = true) { const m = energyMat(color, core, true), o = new THREE.Mesh(_bgeo, m); o.userData.mats = [m]; o.scale.set(w, w, 1); o.frustumCulled = false; return o; }
 function aimBeam(o, a, b, w) { o.position.copy(a); o.lookAt(b); o.scale.set(w, w, Math.max(.01, a.distanceTo(b))); }
@@ -425,14 +429,31 @@ water: {
       cast(p, c) { for (let k = 0; k < c.multi; k++) shoot(p, c, 38, { d: spread(c.d.clone().add(V(rand(-.02, .02), rand(-.02, .02), rand(-.02, .02))).normalize(), k, c.multi, .07), r: .25, dmg: 10.5 * c.dmg, kb: 4.5, sc: c.mega ? 2 : 1 }); },
       look: { m: 'water__drop', trail: [0x7fc8ff, .14, .3, 3, 1], light: 3 },
       fx: { det: e => boomFx(e.x, e.y, e.z, 2.5, 0x2a7dff, .6), nova: e => boomFx(e.x, .5, e.z, 4.5, 0x2a7dff, .8) } },
-    { name: 'Water Whip', icon: '🪢', cd: 3.5, desc: 'Lash a wide arc in front of you, dragging every enemy it hits toward you.',
-      cast(p, c) { for (const e of coneHits(p, 8.5, 140)) { hitEnemy(e, 'water', 26 * c.dmg, p, 0, 0, 0, { src: p }); if (!ET[e.type].boss) { e.kx = (p.x + c.flat.x * 2.2 - e.x) * 5; e.kz = (p.z + c.flat.z * 2.2 - e.z) * 5; } } }, // dragged right in front of you
-      fx: { cast(e) {
-        const o = model('water__whip', 0x4aa0ff), yaw = Math.atan2(e.d[0], e.d[2]);
-        o.position.set(e.x, e.y + 1.2, e.z); o.rotation.y = yaw;
-        addFx(o, .35, (o, k) => { o.scale.set(1, 1, 1); o.rotation.y = yaw + (k - .5) * .9; fade(o, 1 - k * k); });
-        for (let i = 0; i < 30; i++) { const a = yaw + rand(-1.2, 1.2), d = rand(2, 8); emit(e.x + Math.sin(a) * d, e.y + 1.2, e.z + Math.cos(a) * d, rand(-1, 1), rand(0, 2), rand(-1, 1), 0x9fd8ff, rand(.15, .3), .5, 6); }
-      } } },
+    { name: 'Water Whip', icon: '🪢', cd: 3.5, desc: 'Crack a 10 m whip of water straight ahead. Everything along it is dragged toward you, and the tip cracks for double damage and a 0.5 s stun.',
+      cast(p, c) { later(.12, () => { // lands as the lash snaps straight
+        if (p.down) return; const f = flatAim(p);
+        for (const { e, t } of rayHits(V(p.x, p.y + 1, p.z), f, 10, 1.1)) {
+          const tip = t > 7.5, q = center(e);
+          hitEnemy(e, 'water', (tip ? 44 : 22) * c.dmg, p, 0, 0, 0, { src: p });
+          if (tip) { cc(e, 'stun', .5, p); fxe(c.m.key, 'crack', { x: r2(q.x), y: r2(q.y), z: r2(q.z) }); }
+          if (!ET[e.type].boss) { e.kx = (p.x + f.x * 2.2 - e.x) * 5; e.kz = (p.z + f.z * 2.2 - e.z) * 5; } // dragged right in front of you
+        }
+      }); },
+      fx: { cast(e) { // a chain of water that unfurls from your hand in a travelling wave, snaps straight, then recoils
+          const yaw = Math.atan2(e.d[0], e.d[2]), f = V(Math.sin(yaw), 0, Math.cos(yaw)), sd = V(f.z, 0, -f.x), N = 20, L = 10;
+          const g = new THREE.Group(); g.userData.mats = [];
+          const segs = Array.from({ length: N }, (_, i) => { const o = model('water__drop', 0x4aa0ff); o.scale.setScalar(.55 - .3 * i / N); g.add(o); g.userData.mats.push(...o.userData.mats); return o; });
+          const pt = (s, k, h) => { const ext = k < .3 ? easeOut(k / .3) : 1 - easeOut((k - .3) / .7) * .95, w = Math.sin(s * Math.PI * 2.5 - k * 20) * .7 * s * (1 - s * .5) * (k < .3 ? 1 - k / .3 : (k - .3) * 1.5);
+            return h.clone().addScaledVector(f, .6 + (L - .6) * s * ext).addScaledVector(sd, w).setY(h.y + (e.y + 1.1 - h.y) * s + Math.sin(s * Math.PI) * .5 * ext); };
+          addFx(g, .45, (o, k) => {
+            const h = handPos(e.id);
+            segs.forEach((m, i) => { const s = i / (N - 1); m.position.copy(pt(s, k, h)); m.lookAt(pt(Math.min(1, s + .05), k, h)); });
+            if (k > .27 && !o.userData.cr) { o.userData.cr = 1; const q = segs[N - 1].position; ringFx(q.x, q.y, q.z, 1.2, 0xbfe8ff, .25); burst(q.x, q.y, q.z, 24, 0x9fd8ff, 9, .15, .35, 8); flash(q.x, q.y, q.z, 0x9fd8ff, 20, .12); sfx('water_big'); }
+            if (Math.random() < .7) { const q = segs[(Math.random() * N) | 0].position; emit(q.x, q.y, q.z, rand(-1, 1), rand(-1, 1), rand(-1, 1), 0x9fd8ff, rand(.08, .16), .35, 8); }
+            fade(o, k < .8 ? 1 : (1 - k) * 5);
+          });
+        },
+        crack(e) { burst(e.x, e.y, e.z, 30, 0xbfe8ff, 8, .18, .4, 8); ringFx(e.x, e.y, e.z, 1.6, 0xffffff, .2); popNum(e.x, e.y + 1.2, e.z, 'CRACK', '#9fd8ff', 'tag'); } } },
     { name: 'Bubble Prison', icon: '🫧', cd: 9, desc: 'Trap an enemy in a floating bubble. It is helpless and takes 30% more damage.',
       cast(p, c) { shoot(p, c, 26, { r: .5, life: 1.5, dmg: 10 * c.dmg }); },
       shot: { hit(s, e) { const p = own(s); hitEnemy(e, 'water', s.dmg, p, 0, 0, 0); if (!cc(e, 'bubble', 3, p)) damage(e, 30 * s.mul, 'water', p); return 'end'; } },
@@ -1189,27 +1210,56 @@ blood: {
 // ================================================================== SPIRIT
 spirit: {
   name: 'Spirit', color: 0x5effc8, glyph: '👻', adj: 'HAUNTED', react: { name: 'POSSESSION', kind: 'stun' },
-  blurb: 'Commander of the dead. Haunting wisps, a spectral wolf, and an army of ghost knights.',
-  passive: 'Soul Harvest: enemies you kill release a wisp that heals you for 4. Haunted enemies deal 25% less damage.',
+  blurb: 'The summoner. The restless dead, a shrieking banshee, a spectral wolf and an army of ghost knights fight for you.',
+  passive: 'Restless Dead: every monster you kill rises as a wandering spirit that fights for you for 8 s (up to 4 at once). Haunted enemies deal 25% less damage.',
   st: { slow: .15, weak: .25 },
-  onKill(e, p) { heal(p, 4); fxe('spirit.0', 'soul', { x: e.x, y: e.y + 1, z: e.z, id: p.id }); },
+  onKill(e, p) { if (!ET[e.type].boss && !e.pid && entsOf(p, 'spirit.0').length < 4) raiseSpirit(p, e.x, e.z, stats(p).dmgMul); },
   moves: [
     { name: 'Soul Wisps', icon: '🕯️', cd: .45, desc: 'Release wisps that hunt down enemies on their own.',
       cast(p, c) { for (let k = 0; k < c.multi; k++) shoot(p, c, 22, { d: spread(c.d, k, c.multi, .2), r: .35, life: 2.2, dmg: 24 * c.dmg, home: 6, sc: c.mega ? 1.8 : 1 }); },
+      // the wandering spirits of the Restless Dead passive live on this move
+      ent: { tick(n, dt) { summonAI(n, dt, 9, 1.3, .8, e => hitEnemy(e, 'spirit', 12 * n.mul, own(n), e.x - n.x, e.z - n.z, 2), 18); } },
       look: { m: 'spirit__wisp', trail: [0x8affd8, .18, .45, -1, 2], light: 4 },
-      fx: { soul(e) { const pp = () => (role === 'guest' && e.id === myId ? G : (role === 'guest' ? R : S)?.players[e.id]); const from = V(e.x, e.y, e.z);
-          modelFx('spirit__wisp', 0x8affd8, from, .7, (o, k) => { const q = pp(); if (q) { o.position.lerpVectors(from, V(q.x, q.y + 1.2, q.z), easeOut(k)); o.lookAt(q.x, q.y + 1.2, q.z); } fade(o, 1 - k * k); }); },
-        det: e => boomFx(e.x, e.y, e.z, 2.5, 0x5effc8, .6), nova: e => boomFx(e.x, .5, e.z, 4.5, 0x5effc8, .8) } },
-    { name: 'Banshee Wail', icon: '😱', cd: 8, desc: 'A terrifying wail. Enemies in front of you flee in fear for 2.5 seconds.',
-      cast(p, c) { for (const e of coneHits(p, 10, 80)) { cc(e, 'fear', 2.5, p); hitEnemy(e, 'spirit', 24 * c.dmg, p, e.x - p.x, e.z - p.z, 4, { src: p }); } },
-      fx: { cast(e) { const a = V(...e.o), d = V(...e.d); modelFx('spirit__skull', 0x8affd8, a.clone(), .6, (o, k) => { o.position.copy(a).addScaledVector(d, k * 9); o.lookAt(o.position.clone().add(d)); o.rotateY(Math.PI); o.scale.setScalar(1 + k * 4); fade(o, (1 - k) * .8); });
-        for (let i = 0; i < 30; i++) { const s = rand(10, 18); emit(a.x, a.y, a.z, d.x * s + rand(-4, 4), d.y * s + rand(-2, 2), d.z * s + rand(-4, 4), 0x8affd8, .25, .5, 0, 2); } } } },
-    { name: 'Phase Walk', icon: '🌫️', cd: 10, desc: 'Become a ghost for 3 seconds: invulnerable, 30% faster, and you haunt every enemy you pass through.',
-      self(p) { p.bf.phase = 3; },
-      cast(p, c) { buff(p, 'phase', 3); ent(p, c, p.x, p.z, { follow: 1, life: 3, r: 1.3 }); },
-      ent: { tick(n) { for (const e of enemiesNear(n.x, n.z, n.r)) if (ready(n, e, .5)) hitEnemy(e, 'spirit', 12 * n.mul, own(n), 0, 0, 0, { aoe: true }); } },
-      view: { make() { const g = new THREE.Group(); g.userData.mats = []; return g; }, upd(o, n) { for (let k = 0; k < 3; k++) emit(n.x + rand(-.5, .5), n.y + rand(.2, 1.8), n.z + rand(-.5, .5), 0, rand(.3, 1), 0, 0x8affd8, rand(.2, .4), .6, -.5); }, drop: (o) => o.removeFromParent() } },
-    { name: 'Spirit Wolf', icon: '🐺', cd: 14, desc: 'Summon a spectral wolf for 16 seconds. It hunts the enemies closest to you and savages them.',
+      view: { make(n) { const g = new THREE.Group(), o = model('spirit__wisp', 0x5effc8); g.add(o); g.userData.mats = o.userData.mats; Object.assign(g.userData, { w: o, s: n.s, lunge: 0 }); burst(n.x, .6, n.z, 26, 0x8affd8, 4, .25, .5, -2); sfx('spirit'); return g; },
+        upd(o, n, dt, t) {
+          const u = o.userData, k = easeOut(Math.min(1, n.t * 2));
+          if (n.s !== u.s) { u.s = n.s; u.lunge = 1; }
+          u.lunge = Math.max(0, u.lunge - dt * 4);
+          o.rotation.y = lerpAngle(o.rotation.y, n.yaw || 0, Math.min(1, dt * 10));
+          o.position.y = .3 + 1.1 * k + Math.sin(t * 3 + n.id) * .15;
+          u.w.position.z = Math.sin(u.lunge * Math.PI) * 1.1; u.w.rotation.x = -Math.PI / 2 + Math.sin(t * 5 + n.id) * .2; u.w.scale.setScalar(1.5 * k);
+          fade(o, Math.min(1, n.l * 4) * .5);
+          if (Math.random() < .4) emit(n.x + rand(-.3, .3), o.position.y + rand(-.2, .3), n.z + rand(-.3, .3), 0, rand(.2, .8), 0, 0x8affd8, rand(.12, .25), .6, -.4);
+        }, drop(o, n) { burst(n.x, 1.2, n.z, 24, 0x8affd8, 4, .2, .5); dropFade(.3)(o); } },
+      fx: { det: e => boomFx(e.x, e.y, e.z, 2.5, 0x5effc8, .6), nova: e => boomFx(e.x, .5, e.z, 4.5, 0x5effc8, .8) } },
+    { name: 'Command', icon: '👉', cd: 5, desc: 'Point at an enemy: every spirit, wolf and knight you have lunges at it, strikes for 30 and keeps attacking it. With no summons, two wandering spirits rise beside you instead.',
+      cast(p, c) {
+        const mine = S.ents.filter(n => n.own === p.id && SUMMONS.has(n.mv));
+        if (!mine.length) { for (const s of [-1, 1]) raiseSpirit(p, p.x - c.flat.z * s * 1.6, p.z + c.flat.x * s * 1.6, c.dmg); return; }
+        const e = rayHits(c.eye, c.aim, 40, .9)[0]?.e || nearest(p.x + c.flat.x * 10, p.z + c.flat.z * 10, 8);
+        if (!e) return;
+        const q = center(e); fxe(c.m.key, 'order', { id: p.id, x: r2(q.x), y: r2(q.y), z: r2(q.z), from: mine.map(n => [r2(n.x), r2(n.z)]) });
+        for (const n of mine) { // each one lunges to the target's side and strikes
+          const a = Math.atan2(n.x - e.x, n.z - e.z), R = ET[e.type].r * e.sc + .8;
+          n.x = e.x + Math.sin(a) * R; n.z = e.z + Math.cos(a) * R; n.yaw = a + Math.PI; n.tg = e.id; n.rt = 3; n.s++;
+          hitEnemy(e, 'spirit', 30 * c.dmg, p, e.x - p.x, e.z - p.z, 1, { aoe: true });
+        }
+      },
+      fx: { order(e) { const q = V(e.x, e.y, e.z); beamFx(handPos(e.id), q, 0x8affd8, .02, .2); for (const [x, z] of e.from) beamFx(V(x, 1.2, z), q, 0x5effc8, .05, .3); burst(e.x, e.y, e.z, 30, 0x8affd8, 6, .25, .5); ringFx(e.x, .1, e.z, 2, 0x5effc8, .4); sfx('spirit_big'); } } },
+    { name: 'Banshee', icon: '😱', cd: 10, mode: 'aim', range: 18, aimR: 5, desc: 'Summon a banshee at the target for 7 s. Every 2 seconds she shrieks: enemies within 5 m take 18 damage and flee in fear for 1.5 s.',
+      cast(p, c) { for (const n of entsOf(p, c.m.key)) n.dead = true; ent(p, c, c.tgt.x, c.tgt.z, { life: 7, r: 5 * c.st.aoe, acc: 1.6 }); },
+      ent: { tick(n, dt) { if (!pulse(n, dt, 2)) return; n.s++; for (const e of enemiesNear(n.x, n.z, n.r)) { cc(e, 'fear', 1.5, own(n)); hitEnemy(e, 'spirit', 18 * n.mul, own(n), e.x - n.x, e.z - n.z, 4, { aoe: true }); } } },
+      view: { make(n) { const o = model('spirit__skull', 0x8affd8), u = o.userData; Object.assign(u, { s: n.s, wail: 0, circle: zoneCircle('spirit', n.r, .35) }); u.circle.position.set(n.x, .07, n.z); scene.add(u.circle); burst(n.x, 1, n.z, 40, 0x8affd8, 5, .3, .6, -2); sfx('spirit_big'); return o; },
+        upd(o, n, dt, t) {
+          const u = o.userData, k = easeOut(Math.min(1, n.t * 2));
+          if (n.s !== u.s) { u.s = n.s; u.wail = 1; ringFx(n.x, 1.5, n.z, n.r, 0x8affd8, .5); ringFx(n.x, .1, n.z, n.r, 0x5effc8, .5); for (let i = 0; i < 36; i++) { const a = TAU * i / 36; emit(n.x, 2.4, n.z, Math.cos(a) * 12, rand(-1, 1), Math.sin(a) * 12, 0x8affd8, .25, .45, 0, 2); } sfx('spirit_big'); }
+          u.wail = Math.max(0, u.wail - dt * 3);
+          o.position.y = 1.4 + 1.2 * k + Math.sin(t * 2) * .25; o.scale.setScalar((1.8 + u.wail * 1.2) * k); o.lookAt(camera.position);
+          fade(o, Math.min(1, n.l * 4) * .8); spinCircle(u.circle, dt, .5); setOpacity(u.circle.userData.mats, Math.min(.35, n.l * 2));
+          if (Math.random() < .6) emit(n.x + rand(-.4, .4), o.position.y - .6, n.z + rand(-.4, .4), rand(-.5, .5), -rand(.5, 1.5), rand(-.5, .5), 0x8affd8, rand(.15, .3), .7, -.3);
+        },
+        drop(o) { o.userData.circle.removeFromParent(); dropFade(.3)(o); } } },
+    { name: 'Spirit Wolf', icon: '🐺', cd: 12, desc: 'Summon a spectral wolf for 16 seconds. It hunts the enemies closest to you and savages them.',
       cast(p, c) { ent(p, c, p.x + 1.5, p.z, { life: 16, r: .6, yaw: p.yaw + Math.PI }); },
       ent: { tick(n, dt) { summonAI(n, dt, 11, 1.2, .7, e => hitEnemy(e, 'spirit', 30 * n.mul, own(n), e.x - n.x, e.z - n.z, 2), 18); } },
       view: { make(n) { const o = model('spirit__wolf', 0x5effc8); o.scale.setScalar(1.15); o.userData.legs = [0, 1, 2, 3].map(i => o.getObjectByName('spirit__wolf_leg' + i)); o.userData.head = o.getObjectByName('spirit__wolf_head'); o.userData.tail = o.getObjectByName('spirit__wolf_tail'); o.userData.s = n.s; o.userData.bite = 0; burst(n.x, 1, n.z, 40, 0x8affd8, 5, .3, .6); sfx('spirit_big'); return o; },
@@ -1588,7 +1638,7 @@ plasma: {
 soul: {
   name: 'Soul', color: 0x8cb4ff, glyph: '🪔', adj: 'SOULBURNED', react: { name: 'SOUL RIP', kind: 'drain' },
   blurb: 'A reaper. Harvest a soul from every kill to grow stronger, and cut down the weak in a single swing.',
-  passive: 'Soulbound: every kill gives you a Soul (up to 15; elites give 2, bosses 5). Each Soul makes your spells 4% stronger, but getting hit makes you drop 2. Soulburned enemies burn.',
+  passive: 'Soulbound: every kill gives you a Soul (up to 15; elites give 2, bosses 5). Each Soul you hold makes your spells 4% stronger, and getting hit makes you drop 2. Reap and Soul Rend tear out extra Souls; Soulstorm and The Reaper spend them. Soulburned enemies burn.',
   st: { dot: 4 },
   moves: [
     { name: 'Soulfire', icon: '💙', cd: .42, desc: 'Fire bolts of pale soulfire that burn whatever they touch.',
@@ -1599,17 +1649,27 @@ soul: {
         modelFx('soul__flame', 0x8cb4ff, from.clone(), .8, (o, k) => { const q = to(); if (q) { const p = from.clone().lerp(q, easeOut(k)); p.y += Math.sin(k * Math.PI) * 1.5; o.lookAt(p); o.position.copy(p); } fade(o, 1 - k * k * k); });
         if (isMe(e.id)) sfx('orb');
       }, det: e => boomFx(e.x, e.y, e.z, 2.5, 0x8cb4ff, .6), nova: e => boomFx(e.x, .5, e.z, 4.5, 0x8cb4ff, .8) } },
-    { name: 'Reap', icon: '🌒', cd: 5, desc: 'Swing a spectral scythe through everything in front of you (6.5 m). Monsters left under 20% health are reaped outright (not bosses).',
-      cast(p, c) { for (const e of coneHits(p, 6.5, 150)) { hitEnemy(e, 'soul', 30 * c.dmg, p, e.x - p.x, e.z - p.z, 4, { src: p }); if (!e.dead && !ET[e.type].boss && !e.pid && e.hp < e.max * .2) { const q = center(e); fxe(c.m.key, 'reap', { x: q.x, y: q.y, z: q.z }); damage(e, e.hp + 1, 'soul', p, { raw: true }); } } },
-      fx: { cast(e) { // the scythe sweeps from your left to your right, blade leading
-          const yaw = Math.atan2(e.d[0], e.d[2]);
-          modelFx('soul__scythe', 0x8cb4ff, V(e.x, e.y + .75, e.z), .32, (o, k) => { o.rotation.set(0, yaw - Math.PI / 2 + 1.4 - 2.8 * easeOut(k), 0); o.scale.setScalar(2); fade(o, (1 - k * k) * .85); }); // below eye level
-          for (let i = 0; i < 24; i++) { const a = yaw + rand(-1.3, 1.3), d = rand(2.5, 6.5); emit(e.x + Math.sin(a) * d, e.y + .8 + rand(-.3, .3), e.z + Math.cos(a) * d, Math.cos(a) * 5, rand(0, 1), -Math.sin(a) * 5, Math.random() < .5 ? 0x8cb4ff : 0xe0ecff, rand(.08, .18), .45, 0, 2); }
+    { name: 'Reap', icon: '🌒', cd: 5, desc: 'Wind up and sweep a spectral scythe through everything in front of you (6.5 m), flinging them aside. Monsters left under 20% health are reaped outright (not bosses), and each one reaped gives you an extra Soul.',
+      cast(p, c) { later(.16, () => { // the blade lands partway through the swing
+        if (p.down) return; const f = flatAim(p); let hit = 0;
+        for (const e of coneHits(p, 6.5, 160)) {
+          hit = 1; hitEnemy(e, 'soul', 30 * c.dmg, p, -f.z + (e.x - p.x) * .1, f.x + (e.z - p.z) * .1, 5, { src: p }); // flung along the swing, to your right
+          if (!e.dead && !ET[e.type].boss && !e.pid && e.hp < e.max * .2) { const q = center(e); fxe(c.m.key, 'reap', { x: q.x, y: q.y, z: q.z }); damage(e, e.hp + 1, 'soul', p, { raw: true }); if (p.cur === 'soul') p.bd.souls = Math.min(15, (p.bd.souls || 0) + 1); }
+        }
+        if (hit) S.hitstop = Math.max(S.hitstop, .05);
+      }); },
+      fx: { cast(e) { // wind up behind you, then a fast sweep from left to right with ghost afterimages and a crescent of soulfire
+          const yaw = Math.atan2(e.d[0], e.d[2]), ang = k => k < .25 ? 1.4 + .45 * easeOut(k / .25) : 1.85 - 3.5 * easeOut((k - .25) / .75);
+          for (let j = 0; j < 4; j++) modelFx('soul__scythe', 0x8cb4ff, V(e.x, e.y + .75, e.z), .42 + j * .05, (o, k) => { const kk = Math.max(0, k - j * .07); o.rotation.set(0, yaw - Math.PI / 2 + ang(kk), 0); o.scale.setScalar(2); fade(o, (1 - k * k) * (j ? .3 / j : .9) * (j && kk < .25 ? 0 : 1)); });
+          const m = energyMat(0x8cb4ff, true, true); m.side = THREE.DoubleSide; const arc = new THREE.Mesh(REAP_ARC, m); arc.userData.mats = [m]; arc.position.set(e.x, e.y + .4, e.z); arc.rotation.set(-.3, yaw, 0, 'YXZ'); arc.visible = false;
+          addFx(arc, .55, (o, k) => { const a = (k - .35) / .65; o.visible = a > 0; if (a > 0) { o.scale.setScalar(.85 + .25 * easeOut(a)); fade(o, (1 - a) * .5); } if (k > .29 && !o.userData.hit) { o.userData.hit = 1; spray(); } });
+          const spray = () => { for (let i = 0; i < 30; i++) { const a = yaw + rand(-1.35, 1.35), d = rand(3, 6.5); emit(e.x + Math.sin(a) * d, e.y + .9 + rand(-.3, .3), e.z + Math.cos(a) * d, -Math.cos(a) * 7, rand(0, 1.5), Math.sin(a) * 7, Math.random() < .5 ? 0x8cb4ff : 0xe0ecff, rand(.08, .2), .5, 0, 2); } if (isMe(e.id)) shake(.15); sfx('steel'); };
+          sfx('soul_big');
         },
-        reap(e) { modelFx('soul__flame', 0x8cb4ff, V(e.x, e.y, e.z), 1, (o, k) => { o.position.y = e.y + k * 4; o.scale.setScalar(1.1 - k * .6); o.rotation.x = -Math.PI / 2; fade(o, (1 - k) * .8); }); burst(e.x, e.y, e.z, 18, 0x8cb4ff, 5, .16, .5, -2); popNum(e.x, e.y + 1.4, e.z, 'REAPED', '#8cb4ff', 'tag'); sfx('soul_big'); } } },
-    { name: 'Soul Rend', icon: '🫀', cd: 8, desc: 'Hurl a hook of soulfire that tears the soul half out of the first enemy it hits: 35 damage and a 1 s stun, and the torn soul flies back to heal you for 10.',
+        reap(e) { modelFx('soul__flame', 0x8cb4ff, V(e.x, e.y, e.z), 1, (o, k) => { o.position.y = e.y + k * 4; o.scale.setScalar(1.1 - k * .6); o.rotation.x = -Math.PI / 2; fade(o, (1 - k) * .8); }); burst(e.x, e.y, e.z, 26, 0x8cb4ff, 6, .16, .5, -2); flash(e.x, e.y, e.z, 0x8cb4ff, 25, .2); popNum(e.x, e.y + 1.4, e.z, 'REAPED', '#8cb4ff', 'tag'); sfx('soul_big'); } } },
+    { name: 'Soul Rend', icon: '🫀', cd: 8, desc: 'Hurl a hook of soulfire into the first enemy it hits: 35 damage, a 1 s stun, and it tears 2 Souls out of the enemy for you.',
       cast(p, c) { shoot(p, c, 34, { r: .5, life: .9, dmg: 35 * c.dmg }); },
-      shot: { hit(s, e) { const p = own(s), q = center(e); hitEnemy(e, 'soul', s.dmg, p, 0, 0, 0); cc(e, 'stun', 1, p); heal(p, 10); fxe(s.mv, 'rend', { x: q.x, y: q.y, z: q.z, id: s.own }); return 'end'; } },
+      shot: { hit(s, e) { const p = own(s), q = center(e); hitEnemy(e, 'soul', s.dmg, p, 0, 0, 0); cc(e, 'stun', 1, p); if (p.cur === 'soul') p.bd.souls = Math.min(15, (p.bd.souls || 0) + 2); fxe(s.mv, 'rend', { x: q.x, y: q.y, z: q.z, id: s.own }); return 'end'; } },
       look: { m: 'soul__flame', s: 1.5, trail: [0xb8d0ff, .22, .4, -1, 3], light: 6 },
       fx: { rend(e) { const from = V(e.x, e.y, e.z); burst(e.x, e.y, e.z, 30, 0x8cb4ff, 6, .3, .5); modelFx('soul__flame', 0x8cb4ff, from.clone(), .55, (o, k) => { const p = from.clone().lerp(handPos(e.id), easeOut(k)); o.lookAt(p); o.position.copy(p); o.scale.setScalar(1.2 - k * .7); }); beamFx(handPos(e.id), from, 0x8cb4ff, .07, .35); sfx('soul_big'); } } },
     { name: 'Soulstorm', icon: '🌀', cd: 10, desc: 'Unleash your Souls as shrieking soul missiles that hunt down enemies: 2 for every Soul you hold (at least 4), 14 damage each. Spends your Souls.',
@@ -1619,10 +1679,10 @@ soul: {
       },
       look: { m: 'soul__flame', trail: [() => Math.random() < .5 ? 0x8cb4ff : 0xe0ecff, .14, .4, -1, 2], light: 3 },
       fx: { storm(e) { ringFx(e.x, e.y + .1, e.z, 3, 0x8cb4ff, .5); burst(e.x, e.y + 1.5, e.z, 20 + e.n * 2, 0xb8d0ff, 6, .3, .7, -2); sfx('soul_big'); } } },
-    { name: 'The Reaper', icon: '💀', mode: 'aim', range: 20, aimR: 9, desc: 'ULTIMATE. Summon the Reaper at the target. Its scythe sweeps round three times, cutting everything within 9 m for 50 and reaping any monster left under 25% health.',
-      cast(p, c) { ent(p, c, c.tgt.x, c.tgt.z, { life: 4, r: 9 * c.st.aoe }); },
-      ent: { tick(n) { // sweeps at 1, 2 and 3 seconds
-        if (n.s >= 3 || n.t < 1 + n.s) return;
+    { name: 'The Reaper', icon: '💀', mode: 'aim', range: 20, aimR: 9, desc: 'ULTIMATE. Summon the Reaper at the target. It spends your Souls: its scythe sweeps round three times, plus once more for every 3 Souls spent (up to 8 sweeps), cutting everything within 9 m for 50 and reaping any monster left under 25% health.',
+      cast(p, c) { const sw = 3 + Math.min(5, Math.floor((p.bd.souls || 0) / 3)); p.bd.souls = 0; ent(p, c, c.tgt.x, c.tgt.z, { life: 1.6 + sw * .6, r: 9 * c.st.aoe, sw }); },
+      ent: { tick(n) { // a sweep every 0.6 s from 1 s in
+        if (n.s >= n.sw || n.t < 1 + n.s * .6) return;
         n.s++; const c = ctxN(n); fxe(n.mv, 'sweep', { x: n.x, z: n.z, r: n.r });
         for (const e of enemiesNear(n.x, n.z, n.r)) { hitEnemy(e, 'soul', 50 * n.mul, c.p, e.x - n.x, e.z - n.z, 5, { aoe: true }); if (!e.dead && !ET[e.type].boss && !e.pid && e.hp < e.max * .25) { const q = center(e); fxe('soul.1', 'reap', { x: q.x, y: q.y, z: q.z }); damage(e, e.hp + 1, 'soul', c.p, { raw: true }); } }
       } },

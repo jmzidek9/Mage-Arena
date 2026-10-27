@@ -368,7 +368,7 @@ function frame(now, manual = false) {
     handR.position.z = hR0.z + k * .03;
     if (rigMats.staff_gem) rigMats.staff_gem.emissiveIntensity = 3 + Math.sin(t * 4) + k * 6 + chargeK * 8 + chan * 4;
     if (rigMats.hand_rune) rigMats.hand_rune.emissiveIntensity = 4 + chargeK * 10 + chan * 6;
-    const ghost = mp.bf?.veil > 0 || mp.bf?.phase > 0;
+    const ghost = mp.bf?.veil > 0;
     vm.traverse(o => { if (o.isMesh) { o.material.transparent = ghost; o.material.opacity = ghost ? .35 : 1; } });
     hud(src, mp);
   } else {
