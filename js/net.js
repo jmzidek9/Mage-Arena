@@ -11,7 +11,7 @@ const snap = () => ({
   duel: S.duel, dun: S.dun && { floor: S.dun.floor, seed: S.dun.seed, o: S.dun.o, st: S.dun.st, stairs: S.dun.stairs, wait: S.dun.wait },
   players: Object.fromEntries(Object.values(S.players).map(p => [p.id, { id: p.id, ai: p.ai ? 1 : 0, kick: p.kick, spawn: p.spawn, el: p.el, el2: p.el2, cur: p.cur, x: r2(p.x), y: r2(p.y), z: r2(p.z), yaw: r2(p.yaw), pitch: r2(p.pitch),
     hp: Math.round(p.hp), max: p.max, down: p.down, rev: r2(p.rev), up: p.up, ult: r2(p.ult), bf: bfSnap(p.bf), ch: p.ch, chT: r2(p.chT), combo: p.combo, stats: p.stats,
-    r: [Math.round(p.bd.heat || 0), p.bd.souls || 0, p.bd.arc || 0, p.bd.swords || 0, p.bd.bones || 0, (p.bd.runeN || 0) % 3] }])), // element resources: heat, souls, arcane charges, swords, bone plates, rune count
+    r: [Math.round(p.bd.heat || 0), p.bd.souls || 0, p.bd.arc || 0, p.bd.swords || 0, p.bd.bones || 0, (p.bd.runeN || 0) % 3, p.bd.foc && S.t - p.bd.foc.t < 1.5 ? p.bd.foc.n : 0] }])), // element resources: heat, souls, arcane charges, swords, bone plates, rune count, laser focus
   enemies: S.enemies.filter(e => !e.pid).map(e => ({ id: e.id, type: e.type, x: r2(e.x), y: r2(e.y), z: r2(e.z), yaw: r2(e.yaw), hp: Math.round(e.hp), max: Math.round(e.max), sc: e.sc, elite: e.elite,
     st: Object.keys(e.st).map(k => ELIST.indexOf(k)), cc: e.cc?.type || 0, a: e.atk ? r2(1 - e.atk.t / e.atk.max) : 0, sh: Math.round(e.sh), lk: e.link?.g || 0, ts: S.tstop > 0 ? 1 : 0 })),
   shots: S.shots.slice(-160).map(s => ({ id: s.id, mv: s.mv, el: s.el, foe: s.foe ? 1 : 0, x: r2(s.x), y: r2(s.y), z: r2(s.z), vx: r2(s.vx), vy: r2(s.vy), vz: r2(s.vz), sc: r2(s.sc || 1) })),

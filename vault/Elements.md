@@ -130,14 +130,14 @@ Patient and resilient. Root enemies in place, plant guardians and heal your team
 | R | 🌳 **World Tree** *(hold to aim, release to cast)* | ultimate | Grow a great tree that roots every enemy around it, lashes them with vines and heals your team. |
 
 ## 🌑 Shadow
-An assassin. Pin enemies down, vanish from sight and strike from the dark.
+An assassin. Pin enemies down, blind them, vanish from sight and strike from the dark.
 
 **Passive.** Assassin: hits on an enemy's back deal 50% more damage. Cursed enemies take 15% more damage.
 
 | Key | Move | Cooldown | What it does |
 |---|---|---|---|
 | LMB | 🗡️ **Shadow Daggers** | 0.45 s | Throw a fan of three shadow daggers. |
-| RMB | 🥷 **Shadow Step** *(hold to aim, release to cast)* | 6 s | Melt into the shadows and step out at the target. Enemies around where you land are stunned for 1 s and spun round, their backs wide open to your Assassin bonus. |
+| RMB | 🌑 **Blackout** *(hold to aim, release to cast)* | 6 s | Hurl an orb of darkness that bursts into a choking cloud for 3 s. Every enemy it catches, or that walks in, is blinded: hit for 16, stunned for 1.5 s and spun round, its back wide open to your Assassin bonus. |
 | Q | 🕸️ **Shadow Snare** *(hold to aim, release to cast)* | 7 s | Shadow tendrils burst from the ground, pinning every enemy in the area and dragging them together. Your next hit within 2.5 s deals double damage. |
 | E | 🌫️ **Veil** | 14 s | Vanish for 4 seconds. Enemies lose track of you, you move 30% faster, and your first hit deals 2.5x damage. |
 | R | 🌘 **Eclipse** | ultimate | Blot out the sun. Enemies in the darkness are slowed and cursed, while you steal life and cast 30% faster. |
@@ -234,7 +234,7 @@ Bend space. Pull enemies together, lift them helplessly into the air, then slam 
 | R | 🌌 **Singularity** *(hold to aim, release to cast)* | ultimate | Open a black hole that drags in every enemy nearby, grinds them down, then collapses in a huge explosion. |
 
 ## ⏳ Chrono
-Master of time. Echoing attacks, frozen moments, rewinds, and stopping time itself.
+Master of time. Echoing attacks, frozen moments, speeding up your own clock, and stopping time itself.
 
 **Passive.** Time Dilation: all your cooldowns run 18% faster. Timeworn enemies are 35% slower.
 
@@ -242,7 +242,7 @@ Master of time. Echoing attacks, frozen moments, rewinds, and stopping time itse
 |---|---|---|---|
 | LMB | 🕐 **Chrono Bolt** | 0.45 s | A bolt of frozen time. Each hit echoes 1.2 seconds later for the same damage again. |
 | RMB | ⏸️ **Stasis** | 8 s | Freeze an enemy in time for 3 seconds. Damage it takes meanwhile is stored and lands all at once, 30% stronger. |
-| Q | ⏪ **Rewind** | 12 s | Rewind yourself 3 seconds: back to where you were, with the health you had then. |
+| Q | ⏩ **Accelerate** | 14 s | Speed up your own time for 5 s: you move 35% faster and every cooldown runs twice as fast. It also winds your wounds back to the health you had 3 s ago. |
 | E | 🕰️ **Slow Field** *(hold to aim, release to cast)* | 13 s | Warp time in an area: enemies inside move and attack 70% slower, and enemy shots crawl. |
 | R | ⏱️ **Time Stop** | ultimate | Stop time for 4 seconds. Enemies freeze, and all the damage you deal piles up and lands 50% stronger when time resumes. |
 
@@ -312,20 +312,20 @@ Smoke and mirrors. Fool monsters into fighting phantoms, and each other.
 | R | 🎪 **Phantasmagoria** | ultimate | Trap everything within 14 m in a hall of mirrors: monsters are charmed and fight each other for 5 s, then the mirrors shatter for 120 damage to every one of them. |
 
 ## 💀 Bone
-A necromancer. Bone spears, cackling skulls, armor of the dead, and the slain rising to fight for you.
+A necromancer. Thrown bones, cackling skulls, armor of the dead, and the slain rising to fight for you.
 
-**Passive.** Raise Dead: monsters you kill with Bone rise as skeleton warriors that fight for you for 12 s (up to 3 at once). Brittle enemies take 12% more damage.
+**Passive.** Raise Dead: monsters you kill with Bone have a 25% chance to rise as a skeleton warrior that fight for you for 12 s (up to 3 at once). Brittle enemies take 12% more damage.
 
 | Key | Move | Cooldown | What it does |
 |---|---|---|---|
-| LMB | 🦴 **Bone Spear** | 0.5 s | Hurl a jagged bone spear that pierces 2 enemies and pins the last one it hits for a moment. |
+| LMB | 🦴 **Bone Toss** | 0.5 s | Hurl a spinning bone that pierces 2 enemies and pins the last one it hits for a moment. |
 | RMB | ☠️ **Cackling Skull** | 4 s | Hurl a burning skull that bites an enemy, then leaps on to the next one, up to 5 times. |
 | Q | 🛡️ **Bone Armor** | 14 s | Four bone plates orbit you for 10 s. Each one completely blocks a hit, then flies back into the attacker. |
 | E | ⛓️ **Bone Cage** *(hold to aim, release to cast)* | 9 s | Ribs of bone burst from the ground at the target, caging every enemy inside for 2.5 s. Anything that touches the bars is gashed. |
 | R | 🐉 **Bone Dragon** *(hold to aim, release to cast)* | ultimate | Raise a skeletal dragon that circles the target for 7 s, breathing ghostfire on everything beneath it. |
 
 ## 📜 Rune
-Ancient script. Ward traps, falling runestones and binding circles, with every third spell Empowered.
+Ancient script. A trapper: every spell but the bolt is a ward on the ground that enemies set off by walking over it, and every third spell is Empowered.
 
 **Passive.** Rune Mastery: every third spell you cast is Empowered and deals 60% more damage. Inscribed enemies take 10% more damage.
 
@@ -333,9 +333,9 @@ Ancient script. Ward traps, falling runestones and binding circles, with every t
 |---|---|---|---|
 | LMB | 🔹 **Rune Bolt** | 0.4 s | Fire a spinning rune that pierces through an enemy. |
 | RMB | 🔯 **Glyph Trap** *(hold to aim, release to cast)* | 2.5 s | Inscribe a ward glyph at the target (up to 3 at once). It arms after a second, and the first enemy to step on it is blasted into the air and stunned. |
-| Q | 🪨 **Sigilfall** *(hold to aim, release to cast)* | 7 s | Three runestones crash down on the target one after another. The last and largest stuns everything it hits. |
-| E | 🔘 **Binding Circle** *(hold to aim, release to cast)* | 13 s | Draw a great binding circle for 6 s. Enemies inside are slowed by 40%, take 25% more damage from everything, and are scorched by the runes every second. |
-| R | 📖 **Word of Ruin** | ultimate | Speak the word of ruin: a great rune ignites over every enemy within 20 m (up to 12), then each one slams down for 80 damage and a 1.5 s stun. |
+| Q | 🪨 **Sigilfall** *(hold to aim, release to cast)* | 6 s | Inscribe a sigil ward (up to 2 at once). When an enemy steps on it, runic chains hold everything nearby and three runestones crash down, the last and largest stunning everything it hits. |
+| E | 🔘 **Binding Circle** *(hold to aim, release to cast)* | 12 s | Inscribe a binding ward. When an enemy steps on it, a great binding circle springs up for 6 s. Enemies inside are slowed by 40%, take 25% more damage from everything, and are scorched by the runes every second. |
+| R | 📖 **Word of Ruin** *(hold to aim, release to cast)* | ultimate | Inscribe the word of ruin as a great ward. When an enemy steps on it, a great rune ignites over every enemy within 20 m of it (up to 12), then each one slams down for 90 damage and a 1.5 s stun. |
 
 ## ⚛️ Plasma
 Raw, unstable power. Every Plasma spell builds Heat that makes you hit harder, right up until you overheat.
@@ -377,20 +377,20 @@ Something ancient lives below. Tentacles erupt from the floor to seize, crush an
 | R | 👁️ **Kraken** *(hold to aim, release to cast)* | ultimate | The Kraken stirs: colossal tentacles burst from the floor around the target and thrash for 6 s, crushing enemies and dragging them in, then haul everything down for 100 damage. |
 
 ## 📡 Laser
-Precision light. Instant beams that ricochet off pillars, walls and the floor, hitting harder with every bounce.
+Precision light. Instant beams that ricochet off pillars, walls, the floor and your own crystal lenses, hitting harder with every bounce.
 
-**Passive.** Ricochet: every bounce makes a Laser hit 25% harder, and Laser hits to the head always crit. Targeted enemies take 12% more damage.
+**Passive.** Ricochet and Focus: every bounce makes a Laser hit 25% harder, and Laser hits to the head always crit. Hitting the same enemy again within 1.5 s builds Focus, +10% damage per stack (up to 6). Targeted enemies take 12% more damage.
 
 | Key | Move | Cooldown | What it does |
 |---|---|---|---|
 | LMB | 🟢 **Pulse Laser** | 0.3 s | An instant laser pulse that bounces once off whatever it meets. |
 | RMB | ✳️ **Ricochet Beam** *(hold to charge)* | 4 s | Hold to charge a thick beam that bounces up to 4 times off pillars, walls and the floor, piercing everything it touches. |
-| Q | 〽️ **Laser Sweep** | 8 s | Sweep a laser across 120° in front of you, cutting every enemy within 22 m. |
+| Q | 🔷 **Refractor** *(hold to aim, release to cast)* | 5 s | Hang a floating crystal lens at the target for 12 s (up to 2). Any of your lasers that pass through it split into 3 beams that lock onto the nearest enemies, each counting as one more bounce. When it expires it bursts. |
 | E | 🛸 **Laser Drone** | 15 s | Deploy a hovering drone that follows you for 12 s and fires a bouncing laser at the nearest enemy every 0.4 s. |
 | R | 🔺 **Prism Nova** | ultimate | A great prism rises above you and spins for 4 s, firing eight lasers in a star that bounce off everything and shred whatever they cross. |
 
 ## 🔮 Arcane
-Pure magic. Homing missiles, blinks and polymorphs, and charges that build into a devastating barrage.
+Pure magic. Homing missiles, an owl familiar and polymorphs, and charges that build into a devastating barrage.
 
 **Passive.** Arcane Charges: every Arcane spell except Barrage gives you a charge (up to 4; they fade 8 s after your last cast). Each charge makes your spells 12% stronger. Spellbound enemies take 10% more damage.
 
@@ -398,7 +398,7 @@ Pure magic. Homing missiles, blinks and polymorphs, and charges that build into 
 |---|---|---|---|
 | LMB | 🌟 **Arcane Missiles** | 0.55 s | Fire three arcane missiles in quick succession that weave toward enemies. |
 | RMB | 🎆 **Arcane Barrage** | 3 s | Spend all your Arcane Charges on a barrage of heavy arcane bolts: 2, plus 2 for every charge spent. |
-| Q | 💨 **Blink** | 6 s | Teleport 10 m in the direction you are looking. Enemies where you stood are blasted and stunned for a moment. |
+| Q | 🦉 **Arcane Familiar** | 14 s | Summon a spectral owl for 12 s. Every second it swoops on the enemy nearest you and rakes it for 22, and each strike gives you an Arcane Charge. |
 | E | 🐑 **Polymorph** | 12 s | Turn the first enemy you hit, and up to 2 more near it, into harmless sheep for 4 s. Bosses resist it. |
 | R | 🪄 **Arcane Torrent** | ultimate | Open an arcane rift above you that rains 38 homing missiles on enemies within 22 m over 4 s. |
 
@@ -416,7 +416,7 @@ A sword saint. Summoned swords orbit you, guard you, and fly wherever you point.
 | R | ⚜️ **Colossal Blade** *(hold to aim, release to cast)* | ultimate | A colossal sword falls from the heavens onto the target: 160 damage and a huge launch. It stands for 5 s sending out shockwaves, and your halo fills with 6 swords. |
 
 ## Element resources
-Some elements build up something you can see above your ability bar and around your wizard: Plasma's **Heat** (a bar that turns into OVERHEATED), Soul's **Souls** (pale flames circling you), Arcane's **charges** (orbs whirling round you), Blades' **swords** (orbiting your waist), Bone's armor **plates** and Rune's count toward the next **Empowered** spell.
+Some elements build up something you can see above your ability bar and around your wizard: Plasma's **Heat** (a bar that turns into OVERHEATED), Soul's **Souls** (pale flames circling you), Arcane's **charges** (orbs whirling round you), Blades' **swords** (orbiting your waist), Bone's armor **plates**, Rune's count toward the next **Empowered** spell and Laser's **Focus** pips.
 
 ## Switching mid-game
 Press **Esc** (or ⚙ on touch) during a run and pick any element under *General > Switch element*. It replaces the loadout you are using (your Tab loadout stays). Works solo and online. Solo, the menu pauses the game; online it keeps running for your partner and the enemies.

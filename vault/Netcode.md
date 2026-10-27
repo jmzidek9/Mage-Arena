@@ -8,7 +8,7 @@ Peer-to-peer WebRTC through **PeerJS 1.5.4**, using its free cloud broker for th
 3. The host runs the whole simulation (`hostStep`).
 4. The guest simulates its **own movement** locally (`stepMove`) and sends input plus position about 30 times a second (`{t:'i', ...}`). The input carries the held state of all 5 move slots, analog movement, and jump / dash / swap counters.
 5. The host sends a JSON snapshot plus that frame's events 20 times a second (`{t:'s', s, ev}`). A busy snapshot is about 2–3 KB. Projectiles and entities are capped (160 / 120) so it stays small. The guest eases entities toward the snapshot positions and plays the events as VFX.
-6. **Cast prediction:** the guest runs the same `stepCast` rules locally (`host = false`): cooldowns, charge / aim / channel states, instant cast circles and hand kick, and the move's own movement (dashes, blinks, leaps, rewind). `onEvent` skips the host's copy of the guest's own `cast` events, so nothing plays twice. The host still decides all damage, projectiles and entities.
+6. **Cast prediction:** the guest runs the same `stepCast` rules locally (`host = false`): cooldowns, charge / aim / channel states, instant cast circles and hand kick, and the move's own movement (dashes, leaps, glides). `onEvent` skips the host's copy of the guest's own `cast` events, so nothing plays twice. The host still decides all damage, projectiles and entities.
 7. Mid-game element switches go to the host as `{t:'el', el}`, and the host applies them.
 8. The guest sends a heartbeat `{t:'hb'}` every second. After 6 s of silence the host drops the guest and keeps playing solo, and the guest can rejoin with the same code.
 

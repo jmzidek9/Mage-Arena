@@ -1272,14 +1272,13 @@ put('illusion', m.done())
 
 # ---------- BONE ----------
 bg2, bh2 = G['bone']
-m = M('bone__spear')  # a jagged bone spear, point toward -Y
-m.lathe(bonem, [(0.03, 0), (0.05, 0.04), (0.034, 0.1), (0.032, 0.45), (0.048, 0.5), (0.032, 0.55), (0.03, 0.95), (0.055, 1.02), (0.04, 1.08), (0, 1.1)], n=8, M=aim((0, 1, 0), (0, -0.3, 0)), smooth=True)
-m.lathe(bonem, [(0.045, 0), (0.11, 0.1), (0.085, 0.32), (0.03, 0.52), (0, 0.6)], n=5, M=aim((0, -1, 0), (0, -0.28, 0), (1, 0.45, 1)), noise=0.008)
-for sx in (-1, 1):
-    m.lathe(bonem, [(0.022, 0), (0, 0.17)], n=5, M=aim((sx * 0.7, 0.7, 0), (sx * 0.05, -0.38, 0)))  # barbs
-for y in (-0.05, 0.25):
-    m.lathe(bh2, [(0.045, -0.012), (0.055, 0), (0.045, 0.012), (0.035, 0)], n=12, M=TRS((0, y, 0), (math.pi / 2, 0, 0)), closed=True)
-m.lathe(bg2, [(0.07, 0), (0.15, 0.12), (0.1, 0.36), (0, 0.66)], n=8, M=aim((0, -1, 0), (0, -0.25, 0)))  # spectral aura on the head
+m = M('bone__bone')  # a thrown femur, long axis along Y and centred, so it tumbles end over end about X
+m.lathe(bonem, [(0.075, -0.36), (0.062, -0.3), (0.045, -0.2), (0.038, 0), (0.045, 0.2), (0.062, 0.3), (0.075, 0.36)], n=12, M=aim((0, 1, 0)), smooth=True, noise=0.003)
+for y, s in ((-0.4, 1), (0.4, -1)):
+    for sx in (-1, 1):  # two knobbly condyles at each end
+        m.sphere(bonem, 1, TRS((sx * 0.055, y, 0.01 * s), scale=(0.072, 0.07, 0.068)), u=14, v=10)
+    m.sphere(bonedk, 1, TRS((0, y + 0.035 * s, 0), scale=(0.02, 0.03, 0.05)), u=8, v=6)  # the notch between them
+m.sphere(bonedk, 1, TRS((0.03, 0.05, 0.032), scale=(0.006, 0.12, 0.006)), u=6, v=4)  # a hairline crack
 put('bone', m.done())
 m = M('bone__skull')  # a flaming skull flying toward -Y; the jaw is a child so it can chatter
 m.sphere(bonem, 1, TRS((0, 0.03, 0.06), scale=(0.23, 0.26, 0.23)), u=18, v=12)
@@ -1672,6 +1671,32 @@ for k, (r, z) in enumerate(((1.0, 0.0), (0.76, -0.16), (0.52, -0.32))):
 m.lathe(xg3, [(0.48, -0.32), (0.3, -0.62), (0.14, -1.0), (0, -1.45)], n=24, twist=0.45, caps=False)
 m.ico(xh3, 0.14, TRS((0, 0, -0.42)), sub=2, smooth=True)
 put('arcane', m.done(False))
+m = M('arcane__owl')  # Arcane Familiar: a spectral owl flying toward -Y; the wings are children so they can beat
+m.sphere(xg3, 1, TRS((0, 0.05, 0), (0.25, 0, 0), (0.2, 0.3, 0.22)), u=18, v=12)  # body
+m.sphere(xg3, 1, TRS((0, -0.24, 0.17), scale=(0.17, 0.15, 0.15)), u=16, v=12)  # head
+for sx in (-1, 1):
+    m.dot(xh3, (sx * 0.075, 0.0), 0.06, 0, 18, Matrix.Translation((0, -0.375, 0.2)) @ FACE)  # big round eyes
+    m.dot(void, (sx * 0.075, 0.0), 0.028, 0.004, 12, Matrix.Translation((0, -0.375, 0.2)) @ FACE)
+    m.annulus(xh3, 0.065, 0.08, 0, 20, Matrix.Translation((sx * 0.075, -0.372, 0.2)) @ FACE)  # facial disc rims
+    m.lathe(xh3, [(0.04, 0), (0, 0.13)], n=5, M=aim((sx * 0.45, 0.2, 1), (sx * 0.11, -0.22, 0.28)))  # ear tufts
+    for k in range(3):  # talons tucked under
+        m.lathe(xh3, [(0.012, 0), (0, 0.07)], n=4, M=aim((sx * 0.2 + (k - 1) * 0.3, -0.6, -1), (sx * 0.07, -0.02 + k * 0.03, -0.2)))
+m.lathe(xh3, [(0.03, 0), (0, 0.08)], n=5, M=aim((0, -0.6, -1), (0, -0.385, 0.15)))  # beak
+for k in range(5):  # fanned tail feathers
+    a = (k - 2) * 0.22
+    m.flat(xh3 if k % 2 else xg3, lens((0, 0), (math.sin(a) * 0.32, math.cos(a) * 0.32), 0.05), 0, TRS((0, 0.3, -0.02), (0.2, 0, 0)))
+m.annulus(xh3, 0.24, 0.27, 0, 40, Matrix.Translation((0, 0.05, 0.36)))  # a little arcane halo
+owl = m.done(False)
+put('arcane', owl)
+for nm_, sx in (('arcane__owl_wingL', -1), ('arcane__owl_wingR', 1)):
+    w = M(nm_, parent=owl)
+    w.loc = (sx * 0.15, -0.05, 0.08)
+    for k in range(6):  # primaries fanning out from the wing's leading edge
+        t = k / 5
+        root, tip = (sx * (0.05 + t * 0.48), -0.05 - t * 0.04), (sx * (0.2 + t * 0.62), 0.12 + t * 0.2 - t * t * 0.1)
+        w.flat(xh3 if k == 5 else xg3, lens(root, tip, 0.045 + 0.01 * k), 0.002 * k)
+    w.polyline(xh3, [(0, -0.03), (sx * 0.3, -0.1), (sx * 0.55, -0.1), (sx * 0.82, 0.05)], 0.025)  # glowing leading edge
+    w.done(False)
 
 # ---------- BLADES ----------
 yg3, yh3 = G['blades']

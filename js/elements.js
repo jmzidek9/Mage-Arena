@@ -1,7 +1,7 @@
 // Mage Arena elements: 29 elements x 5 moves (LMB, RMB, Q, E, R=ultimate).
 // A move: { name, icon, desc, cd, mode: 'tap' | 'aim' (hold to aim, release to cast) | 'charge' (hold to power up) | 'channel' (hold),
 //   cast(p, c)      host: damage, projectiles (shoot), entities (ent)       c = ctxOf(): o (hand), d (aim dir), k (charge), dmg (multiplier), tgt (aim point)...
-//   self(p, c)      owner: movement (dashes, blinks, leaps) so the guest's own body moves instantly
+//   self(p, c)      owner: movement and self-buffs (dashes, leaps, glides) so the guest's own body moves instantly
 //   tick/start/end  channels (host)          shot: { hit, end, tick, ground }   ent: { tick, end }  (host hooks)
 //   look / view     client visuals for this move's projectiles / entities;  chv: channel visual;  fx: { name: e => ... } client event handlers }
 // Element status `st`: dot (dps), stacks, dotStacks, vulnStacks, slow, vuln, kb, weak (enemy dmg -%), leech. Hooks: onStatus, onHit, onKill.
@@ -31,18 +31,31 @@ function chainBolt(p, c, dmg, chains) {
   hits.forEach((e, i) => hitEnemy(e, c.el, dmg * (i ? .75 : 1), p, e.x - p.x, e.z - p.z, 1.5));
 }
 // hitscan laser along laserPath (bounces off pillars, walls and the floor); each bounce hits 25% harder (Laser's passive)
-function laserShot(p, o, d, len, bounces, dmg, kb = 1) {
-  const pts = laserPath(o, d, len, bounces), seen = new Set();
+// Focus: hitting the same enemy again within 1.5 s stacks +10% (up to 6). A beam that crosses one of your Refractors ends there and splits.
+function laserShot(p, o, d, len, bounces, dmg, kb = 1, split = true) {
+  let pts = laserPath(o, d, len, bounces), lens = null;
+  if (split && p) for (let i = 0; !lens && i + 1 < pts.length; i++) {
+    const a = pts[i], v = pts[i + 1].clone().sub(a), L = v.length(); if (L < .01) continue; v.divideScalar(L);
+    for (const n of entsOf(p, 'laser.2')) { const c = V(n.x, n.y, n.z), t = clamp(c.clone().sub(a).dot(v), 0, L); if (a.clone().addScaledVector(v, t).distanceTo(c) < 1.1) { lens = n; pts = [...pts.slice(0, i + 1), c]; break; } }
+  }
+  const seen = new Set(), f = p ? p.bd.foc ??= { id: 0, n: 0, t: -9 } : null;
+  let first = null;
   for (let i = 0; i + 1 < pts.length; i++) {
     const a = pts[i], v = pts[i + 1].clone().sub(a), L = v.length();
     if (L < .01) continue;
     v.divideScalar(L);
     for (const h of rayHits(a, v, L, .35)) {
       if (seen.has(h.e.id)) continue;
-      seen.add(h.e.id);
-      const head = h.q.y > h.e.y + ET[h.e.type].h * h.e.sc * .72;
-      hitEnemy(h.e, 'laser', dmg * (1 + .25 * i), p, v.x, v.z, kb, { crit: head ? 1.75 : 1, src: { x: a.x, z: a.z } });
+      seen.add(h.e.id); first ??= h.e;
+      const head = h.q.y > h.e.y + ET[h.e.type].h * h.e.sc * .72, foc = f && f.id === h.e.id && S.t - f.t < 1.5 ? 1 + .1 * f.n : 1;
+      hitEnemy(h.e, 'laser', dmg * (1 + .25 * i) * foc, p, v.x, v.z, kb, { crit: head ? 1.75 : 1, src: { x: a.x, z: a.z } });
     }
+  }
+  if (f && first) { f.n = f.id === first.id && S.t - f.t < 1.5 ? Math.min(6, f.n + 1) : 0; f.id = first.id; f.t = S.t; }
+  if (lens) { // split into up to 3 beams at the enemies nearest the lens, each counting the lens as one more bounce
+    const c = V(lens.x, lens.y, lens.z), k = 1 + .25 * (pts.length - 1);
+    const es = enemiesNear(c.x, c.z, 25).sort((a, b) => Math.hypot(a.x - c.x, a.z - c.z) - Math.hypot(b.x - c.x, b.z - c.z)).slice(0, 3);
+    fxe('laser.2', 'split', { x: c.x, y: c.y, z: c.z, b: es.map(e => laserShot(p, c, center(e).sub(c).normalize(), 30, 0, dmg * k, kb, false)) });
   }
   return pts.map(q => [q.x, q.y, q.z].map(r2));
 }
@@ -124,12 +137,39 @@ function ghostWizard(color) {
   g.userData.mats = [m];
   return g;
 }
+// soft smoke puffs that can be dark (particles are additive, so they can only ever glow): one shared material per cloud
+let _puffTex;
+function smokeCloud(n, r, color) {
+  _puffTex ??= (() => { const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d'), gr = g.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(.45, 'rgba(255,255,255,.55)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(c); })();
+  const g = new THREE.Group(), m = new THREE.SpriteMaterial({ map: _puffTex, color, transparent: true, opacity: 0, depthWrite: false });
+  g.userData.puffs = Array.from({ length: n }, () => { const s = new THREE.Sprite(m), a = rand(0, TAU), d = Math.sqrt(Math.random()) * r * .85; s.position.set(Math.cos(a) * d, rand(.4, 1.6), Math.sin(a) * d); s.userData.s = rand(1.8, 3); s.userData.ph = rand(0, TAU); g.add(s); return s; });
+  g.userData.puffMat = m;
+  return g;
+}
 // curl an abyss tentacle (a chain of 6 segments): k = how hard it curls toward its suckers, ph = phase of its writhing
 function curlTentacle(o, k, ph, sway = .25) {
   const segs = o.userData.segs ??= [1, 2, 3, 4, 5].map(i => o.getObjectByName('abyss__tentacle_seg' + i));
   segs.forEach((s, i) => { if (s) { s.rotation.x = k * (.25 + i * .07) + Math.sin(ph + i * .7) * sway; s.rotation.z = Math.cos(ph * .8 + i * .9) * sway * .6; } });
 }
 const shimmer = t => new THREE.Color().setHSL((t * .12) % 1, .75, .78); // Illusion's slowly shifting iridescence
+// Rune wards: every Rune spell but the bolt is inscribed on the ground. A ward arms after a second, then goes off when an enemy steps on it.
+// n.s marks a ward that has gone off (Binding Circle keeps living as its circle)
+function placeWard(p, c, max, o = {}) { const mine = entsOf(p, c.m.key).filter(n => !n.s).sort((a, b) => a.id - b.id); while (mine.length >= max) mine.shift().dead = true; return ent(p, c, c.tgt.x, c.tgt.z, { life: 30, r: 2.2, ...o }); }
+const tripped = n => !n.s && n.t > 1 && enemiesNear(n.x, n.z, n.r).length > 0;
+// the ward on the ground, with an optional floating model over it that tells the wards apart
+function wardMake(n, top, ts = 1) {
+  const g = new THREE.Group(), u = g.userData, w = model('rune__trap', 0x22e6b8, { flat: true }); w.scale.setScalar(n.r); w.rotation.y = rand(0, TAU); g.add(w); u.ward = w; u.mats = [...w.userData.mats];
+  if (top) { const o = model(top, 0x22e6b8, { flat: top === 'rune__glyph', shadow: top !== 'rune__glyph' }); o.scale.setScalar(ts); u.face = top === 'rune__glyph'; g.add(o); u.top = o; u.mats.push(...o.userData.mats); }
+  burst(n.x, .2, n.z, 20, 0x7affd8, 3, .15, .4, -2); sfx('rune');
+  return g;
+}
+function wardUpd(o, n, dt, t) {
+  const u = o.userData; u.ward.position.y = .05; u.ward.rotation.y += dt * .3;
+  if (u.top) { u.top.position.y = 1.3 + Math.sin(t * 2 + n.id) * .15; if (u.face) { u.top.lookAt(camera.position); u.top.rotateZ(t * .8); } else u.top.rotation.y += dt * .8; } // a glyph turns to face you, a stone spins
+  fade(o, Math.min(1, n.l * 20) * (n.t < 1 ? .25 + .2 * Math.sin(t * 20) : .75 + .25 * Math.sin(t * 3 + n.id)));
+  if (n.t > 1 && Math.random() < .08) emit(n.x + rand(-1, 1), .1, n.z + rand(-1, 1), 0, rand(.5, 1.2), 0, 0x7affd8, .1, .8, -.2);
+}
+const wardView = (top, ts) => ({ make: n => wardMake(n, top, ts), upd: wardUpd, drop: dropFade(.25) });
 
 // ---------- the elements ----------
 const ELEMENTS = {
@@ -539,7 +579,7 @@ nature: {
 // ================================================================== SHADOW
 shadow: {
   name: 'Shadow', color: 0x9a4cff, glyph: '🌑', adj: 'CURSED', react: { name: 'NIGHTFALL', kind: 'drain' },
-  blurb: 'An assassin. Pin enemies down, vanish from sight and strike from the dark.',
+  blurb: 'An assassin. Pin enemies down, blind them, vanish from sight and strike from the dark.',
   passive: 'Assassin: hits on an enemy\'s back deal 50% more damage. Cursed enemies take 15% more damage.',
   st: { vuln: .15 },
   moves: [
@@ -547,20 +587,23 @@ shadow: {
       cast(p, c) { const n = 3 + 2 * (c.multi - 1); for (let k = 0; k < n; k++) shoot(p, c, 48, { d: spread(c.d, k, n, .07), r: .22, dmg: 8 * c.dmg, kb: 1.5, sc: c.mega ? 1.8 : 1 }); },
       look: { m: 'shadow__dagger', trail: [0x7a3acc, .14, .25, 0, 1] },
       fx: { det: e => boomFx(e.x, e.y, e.z, 2.5, 0x9a4cff, .6), nova: e => boomFx(e.x, .5, e.z, 4.5, 0x9a4cff, .8) } },
-    { name: 'Shadow Step', icon: '🥷', cd: 6, mode: 'aim', range: 16, aimR: 3, desc: 'Melt into the shadows and step out at the target. Enemies around where you land are stunned for 1 s and spun round, their backs wide open to your Assassin bonus.',
-      self(p, c) { const q = { x: c.tgt.x, z: c.tgt.z }; collide(q, .45); p.x = q.x; p.z = q.z; p.vy = Math.min(p.vy, 0); p.mo = null; },
-      cast(p, c) {
-        const t = c.tgt; buff(p, 'inv', .3); fxe(c.m.key, 'step', { id: p.id, x0: p.x, z0: p.z, x: t.x, z: t.z, r: 3 * c.st.aoe });
-        for (const e of enemiesNear(t.x, t.z, 3 * c.st.aoe)) { hitEnemy(e, 'shadow', 16 * c.dmg, p, 0, 0, 0, { aoe: true }); if (cc(e, 'stun', 1, p)) e.yaw = Math.atan2(e.x - t.x, e.z - t.z); } // facing away from where you stand
-      },
-      fx: { step(e) {
-        for (const [x, z, k] of [[e.x0, e.z0, .8], [e.x, e.z, 1.2]]) { burst(x, 1, z, Math.round(45 * k), 0x3a1a6c, 4, .5, .8, -.5); burst(x, 1, z, Math.round(20 * k), 0xc090ff, 6, .2, .4); ringFx(x, .1, z, 1.6 * k, 0x9a4cff, .4); }
-        ringFx(e.x, .1, e.z, e.r, 0x5a2a9c, .5); circleFx('shadow', V(e.x, .08, e.z), e.r, { life: .7 });
-        const a = V(e.x0, 1.1, e.z0), b = V(e.x, 1.1, e.z), L = a.distanceTo(b);
-        for (let i = 0; i < L * 4; i++) { const q = a.clone().lerp(b, i / (L * 4)); emit(q.x, q.y + rand(-.5, .5), q.z, rand(-.5, .5), rand(0, 1), rand(-.5, .5), Math.random() < .5 ? 0x3a1a6c : 0x9a4cff, rand(.2, .4), .5, -.3); }
-        if (isMe(e.id)) { fovKick = 1.4; shake(.12); }
-        sfx('shadow_big'); sfx('dash');
-      } } },
+    { name: 'Blackout', icon: '🌑', cd: 6, mode: 'aim', range: 20, aimR: 3, desc: 'Hurl an orb of darkness that bursts into a choking cloud for 3 s. Every enemy it catches, or that walks in, is blinded: hit for 16, stunned for 1.5 s and spun round, its back wide open to your Assassin bonus.',
+      cast(p, c) { const t = c.tgt.clone(), T = clamp(Math.hypot(t.x - p.x, t.z - p.z) / 40, .12, .45); fxe(c.m.key, 'throw', { id: p.id, x: t.x, z: t.z, T }); later(T, () => { fxe(c.m.key, 'burst', { x: t.x, z: t.z, r: 3 * c.st.aoe }); ent(p, c, t.x, t.z, { life: 3, r: 3 * c.st.aoe }); }); },
+      ent: { tick(n) { const p = own(n); for (const e of enemiesNear(n.x, n.z, n.r)) if (ready(n, e, 99)) { hitEnemy(e, 'shadow', 16 * n.mul, p, 0, 0, 0, { aoe: true }); if (cc(e, 'stun', 1.5, p) && p) e.yaw = Math.atan2(e.x - p.x, e.z - p.z); } } }, // turned to face away from you
+      view: { make(n) { const g = smokeCloud(16, n.r, 0x2a1250); /* deep violet: pure black vanishes against the night sky */ g.userData.circle = zoneCircle('shadow', n.r, .5); g.add(g.userData.circle); return g; },
+        upd(o, n, dt, t) {
+          const u = o.userData, grow = .5 + .5 * easeOut(Math.min(1, n.t * 4)); spinCircle(u.circle, dt, -.4); setOpacity(u.circle.userData.mats, Math.min(.5, n.l * 3));
+          u.puffMat.opacity = Math.min(.85, n.t * 6, n.l * 3);
+          for (const s of u.puffs) { s.scale.setScalar(s.userData.s * grow); s.position.y += Math.sin(t * .8 + s.userData.ph) * dt * .15; }
+          if (Math.random() < .5) { const a = rand(0, TAU), d = rand(0, n.r); emit(n.x + Math.cos(a) * d, rand(.2, 2), n.z + Math.sin(a) * d, 0, rand(.2, .6), 0, 0x7a3acc, rand(.1, .2), .8, -.2); } // violet wisps in the smoke
+        },
+        drop: dropFade(.4) },
+      fx: { throw(e) {
+          const a = handPos(e.id), b = V(e.x, .8, e.z), arc = Math.min(3, a.distanceTo(b) * .15);
+          modelFx('shadow__orb', 0x9a4cff, a, e.T, (o, k) => { o.position.lerpVectors(a, b, k); o.position.y += Math.sin(k * Math.PI) * arc; o.scale.setScalar(.25); o.lookAt(camera.position); emit(o.position.x, o.position.y, o.position.z, 0, .2, 0, 0x3a1a6c, .3, .4); });
+          sfx('shadow');
+        },
+        burst(e) { burst(e.x, 1, e.z, 70, 0x140a24, 5, .7, 1, -.5); burst(e.x, 1, e.z, 25, 0xc090ff, 7, .2, .4); ringFx(e.x, .1, e.z, e.r, 0x5a2a9c, .5); flash(e.x, 1, e.z, 0x9a4cff, 20, .2); sfx('shadow_big'); } } },
     { name: 'Shadow Snare', icon: '🕸️', cd: 7, mode: 'aim', range: 20, aimR: 3.5, desc: 'Shadow tendrils burst from the ground, pinning every enemy in the area and dragging them together. Your next hit within 2.5 s deals double damage.',
       cast(p, c) {
         const R = 3.5 * c.st.aoe; buff(p, 'crit', 2.5); fxe(c.m.key, 'snare', { x: c.tgt.x, z: c.tgt.z, r: R });
@@ -982,7 +1025,7 @@ gravity: {
 // ================================================================== CHRONO
 chrono: {
   name: 'Chrono', color: 0xffb43a, glyph: '⏳', adj: 'TIMEWORN', react: { name: 'PARADOX', kind: 'echo' },
-  blurb: 'Master of time. Echoing attacks, frozen moments, rewinds, and stopping time itself.',
+  blurb: 'Master of time. Echoing attacks, frozen moments, speeding up your own clock, and stopping time itself.',
   passive: 'Time Dilation: all your cooldowns run 18% faster. Timeworn enemies are 35% slower.',
   st: { slow: .35 },
   moves: [
@@ -1000,13 +1043,17 @@ chrono: {
       shot: { hit(s, e) { const p = own(s); hitEnemy(e, 'chrono', s.dmg, p, 0, 0, 0); if (!cc(e, 'stasis', 3, p)) damage(e, 30 * s.mul, 'chrono', p); return 'end'; } },
       look: { m: 'chrono__hourglass', s: .45, spin: [0, 0, 5], trail: [0xffd080, .2, .3, 0, 1], light: 4 },
       fx: { release(e) { boomFx(e.x, e.y, e.z, 2, 0xffb43a, .7); sfx('chrono_big'); } } },
-    { name: 'Rewind', icon: '⏪', cd: 12, desc: 'Rewind yourself 3 seconds: back to where you were, with the health you had then.',
-      self(p) { const h = p.hist[0]; if (h) { p.x = h[0]; p.y = h[1]; p.z = h[2]; p.vy = 0; p.mo = null; } },
-      cast(p, c) { if (p.hpHist.length) p.hp = Math.min(p.max, Math.max(p.hp, p.hpHist[0])); buff(p, 'inv', .3); fxe(c.m.key, 'rw', { x: p.x, z: p.z, id: p.id }); },
-      fx: { rw(e) {
-        if (e.id !== myId) { const g = WIZ.clone(); g.traverse(o => { if (o.isMesh) { o.material = energyMat(0xffb43a); } }); g.userData.mats = []; g.traverse(o => o.isMesh && g.userData.mats.push(o.material)); g.position.set(e.x, 0, e.z); addFx(g, .8, (o, k) => fade(o, (1 - k) * .6)); }
-        burst(e.x, 1, e.z, 40, 0xffd080, 5, .3, .6); circleFx('chrono', V(e.x, .08, e.z), 2, { life: .8 }); sfx('chrono_big'); if (e.id === myId) fovKick = 1.5;
-      } } },
+    { name: 'Accelerate', icon: '⏩', cd: 14, desc: 'Speed up your own time for 5 s: you move 35% faster and every cooldown runs twice as fast. It also winds your wounds back to the health you had 3 s ago.',
+      self(p) { p.bf.haste = 5; },
+      cast(p, c) { if (p.hpHist.length) p.hp = Math.min(p.max, Math.max(p.hp, p.hpHist[0])); buff(p, 'haste', 5); ent(p, c, p.x, p.z, { follow: 1, life: 5, r: 1 }); fxe(c.m.key, 'rw', { x: p.x, z: p.z, id: p.id }); },
+      // a clock face spins under your feet while it lasts, and others see a trail of afterimages
+      view: { make() { const g = new THREE.Group(), u = g.userData; u.clk = model('chrono__clock', 0xffb43a, { flat: true }); u.clk.rotation.x = -Math.PI / 2; u.clk.position.y = .08; u.clk.scale.setScalar(1.3); g.add(u.clk); u.mats = u.clk.userData.mats.slice(); u.mn = u.clk.getObjectByName('chrono__clock_min'); u.hr = u.clk.getObjectByName('chrono__clock_hr'); return g; },
+        upd(o, n, dt, t) {
+          const u = o.userData, mine = n.own === myId; fade(o, Math.min(1, n.t * 4, n.l * 8) * (mine ? .35 : .8)); if (u.mn) u.mn.rotation.z -= dt * 12; if (u.hr) u.hr.rotation.z -= dt * 2;
+          if (!mine && (u.at = (u.at || 0) - dt) <= 0) { u.at = .12; const g = ghostWizard(0xffb43a); g.position.copy(o.position); g.rotation.y = views.p.get(n.own)?.g.rotation.y || 0; addFx(g, .4, (g, k) => fade(g, (1 - k) * .35)); }
+          if (Math.random() < .3) emit(o.position.x + rand(-.5, .5), o.position.y + rand(.2, 1.8), o.position.z + rand(-.5, .5), 0, .3, 0, 0xffe0a0, .1, .4);
+        }, drop: dropFade(.3) },
+      fx: { rw(e) { burst(e.x, 1, e.z, 40, 0xffd080, 5, .3, .6); circleFx('chrono', V(e.x, .08, e.z), 2, { life: .8 }); sfx('chrono_big'); if (e.id === myId) fovKick = 1.3; } } },
     { name: 'Slow Field', icon: '🕰️', cd: 13, mode: 'aim', range: 20, aimR: 6, desc: 'Warp time in an area: enemies inside move and attack 70% slower, and enemy shots crawl.',
       cast(p, c) { ent(p, c, c.tgt.x, c.tgt.z, { life: 6, r: 6 * c.st.aoe, slowShots: 1 }); },
       ent: { tick(n, dt) { const es = enemiesNear(n.x, n.z, n.r); for (const e of es) e.fs = Math.max(e.fs || 0, .7); if (pulse(n, dt, 1)) for (const e of es) applyStatus(e, 'chrono', own(n)); } },
@@ -1283,16 +1330,16 @@ illusion: {
 bone: {
   name: 'Bone', color: 0xe9dcc0, glyph: '💀', adj: 'BRITTLE', react: { name: 'SPLINTER', kind: 'shatter' },
   blurb: 'A necromancer. Bone spears, cackling skulls, armor of the dead, and the slain rising to fight for you.',
-  passive: 'Raise Dead: monsters you kill with Bone rise as skeleton warriors that fight for you for 12 s (up to 3 at once). Brittle enemies take 12% more damage.',
+  passive: 'Raise Dead: monsters you kill with Bone have a 25% chance to rise as a skeleton warrior that fights for you for 12 s (up to 3 at once). Brittle enemies take 12% more damage.',
   st: { vuln: .12 },
-  onKill(e, p) { if (!ET[e.type].boss && !e.pid && entsOf(p, 'bone.0').length < 3) ent(p, { p, el: 'bone', m: MOVE['bone.0'], dmg: stats(p).dmgMul }, e.x, e.z, { life: 12, r: .5, yaw: e.yaw }); },
+  onKill(e, p) { if (Math.random() < .25 && !ET[e.type].boss && !e.pid && entsOf(p, 'bone.0').length < 3) ent(p, { p, el: 'bone', m: MOVE['bone.0'], dmg: stats(p).dmgMul }, e.x, e.z, { life: 12, r: .5, yaw: e.yaw }); },
   moves: [
-    { name: 'Bone Spear', icon: '🦴', cd: .5, desc: 'Hurl a jagged bone spear that pierces 2 enemies and pins the last one it hits for a moment.',
+    { name: 'Bone Toss', icon: '🦴', cd: .5, desc: 'Hurl a spinning bone that pierces 2 enemies and pins the last one it hits for a moment.',
       cast(p, c) { for (let k = 0; k < c.multi; k++) shoot(p, c, 40, { d: spread(c.d, k, c.multi, .1), r: .3, dmg: 15 * c.dmg, pierce: c.st.pierce + 2, kb: 3, sc: c.mega ? 1.8 : 1 }); },
       shot: { hit(s, e, hd) { const p = own(s); hitEnemy(e, 'bone', s.dmg, p, s.vx, s.vz, s.kb, { crit: hd ? 1.5 : 1, src: { x: s.x - s.vx, z: s.z - s.vz } }); if (s.pierce <= 0) cc(e, 'root', .7, p); fxe(s.mv, 'crack', { x: s.x, y: s.y, z: s.z }); } },
       // the raised skeletons of the Raise Dead passive live on this move
       ent: { tick(n, dt) { summonAI(n, dt, 7, 1.5, .9, e => hitEnemy(e, 'bone', 16 * n.mul, own(n), e.x - n.x, e.z - n.z, 3), 18); } },
-      look: { m: 'bone__spear', trail: [0xe9dcc0, .1, .3, 0, 1], light: 2 },
+      look: { m: 'bone__bone', s: 1.3, spin: [16, 0, 2], trail: [0x8a7a60, .05, .25, 0, 1] },
       view: { make(n) { const o = model('bone__skeleton', 0xe9dcc0, { shadow: true }), P = k => o.getObjectByName('bone__skeleton_' + k); Object.assign(o.userData, { arms: [P('armL'), P('armR')], legs: [P('legL'), P('legR')], head: P('head'), s: n.s, sw: 0 }); dustFx(n.x, n.z, 1.2, 0x5a4a30); burst(n.x, .5, n.z, 30, 0xe9dcc0, 4, .3, .6, -2); sfx('bone_big'); return o; },
         upd(o, n, dt, t) {
           const u = o.userData; u.ph = (u.ph || 0) + dt * (n.v ? 11 : 2); o.rotation.y = lerpAngle(o.rotation.y, n.yaw || 0, Math.min(1, dt * 10));
@@ -1357,7 +1404,7 @@ bone: {
 // ================================================================== RUNE
 rune: {
   name: 'Rune', color: 0x22e6b8, glyph: '📜', adj: 'INSCRIBED', react: { name: 'GLYPHBURST', kind: 'blast' },
-  blurb: 'Ancient script. Ward traps, falling runestones and binding circles, with every third spell Empowered.',
+  blurb: 'Ancient script. A trapper: every spell but the bolt is a ward on the ground that enemies set off by walking over it, and every third spell is Empowered.',
   passive: 'Rune Mastery: every third spell you cast is Empowered and deals 60% more damage. Inscribed enemies take 10% more damage.',
   st: { vuln: .1 },
   onCast(p, m, c) { p.bd.runeN = (p.bd.runeN || 0) + 1; if (p.bd.runeN % 3 === 0) { c.dmg *= 1.6; c.emp = 1; fxe('rune.0', 'emp', { id: p.id, x: c.o.x, y: c.o.y, z: c.o.z }); } },
@@ -1368,20 +1415,22 @@ rune: {
       fx: { emp(e) { if (isMe(e.id)) circleFx('rune', V(-.26, -.17, -.85), .26, { parent: camera, quat: Q_FACE, life: .55 }); else circleFx('rune', V(e.x, e.y, e.z), .8, { life: .5 }); sfx('tink'); },
         det: e => boomFx(e.x, e.y, e.z, 2.5, 0x22e6b8, .6), nova: e => boomFx(e.x, .5, e.z, 4.5, 0x22e6b8, .8) } },
     { name: 'Glyph Trap', icon: '🔯', cd: 2.5, mode: 'aim', range: 18, aimR: 2.2, desc: 'Inscribe a ward glyph at the target (up to 3 at once). It arms after a second, and the first enemy to step on it is blasted into the air and stunned.',
-      cast(p, c) { const mine = entsOf(p, c.m.key).sort((a, b) => a.id - b.id); while (mine.length >= 3) mine.shift().dead = true; ent(p, c, c.tgt.x, c.tgt.z, { life: 25, r: 2.2 }); },
-      ent: { tick(n) { if (n.t > 1 && enemiesNear(n.x, n.z, n.r).length) { boomAt(ctxN(n), n.x, .2, n.z, 3, 45 * n.mul, { lift: 10, kb: 2, cc: ['stun', 1] }, 'trip'); n.dead = true; } } },
-      view: { make(n) { const o = model('rune__trap', 0x22e6b8, { flat: true }); o.scale.setScalar(n.r); o.rotation.y = rand(0, TAU); burst(n.x, .2, n.z, 20, 0x7affd8, 3, .15, .4, -2); return o; },
-        upd(o, n, dt, t) { o.position.y = .05; o.rotation.y += dt * .3; fade(o, n.t < 1 ? .25 + .2 * Math.sin(t * 20) : .75 + .25 * Math.sin(t * 3 + n.id)); if (n.t > 1 && Math.random() < .08) emit(n.x + rand(-1, 1), .1, n.z + rand(-1, 1), 0, rand(.5, 1.2), 0, 0x7affd8, .1, .8, -.2); },
-        drop: dropFade(.25) },
+      cast(p, c) { placeWard(p, c, 3); },
+      ent: { tick(n) { if (tripped(n)) { boomAt(ctxN(n), n.x, .2, n.z, 3, 45 * n.mul, { lift: 10, kb: 2, cc: ['stun', 1] }, 'trip'); n.dead = true; } } },
+      view: wardView(),
       fx: { trip(e) { boomFx(e.x, e.y, e.z, e.r, 0x22e6b8, .9); pillarFx(e.x, .05, e.z, e.r * .5, 7, 0x22e6b8, .6); modelFx('rune__glyph', 0x22e6b8, V(e.x, .5, e.z), .6, (o, k) => { o.position.y = .5 + k * 4; o.rotation.x = -Math.PI / 2; o.scale.setScalar(e.r * (.6 + k)); fade(o, 1 - k); }, { flat: true }); sfx('rune_big'); } } },
-    { name: 'Sigilfall', icon: '🪨', cd: 7, mode: 'aim', range: 22, aimR: 3.5, desc: 'Three runestones crash down on the target one after another. The last and largest stuns everything it hits.',
-      cast(p, c) {
-        const t = c.tgt.clone(), R = 3.5 * c.st.aoe; fxe(c.m.key, 'mark', { x: t.x, z: t.z, r: R });
+    { name: 'Sigilfall', icon: '🪨', cd: 6, mode: 'aim', range: 22, aimR: 2.6, desc: 'Inscribe a sigil ward (up to 2 at once). When an enemy steps on it, runic chains hold everything nearby and three runestones crash down, the last and largest stunning everything it hits.',
+      cast(p, c) { placeWard(p, c, 2, { r: 2.6, R: 3.5 * c.st.aoe }); },
+      ent: { tick(n) {
+        if (!tripped(n)) return;
+        n.dead = true; const c = ctxN(n), t = V(n.x, 0, n.z), R = n.R; fxe(c.m.key, 'mark', { x: t.x, z: t.z, r: R });
+        for (const e of enemiesNear(t.x, t.z, R)) cc(e, 'root', 1.3, c.p);
         for (let i = 0; i < 3; i++) {
           const a = rand(0, TAU), last = i === 2, q = last ? t.clone() : V(t.x + Math.cos(a) * 1.4, 0, t.z + Math.sin(a) * 1.4);
-          later(.3 + i * .3, () => { fxe(c.m.key, 'fall', { x: q.x, z: q.z, s: last ? 1.3 : .85 }); later(.32, () => boomAt(c, q.x, .2, q.z, last ? R : 2.2, (last ? 45 : 26) * c.dmg, { kb: 4, ...(last ? { cc: ['stun', 1.2] } : {}) }, 'slam')); });
+          later(.1 + i * .25, () => { fxe(c.m.key, 'fall', { x: q.x, z: q.z, s: last ? 1.3 : .85 }); later(.32, () => boomAt(c, q.x, .2, q.z, last ? R : 2.2, (last ? 50 : 30) * c.dmg, { kb: 4, ...(last ? { cc: ['stun', 1.2] } : {}) }, 'slam')); });
         }
-      },
+      } },
+      view: wardView('rune__stone', .45),
       fx: { mark(e) { circleFx('rune', V(e.x, .08, e.z), e.r, { life: 1.4 }); modelFx('rune__glyph', 0x22e6b8, V(e.x, 14, e.z), 1.3, (o, k) => { o.rotation.x = Math.PI / 2; o.rotation.z = k * 2; o.scale.setScalar(e.r * .9); fade(o, k < .2 ? k * 5 : 1 - (k - .2) / .8); }, { flat: true }); sfx('rune'); },
         fall(e) { const spin = rand(-1, 1); modelFx('rune__stone', 0x22e6b8, V(e.x, 20, e.z), .33, (o, k) => { o.position.y = 20 * (1 - k * k); o.rotation.set(.15, spin * k, 0); o.scale.setScalar(e.s); for (let i = 0; i < 2; i++) emit(o.position.x + rand(-.5, .5), o.position.y + 2 * e.s, o.position.z + rand(-.5, .5), 0, 4, 0, 0x7affd8, .25, .4); }, { shadow: true }); },
         slam(e) {
@@ -1389,19 +1438,32 @@ rune: {
           const s = model('rune__stone', 0x22e6b8, { shadow: true }); s.position.set(e.x, 0, e.z); s.rotation.set(rand(-.15, .15), rand(0, TAU), rand(-.15, .15)); s.scale.setScalar(e.r > 3 ? 1.3 : .85);
           addFx(s, 1.6, (o, k) => { o.position.y = k > .7 ? -2.8 * ((k - .7) / .3) ** 2 : 0; if (k > .8) fade(o, 1 - (k - .8) / .2); });
         } } },
-    { name: 'Binding Circle', icon: '🔘', cd: 13, mode: 'aim', range: 20, aimR: 6, desc: 'Draw a great binding circle for 6 s. Enemies inside are slowed by 40%, take 25% more damage from everything, and are scorched by the runes every second.',
-      cast(p, c) { ent(p, c, c.tgt.x, c.tgt.z, { life: 6, r: 6 * c.st.aoe }); },
-      ent: { tick(n, dt) { const es = enemiesNear(n.x, n.z, n.r); for (const e of es) { e.fs = Math.max(e.fs || 0, .4); e.fv = .25; e.fvU = S.t + .2; } if (pulse(n, dt, 1)) for (const e of es) hitEnemy(e, 'rune', 10 * n.mul, own(n), 0, 0, 0, { aoe: true }); } },
-      view: { make(n) { const g = new THREE.Group(), u = g.userData; u.mats = []; u.circle = zoneCircle('rune', n.r, .85); g.add(u.circle); u.stones = [];
-          for (let i = 0; i < 6; i++) { const s = model('rune__stone', 0x22e6b8, { shadow: true }), a = TAU * i / 6; s.scale.setScalar(.55); s.position.set(Math.cos(a) * n.r, 0, Math.sin(a) * n.r); s.rotation.y = -a + Math.PI / 2; g.add(s); u.mats.push(...s.userData.mats); u.stones.push(s); }
-          sfx('rune_big'); dustFx(n.x, n.z, n.r * .5, 0x5a5048); return g; },
-        upd(o, n, dt, t) { spinCircle(o.userData.circle, dt, .35); o.userData.stones.forEach((s, i) => { s.position.y = -1.4 * (1 - easeOutBack(clamp(n.t * 3 - i * .1, 0, 1))) + Math.sin(t * 2 + i) * .05; }); if (Math.random() < .4) { const a = rand(0, TAU), d = rand(0, n.r); emit(n.x + Math.cos(a) * d, .15, n.z + Math.sin(a) * d, 0, rand(.4, 1.2), 0, 0x7affd8, rand(.08, .16), 1, -.2); } },
+    { name: 'Binding Circle', icon: '🔘', cd: 12, mode: 'aim', range: 20, aimR: 2.2, desc: 'Inscribe a binding ward. When an enemy steps on it, a great binding circle springs up for 6 s: enemies inside are slowed by 40%, take 25% more damage from everything, and are scorched by the runes every second.',
+      cast(p, c) { placeWard(p, c, 1, { R: 6 * c.st.aoe }); },
+      ent: { tick(n, dt) {
+        if (!n.s) { if (tripped(n)) Object.assign(n, { s: 1, r: n.R, t: 0, life: 6, max: 6 }); return; } // the ward goes off: the same entity lives on as the circle
+        const es = enemiesNear(n.x, n.z, n.r); for (const e of es) { e.fs = Math.max(e.fs || 0, .4); e.fv = .25; e.fvU = S.t + .2; } if (pulse(n, dt, 1)) for (const e of es) hitEnemy(e, 'rune', 10 * n.mul, own(n), 0, 0, 0, { aoe: true });
+      } },
+      view: { make: n => wardMake(n, 'rune__glyph', .5),
+        upd(o, n, dt, t) {
+          const u = o.userData;
+          if (!n.s) { wardUpd(o, n, dt, t); return; }
+          if (!u.circle) { // build the circle the moment the ward goes off
+            u.ward.visible = u.top.visible = false; u.circle = zoneCircle('rune', n.r, .85); o.add(u.circle); u.stones = [];
+            for (let i = 0; i < 6; i++) { const s = model('rune__stone', 0x22e6b8, { shadow: true }), a = TAU * i / 6; s.scale.setScalar(.55); s.position.set(Math.cos(a) * n.r, 0, Math.sin(a) * n.r); s.rotation.y = -a + Math.PI / 2; o.add(s); u.mats.push(...s.userData.mats); u.stones.push(s); }
+            sfx('rune_big'); dustFx(n.x, n.z, n.r * .5, 0x5a5048); flash(n.x, 1, n.z, 0x22e6b8, 40, .3);
+          }
+          fade(o, 1); spinCircle(u.circle, dt, .35); u.stones.forEach((s, i) => { s.position.y = -1.4 * (1 - easeOutBack(clamp(n.t * 3 - i * .1, 0, 1))) + Math.sin(t * 2 + i) * .05; }); if (Math.random() < .4) { const a = rand(0, TAU), d = rand(0, n.r); emit(n.x + Math.cos(a) * d, .15, n.z + Math.sin(a) * d, 0, rand(.4, 1.2), 0, 0x7affd8, rand(.08, .16), 1, -.2); }
+        },
         drop: dropFade() } },
-    { name: 'Word of Ruin', icon: '📖', desc: 'ULTIMATE. Speak the word of ruin: a great rune ignites over every enemy within 20 m (up to 12), then each one slams down for 80 damage and a 1.5 s stun.',
-      cast(p, c) {
-        const es = enemiesNear(p.x, p.z, 20 * c.st.aoe).slice(0, 12); fxe(c.m.key, 'speak', { x: p.x, y: p.y, z: p.z });
-        es.forEach((e, i) => { fxe(c.m.key, 'mark', { id: e.id, d: 1 + i * .12 }); later(1 + i * .12, () => { if (!alive(e)) return; const q = center(e); fxe(c.m.key, 'ruin', { x: e.x, y: q.y, z: e.z }); hitEnemy(e, 'rune', 80 * c.dmg, p, 0, 0, 4, { aoe: true }); cc(e, 'stun', 1.5, p); launch(e, 5); }); });
-      },
+    { name: 'Word of Ruin', icon: '📖', mode: 'aim', range: 22, aimR: 3.5, desc: 'ULTIMATE. Inscribe the word of ruin as a great ward. When an enemy steps on it, a great rune ignites over every enemy within 20 m of it (up to 12), then each one slams down for 90 damage and a 1.5 s stun.',
+      cast(p, c) { placeWard(p, c, 1, { r: 3.5, life: 60, R: 20 * c.st.aoe }); },
+      ent: { tick(n) {
+        if (!tripped(n)) return;
+        n.dead = true; const c = ctxN(n), p = c.p, es = enemiesNear(n.x, n.z, n.R).slice(0, 12); fxe(c.m.key, 'speak', { x: n.x, y: 0, z: n.z });
+        es.forEach((e, i) => { fxe(c.m.key, 'mark', { id: e.id, d: .6 + i * .1 }); later(.6 + i * .1, () => { if (!alive(e)) return; const q = center(e); fxe(c.m.key, 'ruin', { x: e.x, y: q.y, z: e.z }); hitEnemy(e, 'rune', 90 * c.dmg, p, 0, 0, 4, { aoe: true }); cc(e, 'stun', 1.5, p); launch(e, 5); }); });
+      } },
+      view: wardView('rune__glyph', .8),
       fx: { speak(e) { circleFx('rune', V(e.x, e.y + .08, e.z), 5, { life: 1.4 }); pillarFx(e.x, e.y + .05, e.z, 2.5, 10, 0x22e6b8, 1); flash(e.x, 2, e.z, 0x22e6b8, 60, .5); sfx('rune_big'); },
         mark(e) { modelFx('rune__glyph', 0x22e6b8, V(0, -50, 0), e.d, (o, k) => { const v = views.e.get(e.id); if (v) o.position.set(v.g.position.x, v.g.position.y + 5 + Math.sin(k * 8) * .2, v.g.position.z); o.lookAt(camera.position); o.scale.setScalar(1.3 * easeOutBack(Math.min(1, k * 4))); fade(o, .8 + .2 * Math.sin(k * 30)); }, { flat: true }); },
         ruin(e) { modelFx('rune__glyph', 0x22e6b8, V(e.x, e.y + 5, e.z), .25, (o, k) => { o.position.y = e.y + 5 - 5 * k; o.rotation.x = -Math.PI / 2; o.scale.setScalar(1.3 + k * 1.5); fade(o, 1 - k); }, { flat: true }); boomFx(e.x, e.y, e.z, 3, 0x22e6b8, 1); pillarFx(e.x, .05, e.z, 1.2, 7, 0x22e6b8, .5); shake(.15); sfx('rune_big'); } } },
@@ -1588,22 +1650,24 @@ abyss: {
 // ================================================================== LASER
 laser: {
   name: 'Laser', color: 0x2cff6a, glyph: '📡', adj: 'TARGETED', react: { name: 'REFRACTION', kind: 'chain' },
-  blurb: 'Precision light. Instant beams that ricochet off pillars, walls and the floor, hitting harder with every bounce.',
-  passive: 'Ricochet: every bounce makes a Laser hit 25% harder, and Laser hits to the head always crit. Targeted enemies take 12% more damage.',
+  blurb: 'Precision light. Instant beams that ricochet off pillars, walls, the floor and your own crystal lenses, hitting harder with every bounce.',
+  passive: 'Ricochet and Focus: every bounce makes a Laser hit 25% harder, and Laser hits to the head always crit. Hitting the same enemy again within 1.5 s builds Focus, +10% damage per stack (up to 6). Targeted enemies take 12% more damage.',
   st: { vuln: .12 },
   moves: [
     { name: 'Pulse Laser', icon: '🟢', cd: .3, desc: 'An instant laser pulse that bounces once off whatever it meets.',
-      cast(p, c) { for (let k = 0; k < c.multi; k++) fxe(c.m.key, 'beam', { pts: laserShot(p, c.o, spread(c.d, k, c.multi, .05), 45, 1, 9 * c.dmg, 1.2), w: c.mega ? .12 : .05 }); },
+      cast(p, c) { for (let k = 0; k < c.multi; k++) fxe(c.m.key, 'beam', { pts: laserShot(p, c.o, spread(c.d, k, c.multi, .05), 45, 1, 9 * c.dmg, 1.2), w: (c.mega ? .12 : .05) * (1 + .12 * p.bd.foc.n) }); }, // the beam thickens as Focus builds
       fx: { beam(e) { laserFx(e.pts, 0x2cff6a, e.w); }, det: e => boomFx(e.x, e.y, e.z, 2.5, 0x2cff6a, .6), nova: e => boomFx(e.x, .5, e.z, 4.5, 0x2cff6a, .8) } },
     { name: 'Ricochet Beam', icon: '✳️', cd: 4, mode: 'charge', charge: .8, desc: 'Hold to charge a thick beam that bounces up to 4 times off pillars, walls and the floor, piercing everything it touches.',
       cast(p, c) { fxe(c.m.key, 'beam', { pts: laserShot(p, c.o, c.d, 70, 2 + Math.round(2 * c.k), (20 + 45 * c.k) * c.dmg, 3 + 4 * c.k), w: .1 + .16 * c.k }); },
       fx: { beam(e) { laserFx(e.pts, 0x2cff6a, Math.min(e.w, .2), .3); const [x, y, z] = e.pts[e.pts.length - 1]; flash(x, y, z, 0x2cff6a, 30, .2); shake(.06 + e.w * .4); } } },
-    { name: 'Laser Sweep', icon: '〽️', cd: 8, desc: 'Sweep a laser across 120° in front of you, cutting every enemy within 22 m.',
-      cast(p, c) { ent(p, c, p.x, p.z, { follow: 1, life: .45, r: 22, yaw: p.yaw }); },
-      ent: { tick(n) { const p = own(n); if (!p) return; const yaw = n.yaw + 1.05 - 2.1 * Math.min(1, n.t / .45), d = V(-Math.sin(yaw), -.05, -Math.cos(yaw)).normalize(); for (const h of rayHits(eyeOf(p).add(V(0, -.45, 0)), d, n.r, .5)) if (ready(n, h.e, 99)) hitEnemy(h.e, 'laser', 40 * n.mul, p, d.x, d.z, 3, { src: p }); } },
-      view: { make() { const g = new THREE.Group(), u = g.userData; u.mats = []; u.core = beamMesh(0xffffff, .05); u.outer = beamMesh(0x2cff6a, .16); scene.add(u.core, u.outer); return g; },
-        upd(o, n) { const u = o.userData, yaw = n.yaw + 1.05 - 2.1 * Math.min(1, n.t / .45), d = V(-Math.sin(yaw), -.05, -Math.cos(yaw)).normalize(), a = handPos(n.own), L = d.y < -.01 ? Math.min(n.r, -a.y / d.y) : n.r, b = a.clone().addScaledVector(d, L); aimBeam(u.core, a, b, .05); aimBeam(u.outer, a, b, .16); burst(b.x, b.y, b.z, 3, 0x2cff6a, 4, .15, .25); },
-        drop(o) { o.userData.core.removeFromParent(); o.userData.outer.removeFromParent(); o.removeFromParent(); } } },
+    { name: 'Refractor', icon: '🔷', cd: 5, mode: 'aim', range: 24, aimR: 1.1, desc: 'Hang a floating crystal lens at the target for 12 s (up to 2). Any of your lasers that pass through it split into 3 beams that lock onto the nearest enemies, each counting as one more bounce. When it expires it bursts.',
+      cast(p, c) { const mine = entsOf(p, c.m.key).sort((a, b) => a.id - b.id); while (mine.length >= 2) mine.shift().life = 0; ent(p, c, c.tgt.x, c.tgt.z, { y: 1.6, life: 12, r: 1.1 }); },
+      ent: { end(n) { boomAt(ctxN(n), n.x, n.y, n.z, 3, 25 * n.mul, { kb: 3 }, 'pop'); } },
+      view: { make(n) { const g = new THREE.Group(), u = g.userData; u.prism = model('laser__prism', 0x2cff6a); u.prism.scale.setScalar(.45); u.lens = model('laser__lens', 0x2cff6a, { flat: true }); u.lens.scale.setScalar(1.6); g.add(u.prism, u.lens); u.mats = [...u.prism.userData.mats, ...u.lens.userData.mats]; burst(n.x, 1.6, n.z, 25, 0x2cff6a, 4, .15, .4); sfx('laser'); return g; },
+        upd(o, n, dt, t) { const u = o.userData; u.prism.position.y = Math.sin(t * 2 + n.id) * .12; u.prism.rotation.y += dt * 1.5; u.lens.position.y = u.prism.position.y; u.lens.lookAt(camera.position); u.lens.rotateZ(t * .5); fade(o, Math.min(1, n.t * 4, n.l * 12) * (n.l < .2 ? .6 + .4 * Math.sin(t * 25) : 1)); if (Math.random() < .2) emit(o.position.x + rand(-.4, .4), o.position.y + rand(-.4, .4), o.position.z + rand(-.4, .4), 0, .5, 0, 0x2cff6a, .08, .5); },
+        drop: dropFade(.2) },
+      fx: { split(e) { for (const pts of e.b) laserFx(pts, 0x2cff6a, .07, .2); flash(e.x, e.y, e.z, 0x2cff6a, 25, .15); burst(e.x, e.y, e.z, 10, 0xb8ffd0, 4, .12, .25); if (e.b.length) sfx('laser'); },
+        pop: e => boomFx(e.x, e.y, e.z, e.r, 0x2cff6a, .5) } },
     { name: 'Laser Drone', icon: '🛸', cd: 15, desc: 'Deploy a hovering drone that follows you for 12 s and fires a bouncing laser at the nearest enemy every 0.4 s.',
       cast(p, c) { for (const n of entsOf(p, c.m.key)) n.dead = true; ent(p, c, p.x + 1, p.z, { life: 12, r: 18, y: p.y + 2.6 }); },
       ent: { tick(n, dt) {
@@ -1649,7 +1713,7 @@ laser: {
 // ================================================================== ARCANE
 arcane: {
   name: 'Arcane', color: 0xd84cff, glyph: '🔮', adj: 'SPELLBOUND', react: { name: 'ARCANE SURGE', kind: 'overload' },
-  blurb: 'Pure magic. Homing missiles, blinks and polymorphs, and charges that build into a devastating barrage.',
+  blurb: 'Pure magic. Homing missiles, an owl familiar and polymorphs, and charges that build into a devastating barrage.',
   passive: 'Arcane Charges: every Arcane spell except Barrage gives you a charge (up to 4; they fade 8 s after your last cast). Each charge makes your spells 12% stronger. Spellbound enemies take 10% more damage.',
   st: { vuln: .1 },
   onCast(p, m) { if (m.slot !== 1) p.bd.arc = Math.min(4, (p.bd.arc || 0) + 1); p.bd.arcT = 8; },
@@ -1662,15 +1726,32 @@ arcane: {
       cast(p, c) { const n = 2 + 2 * (p.bd.arc || 0); p.bd.arc = 0; fxe(c.m.key, 'barrage', { id: p.id, n }); for (let i = 0; i < n; i++) later(i * .05, () => { if (p.down) return; const c2 = ctxOf(p, c.m); shoot(p, c2, 44, { d: c2.d.clone().add(V(rand(-.035, .035), rand(-.025, .04), rand(-.035, .035))).normalize(), r: .35, dmg: 15 * c.dmg, home: 2.5, kb: 3 }); }); },
       look: { m: 'arcane__orb', s: .8, spin: [0, 0, 9], trail: [0xe090ff, .09, .25, 0, 1], light: 3 },
       fx: { barrage(e) { if (isMe(e.id)) { shake(.04 * e.n); fovKick = .3 + e.n * .05; } } } },
-    { name: 'Blink', icon: '💨', cd: 6, desc: 'Teleport 10 m in the direction you are looking. Enemies where you stood are blasted and stunned for a moment.',
-      self(p) { // step forward in half metres so a blink never passes through a dungeon wall
-        const f = flatAim(p); let x = p.x, z = p.z;
-        for (let i = 0; i < 20; i++) { const nx = x + f.x * .5, nz = z + f.z * .5; if (MAP.rects && !inRects(nx, nz, .45)) break; x = nx; z = nz; }
-        const q = { x, z }; collide(q, .45); p.x = q.x; p.z = q.z; p.mo = null;
-      },
-      cast(p, c) { buff(p, 'inv', .2); boomAt(c, p.x, p.y + .8, p.z, 3, 18 * c.dmg, { kb: 5, cc: ['stun', .6] }, 'blink'); fxe(c.m.key, 'arrive', { id: p.id, x: p.x + c.flat.x * 10, y: p.y, z: p.z + c.flat.z * 10 }); },
-      fx: { blink(e) { boomFx(e.x, e.y, e.z, e.r, 0xd84cff, .7); circleFx('arcane', V(e.x, e.y - .7, e.z), 1.8, { life: .6 }); },
-        arrive(e) { burst(e.x, e.y + 1, e.z, 40, 0xe090ff, 6, .25, .5); ringFx(e.x, e.y + .1, e.z, 2, 0xd84cff, .4); if (isMe(e.id)) { fovKick = 1.6; sfx('dash'); } } } },
+    { name: 'Arcane Familiar', icon: '🦉', cd: 14, desc: 'Summon a spectral owl for 12 s. Every second it swoops on the enemy nearest you and rakes it for 22, and each strike gives you an Arcane Charge.',
+      cast(p, c) { for (const n of entsOf(p, c.m.key)) n.dead = true; ent(p, c, p.x, p.z, { life: 12, r: 18, y: p.y + 2.4 }); },
+      ent: { tick(n, dt) {
+        const p = own(n); if (!p) { n.life = 0; return; }
+        const e = n.tg && S.enemies.find(x => x.id === n.tg && alive(x));
+        let tx, ty, tz, spd;
+        if (e && (n.sw += dt) < 2) { const q = center(e); tx = q.x; ty = q.y; tz = q.z; spd = 24; }
+        else { // circle above you, wide enough to stay out of your face, and pick a new prey once a second
+          const a = n.t * 1.1; tx = p.x + Math.cos(a) * 2.6; tz = p.z + Math.sin(a) * 2.6; ty = p.y + 3; spd = 12; n.tg = 0;
+          if (pulse(n, dt, 1)) { const t = nearest(p.x, p.z, n.r); if (t) { n.tg = t.id; n.sw = 0; } }
+        }
+        const dx = tx - n.x, dy = ty - n.y, dz = tz - n.z, d = Math.hypot(dx, dy, dz), st = Math.min(d, spd * dt);
+        if (d > .01) { n.x += dx / d * st; n.y += dy / d * st; n.z += dz / d * st; }
+        if (Math.hypot(dx, dz) > .05) n.yaw = Math.atan2(dx, dz);
+        n.v = e ? 1 : 0;
+        if (e && d < .9) { hitEnemy(e, 'arcane', 22 * n.mul, p, dx, dz, 2); p.bd.arc = Math.min(4, (p.bd.arc || 0) + 1); p.bd.arcT = 8; n.tg = 0; n.s++; fxe(n.mv, 'rake', { x: n.x, y: n.y, z: n.z }); }
+      } },
+      view: { make(n) { const o = model('arcane__owl', 0xd84cff), P = k => o.getObjectByName('arcane__owl_' + k); o.scale.setScalar(1.5); Object.assign(o.userData, { wl: P('wingL'), wr: P('wingR') }); burst(n.x, n.y, n.z, 30, 0xe090ff, 4, .2, .5); sfx('arcane_big'); return o; },
+        upd(o, n, dt, t) {
+          const u = o.userData, f = Math.sin(t * (n.v ? 9 : 14)) * (n.v ? .25 : .7) - (n.v ? .6 : 0); // a swoop folds the wings back
+          if (u.wl) u.wl.rotation.z = -f; if (u.wr) u.wr.rotation.z = f;
+          o.rotation.y = lerpAngle(o.rotation.y, n.yaw || 0, Math.min(1, dt * 8)); o.rotation.x = n.v ? .35 : 0; fade(o, Math.min(1, n.t * 4, n.l * 8));
+          if (Math.random() < (n.v ? .8 : .3)) emit(o.position.x, o.position.y, o.position.z, 0, -.3, 0, Math.random() < .5 ? 0xe090ff : 0xffffff, rand(.06, .14), .5);
+        },
+        drop(o) { burst(o.position.x, o.position.y, o.position.z, 40, 0xe090ff, 5, .2, .5, 2); o.removeFromParent(); } },
+      fx: { rake(e) { burst(e.x, e.y, e.z, 18, 0xe090ff, 5, .14, .3, 4); flash(e.x, e.y, e.z, 0xd84cff, 12, .12); sfx('arcane'); } } },
     { name: 'Polymorph', icon: '🐑', cd: 12, desc: 'Turn the first enemy you hit, and up to 2 more near it, into harmless sheep for 4 s. Bosses resist it.',
       cast(p, c) { shoot(p, c, 32, { r: .5, life: 1.2, dmg: 5 * c.dmg }); },
       shot: { hit(s, e) { const p = own(s); for (const o of [e, ...enemiesNear(e.x, e.z, 4, [e.id]).slice(0, 2)]) { hitEnemy(o, 'arcane', s.dmg, p, 0, 0, 0); if (cc(o, 'poly', 4, p)) { const q = center(o); fxe(s.mv, 'poof', { x: q.x, y: q.y, z: q.z }); } } return 'end'; } },

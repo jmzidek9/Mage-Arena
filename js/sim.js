@@ -73,7 +73,7 @@ function newPlayer(id, el, el2 = null) {
   return { id, el, el2, cur: el, x: id === 'h' ? -2 : 2, y: 0, z: 8, vy: 0, yaw: 0, pitch: 0, hp: 100, max: 100, down: false, rev: 0,
     cds: {}, ult: 0, bf: {}, bd: {}, dcd: 0, dashT: 0, dx: 0, dz: 0, dashAt: -9, jumpN: 0, dashN: 0, swapN: 0, dashes: 0, novaN: 0,
     casts: 0, jumps: 0, up: {}, inp: { yaw: 0, pitch: 0, k: [] }, prevK: [], ch: null, chT: 0, chg: null, mo: null,
-    hist: [], histT: 0, hpHist: [], combo: 0, comboT: 0, regenT: 0, stats: { kills: 0, dmg: 0, combos: 0, dodges: 0, best: 0 } };
+    hpHist: [], combo: 0, comboT: 0, regenT: 0, stats: { kills: 0, dmg: 0, combos: 0, dodges: 0, best: 0 } };
 }
 const players = () => Object.values(S.players);
 const mate = p => S.mode === 'duel' ? null : players().find(q => q !== p); // no partner heals for your duel opponent
@@ -86,7 +86,7 @@ function stats(p) {
     cdMul: .85 ** n('swift') * (bf.pact > 0 ? .8 : 1) * (el === 'chrono' ? .82 : 1) * (bf.eclipse > 0 ? .7 : 1),
     skillCd: .8 ** n('quick'),
     dmgMul: (1 + .2 * n('potency')) * (bf.pact > 0 ? 1.6 : 1) * comboB * lowHp * elementPower(p, el),
-    speed: 7.5 * (1 + .12 * n('fleet')) * (bf.tempest > 0 ? 1.6 : 1) * (bf.veil > 0 ? 1.3 : 1) * (bf.phase > 0 ? 1.3 : 1) * (el === 'wind' ? 1.15 : 1),
+    speed: 7.5 * (1 + .12 * n('fleet')) * (bf.tempest > 0 ? 1.6 : 1) * (bf.veil > 0 ? 1.3 : 1) * (bf.phase > 0 ? 1.3 : 1) * (bf.haste > 0 ? 1.35 : 1) * (el === 'wind' ? 1.15 : 1),
     aoe: (1 + .25 * n('wide')) * (el === 'explosion' ? 1.2 : 1),
     dur: 1 + .5 * n('linger'), multi: 1 + n('twin'), chain: 2 + n('twin'), pierce: n('pierce'), bounce: n('ricochet'),
     steal: .04 * n('siphon') + (el === 'blood' ? .06 : 0) + (bf.eclipse > 0 ? .25 : 0),
@@ -579,7 +579,6 @@ function stepMove(p, i, dt) {
   collide(p, .45);
   const gy = groundY(p.x, p.z); // 0, or the height of the dungeon stairs; stick to the steps on the way down
   if (p.y <= gy + (p.gr && p.vy <= 0 ? .5 : 0) && !(S.mode === 'duel' && offMap(p.x, p.z))) { p.y = gy; p.vy = 0; p.gr = true; } else p.gr = false; // no floor past the duel platform's edge
-  if ((p.histT += dt) >= .1) { p.histT = 0; p.hist.push([p.x, p.y, p.z]); if (p.hist.length > 31) p.hist.shift(); }
 }
 
 // ===================== players: the 5-slot move system =====================
@@ -623,7 +622,8 @@ function fire(p, m, k, host) {
 }
 // host: real casts. guest (host=false): same rules for prediction (cooldowns, self-movement, instant visuals)
 function stepCast(p, i, dt, host = true) {
-  for (const el in p.cds) { const a = p.cds[el]; for (let s = 0; s < 5; s++) a[s] -= dt; }
+  const cdt = dt * (p.bf.haste > 0 ? 2 : 1); // Chrono's Accelerate
+  for (const el in p.cds) { const a = p.cds[el]; for (let s = 0; s < 5; s++) a[s] -= cdt; }
   const kit = kitOf(p), held = p.bf.stun > 0 ? [] : i.k || [];
   // while down, drop Tab presses on both machines so host and guest never disagree about the active element after a revive
   if (p.down || S.phase === 'over' || (host && S.phase === 'lobby')) { p.ch = null; p.chg = null; p.prevK = []; p.swapN = i.swapN; return; }

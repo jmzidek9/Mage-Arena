@@ -496,7 +496,7 @@ function hud(src, mp) {
   if (sp.ult >= 1 && !hud.ultReady) sfx('ready');
   hud.ultReady = sp.ult >= 1;
   const bf = sp.bf || {}, tags = [];
-  for (const [k, n, c] of [['veil', 'VEILED', '#b08cff'], ['phase', 'PHASED', '#5effc8'], ['pact', 'BLOOD PACT', '#ff4060'], ['molten', 'MOLTEN', '#ff6a2a'], ['quake', 'BEDROCK', '#d9913a'], ['tempest', 'TEMPEST', '#9dffd6'], ['shell', 'SHELL', '#ff8ae8'], ['crit', 'NEXT HIT x2', '#ffd36a'], ['glide', 'GLIDE', '#9dffd6'], ['eclipse', 'ECLIPSE', '#9a4cff'], ['bloom', 'BLOOM', '#ff9ad8'], ['mirror', 'MIRRORED', '#f0a6ff'], ['fusion', 'FUSION', '#ff3ca8']])
+  for (const [k, n, c] of [['veil', 'VEILED', '#b08cff'], ['phase', 'PHASED', '#5effc8'], ['pact', 'BLOOD PACT', '#ff4060'], ['molten', 'MOLTEN', '#ff6a2a'], ['quake', 'BEDROCK', '#d9913a'], ['tempest', 'TEMPEST', '#9dffd6'], ['shell', 'SHELL', '#ff8ae8'], ['crit', 'NEXT HIT x2', '#ffd36a'], ['glide', 'GLIDE', '#9dffd6'], ['eclipse', 'ECLIPSE', '#9a4cff'], ['bloom', 'BLOOM', '#ff9ad8'], ['mirror', 'MIRRORED', '#f0a6ff'], ['fusion', 'FUSION', '#ff3ca8'], ['haste', 'ACCELERATED', '#ffb43a']])
     if (bf[k] > 0) tags.push(`<span style="color:${c};border-color:${c}">${n}${k === 'shell' ? '' : ' ' + Math.ceil(bf[k])}</span>`);
   const tagHtml = tags.join('');
   if (tagHtml !== hud.tags) { $('buffs').innerHTML = tagHtml; hud.tags = tagHtml; }
@@ -504,7 +504,7 @@ function hud(src, mp) {
   const R = sp.r || [], pips = (n, of) => Array.from({ length: of }, (_, i) => `<span class="pip${i < n ? ' on' : ''}"></span>`).join(''), meter = f => `<span class="meter"><i style="width:${Math.round(clamp(f, 0, 1) * 100)}%"></i></span>`;
   const res = cur === 'plasma' ? (bf.overheat > 0 ? `OVERHEATED ${meter(1)}` : bf.fusion > 0 ? `FUSION ${meter(bf.fusion / 4)}` : `HEAT ${meter(R[0] / 100)} ${R[0] | 0}`)
     : cur === 'soul' ? `SOULS ${meter(R[1] / 15)} ${R[1] || 0}` : cur === 'arcane' ? `CHARGES ${pips(R[2], 4)}` : cur === 'blades' ? `SWORDS ${pips(R[3], 6)}`
-    : cur === 'rune' ? (R[5] === 2 ? `NEXT SPELL EMPOWERED ${pips(2, 2)}` : `RUNE ${pips(R[5], 2)}`) : cur === 'bone' && R[4] > 0 ? `BONE ARMOR ${pips(R[4], 4)}` : '';
+    : cur === 'rune' ? (R[5] === 2 ? `NEXT SPELL EMPOWERED ${pips(2, 2)}` : `RUNE ${pips(R[5], 2)}`) : cur === 'bone' && R[4] > 0 ? `BONE ARMOR ${pips(R[4], 4)}` : cur === 'laser' ? `FOCUS ${pips(R[6], 6)}` : '';
   if (res !== hud.res) { hud.res = res; $('res').innerHTML = res; $('res').classList.toggle('hidden', !res); $('res').classList.toggle('hot', cur === 'plasma' && (bf.overheat > 0 || R[0] > 80)); }
   const combo = sp.combo || 0;
   $('comboCt').classList.toggle('hidden', combo < 5);
