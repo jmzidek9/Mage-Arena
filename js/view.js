@@ -623,7 +623,25 @@ function hud(src, mp) {
 }
 
 // ===================== screens =====================
+// once per session: draw a hidden frame with one of every effect model, cast circle and spell template in view,
+// so their shaders compile now instead of hitching the first time a spell uses them
+let warmed = false;
+function warmFx() {
+  if (warmed) return; warmed = true;
+  const g = new THREE.Group(), add = o => { o.position.set(rand(-1, 1), rand(-1, 1), 0); g.add(o); };
+  for (const n in NODE) add(model(n, 0xffffff, { shadow: true }));
+  add(model('fire__flame', 0xff6a1a, { flame: true }));
+  for (const el in CTPL) add(makeCircle(el));
+  for (const k in T) for (const o of [T[k]].flat()) add(glowify(o.clone(), glowMats(0xffffff)));
+  const b = T.beam.clone(), d = T.disc.clone(); b.material = beamMat(0xffffff); d.material = discMat(0xffffff); add(b); add(d);
+  add(new THREE.Sprite(new THREE.SpriteMaterial({ map: puffTex(), transparent: true, depthWrite: false })));
+  g.scale.setScalar(.05);
+  camera.add(g); g.position.set(0, 0, -3);
+  try { renderer.compile(scene, camera); renderer.render(scene, camera); } catch (err) { console.error(err); }
+  camera.remove(g);
+}
 function showGame() {
+  warmFx();
   for (const id of ['modes', 'lobby', 'over']) $(id).classList.add('hidden');
   $('hud').classList.remove('hidden');
   hudKey = ''; tintRig(myEl); xpGiven = false;
