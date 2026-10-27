@@ -58,6 +58,45 @@ function teleFx(e) {
   });
   if (distTo(e.x, e.z) < 16) sfx('tele');
 }
+// monster attacks (sim: resolveAttack / bossMeteors)
+const SWINGS = new Set(['swipe', 'thrust', 'lunge', 'bash', 'leap']);
+const FOE_FX = {
+  mend(e) { ringFx(e.x, .1, e.z, 9, 0x40ff90, .6); burst(e.x, 1.5, e.z, 40, 0x80ffb0, 6, .3, .7, -2); sfx('heal'); },
+  leap(e) { // a heavy landing: dust, flung grit, a little shake when it's close
+    dustFx(e.x, e.z, e.r); ringFx(e.x, .1, e.z, e.r * 1.2, 0xffc8a0, .4); debrisFx(e.x, .4, e.z, 5, 'earth__pebble', 0x8a7a62, .3, 7);
+    shake(clamp(.3 - distTo(e.x, e.z) * .015, 0, .25)); sfx('smash'); cityPush(e.x, 0, e.z, e.r + 2, 4);
+  },
+  quake(e) { // one stone spike of the rolling line (none right on top of you: it would fill the screen)
+    if (distTo(e.x, e.z) > 2.2) { const o = model('earth__pillar', 0x8a6a4a, { shadow: true }); o.position.set(e.x, -2, e.z); o.rotation.set(rand(-.35, .35), rand(0, TAU), rand(-.35, .35)); o.scale.setScalar(rand(.26, .34));
+    addFx(o, 1, (o, k) => { o.position.y = k < .15 ? -1.4 + 1.2 * easeOutBack(k / .15) : k > .7 ? -.2 - 1.3 * ((k - .7) / .3) ** 2 : -.2; }); }
+    dustFx(e.x, e.z, 1.1); debrisFx(e.x, .3, e.z, 3, 'earth__pebble', 0x8a6a4a, .25, 6);
+    if (distTo(e.x, e.z) < 20) { shake(.06); if (e.i % 2 === 0) sfx('earth'); }
+    cityPush(e.x, 0, e.z, 2.5, 3);
+  },
+  hex(e) { // the curse ring bursts into a green column
+    circleFx('sigil', V(e.x, .08, e.z), e.r, { life: .6, color: 0x40ff90 }); pillarFx(e.x, 0, e.z, e.r * .8, 4.5, 0x40ff90, .55);
+    burst(e.x, .5, e.z, 40, 0x80ffb0, 7, .25, .6, -1, 3); flash(e.x, 1, e.z, 0x40ff90, 30, .25); sfx('foe_hex');
+  },
+  blink(e) { // gone in a puff of dark, out of another behind you
+    for (const [x, z] of [[e.x, e.z], [e.x2, e.z2]]) { smokeFx(x, e.h * .5, z, .8, 0x1a1030, .9, 5, .6); burst(x, e.h * .5, z, 24, 0x9a4cff, 5, .2, .4); }
+    flash(e.x2, 1, e.z2, 0x9a4cff, 25, .2); sfx('foe_blink');
+  },
+  bash(e) { // a shield charge tearing up the floor
+    for (let i = 0; i <= 8; i++) { const x = e.x + (e.x2 - e.x) * i / 8, z = e.z + (e.z2 - e.z) * i / 8; for (let j = 0; j < 3; j++) emit(x + rand(-.4, .4), .15, z + rand(-.4, .4), rand(-1, 1), rand(1.5, 3.5), rand(-1, 1), 0xd8c8a8, rand(.07, .13), rand(.4, .7), 9, 1); }
+    dustFx(e.x2, e.z2, 1.2); sfx('bash');
+  },
+  meteor(e) { fireBoom(e.x, 0, e.z, e.r, .8); debrisFx(e.x, .5, e.z, 6, 'earth__pebble', 0x5a3a2a, .35, 9); },
+};
+// the boss's rock: hidden until the last half second of its warning, then it falls blazing onto the circle
+function meteorFall(e) {
+  const o = model('earth__boulder', 0x6a4030, { shadow: true }), d = e.d, fall = Math.min(.5, d), ox = rand(-5, 5), oz = rand(-5, 5);
+  o.scale.setScalar(.8); o.visible = false;
+  addFx(o, d, (o, k, dt) => {
+    const u = (k * d - (d - fall)) / fall; if (u < 0) return;
+    o.visible = true; o.position.set(e.x + ox * (1 - u), 20 * (1 - u) + .5, e.z + oz * (1 - u)); o.rotation.x += 9 * dt; o.rotation.z += 5 * dt;
+    for (let i = 0; i < 3; i++) emit(o.position.x + rand(-.4, .4), o.position.y + rand(-.4, .4), o.position.z + rand(-.4, .4), 0, rand(1, 3), 0, flameColor(), rand(.3, .55), rand(.25, .45), -2);
+  });
+}
 const COMBO_FX = {
   steam(e) { meshFx(T.steam, V(e.x, e.y, e.z), 1.1, 1, 3.4, .6); burst(e.x, e.y, e.z, 60, 0xffffff, 7, .6, 1, -1.5, 1); },
   shatter(e) { meshFx(T.shatter, V(e.x, e.y, e.z), .7, .5, 2.6, 4); burst(e.x, e.y, e.z, 70, 0x9feaff, 12, .25, .7, 8); ringFx(e.x, .1, e.z, 3.5, 0x7fe6ff, .5); },
@@ -67,7 +106,7 @@ function onEvent(e) {
   switch (e.k) {
     // the guest already drew its own casts instantly in stepCast(predict), so skip the host's late echo
     case 'cast': if (role !== 'guest' || e.id !== myId) castFx(e); break;
-    case 'fx': try { MOVE[e.m]?.fx?.[e.f]?.(e); if (e.m === 'foe' && e.f === 'mend') { ringFx(e.x, .1, e.z, 9, 0x40ff90, .6); burst(e.x, 1.5, e.z, 40, 0x80ffb0, 6, .3, .7, -2); sfx('heal'); } } catch (err) { console.error(e, err); } break;
+    case 'fx': try { if (e.m === 'foe') FOE_FX[e.f]?.(e); else MOVE[e.m]?.fx?.[e.f]?.(e); } catch (err) { console.error(e, err); } break;
     case 'bolt': {
       const col = EL[e.el]?.color ?? EL.storm.color;
       boltFx(e.pts, col);
@@ -79,7 +118,7 @@ function onEvent(e) {
     case 'dmg': {
       const col = e.b ? '#9a9aa8' : e.c ? '#ffe36a' : css(EL[e.el]?.color ?? 0xffffff);
       if (!e.d || Math.random() < .5) popNum(e.x, e.y, e.z, e.c ? e.n + '!' : e.n, col, (e.c ? 'crit ' : '') + (e.d ? 'dot' : ''));
-      const v = views.e.get(e.id); if (v && !e.d) { v.flash = .09; v.flinch = Math.min(1.3, v.flinch + (e.c ? 1.1 : .6)); }
+      const v = views.e.get(e.id); if (v && !e.d) { v.flash = .09; v.flinch = Math.min(1.3, v.flinch + (e.c ? 1.1 : .6)); v.fdir = Math.random() < .5 ? -1 : 1; }
       if (!e.d) sfx(e.c ? 'crit' : 'hit');
       break;
     }
@@ -111,8 +150,16 @@ function onEvent(e) {
       sfx('spawn');
       break;
     }
-    case 'tele': teleFx(e); { const v = views.e.get(e.id); if (v) v.wind = e.d; } break;
-    case 'strike': { const v = views.e.get(e.id); if (v) v.strike = 1; if (e.a === 'smash' || e.a === 'slam') sfx('smash'); break; }
+    case 'tele': teleFx(e); if (e.a === 'meteor') meteorFall(e); { const v = views.e.get(e.id); if (v) v.wind = e.d; } break;
+    case 'strike': {
+      const v = views.e.get(e.id); if (!v) break;
+      v.strike = 1; v.ak = e.a; const near = distTo(v.g.position.x, v.g.position.z) < 15;
+      if (e.a === 'smash' || e.a === 'slam') sfx('smash');
+      else if (e.a === 'call') sfx('ring');
+      else if (near && SWINGS.has(e.a)) sfx('swing');
+      if (e.a === 'leap' || e.a === 'lunge') dustFx(v.g.position.x, v.g.position.z, .8 * v.sc);
+      break;
+    }
     case 'stagger': popNum(e.x, e.y + .4, e.z, 'STAGGER', '#ffd36a', 'tag'); ringFx(e.x, e.y, e.z, 1.5, 0xffd36a, .3); sfx('stagger'); break;
     case 'miss': if (e.id === myId) popNum(camera.position.x, camera.position.y + .2, camera.position.z, 'MISSED: A PHANTOM', '#f0a6ff', 'tag'); else popNum(e.x, e.y, e.z, 'MISS', '#f0a6ff', 'tag'); burst(e.x, e.y - .5, e.z, 20, 0xffc8ff, 4, .2, .4); sfx('illusion'); break;
     case 'block': burst(e.x, e.y, e.z, 12, 0xffe0a0, 6, .12, .25, 6); flash(e.x, e.y, e.z, 0xffe0a0, 8, .1); sfx('block'); break;
@@ -172,9 +219,9 @@ function sync(map, list, make, upd, drop) {
 // ---------- enemies: articulated rigs (parts named <type>_armL etc. in enemies.glb) ----------
 const ETPL = {};
 for (const k in ET) ETPL[k] = enemiesG.children.find(c => c.name.replace(/\d+$/, '') === k) || null;
-const FALLBACK = { bomber: 'runner', knight: 'grunt', shaman: 'shooter', skeleton: 'grunt', rat: 'runner', archer: 'shooter', ghoul: 'splitter', dknight: 'knight', warden: 'boss' };
+const FALLBACK = { stalker: 'grunt', bomber: 'runner', knight: 'grunt', shaman: 'shooter', skeleton: 'grunt', rat: 'runner', archer: 'shooter', ghoul: 'splitter', dknight: 'knight', warden: 'boss' };
 const PART_RE = /_(body|head|jaw|armL|armR|legL|legR|leg\d|tail|wingL|wingR|ring|tent\d|shield|weapon|eye|fuse|staff|crown)$/;
-const RIM = { boss: 0xff5a20, bomber: 0xffa020, knight: 0xa0c0ff, shaman: 0x40ff90, skeleton: 0xbfd4ff, rat: 0xffb060, archer: 0xbfd4ff, ghoul: 0x7aff6a, dknight: 0xff4a4a, warden: 0x5ad8ff };
+const RIM = { stalker: 0x9a4cff, boss: 0xff5a20, bomber: 0xffa020, knight: 0xa0c0ff, shaman: 0x40ff90, skeleton: 0xbfd4ff, rat: 0xffb060, archer: 0xbfd4ff, ghoul: 0x7aff6a, dknight: 0xff4a4a, warden: 0x5ad8ff };
 function makeEnemy(e) {
   const tpl = ETPL[e.type] || ETPL[FALLBACK[e.type]] || ETPL.grunt;
   const g = tpl.clone(), mats = [], parts = {};
@@ -183,7 +230,8 @@ function makeEnemy(e) {
     if (o !== g) { const m = o.name.match(PART_RE); if (m) parts[m[1]] = { o, r: o.rotation.clone(), p: o.position.clone() }; }
     if (o.isMesh) { o.material = o.material.clone(); enhance(o.material, e.elite ? 0xffc640 : RIM[e.type] ?? 0x7a4cff); mats.push({ m: o.material, c: o.material.emissive.clone(), i: o.material.emissiveIntensity }); }
   });
-  if (!ETPL[e.type]) for (const m of mats) m.c.set(RIM[e.type]), m.i = .5; // placeholder tint until the rig exists
+  if (e.type === 'stalker') for (const m of mats) m.m.color.setHex(0x1a1424); // a shadow-black grunt: only its eyes glow, the rim light outlines it violet
+  else if (!ETPL[e.type]) for (const m of mats) m.c.set(RIM[e.type]), m.i = .5; // placeholder tint until the rig exists
   g.scale.setScalar(e.sc);
   let ring = null;
   if (e.elite) { ring = makeCircle('sigil', 0xffc640); ring.scale.setScalar(1.4); ring.position.y = .05; g.add(ring); }
@@ -201,42 +249,83 @@ const CC_OV = {
   charm: () => { const o = model('illusion__mask', 0xf0a6ff); o.scale.setScalar(1.1); return o; },
   poly: (r, h) => { const o = model('arcane__sheep', 0xd84cff, { shadow: true }); o.scale.setScalar(Math.max(.9, r * 1.6)); return o; }, // the monster itself is hidden meanwhile
 };
+// attack poses: [body pitch fwd, body twist, crouch, arm L raise, arm R raise, leg R lift] for the windup (w) and the strike (s),
+// blended by how far the windup is (smoothstep: slow coil, hard commit) and how fresh the strike is (snaps, then settles)
+const POSE = {
+  swipe:  { w: [-.1, .6, 0, .4, 2.2, 0],   s: [.3, -1.1, 0, 0, -2.6, 0] },
+  smash:  { w: [-.35, 0, -.06, 2.8, 2.8, 0], s: [.55, 0, .18, -3.4, -3.4, 0] },
+  slam:   { w: [-.25, 0, .1, 2.4, 2.4, 0],  s: [.5, 0, .25, -2.8, -2.8, 0] },
+  thrust: { w: [.15, .35, .12, 0, .9, 0],   s: [.35, -.5, 0, 0, -1.8, 0] },
+  bash:   { w: [.3, -.2, .15, -1, .3, 0],   s: [.5, 0, 0, -1.6, -.6, 0] },
+  lunge:  { w: [.35, 0, .28, -.8, -.8, 0],  s: [.1, 0, -.1, 1.4, 1.4, 0] },
+  leap:   { w: [.3, 0, .32, -1, -1, 0],     s: [-.1, 0, -.15, 2, 2, 0] },
+  quake:  { w: [-.1, .15, 0, .8, .8, 1.3],  s: [.25, 0, .2, -.4, -.4, -1.6] },
+  orb:    { w: [-.2, 0, 0, .6, 2, 0],       s: [.3, 0, 0, 0, -.8, 0] },
+  volley: { w: [-.25, 0, -.04, 2.2, 2.2, 0], s: [.35, 0, 0, -.6, -.6, 0] },
+  hex:    { w: [-.3, 0, -.05, 2.6, 2.6, 0], s: [.4, 0, .1, -1, -1, 0] },
+  mend:   { w: [-.3, 0, -.05, 2.4, 2.4, 0], s: [0, 0, 0, 0, 0, 0] },
+  call:   { w: [0, 0, 0, 0, 0, 0],          s: [-.4, 0, -.1, 3, 3, 0] }, // the boss throws its arms up to call the rocks
+  fuse:   { w: [0, 0, .08, 0, 0, 0],        s: [0, 0, 0, 0, 0, 0] },
+};
+const CASTS = { orb: 0x40ff70, volley: 0x40ff70, hex: 0x40ff90, mend: 0x80ffb0 };
 function animEnemy(v, e, dt, t) {
-  const tp = ET[e.type], P = v.parts, g = v.g;
-  const pos = g.position, last = v.last || pos.clone();
-  const sp = Math.hypot(pos.x - last.x, pos.z - last.z) / Math.max(dt, 1e-4);
+  const tp = ET[e.type], P = v.parts, g = v.g, pos = g.position, ID = 1 / Math.max(dt, 1e-4);
+  const last = v.last || pos.clone(), sp = Math.hypot(pos.x - last.x, pos.z - last.z) * ID, vy = (pos.y - last.y) * ID;
   v.last = pos.clone(); v.spd += (Math.min(sp, 20) - v.spd) * Math.min(1, dt * 8);
   const frozen = e.ts || (e.cc && ['freeze', 'stasis', 'encase'].includes(e.cc));
   const walk = frozen ? 0 : clamp(v.spd / (tp.spd * 1.1), 0, 1.6);
   if (!frozen) v.ph += dt * (3 + v.spd * 1.7);
-  v.flinch = Math.max(0, v.flinch - dt * 6); v.strike = Math.max(0, v.strike - dt * 4);
-  const wind = frozen ? (v.windKeep || 0) : (e.a || 0); v.windKeep = wind;
-  const S1 = Math.sin(v.ph), C1 = Math.cos(v.ph), stun = e.cc === 'stun', breath = Math.sin(t * 2.2 + e.id);
-  // whole body: bob, lean into the windup, lunge on the strike, flinch from hits, wobble when stunned
-  const bob = Math.abs(S1) * .06 * walk;
-  g.rotation.x = -wind * .28 + v.strike * .35 - v.flinch * .22 + (tp.boss ? 0 : walk * .06);
-  g.rotation.z = stun ? Math.sin(t * 13) * .14 : 0;
-  g.position.y += bob * v.sc;
-  if (!Object.keys(P).length) { g.scale.set(v.sc * (1 - wind * .08 + v.flinch * .05), v.sc * (1 + wind * .12 - v.flinch * .08 + breath * .02), v.sc * (1 - wind * .08)); return; }
-  const set = (k, rx = 0, ry = 0, rz = 0, py = 0) => { const q = P[k]; if (!q) return; q.o.rotation.set(q.r.x + rx, q.r.y + ry, q.r.z + rz); if (py) q.o.position.y = q.p.y + py; };
-  set('body', walk * .08 + breath * .02, 0, S1 * .05 * walk, breath * .01);
-  if (e.type === 'splitter' && P.body) { const q = Math.sin(t * 6 + e.id) * .06 + Math.abs(S1) * .08 * walk + wind * .18 - v.flinch * .1; P.body.o.scale.set(1 + q, 1 - q * 1.4, 1 + q); P.body.o.rotation.x = 0; }
-  set('legL', S1 * .75 * walk); set('legR', -S1 * .75 * walk);
-  for (let i = 0; i < 4; i++) set('leg' + i, Math.sin(v.ph + (i % 2 ? Math.PI : 0) + (i > 1 ? Math.PI / 2 : 0)) * .8 * walk);
-  const raise = wind * (tp.atk === 'smash' ? 2.6 : 1.9), swing = v.strike * (tp.atk === 'smash' ? 3.2 : 2.2);
-  set('armL', -S1 * .5 * walk - raise + swing, 0, breath * .05);
-  set('armR', S1 * .5 * walk - raise * (tp.atk === 'swipe' ? 1.2 : 1) + swing, 0, -breath * .05);
-  set('head', -v.flinch * .3 + breath * .04 + (wind > 0 ? -wind * .25 : 0), Math.sin(t * .7 + e.id) * .15);
-  set('jaw', wind * .6 + v.strike * .4);
-  set('tail', 0, Math.sin(t * 6 + e.id) * .5);
+  v.flinch = Math.max(0, v.flinch - dt * 6); v.strike = Math.max(0, v.strike - dt * 3.2);
+  // turning: lean into it
+  const yr = v.ly == null ? 0 : Math.atan2(Math.sin(g.rotation.y - v.ly), Math.cos(g.rotation.y - v.ly)) * ID; v.ly = g.rotation.y;
+  v.turn = (v.turn || 0) + (clamp(yr, -8, 8) - (v.turn || 0)) * Math.min(1, dt * 6);
+  // airborne (leaps, launches): stretch on the way, squash on landing
+  const air = e.y > .25 && e.cc !== 'bubble' && e.cc !== 'lift';
+  if (v.air && !air) v.squash = 1; v.air = air; v.squash = Math.max(0, (v.squash || 0) - dt * 5);
+  v.airK = (v.airK || 0) + ((air ? 1 : 0) - (v.airK || 0)) * Math.min(1, dt * 10);
+  const w0 = frozen ? (v.windKeep || 0) : (e.a || 0); v.windKeep = w0;
+  if (!frozen && (e.ak || w0 > 0)) v.ak = e.ak || v.ak; // keep the last attack's pose through the strike
+  const ak = v.ak || tp.atk, pose = POSE[ak] || POSE.swipe, wind = w0 * w0 * (3 - 2 * w0), str = v.strike * v.strike;
+  const shiver = w0 > .75 ? Math.sin(t * 70 + e.id) * (w0 - .75) * .3 : 0; // trembling with effort just before the blow
+  const q = i => pose.w[i] * wind + pose.s[i] * str;
+  const stun = e.cc === 'stun', rising = e.y < -.05, breath = Math.sin(t * 2.2 + e.id), fd = v.fdir || 1;
+  const bp = q(0), tw = q(1), cr = q(2) + v.squash * .22 - Math.min(.16, Math.abs(vy) * .02) * v.airK;
+  // whole body: bob, lean, crouch / stretch, flinch from hits, wobble when stunned, claw up out of the ground on spawn
+  g.rotation.x = bp + shiver * .3 - v.flinch * .22 + (tp.boss ? 0 : walk * .06) + (rising ? .35 : 0) + v.airK * .2;
+  g.rotation.z = (stun ? Math.sin(t * 13) * .14 : 0) - clamp(v.turn * .035, -.18, .18) * Math.min(1, walk + .3) + v.flinch * .12 * fd;
+  g.position.y += Math.abs(Math.sin(v.ph)) * .06 * walk * v.sc;
+  g.scale.set(v.sc * (1 + cr * .5), v.sc * (1 - cr + breath * .015), v.sc * (1 + cr * .5));
+  // casters gather power at the hands while they chant
+  if (CASTS[ak] && w0 > 0 && !frozen && Math.random() < .6) {
+    const h = tp.h * v.sc, f = g.rotation.y, a = rand(0, TAU), r = rand(.5, 1);
+    const hx = pos.x + Math.sin(f) * .6 * v.sc, hy = pos.y + h * .85, hz = pos.z + Math.cos(f) * .6 * v.sc;
+    emit(hx + Math.cos(a) * r, hy + rand(-.5, .5), hz + Math.sin(a) * r, -Math.cos(a) * r * 3, 0, -Math.sin(a) * r * 3, CASTS[ak], .1 + .12 * w0, .3);
+  }
+  if ((ak === 'leap' || ak === 'lunge' || ak === 'bash') && w0 > .5 && Math.random() < .25) emit(pos.x + rand(-.4, .4), .1, pos.z + rand(-.4, .4), rand(-1, 1), rand(1, 2), rand(-1, 1), 0xd8c8a8, .1, .4, 6); // pawing the ground
+  if (!Object.keys(P).length) return;
+  const set = (k, rx = 0, ry = 0, rz = 0, py = 0) => { const p = P[k]; if (!p) return; p.o.rotation.set(p.r.x + rx, p.r.y + ry, p.r.z + rz); if (py) p.o.position.y = p.p.y + py; };
+  const S1 = Math.sin(v.ph), limp = stun ? .6 : 0, claw = rising ? 2.2 + Math.sin(t * 9 + e.id) * .5 : 0, tuck = v.airK;
+  set('body', walk * .08 + breath * .02, tw, S1 * .05 * walk, breath * .01);
+  if (e.type === 'splitter' && P.body) { const k = Math.sin(t * 6 + e.id) * .06 + Math.abs(S1) * .08 * walk + wind * .18 - v.flinch * .1; P.body.o.scale.set(1 + k, 1 - k * 1.4, 1 + k); P.body.o.rotation.x = 0; }
+  set('legL', S1 * .75 * walk * (1 - tuck) - tuck * .9); set('legR', -S1 * .75 * walk * (1 - tuck) - tuck * .6 - q(5));
+  for (let i = 0; i < 4; i++) set('leg' + i, Math.sin(v.ph + (i % 2 ? Math.PI : 0) + (i > 1 ? Math.PI / 2 : 0)) * .8 * walk * (1 - tuck) + tuck * (i < 2 ? -.7 : .7));
+  const armL = q(3) + claw + tuck * 1.2 - limp, armR = q(4) + (rising ? 4.4 - claw : 0) + tuck * 1.2 - limp;
+  set('armL', -S1 * .5 * walk - armL, 0, breath * .05 + tuck * .5 + limp * .3);
+  set('armR', S1 * .5 * walk - armR, 0, -breath * .05 - tuck * .5 - limp * .3);
+  // the head eyes you up while it isn't busy attacking (and droops when stunned)
+  const look = w0 || v.strike > .2 ? 0 : clamp(Math.atan2(Math.sin(Math.atan2(camera.position.x - pos.x, camera.position.z - pos.z) - g.rotation.y), Math.cos(Math.atan2(camera.position.x - pos.x, camera.position.z - pos.z) - g.rotation.y)), -.7, .7);
+  v.look = (v.look || 0) + (look - (v.look || 0)) * Math.min(1, dt * 5);
+  set('head', -v.flinch * .3 + breath * .04 - wind * .25 + limp * .5 + str * .2, v.look * .8 + Math.sin(t * .7 + e.id) * .08, v.flinch * .2 * fd);
+  set('jaw', wind * .6 + str * .5 + (rising ? .5 : 0));
+  set('tail', 0, Math.sin(t * (6 + wind * 10) + e.id) * (.5 + wind * .3));
   set('wingL', 0, 0, Math.sin(t * 30) * .6); set('wingR', 0, 0, -Math.sin(t * 30) * .6);
   set('ring', 0, t * (1 + wind * 6), 0);
-  for (let i = 0; i < 6; i++) set('tent' + i, Math.sin(t * 3 + i * 1.3) * .3, 0, Math.cos(t * 2.5 + i) * .3);
-  set('shield', wind * -.4, 0, 0);
-  set('weapon', -wind * 1.4 + swing * .8);
-  set('staff', -wind * .8, 0, Math.sin(t * 2) * .1);
+  for (let i = 0; i < 6; i++) set('tent' + i, Math.sin(t * (3 + wind * 6) + i * 1.3) * (.3 + wind * .3), 0, Math.cos(t * 2.5 + i) * .3);
+  set('shield', ak === 'bash' ? -wind * 1.1 - str * .6 : -wind * .4, ak === 'bash' ? wind * .4 : 0, 0);
+  set('weapon', -q(4) * .6);
+  set('staff', -wind * (ak === 'hex' || ak === 'volley' ? 1.6 : .8) + str * .5, 0, Math.sin(t * 2) * .1);
   set('eye', 0, Math.sin(t * 1.3 + e.id) * .25, 0);
-  if (P.fuse) { P.fuse.o.scale.setScalar(1 + wind * (1 + Math.sin(t * 40)) * .6); }
+  if (P.fuse) { P.fuse.o.scale.setScalar(1 + w0 * (1 + Math.sin(t * 40)) * .6); }
 }
 let linkPool = [];
 function renderEnemies(src, dt, t, a) {

@@ -35,14 +35,16 @@ function reactionOf(stEl, byEl) {
 }
 
 const ET = {
-  grunt:    { hp: 40,   spd: 3.8, r: .5,  h: 1.8, dmg: 10, reach: 1.9, cost: 1, from: 1, kb: 1,   poise: 30,  atk: 'swipe',  wind: .5,  cd: 1.3 },
+  // alt: a second move with its own range band and cooldown, so no monster is one-note
+  grunt:    { hp: 40,   spd: 3.8, r: .5,  h: 1.8, dmg: 10, reach: 1.9, cost: 1, from: 1, kb: 1,   poise: 30,  atk: 'swipe',  wind: .5,  cd: 1.3, alt: { atk: 'leap', min: 4.5, max: 9, wind: .55, cd: 8, dmg: 12 } },
   runner:   { hp: 22,   spd: 7,   r: .45, h: 1.0, dmg: 8,  reach: 3.2, cost: 1, from: 2, kb: 1.4, poise: 15,  atk: 'lunge',  wind: .38, cd: 1.5 },
-  shooter:  { hp: 34,   spd: 3,   r: .6,  h: 2.3, dmg: 9,  reach: 26,  cost: 3, from: 3, kb: 1,   poise: 25,  atk: 'orb',    wind: .65, cd: 2.2, ranged: 1, keep: [9, 15] },
+  shooter:  { hp: 34,   spd: 3,   r: .6,  h: 2.3, dmg: 9,  reach: 26,  cost: 3, from: 3, kb: 1,   poise: 25,  atk: 'orb',    wind: .65, cd: 2.2, ranged: 1, keep: [9, 15], alt: { atk: 'volley', min: 0, max: 24, wind: .9, cd: 9, dmg: 6 } },
   bomber:   { hp: 24,   spd: 6.2, r: .5,  h: 1.25, dmg: 26, reach: 2.4, cost: 2, from: 3, kb: 1.2, poise: 10, atk: 'fuse',   wind: .95, cd: 9 },
   splitter: { hp: 70,   spd: 2.6, r: .65, h: 1.0, dmg: 12, reach: 2.0, cost: 2, from: 4, kb: .8,  poise: 40,  atk: 'slam',   wind: .55, cd: 1.4, split: 1 },
-  brute:    { hp: 190,  spd: 2.3, r: 1.1, h: 2.7, dmg: 24, reach: 3.4, cost: 5, from: 5, kb: .25, poise: 130, atk: 'smash',  wind: .95, cd: 2.1 },
-  knight:   { hp: 120,  spd: 3.3, r: .6,  h: 2.1, dmg: 17, reach: 3.6, cost: 4, from: 6, kb: .4,  poise: 80,  atk: 'thrust', wind: .6,  cd: 1.7, shield: 1 },
-  shaman:   { hp: 60,   spd: 2.9, r: .55, h: 2.1, dmg: 0,  reach: 9,   cost: 4, from: 7, kb: 1,   poise: 30,  atk: 'mend',   wind: 1.1, cd: 4,   ranged: 1, keep: [12, 18] },
+  stalker:  { hp: 48,   spd: 4.6, r: .45, h: 1.9, dmg: 12, reach: 1.9, cost: 3, from: 4, kb: 1,   poise: 25,  atk: 'swipe',  wind: .45, cd: 1.4, alt: { atk: 'blink', min: 5, max: 18, wind: .6, cd: 5.5, dmg: 15 } },
+  brute:    { hp: 190,  spd: 2.3, r: 1.1, h: 2.7, dmg: 24, reach: 3.4, cost: 5, from: 5, kb: .25, poise: 130, atk: 'smash',  wind: .95, cd: 2.1, alt: { atk: 'quake', min: 4, max: 15, wind: 1.1, cd: 8, dmg: 20 } },
+  knight:   { hp: 120,  spd: 3.3, r: .6,  h: 2.1, dmg: 17, reach: 3.6, cost: 4, from: 6, kb: .4,  poise: 80,  atk: 'thrust', wind: .6,  cd: 1.7, shield: 1, alt: { atk: 'bash', min: 4, max: 9, wind: .7, cd: 7, dmg: 15 } },
+  shaman:   { hp: 60,   spd: 2.9, r: .55, h: 2.1, dmg: 0,  reach: 9,   cost: 4, from: 7, kb: 1,   poise: 30,  atk: 'mend',   wind: 1.1, cd: 4,   ranged: 1, keep: [12, 18], alt: { atk: 'hex', min: 0, max: 22, wind: 1.2, cd: 5, dmg: 13 } },
   boss:     { hp: 1500, spd: 2.1, r: 2.2, h: 5.6, dmg: 30, reach: 5,   cost: 0, from: 99, kb: .04, poise: 650, atk: 'smash', wind: 1.05, cd: 2.2, boss: 1 },
 };
 const waveBudget = w => 10 + w * 6;
@@ -232,7 +234,7 @@ function ccEnd(e) {
   if (c.type === 'bubble') { e.vy = -2; ev({ k: 'fx', m: 'water.2', f: 'pop', x: r2(e.x), y: r2(e.y + 1), z: r2(e.z) }); }
   if (c.type === 'lift') e.vy = -24;
 }
-function launch(e, vy) { if (!e || e.dead || ET[e.type].boss) return; if (e.cc && ['bubble', 'lift', 'stasis'].includes(e.cc.type)) return; e.vy = Math.max(e.vy, vy * (ET[e.type].kb > .3 ? 1 : .5)); e.y = Math.max(e.y, .05); e.atk = null; }
+function launch(e, vy) { if (!e || e.dead || ET[e.type].boss) return; if (e.cc && ['bubble', 'lift', 'stasis'].includes(e.cc.type)) return; e.vy = Math.max(e.vy, vy * (ET[e.type].kb > .3 ? 1 : .5)); e.y = Math.max(e.y, .05); e.atk = null; e.leap = null; }
 function pull(e, x, z, k) { const dx = x - e.x, dz = z - e.z, d = Math.hypot(dx, dz) || 1, t = ET[e.type]; e.kx += dx / d * k * t.kb; e.kz += dz / d * k * t.kb; }
 function push(e, x, z, k) { pull(e, x, z, -k); }
 
@@ -655,7 +657,7 @@ function spawnEnemy(type, x, z, elite = false, sc = 1) {
   const t = ET[type];
   const hp = t.hp * (1 + .12 * (S.wave - 1)) * (elite ? 4 : 1) * sc * (t.boss ? 1 + .35 * (S.wave / 5 - 1) : 1) * (S.mod === 'swarm' ? .5 : 1);
   const e = { id: S.nid++, type, x, z, y: -2.6, rise: .8, hp, max: hp, kx: 0, kz: 0, vy: 0, st: {}, stk: {}, src: {}, dotT: .5, m: statusMods({ st: {} }),
-    acd: rand(.6, 1.6), sp: 4, yaw: Math.atan2(-x, -z), sc: sc * (elite ? 1.35 : 1), elite, fall: false, ch: 0, cdx: 0, cdz: 0, chHit: [],
+    acd: rand(.6, 1.6), acd2: rand(2, 5), sp: 4, yaw: Math.atan2(-x, -z), sc: sc * (elite ? 1.35 : 1), elite, fall: false, ch: 0, cdx: 0, cdz: 0, chHit: [],
     cc: null, atk: null, poise: t.poise * (1 + .1 * S.wave), sh: 0, link: null, wander: rand(0, TAU), enraged: false };
   S.enemies.push(e); ev({ k: 'spawn', x: r2(x), z: r2(z), s: r2(t.r * e.sc) });
   return e;
@@ -667,14 +669,25 @@ function bomberBlast(e, p, early) {
   aoe(e.x, e.z, R, early ? 70 : 45, 'explosion', p, e.id, 10);
 }
 // telegraphed attacks: start (windup with a ground warning) -> resolve
-function startAttack(e, tgt) {
-  const t = ET[e.type], dx = tgt.x - e.x, dz = tgt.z - e.z, yaw = Math.atan2(dx, dz), R = t.r * e.sc;
-  const wind = t.wind * (e.enraged ? .75 : 1);
+function startAttack(e, tgt, al = null) {
+  const t = ET[e.type], dx = tgt.x - e.x, dz = tgt.z - e.z, yaw = Math.atan2(dx, dz), R = t.r * e.sc, k = al?.atk || t.atk;
+  const wind = (al?.wind ?? t.wind) * (e.enraged ? .75 : 1);
   if (e.pen > S.t && !e.dead) { MOVE['light.3'].smite(e); if (e.cc) return; } // Penance: the attack is struck down before it starts
-  e.atk = { k: t.atk, t: wind, max: wind, yaw, tx: tgt.x, tz: tgt.z, lure: tgt.lure };
+  if (k === 'blink') { // Stalker: vanish, step out of the dark just behind the target, then swipe
+    const d = Math.hypot(dx, dz) || 1, q = confine({ x: tgt.x + dx / d * 2, z: tgt.z + dz / d * 2 }, 1);
+    ev({ k: 'fx', m: 'foe', f: 'blink', x: r2(e.x), z: r2(e.z), x2: r2(q.x), z2: r2(q.z), h: r2(t.h * e.sc) });
+    e.x = q.x; e.z = q.z;
+    return startAttack(e, tgt, { atk: 'swipe', wind: al.wind, dmg: al.dmg });
+  }
+  e.atk = { k, t: wind, max: wind, yaw, tx: tgt.x, tz: tgt.z, lure: tgt.lure, dmg: al?.dmg };
   e.yaw = yaw;
   let tele;
-  switch (t.atk) {
+  switch (k) {
+    case 'leap': { const r = 2.3 * e.sc ** .5; Object.assign(e.atk, { lx: tgt.x, lz: tgt.z, lr: r }); tele = { shape: 'circle', x: tgt.x, z: tgt.z, r }; break; }
+    case 'quake': tele = { shape: 'line', x: e.x, z: e.z, yaw, len: 16, w: 2.6 }; break;
+    case 'bash': tele = { shape: 'line', x: e.x, z: e.z, yaw, len: al.max + 1, w: 1.8 }; break;
+    case 'hex': Object.assign(e.atk, { hx: tgt.x, hz: tgt.z }); tele = { shape: 'circle', x: tgt.x, z: tgt.z, r: 2.6 }; break;
+    case 'volley': tele = null; break;
     case 'swipe': tele = { shape: 'cone', x: e.x, z: e.z, yaw, r: t.reach * e.sc + .4, ang: 110 }; break;
     case 'lunge': tele = { shape: 'line', x: e.x, z: e.z, yaw, len: t.reach * e.sc + 1, w: 1.3 }; break;
     case 'slam': tele = { shape: 'circle', x: e.x, z: e.z, r: t.reach * e.sc }; break;
@@ -684,12 +697,31 @@ function startAttack(e, tgt) {
     case 'mend': tele = { shape: 'circle', x: e.x, z: e.z, r: 9, ally: 1 }; break;
     case 'orb': tele = null; break;
   }
-  ev({ k: 'tele', id: e.id, a: t.atk, d: r2(wind), ...(tele ? Object.fromEntries(Object.entries(tele).map(([k, v]) => [k, typeof v === 'number' ? r2(v) : v])) : {}) });
+  ev({ k: 'tele', id: e.id, a: k, d: r2(wind), ...(tele ? Object.fromEntries(Object.entries(tele).map(([k, v]) => [k, typeof v === 'number' ? r2(v) : v])) : {}) });
 }
 const inCone = (p, x, z, yaw, r, ang) => { const dx = p.x - x, dz = p.z - z, d = Math.hypot(dx, dz); return d < r && (d < .6 || (dx * Math.sin(yaw) + dz * Math.cos(yaw)) / d > Math.cos(ang / 2 * Math.PI / 180)); };
 const inLine = (p, x, z, yaw, len, w) => { const dx = p.x - x, dz = p.z - z, f = dx * Math.sin(yaw) + dz * Math.cos(yaw), s = Math.abs(dx * Math.cos(yaw) - dz * Math.sin(yaw)); return f > -.5 && f < len && s < w / 2 + .4; };
+function foeOrb(e, a, ps, off, dmg, spd = 15) {
+  const tgt = a.lure ? { x: a.tx, y: 0, z: a.tz } : ps.reduce((b, p) => !b || Math.hypot(p.x - e.x, p.z - e.z) < Math.hypot(b.x - e.x, b.z - e.z) ? p : b, null);
+  if (!tgt) return;
+  const o = V(e.x, e.y + 1.75 * e.sc, e.z), v = V(tgt.x, tgt.y + 1.2, tgt.z).sub(o).normalize().applyAxisAngle(V(0, 1, 0), off).multiplyScalar(spd);
+  S.shots.push({ id: S.nid++, foe: 1, mv: 'foe', el: 'foe', x: o.x, y: o.y, z: o.z, vx: v.x, vy: v.y, vz: v.z, life: 3, dmg, sc: 1 });
+}
+// boss: call down a rain of burning rocks, three marked circles on each player, falling one after another
+function bossMeteors(e, ps, scale) {
+  ev({ k: 'strike', id: e.id, a: 'call' });
+  for (const p of ps) for (let i = 0; i < 3; i++) {
+    const q = i ? confine({ x: p.x + rand(-4, 4), z: p.z + rand(-4, 4) }, 1) : { x: p.x, z: p.z }, d = 1.1 + i * .4, r = 2.6;
+    ev({ k: 'tele', a: 'meteor', shape: 'circle', x: r2(q.x), z: r2(q.z), r, d: r2(d) });
+    later(d, () => {
+      ev({ k: 'fx', m: 'foe', f: 'meteor', x: r2(q.x), z: r2(q.z), r });
+      for (const o of players()) if (!o.down && Math.hypot(o.x - q.x, o.z - q.z) < r + .3 && o.y < 1.5) enemyHits(o, 20 * scale, e);
+    });
+  }
+}
+const LOCKED = new Set(['smash', 'thrust', 'lunge', 'leap', 'quake', 'bash', 'hex']); // committed: no turning to follow you mid-windup
 function resolveAttack(e) {
-  const t = ET[e.type], a = e.atk, sc = 1 + .06 * (S.wave - 1), dmg = t.dmg * sc * (e.elite ? 1.5 : 1), ps = players().filter(p => !p.down);
+  const t = ET[e.type], a = e.atk, sc = 1 + .06 * (S.wave - 1), dmg = (a.dmg ?? t.dmg) * sc * (e.elite ? 1.5 : 1), ps = players().filter(p => !p.down);
   e.atk = null; e.acd = t.cd * rand(.85, 1.15) * (e.enraged ? .7 : 1);
   ev({ k: 'strike', id: e.id, a: a.k });
   if (a.lure) for (const n of S.ents) if (n.lure && Math.hypot(n.x - a.tx, n.z - a.tz) < 1.5) n.hits = (n.hits || 0) + 1; // a decoy took the blow
@@ -709,13 +741,29 @@ function resolveAttack(e) {
       for (const p of ps) if (inLine(p, x0, z0, a.yaw, L, 1.3) && p.y < 1.2) enemyHits(p, dmg, e);
       break;
     }
-    case 'orb': {
-      const tgt = a.lure ? { x: a.tx, y: 0, z: a.tz } : ps.reduce((b, p) => !b || Math.hypot(p.x - e.x, p.z - e.z) < Math.hypot(b.x - e.x, b.z - e.z) ? p : b, null);
-      if (!tgt) break;
-      const o = V(e.x, e.y + 1.75 * e.sc, e.z), v = V(tgt.x, tgt.y + 1.2, tgt.z).sub(o).normalize().multiplyScalar(15);
-      S.shots.push({ id: S.nid++, foe: 1, mv: 'foe', el: 'foe', x: o.x, y: o.y, z: o.z, vx: v.x, vy: v.y, vz: v.z, life: 3, dmg, sc: 1 });
+    case 'orb': foeOrb(e, a, ps, 0, dmg); break;
+    case 'volley': for (let i = -2; i <= 2; i++) foeOrb(e, a, ps, i * .17, dmg, 12); break; // a fan of five slower orbs: step out of the gaps
+    case 'leap': e.leap = { x0: e.x, z0: e.z, x1: a.lx, z1: a.lz, t: 0, dmg, r: a.lr }; break; // lands in stepEnemies
+    case 'bash': { // shield first, a long charge down the marked lane
+      const L = ET[e.type].alt.max + 1, x0 = e.x, z0 = e.z;
+      e.x += Math.sin(a.yaw) * L * .9; e.z += Math.cos(a.yaw) * L * .9; collide(e, t.r * e.sc);
+      ev({ k: 'fx', m: 'foe', f: 'bash', x: r2(x0), z: r2(z0), x2: r2(e.x), z2: r2(e.z) });
+      for (const p of ps) if (inLine(p, x0, z0, a.yaw, L, 1.8) && p.y < 1.4) enemyHits(p, dmg, e);
       break;
     }
+    case 'quake': { // a stomp that rips a line of stone spikes along the ground toward you
+      const x0 = e.x, z0 = e.z, fx = Math.sin(a.yaw), fz = Math.cos(a.yaw), R = t.r * e.sc, hit = new Set();
+      for (let i = 0; i < 7; i++) later(i * .07, () => {
+        const x = x0 + fx * (R + 1 + i * 2.1), z = z0 + fz * (R + 1 + i * 2.1);
+        ev({ k: 'fx', m: 'foe', f: 'quake', x: r2(x), z: r2(z), i });
+        for (const p of players()) if (!p.down && !hit.has(p.id) && Math.hypot(p.x - x, p.z - z) < 1.7 && p.y < 1) { hit.add(p.id); enemyHits(p, dmg, e); }
+      });
+      break;
+    }
+    case 'hex': // a curse ring at your feet that bursts when the chant ends
+      ev({ k: 'fx', m: 'foe', f: 'hex', x: r2(a.hx), z: r2(a.hz), r: 2.6 });
+      for (const p of ps) if (Math.hypot(p.x - a.hx, p.z - a.hz) < 2.9 && p.y < 2) enemyHits(p, dmg, e);
+      break;
     case 'fuse': e.blown = 1; bomberBlast(e, null, false); kill(e, null, null); break;
     case 'mend': for (const o of enemiesNear(e.x, e.z, 9)) if (o !== e && !ET[o.type].boss) { o.hp = Math.min(o.max, o.hp + o.max * .25); o.sh = Math.max(o.sh, 25 * sc); } ev({ k: 'fx', m: 'foe', f: 'mend', x: r2(e.x), z: r2(e.z) }); break;
   }
@@ -750,6 +798,17 @@ function stepEnemies(dt) {
     if (e.cc) { e.cc.t -= dt * (e.cc.type === 'stasis' ? 1 : 1); if (e.cc.t <= 0) ccEnd(e); }
     const ctype = e.cc?.type, hard = ctype && HARD.has(ctype);
     if (e.pid) { handToWizard(e, hard, ctype); continue; }
+    if (e.leap && (hard || ctype === 'bubble' || ctype === 'lift')) e.leap = null; // knocked out of the air: just falls
+    if (e.leap) { // airborne: arc onto the marked spot and land with a crash
+      const L = e.leap, u = Math.min(1, L.t += dt / .5);
+      e.x = L.x0 + (L.x1 - L.x0) * u; e.z = L.z0 + (L.z1 - L.z0) * u; e.y = Math.sin(u * Math.PI) * 2.6; e.vy = 0;
+      if (u >= 1) {
+        e.leap = null; e.y = 0; collide(e, R, sol);
+        ev({ k: 'fx', m: 'foe', f: 'leap', x: r2(e.x), z: r2(e.z), r: r2(L.r) });
+        for (const p of ps) if (Math.hypot(p.x - e.x, p.z - e.z) < L.r + .3 && p.y < 1.2) enemyHits(p, L.dmg, e);
+      }
+      continue;
+    }
     // vertical: held aloft by bubble / levitate, otherwise gravity (launches, slams)
     if (ctype === 'bubble' || ctype === 'lift') { e.y += ((ctype === 'lift' ? 3.2 : 2.2) - e.y) * Math.min(1, dt * 4); e.vy = 0; }
     else if (e.y > 0 || e.vy > 0) {
@@ -810,7 +869,7 @@ function stepEnemies(dt) {
     }
     const dx = tgt.x - e.x, dz = tgt.z - e.z, d = Math.hypot(dx, dz) || 1;
     if (e.atk) { // winding up: turn slowly toward the target, then strike
-      if (e.atk.k !== 'smash' && e.atk.k !== 'thrust' && e.atk.k !== 'lunge') e.yaw = lerpAngle(e.yaw, Math.atan2(dx, dz), Math.min(1, dt * 2));
+      if (!LOCKED.has(e.atk.k)) e.yaw = lerpAngle(e.yaw, Math.atan2(dx, dz), Math.min(1, dt * 2));
       if ((e.atk.t -= dt * rate) <= 0) resolveAttack(e);
       continue;
     }
@@ -820,7 +879,10 @@ function stepEnemies(dt) {
       for (const p of ps) if (!e.chHit.includes(p.id) && Math.hypot(p.x - e.x, p.z - e.z) < R + .7) { e.chHit.push(p.id); enemyHits(p, 25 * scale, e); }
       continue;
     }
-    const rooted = ctype === 'root';
+    const rooted = ctype === 'root', al = t.alt;
+    if (al && (e.acd2 -= dt * rate) <= 0 && d >= al.min && d <= al.max && tgt.y < 1.5 && !tgt.lure && !(rooted && al.atk !== 'volley' && al.atk !== 'hex')) {
+      e.acd2 = al.cd * rand(.85, 1.15) * (e.enraged ? .7 : 1); startAttack(e, tgt, al); continue;
+    }
     if (t.ranged) {
       const [lo, hi] = t.keep, w = d > hi ? 1 : d < lo ? -1 : 0, side = Math.sin(S.t * .7 + e.id) * .6;
       const g = navTo(e, tgt);
@@ -836,7 +898,9 @@ function stepEnemies(dt) {
     }
     if (t.boss && (e.sp -= dt) <= 0) {
       e.sp = rand(3.5, 5.5) * (e.enraged ? .7 : 1);
-      if (Math.random() < .5) { S.rings.push({ x: e.x, z: e.z, r: R, life: 2.4, hit: [] }); ev({ k: 'ring', x: r2(e.x), z: r2(e.z), r: R }); }
+      const roll = Math.random();
+      if (roll < .3) bossMeteors(e, ps, scale);
+      else if (roll < .65) { S.rings.push({ x: e.x, z: e.z, r: R, life: 2.4, hit: [] }); ev({ k: 'ring', x: r2(e.x), z: r2(e.z), r: R }); }
       else { e.ch = .9; e.cdx = dx / d; e.cdz = dz / d; e.chHit = []; ev({ k: 'roar', x: r2(e.x), z: r2(e.z), yaw: r2(e.yaw) }); }
     }
   }

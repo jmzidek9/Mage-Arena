@@ -12,9 +12,9 @@ const CELL = 50, HALL_W = 5, HALL_H = 4.8, STAIR_D = 6, ROOM_ACTIVE = 1, ROOM_CL
 Object.assign(ET, { // medieval foes (zone: dungeon keeps them out of the Arena's spawn pool)
   skeleton: { hp: 46,   spd: 3.7, r: .45, h: 1.85, dmg: 11, reach: 2.0, cost: 1, from: 1, kb: 1,   poise: 30,  atk: 'swipe',  wind: .5,  cd: 1.3, zone: 'dungeon' },
   rat:      { hp: 18,   spd: 7.4, r: .42, h: .7,  dmg: 7,  reach: 3.0, cost: 1, from: 1, kb: 1.5, poise: 10,  atk: 'lunge',  wind: .35, cd: 1.4, zone: 'dungeon' },
-  archer:   { hp: 32,   spd: 3,   r: .45, h: 1.85, dmg: 9,  reach: 26,  cost: 2, from: 2, kb: 1,   poise: 22,  atk: 'orb',    wind: .7,  cd: 2.1, ranged: 1, keep: [7, 13], zone: 'dungeon' },
-  ghoul:    { hp: 75,   spd: 4.4, r: .6,  h: 1.7, dmg: 14, reach: 2.2, cost: 2, from: 3, kb: .8,  poise: 45,  atk: 'slam',   wind: .55, cd: 1.5, zone: 'dungeon' },
-  dknight:  { hp: 150,  spd: 3.1, r: .65, h: 2.2, dmg: 18, reach: 3.6, cost: 4, from: 4, kb: .35, poise: 90,  atk: 'thrust', wind: .6,  cd: 1.8, shield: 1, zone: 'dungeon' },
+  archer:   { hp: 32,   spd: 3,   r: .45, h: 1.85, dmg: 9,  reach: 26,  cost: 2, from: 2, kb: 1,   poise: 22,  atk: 'orb',    wind: .7,  cd: 2.1, ranged: 1, keep: [7, 13], zone: 'dungeon', alt: { atk: 'volley', min: 0, max: 22, wind: .9, cd: 9, dmg: 6 } },
+  ghoul:    { hp: 75,   spd: 4.4, r: .6,  h: 1.7, dmg: 14, reach: 2.2, cost: 2, from: 3, kb: .8,  poise: 45,  atk: 'slam',   wind: .55, cd: 1.5, zone: 'dungeon', alt: { atk: 'leap', min: 4, max: 9, wind: .5, cd: 7, dmg: 14 } },
+  dknight:  { hp: 150,  spd: 3.1, r: .65, h: 2.2, dmg: 18, reach: 3.6, cost: 4, from: 4, kb: .35, poise: 90,  atk: 'thrust', wind: .6,  cd: 1.8, shield: 1, zone: 'dungeon', alt: { atk: 'bash', min: 4, max: 9, wind: .7, cd: 7, dmg: 16 } },
   warden:   { hp: 1700, spd: 2.2, r: 1.8, h: 4.6, dmg: 30, reach: 4.6, cost: 0, from: 99, kb: .04, poise: 650, atk: 'smash', wind: 1.05, cd: 2.2, boss: 1, minions: ['skeleton', 'rat'], zone: 'dungeon' },
 });
 let DUN = null; // the current floor: rooms, halls, pillars, stair pieces, nav table (all in world coordinates)
