@@ -74,26 +74,26 @@ function newPlayer(id, el, el2 = null) {
   return { id, el, el2, cur: el, x: id === 'h' ? -2 : 2, y: 0, z: 8, vy: 0, yaw: 0, pitch: 0, hp: 100, max: 100, down: false, rev: 0,
     cds: {}, ult: 0, bf: {}, bd: {}, dcd: 0, dashT: 0, dx: 0, dz: 0, dashAt: -9, jumpN: 0, dashN: 0, swapN: 0, dashes: 0, novaN: 0,
     casts: 0, jumps: 0, up: {}, inp: { yaw: 0, pitch: 0, k: [] }, prevK: [], ch: null, chT: 0, chg: null, mo: null,
-    hpHist: [], combo: 0, comboT: 0, regenT: 0, stats: { kills: 0, dmg: 0, combos: 0, dodges: 0, best: 0 } };
+    combo: 0, comboT: 0, regenT: 0, stats: { kills: 0, dmg: 0, combos: 0, dodges: 0, best: 0 } };
 }
 const players = () => Object.values(S.players);
 const mate = p => S.mode === 'duel' ? null : players().find(q => q !== p); // no partner heals for your duel opponent
 const own = n => S.players[n.own];
 function stats(p) {
-  const n = k => p.up[k] || 0, bf = p.bf || {}, el = p.cur || p.el, tl = k => p.tal?.[k] || 0; // tl: permanent talents (empty in Duels)
+  const n = k => p.up[k] || 0, el = p.cur || p.el, tl = k => p.tal?.[k] || 0; // tl: permanent talents (empty in Duels)
   const comboB = 1 + Math.min(.3, Math.floor((p.combo || 0) / 10) * .05);
   const lowHp = el === 'blood' ? 1 + Math.max(0, 1 - p.hp / p.max) * .5 : 1;
   return {
-    cdMul: (1 - .04 * tl('haste')) * .85 ** n('swift') * (bf.pact > 0 ? .8 : 1) * (el === 'chrono' ? .82 : 1) * (bf.eclipse > 0 ? .7 : 1),
+    cdMul: (1 - .04 * tl('haste')) * .85 ** n('swift') * (el === 'chrono' ? .82 : 1),
     skillCd: .8 ** n('quick'),
-    dmgMul: (1 + .04 * tl('power')) * (1 + .2 * n('potency')) * (bf.pact > 0 ? 1.6 : 1) * comboB * lowHp * elementPower(p, el),
-    speed: 7.5 * (1 + .03 * tl('swift')) * (1 + .12 * n('fleet')) * (bf.tempest > 0 ? 1.6 : 1) * (bf.veil > 0 ? 1.3 : 1) * (bf.haste > 0 ? 1.35 : 1) * (el === 'wind' ? 1.15 : 1),
+    dmgMul: (1 + .04 * tl('power')) * (1 + .2 * n('potency')) * comboB * lowHp * elementPower(p, el),
+    speed: 7.5 * (1 + .03 * tl('swift')) * (1 + .12 * n('fleet')) * (el === 'wind' ? 1.15 : 1),
     aoe: (1 + .25 * n('wide')) * (el === 'explosion' ? 1.2 : 1),
     dur: 1 + .5 * n('linger'), multi: 1 + n('twin'), chain: 2 + n('twin'), pierce: n('pierce'), bounce: n('ricochet'),
-    steal: .04 * n('siphon') + (el === 'blood' ? .06 : 0) + (bf.eclipse > 0 ? .25 : 0),
+    steal: .04 * n('siphon') + (el === 'blood' ? .06 : 0),
     combo: 1 + .4 * n('combo'), dashCd: 1.2 * .6 ** n('blink'), detonate: n('detonate'), storm: n('storm'), bond: n('bond'),
     over: n('over') > 0, nova: n('nova'), ultMul: (1 + .35 * n('surge')) * (1 + .08 * tl('focus')), echo: n('echo') * .25,
-    dr: (el === 'earth' ? .85 : 1) * (bf.molten > 0 ? .6 : 1) * (bf.quake > 0 ? .5 : 1),
+    dr: (el === 'earth' ? .85 : 1),
   };
 }
 // resources some elements build up: Plasma's Heat, Soul's Souls, Arcane's charges
@@ -309,8 +309,6 @@ function hitEnemy(e, el, amount, p, kx = 0, kz = 0, kb = 3, o = {}) {
   let mul = o.crit || 1;
   if (p && (p.cur === 'shadow')) { const sx = p.x - e.x, sz = p.z - e.z, d = Math.hypot(sx, sz) || 1; if ((sx * Math.sin(e.yaw) + sz * Math.cos(e.yaw)) / d < -.3) mul *= 1.5; }
   if (p && p.cur === 'gravity' && e.y > .4) mul *= 2;
-  if (p && p.bf.crit > 0) { mul *= 2; p.bf.crit = 0; }
-  if (p && p.bf.veil > 0) { mul *= 2.5; p.bf.veil = 0; }
   const L = Math.hypot(kx, kz) || 1, k = kb * t.kb * (e.m?.kb || 1) * (p?.cur === 'water' ? 1.4 : 1);
   if (!(e.cc && ['bubble', 'lift', 'stasis', 'encase', 'freeze'].includes(e.cc.type))) { e.kx += kx / L * k; e.kz += kz / L * k; }
   const dealt = damage(e, amount * mul, el, p, { crit: mul >= 1.45, poise: o.poise });
@@ -389,16 +387,8 @@ function kill(e, el, p) {
 }
 function hurt(p, n, src = null) {
   if (p.down || p.dashT > 0 || p.bf.phoenix > 0 || p.bf.inv > 0 || S.phase !== 'fight') return false;
-  if (p.bd.bones > 0) { // Bone Armor: a plate takes the whole hit, then flies back at the attacker
-    p.bd.bones--;
-    const o = V(p.x, p.y + 1.2, p.z);
-    ev({ k: 'fx', m: 'bone.2', f: 'block', x: r2(o.x), y: r2(o.y), z: r2(o.z) });
-    if (src && !src.dead) shoot(p, { p, el: 'bone', m: MOVE['bone.2'], dmg: stats(p).dmgMul, o, d: center(src).sub(o).normalize() }, 30, { r: .4, dmg: 30 * stats(p).dmgMul, kb: 6 });
-    return true;
-  }
   n *= stats(p).dr;
-  if (p.bd.shell > 0) { const a = Math.min(p.bd.shell, n); p.bd.shell -= a; n -= a; if (p.bd.shell <= 0) { p.bf.shell = 0; shellBurst(p); } }
-  if (src && (p.cur === 'magma' || p.bf.molten > 0) && !src.dead) applyStatus(src, 'magma', p);
+  if (src && p.cur === 'magma' && !src.dead) applyStatus(src, 'magma', p);
   if (n <= 0) return true;
   p.hp -= n; ev({ k: 'hurt', id: p.id, n: Math.round(n) });
   if (p.cur === 'soul' && p.bd.souls > 0) p.bd.souls = Math.max(0, p.bd.souls - 2);
@@ -414,11 +404,6 @@ function enemyHits(p, dmg, e) {
   }
   if (e?.st?.illusion > 0 && Math.random() < 1 / 3) { ev({ k: 'miss', x: r2(p.x), y: r2(p.y + 1.6), z: r2(p.z), id: p.id }); return; } // Misdirection: it struck a phantom
   hurt(p, dmg * (1 - (e?.m?.weak || 0)), e);
-}
-function shellBurst(p) {
-  const c = { p, el: 'crystal', m: MOVE['crystal.2'], dmg: stats(p).dmgMul };
-  for (let i = 0; i < 16; i++) { const a = TAU * i / 16; shoot(p, c, 26, { o: V(p.x, 1.1 + p.y, p.z), d: V(Math.sin(a), .05, Math.cos(a)), dmg: 14 * c.dmg, life: .7, look: 'crystal__prism' }); }
-  ev({ k: 'fx', m: 'crystal.2', f: 'burst', x: r2(p.x), y: r2(p.y + 1), z: r2(p.z) });
 }
 
 // ===================== projectiles =====================
@@ -538,6 +523,7 @@ function stepMove(p, i, dt) {
     p.spawnN = p.spawn.n; Object.assign(p, { x: p.spawn.x, z: p.spawn.z, y: 0, vy: 0, kx: 0, kz: 0, mo: null, dashT: 0, cds: {} });
     p.yaw = p.spawn.yaw; if (p.id === myId) inp.yaw = p.spawn.yaw;
   }
+  if (p.tp && p.tp.n !== p.tpN) { p.tpN = p.tp.n; p.x = p.tp.x; p.z = p.tp.z; p.kx = p.kz = 0; p.mo = null; p.dashT = 0; } // a host-side teleport (Shadow Swap)
   if (p.down) return;
   const st = stats(p);
   const fx = -Math.sin(p.yaw), fz = -Math.cos(p.yaw), rx = Math.cos(p.yaw), rz = -Math.sin(p.yaw);
@@ -610,12 +596,6 @@ function fire(p, m, k, host) {
     EL[m.el].onCast?.(p, m, c);
     ev(castEv(p, m, c));
     m.cast?.(p, c);
-    if (m.slot === 0 && p.bf.mirror > 0) for (const side of [-1, 1]) { // Mirror Images copy the basic attack from beside you, at 40%
-      const o = c.o.clone().add(V(Math.cos(p.yaw), 0, -Math.sin(p.yaw)).multiplyScalar(side * 1.6)), aimPt = c.eye.clone().addScaledVector(c.aim, 40);
-      const d = aimPt.sub(o).normalize();
-      ev({ k: 'fx', m: 'illusion.3', f: 'mimic', x: r2(o.x), y: r2(o.y), z: r2(o.z) });
-      m.cast?.(p, { ...c, o, d, eye: o.clone(), aim: d, dmg: c.dmg * .4, multi: 1 });
-    }
   }
   if (!host || p.id === 'h') m.self?.(p, c);   // movement belongs to whoever owns the player
   if (!host) castFx(castEv(p, m, c));          // the guest draws its own cast at once (prediction)
@@ -623,8 +603,7 @@ function fire(p, m, k, host) {
 }
 // host: real casts. guest (host=false): same rules for prediction (cooldowns, self-movement, instant visuals)
 function stepCast(p, i, dt, host = true) {
-  const cdt = dt * (p.bf.haste > 0 ? 2 : 1); // Chrono's Accelerate
-  for (const el in p.cds) { const a = p.cds[el]; for (let s = 0; s < 5; s++) a[s] -= cdt; }
+  for (const el in p.cds) { const a = p.cds[el]; for (let s = 0; s < 5; s++) a[s] -= dt; }
   const kit = kitOf(p), held = p.bf.stun > 0 ? [] : i.k || [];
   // while down, drop Tab presses on both machines so host and guest never disagree about the active element after a revive
   if (p.down || S.phase === 'over' || (host && S.phase === 'lobby')) { p.ch = null; p.chg = null; p.prevK = []; p.swapN = i.swapN; return; }
@@ -686,6 +665,7 @@ function bomberBlast(e, p, early) {
 function startAttack(e, tgt) {
   const t = ET[e.type], dx = tgt.x - e.x, dz = tgt.z - e.z, yaw = Math.atan2(dx, dz), R = t.r * e.sc;
   const wind = t.wind * (e.enraged ? .75 : 1);
+  if (e.pen > S.t && !e.dead) { MOVE['light.3'].smite(e); if (e.cc) return; } // Penance: the attack is struck down before it starts
   e.atk = { k: t.atk, t: wind, max: wind, yaw, tx: tgt.x, tz: tgt.z, lure: tgt.lure };
   e.yaw = yaw;
   let tele;
@@ -791,12 +771,11 @@ function stepEnemies(dt) {
     }
     if (Math.hypot(e.kx, e.kz) < 5) collide(e, R, sol);
     if (hard || e.y > .3) continue;
-    // field effects (slow fields, eclipse) are written onto e.fs by entity ticks each frame
+    // field effects (slow fields, heat waves) are written onto e.fs by entity ticks each frame
     const fieldSlow = e.fs || 0; e.fs = 0;
     const slow = Math.min(.85, Math.max(e.m.slow, fieldSlow)), rate = (1 - slow) * haste;
-    const vis = ps.filter(p => !(p.bf.veil > 0));
     let tgt = null, bd = 1e9;
-    for (const p of vis) { const d = Math.hypot(p.x - e.x, p.z - e.z); if (d < bd) { bd = d; tgt = p; } }
+    for (const p of ps) { const d = Math.hypot(p.x - e.x, p.z - e.z); if (d < bd) { bd = d; tgt = p; } }
     for (const n of lures) { const d = Math.hypot(n.x - e.x, n.z - e.z); if (d < n.r && d * .5 < bd) { bd = d * .5; tgt = { x: n.x, y: 0, z: n.z, lure: 1 }; } } // Illusion decoys draw them in
     const spd = t.spd * rate;
     if (ctype === 'charm') { // turned against their own: hunt the nearest other monster and hit it
@@ -877,11 +856,8 @@ function stepPlayers(dt) {
     p.ult = Math.min(1, p.ult + dt * .008 * st.ultMul);
     if ((p.regenT += dt) >= .5) {
       p.regenT = 0;
-      p.hpHist.push(p.hp); if (p.hpHist.length > 7) p.hpHist.shift();
       if (p.cur === 'nature') p.hp = Math.min(p.max, p.hp + .75);
-      if (p.bf.bloom > 0) heal(p, 3.75);
     }
-    if (p.bf.shell <= 0 && p.bd.shell > 0) { p.bd.shell = 0; shellBurst(p); }
     if (p.bd.heat > 0) p.bd.heat = Math.max(0, p.bd.heat - 15 * dt); // Plasma Heat cools off
     if (p.bd.arc > 0 && (p.bd.arcT -= dt) <= 0) p.bd.arc = 0;      // Arcane charges fade when you stop casting
     if (p.cur === 'blades') { // Sword Halo: a sword forms every 2.5 s, and an orbiting sword cuts down anything that gets close

@@ -9,9 +9,9 @@ const bfSnap = bf => { const o = {}; for (const k in bf) if (bf[k] > 0) o[k] = r
 const snap = () => ({
   phase: S.phase, mode: S.mode, wave: S.wave, mod: S.mod, ts: S.tstop > 0 ? 1 : 0,
   duel: S.duel, dun: S.dun && { floor: S.dun.floor, seed: S.dun.seed, o: S.dun.o, st: S.dun.st, stairs: S.dun.stairs, wait: S.dun.wait },
-  players: Object.fromEntries(Object.values(S.players).map(p => [p.id, { id: p.id, ai: p.ai ? 1 : 0, kick: p.kick, spawn: p.spawn, el: p.el, el2: p.el2, cur: p.cur, x: r2(p.x), y: r2(p.y), z: r2(p.z), yaw: r2(p.yaw), pitch: r2(p.pitch),
+  players: Object.fromEntries(Object.values(S.players).map(p => [p.id, { id: p.id, ai: p.ai ? 1 : 0, kick: p.kick, spawn: p.spawn, tp: p.tp, el: p.el, el2: p.el2, cur: p.cur, x: r2(p.x), y: r2(p.y), z: r2(p.z), yaw: r2(p.yaw), pitch: r2(p.pitch),
     hp: Math.round(p.hp), max: p.max, down: p.down, rev: r2(p.rev), up: p.up, ult: r2(p.ult), bf: bfSnap(p.bf), ch: p.ch, chT: r2(p.chT), combo: p.combo, stats: p.stats,
-    r: [Math.round(p.bd.heat || 0), p.bd.souls || 0, p.bd.arc || 0, p.bd.swords || 0, p.bd.bones || 0, (p.bd.runeN || 0) % 3, p.bd.foc && S.t - p.bd.foc.t < 1.5 ? p.bd.foc.n : 0] }])), // element resources: heat, souls, arcane charges, swords, bone plates, rune count, laser focus
+    r: [Math.round(p.bd.heat || 0), p.bd.souls || 0, p.bd.arc || 0, p.bd.swords || 0, 0, (p.bd.runeN || 0) % 3, p.bd.foc && S.t - p.bd.foc.t < 1.5 ? p.bd.foc.n : 0] }])), // element resources: heat, souls, arcane charges, swords, (unused), rune count, laser focus
   enemies: S.enemies.filter(e => !e.pid).map(e => ({ id: e.id, type: e.type, x: r2(e.x), y: r2(e.y), z: r2(e.z), yaw: r2(e.yaw), hp: Math.round(e.hp), max: Math.round(e.max), sc: e.sc, elite: e.elite,
     st: Object.keys(e.st).map(k => ELIST.indexOf(k)), cc: e.cc?.type || 0, a: e.atk ? r2(1 - e.atk.t / e.atk.max) : 0, sh: Math.round(e.sh), lk: e.link?.g || 0, ts: S.tstop > 0 ? 1 : 0 })),
   shots: S.shots.slice(-160).map(s => ({ id: s.id, mv: s.mv, el: s.el, foe: s.foe ? 1 : 0, x: r2(s.x), y: r2(s.y), z: r2(s.z), vx: r2(s.vx), vy: r2(s.vy), vz: r2(s.vz), sc: r2(s.sc || 1) })),
@@ -207,9 +207,9 @@ function onGuestData(m) {
   const mine = R.players.g;
   if (mine) {
     const restart = lastPhase === 'over' && R.phase !== 'over';
-    if (!G || restart) G = Object.assign(newPlayer('g', mine.el, mine.el2), { x: mine.x, y: mine.y, z: mine.z, tal: R.mode === 'duel' ? {} : PROG.tal }); // talents too, so predicted movement matches the host
+    if (!G || restart) G = Object.assign(newPlayer('g', mine.el, mine.el2), { x: mine.x, y: mine.y, z: mine.z, tpN: mine.tp?.n, tal: R.mode === 'duel' ? {} : PROG.tal }); // talents too, so predicted movement matches the host
     if (G.cur !== mine.cur && !(G.swapAt > performance.now() - 600)) G.cur = mine.cur;
-    Object.assign(G, { kick: mine.kick, spawn: mine.spawn, el: mine.el, el2: mine.el2, hp: mine.hp, max: mine.max, down: mine.down, rev: mine.rev, up: mine.up, ult: mine.ult, combo: mine.combo, stats: mine.stats });
+    Object.assign(G, { kick: mine.kick, spawn: mine.spawn, tp: mine.tp, el: mine.el, el2: mine.el2, hp: mine.hp, max: mine.max, down: mine.down, rev: mine.rev, up: mine.up, ult: mine.ult, combo: mine.combo, stats: mine.stats });
     for (const k in mine.bf) G.bf[k] = mine.bf[k];
     if (mine.down) { G.x = mine.x; G.z = mine.z; }
     if (!playing || restart) { myEl = mine.el; showGame(); }
@@ -356,7 +356,7 @@ function frame(now, manual = false) {
     trauma = Math.max(0, trauma - dt * 1.6);
     const sh = trauma * trauma;
     camera.position.x += (Math.random() - .5) * sh * .5; camera.position.y += (Math.random() - .5) * sh * .5; camera.rotation.z += (Math.random() - .5) * sh * .08;
-    fovKick += (0 - fovKick) * Math.min(1, dt * 8); camera.fov = baseFov + fovKick * 10 + (mp.bf?.tempest > 0 ? 8 : 0); camera.updateProjectionMatrix();
+    fovKick += (0 - fovKick) * Math.min(1, dt * 8); camera.fov = baseFov + fovKick * 10; camera.updateProjectionMatrix();
     vm.visible = !mp.down;
     vmKick = Math.max(0, vmKick - dt * 5);
     const k = vmKick * vmKick, chargeK = renderAim(mp, dt), chan = mp.ch ? 1 : 0;
@@ -368,8 +368,6 @@ function frame(now, manual = false) {
     handR.position.z = hR0.z + k * .03;
     if (rigMats.staff_gem) rigMats.staff_gem.emissiveIntensity = 3 + Math.sin(t * 4) + k * 6 + chargeK * 8 + chan * 4;
     if (rigMats.hand_rune) rigMats.hand_rune.emissiveIntensity = 4 + chargeK * 10 + chan * 6;
-    const ghost = mp.bf?.veil > 0;
-    vm.traverse(o => { if (o.isMesh) { o.material.transparent = ghost; o.material.opacity = ghost ? .35 : 1; } });
     hud(src, mp);
   } else {
     camera.position.set(Math.sin(t * .06) * 30, 10, Math.cos(t * .06) * 30); camera.lookAt(0, 1, 0); vm.visible = false;

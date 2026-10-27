@@ -1,17 +1,17 @@
 # Graph Report - Test Game  (2026-10-27)
 
 ## Corpus Check
-- 26 files · ~133,031 words
+- 26 files · ~133,709 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 2 file(s) not represented in the graph (top: (none) 2)
 
 ## Summary
-- 651 nodes · 1205 edges · 28 communities (21 shown, 7 thin omitted)
+- 651 nodes · 1196 edges · 29 communities (22 shown, 7 thin omitted)
 - Extraction: 96% EXTRACTED · 4% INFERRED · 0% AMBIGUOUS · INFERRED: 46 edges (avg confidence: 0.89)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `4759133e`
+- Built from commit: `4676fed9`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -40,42 +40,43 @@
 - Mage Arena
 - initAudio
 - Similar moves (reviewed 2026-10-27)
+- Blender Assets
 - Elements
 - keyName
-- pol
+- SFX
 
 ## God Nodes (most connected - your core abstractions)
 1. `Elements` - 36 edges
-2. `ev()` - 24 edges
-3. `Mesh` - 23 edges
+2. `Mesh` - 23 edges
+3. `ev()` - 23 edges
 4. `react()` - 21 edges
 5. `stepEnemies()` - 21 edges
-6. `stats()` - 19 edges
-7. `push()` - 18 edges
+6. `stats()` - 18 edges
+7. `push()` - 17 edges
 8. `TRS()` - 15 edges
 9. `damage()` - 15 edges
-10. `stepPlayers()` - 13 edges
+10. `hostStep()` - 13 edges
 
 ## Surprising Connections (you probably didn't know these)
+- `Finishing pass` --references--> `bake_ao()`  [INFERRED]
+  vault/Blender Assets.md → blender/lib.py
 - `Blender Assets` --references--> `sigil()`  [INFERRED]
   vault/Blender Assets.md → blender/build_elements.py
 - `Blender Assets` --references--> `Mesh`  [INFERRED]
   vault/Blender Assets.md → blender/lib.py
-- `Finishing pass` --references--> `bake_ao()`  [INFERRED]
-  vault/Blender Assets.md → blender/lib.py
-- `Combos (reactions)` --references--> `react()`  [INFERRED]
+- `Sound effects (`audio/sfx/`, file names kept from the packs)` --references--> `SFX`  [INFERRED]
+  audio/CREDITS.md → js/core.js
+- `Combos (reactions)` --references--> `reactionOf()`  [INFERRED]
   vault/Combos.md → js/sim.js
-- `Flow` --references--> `onEvent()`  [INFERRED]
-  vault/Netcode.md → js/view.js
 
 ## Import Cycles
 - None detected.
 
-## Communities (28 total, 7 thin omitted)
+## Communities (29 total, 7 thin omitted)
 
 ### Community 0 - "sim.js"
 Cohesion: 0.07
-Nodes (87): addUlt(), aimOf(), alive(), aoe(), applyStatus(), blast(), bomberBlast(), bondMul() (+79 more)
+Nodes (86): addUlt(), aimOf(), alive(), aoe(), applyStatus(), blast(), bomberBlast(), bondMul() (+78 more)
 
 ### Community 1 - "core.js"
 Cohesion: 0.02
@@ -90,8 +91,8 @@ Cohesion: 0.05
 Nodes (61): animEnemy(), bestFor(), buildBar(), castFx(), CC_OV, COMBO_FX, DIFF, distTo() (+53 more)
 
 ### Community 4 - "build_enemies.py"
-Cohesion: 0.11
-Nodes (30): digit(), finger(), fist(), limb(), open_hand(), palm(), sleeve(), arm() (+22 more)
+Cohesion: 0.10
+Nodes (31): digit(), finger(), fist(), limb(), open_hand(), palm(), sleeve(), arm() (+23 more)
 
 ### Community 5 - "net.js"
 Cohesion: 0.11
@@ -106,20 +107,20 @@ Cohesion: 0.06
 Nodes (33): energyMat(), model(), r2(), aimBeam(), beamFx(), beamMesh(), _bgeo, blastFx() (+25 more)
 
 ### Community 8 - "Elements.md"
-Cohesion: 0.08
-Nodes (23): grab(), sp(), reactionOf(), Blender Assets, Conventions, Combos (reactions), Named reactions, Reaction kinds (for every other pair) (+15 more)
+Cohesion: 0.09
+Nodes (19): Combos (reactions), Named reactions, Reaction kinds (for every other pair), Enemies, Fighting them, Wave budget, Wave modifiers, Cross-platform (+11 more)
 
 ### Community 9 - "lib.py"
-Cohesion: 0.10
-Nodes (8): apply_bevel(), bake_ao(), basis(), pack_bundle(), Previewer, runes(), uv_ribbon(), Finishing pass
+Cohesion: 0.11
+Nodes (6): apply_bevel(), bake_ao(), pack_bundle(), Previewer, runes(), uv_ribbon()
 
 ### Community 10 - "Audio credits"
-Cohesion: 0.33
-Nodes (5): Audio credits, Music (`audio/music/`), Sound effects (`audio/sfx/`, file names kept from the packs), pickSample(), SFX
+Cohesion: 0.50
+Nodes (3): Audio credits, Music (`audio/music/`), Sound effects (`audio/sfx/`, file names kept from the packs)
 
 ### Community 11 - "build_elements.py"
-Cohesion: 0.14
-Nodes (14): arcpts(), crescent(), crescent_blade(), lens(), M(), mirror_shard(), plated_rock(), put() (+6 more)
+Cohesion: 0.13
+Nodes (16): arcpts(), blob_cloud(), crescent(), crescent_blade(), lens(), M(), mirror_shard(), plated_rock() (+8 more)
 
 ### Community 12 - "boltFx"
 Cohesion: 0.27
@@ -153,6 +154,10 @@ Nodes (3): MUSIC, playMood(), track()
 Cohesion: 0.40
 Nodes (4): Alike within one element, Similar moves (reviewed 2026-10-27), Similar (same role, different twist), Very similar (near-duplicates)
 
+### Community 25 - "Blender Assets"
+Cohesion: 0.40
+Nodes (5): grab(), sp(), Blender Assets, Conventions, Finishing pass
+
 ### Community 26 - "Elements"
 Cohesion: 0.06
 Nodes (36): 🐙 Abyss, 🔮 Arcane, Balance, 🗡️ Blades, 🩸 Blood, 💀 Bone, ⏳ Chrono, 🌠 Cosmic (+28 more)
@@ -163,17 +168,17 @@ Nodes (36): 🐙 Abyss, 🔮 Arcane, Balance, 🗡️ Blades, 🩸 Blood, 💀 B
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `Blender Assets` connect `Elements.md` to `lib.py`, `build_elements.py`, `Mesh`, `elements.js`?**
+- **Why does `Blender Assets` connect `Blender Assets` to `Elements.md`, `build_elements.py`, `Mesh`, `elements.js`?**
   _High betweenness centrality (0.278) - this node is a cross-community bridge._
 - **Are the 2 inferred relationships involving `react()` (e.g. with `r2()` and `Combos (reactions)`) actually correct?**
   _`react()` has 2 INFERRED edges - model-reasoned connections that need verification._
 - **Should `sim.js` be split into smaller, more focused modules?**
-  _Cohesion score 0.06786114221724523 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.06680393502630977 - nodes in this community are weakly interconnected._
 - **Why does `r2()` connect `elements.js` to `sim.js`, `core.js`?**
-  _High betweenness centrality (0.223) - this node is a cross-community bridge._
+  _High betweenness centrality (0.222) - this node is a cross-community bridge._
 - **Should `core.js` be split into smaller, more focused modules?**
   _Cohesion score 0.023255813953488372 - nodes in this community are weakly interconnected._
-- **Why does `Mesh` connect `Mesh` to `Elements.md`, `lib.py`, `build_elements.py`, `pol`?**
+- **Why does `Mesh` connect `Mesh` to `lib.py`, `build_elements.py`, `Blender Assets`?**
   _High betweenness centrality (0.183) - this node is a cross-community bridge._
 - **Should `dungeon.js` be split into smaller, more focused modules?**
   _Cohesion score 0.07486338797814207 - nodes in this community are weakly interconnected._

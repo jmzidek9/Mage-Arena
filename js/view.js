@@ -364,9 +364,8 @@ function makeWizard(p) {
   const mats = [];
   g.traverse(o => { if (!o.isMesh) return; o.material = o.material.clone(); enhance(o.material, EL[p.cur || p.el].color); mats.push(o.material); });
   const rc = makeCircle(p.el); rc.visible = false;
-  const shell = model('crystal__shell', 0xff5ad8); shell.visible = false; shell.scale.setScalar(1.3);
-  scene.add(g, rc, shell);
-  return { g, rc, mats, shell, cur: null };
+  scene.add(g, rc);
+  return { g, rc, mats, cur: null };
 }
 function tintWizard(v, el) {
   v.cur = el; const c = EL[el].color;
@@ -379,14 +378,9 @@ function renderPartner(src, dt, t, a) {
     if (fresh) v.g.position.copy(tg); else v.g.position.lerp(tg, a);
     v.g.rotation.y = lerpAngle(v.g.rotation.y, p.yaw + Math.PI, fresh ? 1 : a);
     v.g.rotation.x += ((p.down ? -1.35 : 0) - v.g.rotation.x) * Math.min(1, dt * 8);
-    const ghost = p.bf?.veil > 0 ? .12 : 1;
-    for (const m of v.mats) { m.transparent = ghost < 1; m.opacity = ghost; }
-    v.shell.visible = p.bf?.shell > 0; if (v.shell.visible) { v.shell.position.set(v.g.position.x, v.g.position.y + 1.1, v.g.position.z); v.shell.rotation.y += dt; }
-    if (p.bf?.molten > 0 && Math.random() < .5) emit(v.g.position.x + rand(-.5, .5), v.g.position.y + rand(.2, 2), v.g.position.z + rand(-.5, .5), 0, 1, 0, 0xff5a10, .2, .5, -1);
-    if (p.bf?.pact > 0 && Math.random() < .4) emit(v.g.position.x + rand(-.5, .5), v.g.position.y + rand(.2, 2), v.g.position.z + rand(-.5, .5), 0, 1, 0, 0xe8102e, .2, .5, -1);
     v.rc.visible = p.down; v.rc.position.set(v.g.position.x, .08, v.g.position.z); v.rc.scale.setScalar(1.3); spinCircle(v.rc, dt, .5 + p.rev * 3);
     setOpacity(v.rc.userData.mats, .25 + p.rev * .75);
-  }, v => { v.g.removeFromParent(); v.rc.removeFromParent(); v.shell.removeFromParent(); });
+  }, v => { v.g.removeFromParent(); v.rc.removeFromParent(); });
 }
 
 // ---------- channels (flamethrower, solar beam) for every player, aim reticle + charge for you ----------
@@ -404,14 +398,14 @@ function renderChannels(src, dt, t) {
   }
   for (const [id, v] of views.ch) if (!live.has(id)) { v.o.removeFromParent(); views.ch.delete(id); }
 }
-// ---------- element auras: Blades' orbiting swords, harvested Souls, Arcane charges, Illusion's mirror images, Plasma heat ----------
-// p.r = [heat, souls, arcane charges, swords, bone plates, rune count] (see snap)
+// ---------- element auras: Blades' orbiting swords, harvested Souls, Arcane charges, Plasma heat ----------
+// p.r = [heat, souls, arcane charges, swords, (unused), rune count, laser focus] (see snap)
 function renderAuras(src, dt, t) {
   const live = new Set();
   for (const p of Object.values(src.players)) {
     live.add(p.id);
     const mine = p.id === myId, q = mine ? me() : p, R = p.r || [], bf = p.bf || {}, down = p.down;
-    const v = views.aura.get(p.id) || (views.aura.set(p.id, { swords: [], souls: [], arc: [], imgs: [] }), views.aura.get(p.id));
+    const v = views.aura.get(p.id) || (views.aura.set(p.id, { swords: [], souls: [], arc: [] }), views.aura.get(p.id));
     const g = views.p.get(p.id)?.g, pos = mine || !g ? V(q.x, q.y, q.z) : g.position.clone(), yaw = q.yaw || 0;
     const pool = (list, n, make) => { while (list.length < n) { const o = make(); scene.add(o); list.push(o); } list.forEach((o, i) => o.visible = i < n && !down); return list.slice(0, down ? 0 : n); };
     // swords circle at the waist, pointing along their orbit
@@ -423,26 +417,6 @@ function renderAuras(src, dt, t) {
     // arcane charges whirl round you, quick and small
     const ac = pool(v.arc, R[2] || 0, () => model('arcane__orb', EL.arcane.color));
     ac.forEach((o, i) => { const a = t * 3.2 + TAU * i / 4, rr = mine ? .9 : .7; o.position.set(pos.x + Math.cos(a) * rr, pos.y + (mine ? .9 : 1.3) + Math.sin(t * 4 + i) * .06, pos.z + Math.sin(a) * rr); o.rotation.z += dt * 6; o.scale.setScalar(.35); });
-    // Illusion's mirror images at your sides (a little ahead of you in your own view, so you can see them).
-    // They slide out of you when cast, hover with mirror shards circling their feet, recoil when they fire (u.kick, set by the 'mimic' fx), and shatter when they end.
-    const on = bf.mirror > 0 && !down;
-    if (on && !v.imgOn) v.imgT = t;
-    if (!on && v.imgOn) for (const o of v.imgs) if (o.visible) { burst(o.position.x, o.position.y + 1.1, o.position.z, 40, 0xffc8ff, 5, .2, .5, 4); flash(o.position.x, o.position.y + 1, o.position.z, 0xf0a6ff, 10, .2); sfx('tink'); }
-    v.imgOn = on;
-    const im = pool(v.imgs, on ? 2 : 0, () => { const g = ghostWizard(EL.illusion.color), sh = ringOf('illusion__shard', EL.illusion.color, 5, .6, .3); g.add(sh); g.userData.shards = sh; g.userData.mats.push(...sh.userData.mats); return g; });
-    const out = easeOutBack(Math.min(1, (t - v.imgT) / .4)), sliding = t - v.imgT < .4;
-    im.forEach((o, i) => {
-      const u = o.userData, s = i ? 1 : -1, fx = -Math.sin(yaw), fz = -Math.cos(yaw), rx = Math.cos(yaw), rz = -Math.sin(yaw), side = (mine ? 2.5 : 1.6) * out, fw = mine ? 2.1 : 0; // in your own view they part sideways from in front of you, not out of the camera
-      u.kick = Math.max(0, (u.kick || 0) - dt * 5);
-      const back = u.kick * .35, bob = .15 + Math.sin(t * 2.2 + i * 1.7) * .1;
-      o.position.set(pos.x + rx * side * s + fx * (fw - back), pos.y + bob, pos.z + rz * side * s + fz * (fw - back));
-      o.rotation.set(-u.kick * .25, yaw + Math.PI, Math.sin(t * 1.6 + i * 2) * .06); // recoil leans back; idle sway
-      u.shards.rotation.y += dt * 1.8 * s; u.shards.position.y = .1 + Math.sin(t * 3 + i) * .05;
-      tint(o, shimmer(t + i));
-      const flick = bf.mirror < 1 ? (Math.sin(t * 40 + i) > 0 ? 1 : .3) : 1; // about to break
-      fade(o, Math.min(1, (t - v.imgT) * 4) * (mine ? .28 : .45) * (1 + .2 * Math.sin(t * 7 + i) + u.kick * 1.5) * flick);
-      if (sliding && Math.random() < .25 && o.position.distanceTo(camera.position) > 2.2) { const g = ghostWizard(EL.illusion.color); g.position.copy(o.position); g.rotation.copy(o.rotation); tint(g, shimmer(t + i)); addFx(g, .25, (g, k) => fade(g, (1 - k) * (mine ? .08 : .15))); } // afterimages as they slide out
-    });
     // Plasma: sparks off your hand as Heat builds, smoke while overheated
     if (!down && ((R[0] || 0) > 35 || bf.overheat > 0) && Math.random() < (bf.overheat > 0 ? .6 : (R[0] - 35) / 80)) {
       const h = handPos(p.id), hot = bf.overheat > 0;
@@ -516,15 +490,15 @@ function hud(src, mp) {
   if (sp.ult >= 1 && !hud.ultReady) sfx('ready');
   hud.ultReady = sp.ult >= 1;
   const bf = sp.bf || {}, tags = [];
-  for (const [k, n, c] of [['veil', 'VEILED', '#b08cff'], ['pact', 'BLOOD PACT', '#ff4060'], ['molten', 'MOLTEN', '#ff6a2a'], ['quake', 'BEDROCK', '#d9913a'], ['tempest', 'TEMPEST', '#9dffd6'], ['shell', 'SHELL', '#ff8ae8'], ['crit', 'NEXT HIT x2', '#ffd36a'], ['glide', 'GLIDE', '#9dffd6'], ['eclipse', 'ECLIPSE', '#9a4cff'], ['bloom', 'BLOOM', '#ff9ad8'], ['mirror', 'MIRRORED', '#f0a6ff'], ['fusion', 'FUSION', '#ff3ca8'], ['haste', 'ACCELERATED', '#ffb43a']])
-    if (bf[k] > 0) tags.push(`<span style="color:${c};border-color:${c}">${n}${k === 'shell' ? '' : ' ' + Math.ceil(bf[k])}</span>`);
+  for (const [k, n, c] of [['glide', 'GLIDE', '#9dffd6'], ['fusion', 'FUSION', '#ff3ca8']])
+    if (bf[k] > 0) tags.push(`<span style="color:${c};border-color:${c}">${n} ${Math.ceil(bf[k])}</span>`);
   const tagHtml = tags.join('');
   if (tagHtml !== hud.tags) { $('buffs').innerHTML = tagHtml; hud.tags = tagHtml; }
   // the current element's resource, if it has one
   const R = sp.r || [], pips = (n, of) => Array.from({ length: of }, (_, i) => `<span class="pip${i < n ? ' on' : ''}"></span>`).join(''), meter = f => `<span class="meter"><i style="width:${Math.round(clamp(f, 0, 1) * 100)}%"></i></span>`;
   const res = cur === 'plasma' ? (bf.overheat > 0 ? `OVERHEATED ${meter(1)}` : bf.fusion > 0 ? `FUSION ${meter(bf.fusion / 4)}` : `HEAT ${meter(R[0] / 100)} ${R[0] | 0}`)
     : cur === 'soul' ? `SOULS ${meter(R[1] / 15)} ${R[1] || 0}` : cur === 'arcane' ? `CHARGES ${pips(R[2], 4)}` : cur === 'blades' ? `SWORDS ${pips(R[3], 6)}`
-    : cur === 'rune' ? (R[5] === 2 ? `NEXT SPELL EMPOWERED ${pips(2, 2)}` : `RUNE ${pips(R[5], 2)}`) : cur === 'bone' && R[4] > 0 ? `BONE ARMOR ${pips(R[4], 4)}` : cur === 'laser' ? `FOCUS ${pips(R[6], 6)}` : '';
+    : cur === 'rune' ? (R[5] === 2 ? `NEXT SPELL EMPOWERED ${pips(2, 2)}` : `RUNE ${pips(R[5], 2)}`) : cur === 'laser' ? `FOCUS ${pips(R[6], 6)}` : '';
   if (res !== hud.res) { hud.res = res; $('res').innerHTML = res; $('res').classList.toggle('hidden', !res); $('res').classList.toggle('hot', cur === 'plasma' && (bf.overheat > 0 || R[0] > 80)); }
   const combo = sp.combo || 0;
   $('comboCt').classList.toggle('hidden', combo < 5);
@@ -544,8 +518,7 @@ function hud(src, mp) {
   $('lock').classList.toggle('hidden', locked() || usingVirt());
   $('touch').classList.toggle('hidden', !document.body.classList.contains('touching'));
   hurtT = Math.max(0, hurtT - 1 / 60 * 2.5); healT = Math.max(0, healT - 1 / 60 * 2);
-  const veil = bf.veil > 0;
-  $('vignette').style.boxShadow = `inset 0 0 ${120 + hurtT * 80}px rgba(255,20,50,${hurtT * .8})` + (healT > 0 ? `, inset 0 0 140px rgba(60,255,140,${healT * .35})` : '') + (veil ? ', inset 0 0 180px rgba(120,60,255,.45)' : '') + (bf.shell > 0 ? ', inset 0 0 90px rgba(255,120,230,.35)' : '') + (bf.pact > 0 ? `, inset 0 0 150px rgba(255,0,40,${.25 + .1 * Math.sin(performance.now() / 150)})` : '');
+  $('vignette').style.boxShadow = `inset 0 0 ${120 + hurtT * 80}px rgba(255,20,50,${hurtT * .8})` + (healT > 0 ? `, inset 0 0 140px rgba(60,255,140,${healT * .35})` : '');
 }
 
 // ===================== screens =====================
