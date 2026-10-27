@@ -41,6 +41,7 @@ ELS = {  # glow, core
     'laser': ((0.12, 1.0, 0.35), (0.85, 1.0, 0.9)),
     'arcane': ((0.8, 0.25, 1.0), (1.0, 0.85, 1.0)),
     'blades': ((1.0, 0.75, 0.15), (1.0, 0.97, 0.75)),
+    'ink': ((0.16, 0.26, 1.0), (0.72, 0.8, 1.0)),
 }
 G = {k: (mat(k + '_glow', g, emit=6), mat(k + '_core', c, emit=10)) for k, (g, c) in ELS.items()}
 
@@ -79,6 +80,8 @@ abyssm = mat('abyss_skin', (0.04, 0.05, 0.1), rough=0.35, metal=0.2, emit=0.15, 
 fleshm = mat('abyss_flesh', (0.14, 0.03, 0.09), rough=0.5, emit=0.3, ecolor=(0.4, 0.1, 0.5))
 dronem = mat('drone_shell', (0.82, 0.85, 0.9), rough=0.3, metal=0.5)
 clothm = mat('reaper_cloth', (0.03, 0.03, 0.06), rough=0.95)
+inkm = mat('ink_wet', (0.012, 0.013, 0.025), rough=0.08)  # glossy wet black ink
+bamboo = mat('bamboo', (0.55, 0.44, 0.2), rough=0.55)
 
 ALL = []          # every top-level exported object
 BY_EL = {}        # element -> objects, for preview renders
@@ -269,6 +272,13 @@ def rim(o, el, g, h, rng):
             a = TAU * i / 12
             o.flat(g, [pol(1.02, a - 0.012), pol(1.19, a - 0.008), pol(1.24, a), pol(1.19, a + 0.008), pol(1.02, a + 0.012)])
             o.stroke(h, pol(1.04, a - 0.045), pol(1.04, a + 0.045), 0.014)
+    elif st == 'ink':  # ink flicked off a brush: blots and drips all round the rim
+        for i in range(18):
+            a = TAU * i / 18 + rng.uniform(-0.05, 0.05)
+            o.dot(g, pol(1.06 + rng.uniform(0, 0.05), a), rng.uniform(0.018, 0.034), 0, 12)
+            if i % 3 == 0:
+                o.polyline(g, [pol(1.0 + 0.03 * t, a + 0.06) for t in range(5)], 0.012)
+                o.dot(h, pol(1.15, a + 0.06), 0.012, 0, 10)
 
 
 def sigil(s, el, g, h, rng):
@@ -470,7 +480,18 @@ def sigil(s, el, g, h, rng):
             s.flat(g, [tuple(d * 0.5 + n_ * 0.03), tuple(d * 0.1), tuple(d * 0.5 - n_ * 0.03)], z)
             s.stroke(h, tuple(d * 0.5 + n_ * 0.07), tuple(d * 0.5 - n_ * 0.07), 0.02, z)
         s.ring2d(h, (0, 0), 0.52, 0.012, z, 96)
-    s.annulus(h, 0.10, 0.12, z) if st not in ('shadow', 'chrono', 'gravity', 'light', 'spirit', 'blood', 'illusion', 'bone', 'rune', 'plasma', 'abyss', 'laser', 'arcane', 'blades') else None
+    elif st == 'ink':  # an ensō, the brushed Zen circle left open at the end, round a single brush mark
+        outer, inner = [], []
+        for i in range(61):
+            t = i / 60
+            a = math.pi * 0.62 + t * TAU * 0.9
+            w = 0.06 * (1 - t) ** 0.7 + 0.008  # heavy where the brush lands, drying to a thin tail
+            outer.append(pol(0.42 + w, a))
+            inner.append(pol(0.42 - w, a))
+        s.flat(g, outer + inner[::-1], z)
+        s.polyline(h, [(-0.06, 0.14), (0.0, 0.1), (0.05, 0.02), (0.02, -0.08), (-0.05, -0.15)], 0.03, z)  # one bold stroke
+        s.dot(h, (0.08, 0.16), 0.03, z)
+    s.annulus(h, 0.10, 0.12, z) if st not in ('shadow', 'chrono', 'gravity', 'light', 'spirit', 'blood', 'illusion', 'bone', 'rune', 'plasma', 'abyss', 'laser', 'arcane', 'blades', 'ink') else None
 
 
 def spell_circle(el):
@@ -1728,6 +1749,117 @@ for z in (7.5, 7.9, 8.3):
 m.ico(goldm, 0.24, TRS((0, 0, 8.72)), sub=2, smooth=True)
 m.ico(yh3, 0.1, TRS((0, -0.2, 8.72)), sub=1)
 put('blades', m.done())
+
+# ---------- INK ----------
+ig, ih = G['ink']
+
+
+def splat(m, mat_, c, r, z, rng, lobes=9, drops=10):
+    """An ink splat outline (wobbly blob with fingers) plus a spray of droplets around it."""
+    pts, ph, ph2 = [], rng.uniform(0, TAU), rng.uniform(0, TAU)
+    fingers = {rng.randrange(72) for _ in range(lobes // 2)}
+    for i in range(72):  # a rounded, lumpy blob; a few long splash fingers poke out of it
+        a = TAU * i / 72
+        k = 1 + 0.1 * math.sin(a * lobes + ph) + 0.07 * math.sin(a * 3 + ph2)
+        if any(min(abs(i - f), 72 - abs(i - f)) <= 1 for f in fingers):
+            k += 0.3 if i in fingers else 0.12
+        pts.append((c[0] + math.cos(a) * r * k, c[1] + math.sin(a) * r * k))
+    m.flat(mat_, pts, z)
+    for _ in range(drops):
+        a, d = rng.uniform(0, TAU), r * rng.uniform(1.35, 2.0)
+        m.dot(mat_, (c[0] + math.cos(a) * d, c[1] + math.sin(a) * d), r * rng.uniform(0.05, 0.13), z, 10)
+
+
+m = M('ink__drop')  # Ink Bolt: a glossy glob of ink, round nose toward -Y, tapering tail toward +Y
+m.lathe(inkm, [(0, -0.2), (0.11, -0.16), (0.15, -0.06), (0.13, 0.08), (0.07, 0.25), (0.02, 0.42), (0, 0.48)], n=16, M=aim((0, 1, 0)), smooth=True, noise=0.006)
+m.sphere(ih, 0.035, TRS((0.05, -0.12, 0.09)), u=8, v=6)  # a highlight glint
+for k in range(3):  # droplets flung off the tail
+    m.sphere(inkm, 0.035 - 0.008 * k, TRS((0.05 * (-1) ** k, 0.5 + 0.12 * k, 0.03 * k)), u=8, v=6)
+m.lathe(ig, [(0, -0.26), (0.19, -0.18), (0.2, 0.0), (0.12, 0.3), (0, 0.55)], n=12, M=aim((0, 1, 0)), smooth=True)  # indigo sheen around it
+put('ink', m.done())
+
+m = M('ink__stroke')  # Brush Stroke: a crescent of ink on the ground, radius 0.72..1, spanning 120 degrees round -Y (scaled to range in game)
+rng = random.Random('stroke')
+N_ = 40
+for side in (0, 1):  # the black stroke, then a slightly wider indigo halo under it
+    mat_, grow, z = (inkm, 0, 0.012) if side == 0 else (ig, 0.02, 0.004)  # a thin halo: wider, it blooms over the ink
+    outer, inner = [], []
+    for i in range(N_ + 1):
+        t = i / N_
+        a = -math.pi / 2 - TAU / 6 + t * TAU / 3
+        w = math.sin(math.pi * min(1, t * 1.25)) ** 0.6  # fat where the brush lands, tapering to a dry tail
+        outer.append(pol(0.86 + 0.14 * w + grow + 0.012 * math.sin(t * 37), a))
+        inner.append(pol(0.86 - 0.14 * w - grow + 0.01 * math.sin(t * 29), a))
+    m.flat(mat_, outer + inner[::-1], z)
+for r_, t0, t1 in ((0.93, 0.08, 0.7), (0.83, 0.15, 0.5)):  # wet highlights running along the stroke
+    m.polyline(ih, [pol(r_ + 0.006 * math.sin(i * 0.9), -math.pi / 2 - TAU / 6 + (t0 + (t1 - t0) * i / 30) * TAU / 3) for i in range(31)], 0.012, 0.016)
+for k in range(5):  # dry-brush streaks breaking off the tail
+    a0 = -math.pi / 2 + TAU / 6 - 0.05
+    r_ = 0.8 + 0.035 * k
+    m.polyline(inkm, [pol(r_, a0 + 0.012 * t) for t in range(int(6 + 4 * rng.random()))], 0.01, 0.014)
+for _ in range(14):  # spatter flicked off the sweep
+    a, d = -math.pi / 2 + rng.uniform(-1.1, 1.1), rng.uniform(1.05, 1.3)
+    m.dot(inkm, pol(d, a), rng.uniform(0.01, 0.03), 0.012, 10)
+put('ink', m.done(False))
+
+m = M('ink__pool')  # Ink Pool: a big glossy splat (unit radius) with an indigo rim
+rng = random.Random('pool')
+splat(m, ig, (0, 0), 0.82, 0.004, random.Random('pool'), 9, 0)
+splat(m, inkm, (0, 0), 0.75, 0.012, rng, 9, 14)
+for i in range(6):  # glinting ripples on the surface
+    m.annulus(ih, 0.2 + 0.09 * i, 0.205 + 0.09 * i, 0.016, 48, I, i * 0.7, i * 0.7 + 1.4)
+put('ink', m.done(False))
+
+m = M('ink__koi')  # Ink Koi: a koi of living ink swimming toward -Y; the tail is a child so it can wag
+m.lathe(inkm, [(0, -0.42), (0.08, -0.38), (0.13, -0.26), (0.14, -0.08), (0.11, 0.12), (0.06, 0.3), (0.035, 0.38)], n=16, M=aim((0, 1, 0), scale=(1, 0.8, 1)), smooth=True)
+for sx in (-1, 1):
+    m.sphere(ih, 0.025, TRS((sx * 0.085, -0.32, 0.04)), u=8, v=6)  # eyes
+    m.flat(ig, [(0, 0), (sx * 0.2, 0.06), (sx * 0.22, 0.16), (sx * 0.06, 0.1)], 0, TRS((sx * 0.1, -0.16, -0.06), (0, sx * 0.4, 0)))  # pectoral fins
+    m.tube(ih, [(sx * 0.05, -0.4, -0.02), (sx * 0.12, -0.48, -0.05), (sx * 0.2, -0.5, -0.1)], [0.008, 0.006, 0.002], n=4)  # barbels
+m.flat(ig, [(0, -0.2), (0.1, -0.1), (0.07, 0.15), (0, 0.25)], 0, TRS((0, 0, 0.1), (0, -math.pi / 2, 0)))  # dorsal fin
+for i in range(5):  # ink scales picked out in indigo
+    m.annulus(ih, 0.06, 0.068, 0, 16, TRS((0.0, -0.16 + i * 0.09, 0.105), (0.3, 0, 0)), math.pi, TAU)
+koi = m.done()
+put('ink', koi)
+t_ = M('ink__koi_tail', parent=koi)
+t_.loc = (0, 0.36, 0)
+t_.flat(ig, [(0, 0), (-0.22, 0.24), (-0.1, 0.22), (0, 0.12), (0.1, 0.22), (0.22, 0.24)], 0, TRS(rot=(0, math.pi / 2, 0)) @ TRS(rot=(0, 0, math.pi / 2)))
+t_.lathe(inkm, [(0.035, 0), (0.02, 0.1), (0, 0.12)], n=8, M=aim((0, 1, 0)), smooth=True)
+t_.done(False)
+
+m = M('ink__brush')  # a giant calligraphy brush, bristle tip at the origin, handle up +Z
+m.lathe(bamboo, [(0.07, 0.5), (0.075, 1.2), (0.085, 1.22), (0.075, 1.24), (0.075, 2.0), (0.085, 2.02), (0.075, 2.04), (0.07, 2.7)], n=14, smooth=True)  # bamboo handle with nodes
+m.lathe(darkmetal, [(0.09, 0.42), (0.1, 0.46), (0.1, 0.56), (0.08, 0.6)], n=14, smooth=True)  # ferrule
+m.lathe(inkm, [(0, 0), (0.05, 0.06), (0.12, 0.2), (0.11, 0.36), (0.085, 0.46)], n=14, smooth=True, noise=0.006)  # wet bristles
+m.ico(goldm, 0.08, TRS((0, 0, 2.74)), sub=1)
+m.tube(ih, [(0, 0, 2.78), (0.04, 0, 2.95), (0.1, 0, 3.05)], [0.012, 0.01, 0.006], n=5)  # tassel cord
+m.lathe(ig, [(0.07, 3.0), (0.1, 3.15), (0.02, 3.35)], n=8, M=TRS((0.1, 0, 0)))
+put('ink', m.done())
+
+m = M('ink__dragon_head')  # Ink Dragon: the head, snout toward -Y (the body is a trail of ink__dragon_seg in game)
+m.lathe(inkm, [(0, -1.05), (0.14, -1.0), (0.2, -0.7), (0.26, -0.35), (0.34, -0.05), (0.3, 0.2), (0.15, 0.35), (0, 0.38)], n=16, M=aim((0, 1, 0), scale=(1, 0.75, 1)), smooth=True)
+for sx in (-1, 1):
+    m.sphere(ih, 0.06, TRS((sx * 0.2, -0.5, 0.14)), u=10, v=8)  # glowing eyes
+    m.lathe(ih, [(0.02, 0), (0.08, 0.05), (0.02, 0.12)], n=8, M=aim((0, -1, 0.2), (sx * 0.2, -0.56, 0.15)))  # brow ridge
+    m.tube(inkm, [(sx * 0.15, -0.1, 0.18), (sx * 0.28, 0.25, 0.42), (sx * 0.32, 0.6, 0.55), (sx * 0.26, 0.85, 0.62)], [0.05, 0.04, 0.025, 0.004], n=6)  # antlers
+    m.tube(inkm, [(sx * 0.27, 0.42, 0.48), (sx * 0.45, 0.5, 0.62)], [0.025, 0.004], n=5)
+    m.tube(ih, [(sx * 0.12, -0.95, 0.0), (sx * 0.35, -1.05, -0.05), (sx * 0.65, -0.95, -0.2), (sx * 0.85, -0.75, -0.15)], [0.014, 0.011, 0.007, 0.002], n=4)  # whiskers
+    for k in range(4):  # flame-like mane down the cheeks
+        m.flat(ig, [(0, 0), (sx * 0.28, 0.12), (sx * 0.15, 0.22)], 0, TRS((sx * 0.25, 0.0 + k * 0.1, -0.05 + k * 0.05), (0, sx * 0.3, 0)))
+m.lathe(inkm, [(0, -0.95), (0.1, -0.9), (0.18, -0.6), (0.22, -0.3), (0, -0.2)], n=14, M=aim((0, 1, 0), (0, 0, -0.17), (1, 1, 0.4)), smooth=True)  # lower jaw
+for i in range(6):  # fangs
+    x = -0.15 + i * 0.06
+    m.lathe(ih, [(0.018, 0), (0, 0.08)], n=4, M=aim((0, 0, -1), (x, -0.9 + abs(x) * 0.6, -0.08)))
+m.ico(ih, 0.09, TRS((0, -0.3, -0.12)), sub=2, smooth=True)  # the pearl glow in its throat
+put('ink', m.done())
+
+m = M('ink__dragon_seg')  # one body segment (repeated along the dragon's trail), facing -Y
+m.sphere(inkm, 1, TRS(scale=(0.3, 0.42, 0.28)), u=14, v=10)
+m.lathe(ig, [(0.05, 0), (0, 0.32)], n=4, M=aim((0, 0.35, 1), (0, 0.05, 0.22)))  # dorsal fin flame
+for sx in (-1, 1):
+    m.flat(ig, [(0, 0), (sx * 0.22, 0.12), (sx * 0.12, 0.28)], 0, TRS((sx * 0.22, -0.05, -0.05), (0.3, sx * 0.4, 0)))
+m.annulus(ih, 0.27, 0.29, 0, 24, TRS(rot=(math.pi / 2, 0, 0)), 0, math.pi)  # a glowing scale band over the back
+put('ink', m.done())
 
 # ---------- save, export, render ----------
 bpy.context.view_layer.update()

@@ -236,7 +236,7 @@ function testMove(m, frames = 180, budget = 1500) {
 }
 function selfTest() {
   const res = [], t = (name, ok) => res.push(`${ok ? 'PASS' : 'FAIL'} ${name}`);
-  t(`${ELIST.length} elements with 5 moves each`, ELIST.length === 29 && ELIST.every(k => EL[k].moves.length === 5));
+  t(`${ELIST.length} elements with 5 moves each`, ELIST.length === 30 && ELIST.every(k => EL[k].moves.length === 5));
   t('every move has a name, icon, description and a valid mode', Object.values(MOVE).filter(m => m.el).every(m => m.name && m.icon && m.desc && ['tap', 'aim', 'charge', 'channel'].includes(m.mode)));
   t('every move does something', Object.values(MOVE).filter(m => m.el).every(m => m.cast || m.self || m.tick));
   t('aim moves have a range, charge moves a charge time, channels a max', Object.values(MOVE).filter(m => m.el).every(m => (m.mode !== 'aim' || m.range) && (m.mode !== 'charge' || m.charge) && (m.mode !== 'channel' || m.max)));

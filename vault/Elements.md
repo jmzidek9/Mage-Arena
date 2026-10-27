@@ -1,6 +1,6 @@
 # Elements
 
-29 elements, each with its own passive and 5 moves on **LMB, RMB, Q, E** and **R** (the ultimate, which charges as you deal damage and kill).
+30 elements, each with its own passive and 5 moves on **LMB, RMB, Q, E** and **R** (the ultimate, which charges as you deal damage and kill).
 Each element applies its own status on hit; hitting an enemy that carries a *different* element's status triggers a reaction (see [[Combos]]).
 Everything here is generated from `js/elements.js` (the `ELEMENTS` table), so it matches the game.
 
@@ -37,6 +37,7 @@ Move modes: **tap** casts on press (LMB repeats while held), **hold to aim** sho
 | 📡 Laser | targeted | REFRACTION (chain) |
 | 🔮 Arcane | spellbound | ARCANE SURGE (overload) |
 | 🗡️ Blades | lacerated | THOUSAND CUTS (chain) |
+| 🖌️ Ink | inked | INKBLOT (spread) |
 
 ## 🔥 Fire
 Raw destruction. Stack burns on everything, then blow it all up.
@@ -308,7 +309,7 @@ Smoke and mirrors. Fool monsters into fighting phantoms, and each other.
 | LMB | 🦋 **Phantom Moths** | 0.45 s | Release a glowing moth flanked by two phantom moths that flutter off to hunt enemies. Phantoms deal half damage. |
 | RMB | 🪞 **Decoy** *(hold to aim, release to cast)* | 8 s | Conjure a phantom double of yourself at the target. Monsters within 12 m attack it instead of you for 5 s. Once it is struck 3 times, or time runs out, it shatters, damaging and beguiling everything around it. |
 | Q | 😵‍💫 **Mesmerize** | 10 s | A hypnotic pulse charms every monster in front of you for 4 s: they turn on each other and attack the nearest monster instead of you. Bosses resist it. |
-| E | 👥 **Mirror Images** | 16 s | Two mirror images of you stand at your sides for 8 s, copying your basic attack at 40% power, whichever element you are using. |
+| E | 👥 **Mirror Images** | 16 s | Two mirror images of you stand at your sides for 8 s, copying your basic attack at 40% power, whichever element you are using. They slide out of you, hover with mirror shards circling their feet, recoil as they fire, flicker in their last second and shatter. |
 | R | 🎪 **Phantasmagoria** | ultimate | Trap everything within 14 m in a hall of mirrors: monsters are charmed and fight each other for 5 s, then the mirrors shatter for 120 damage to every one of them. |
 
 ## 💀 Bone
@@ -414,6 +415,21 @@ A sword saint. Summoned swords orbit you, guard you, and fly wherever you point.
 | Q | 💃 **Blade Dance** | 8 s | Dash 9 m forward in a whirl of blades, cutting everything you pass through for 32 damage, and forge 2 new swords. |
 | E | ☔ **Rain of Blades** *(hold to aim, release to cast)* | 11 s | Twelve swords rain down on the target area, 20 damage each, and the ground they pierce slows enemies by 30% for 4 s. |
 | R | ⚜️ **Colossal Blade** *(hold to aim, release to cast)* | ultimate | A colossal sword falls from the heavens onto the target: 160 damage and a huge launch. It stands for 5 s sending out shockwaves, and your halo fills with 6 swords. |
+
+## 🖌️ Ink
+A calligrapher. Living ink: brush strokes that mire, koi that hunt, and a dragon painted across the sky.
+
+**Passive.** Bleeding Ink: monsters you kill with Ink burst in a splash that hits everything within 3 m for 15 and inks it. Inked enemies are 25% slower.
+
+| Key | Move | Cooldown | What it does |
+|---|---|---|---|
+| LMB | 💧 **Ink Bolt** | 0.4 s | Fling a glob of ink that splashes where it lands, inking everything within 2 m. |
+| RMB | 🖌️ **Brush Stroke** | 5 s | Sweep a giant brush through a 120° arc in front of you: 30 damage to everything within 7.5 m and a hard shove, leaving a crescent of wet ink that mires anything on it (50% slower) for 5 s. |
+| Q | 🐟 **Ink Koi** | 9 s | Paint three koi of living ink that swim through the air, hunting the nearest enemies. Each one bites for 26 and bursts in a splash of ink. |
+| E | 🫧 **Ink Pool** *(hold to aim, release to cast)* | 12 s | Pour a pool of ink at the target for 6 s. Every enemy that wades in is seized by the ink and stuck fast for 1.5 s, then mired (50% slower) while it stays, taking damage every second. |
+| R | 🐉 **Ink Dragon** *(hold to aim, release to cast)* | ultimate | Paint a great ink dragon that bursts from the floor and coils around the target for 4 s, raining ink on everything beneath it, then dives into the centre: 90 damage and a 1.2 s stun. |
+
+Ink splats are real geometry (glossy black PBR with an indigo energy rim) laid at `INK_Y` = 0.09 m, just above the arena's raised tiles. The dragon's body is 30 segments that follow the trail its head has drawn.
 
 ## Element resources
 Some elements build up something you can see above your ability bar and around your wizard: Plasma's **Heat** (a bar that turns into OVERHEATED), Soul's **Souls** (pale flames circling you), Arcane's **charges** (orbs whirling round you), Blades' **swords** (orbiting your waist), Bone's armor **plates**, Rune's count toward the next **Empowered** spell and Laser's **Focus** pips.

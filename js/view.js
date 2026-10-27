@@ -329,6 +329,7 @@ function renderShots(src, dt, t, a) {
       v.o.scale.setScalar(v.o.userData.base * (s.sc || 1) * (L.flick ? rand(.85, 1.15) : 1));
       if (L.flap) v.o.scale.x *= .35 + .65 * Math.abs(Math.sin(t * 22 + s.id)); // wings beating
       if (L.jaw) { const j = v.jaw ??= v.o.getObjectByName(L.jaw); if (j) j.rotation.x = Math.abs(Math.sin(t * 16 + s.id)) * .55; }
+      if (L.wag) { const j = v.wag ??= v.o.getObjectByName(L.wag), w = Math.sin(t * 13 + s.id); if (j) j.rotation.y = w * .6; v.o.rotateY(-w * .15); } // a swimming tail
       if (L.blink) fade(v.o, .6 + .4 * Math.sin(t * 20));
       if (L.trail) { const [c, sz, life, grav, n] = L.trail; const p = v.o.position; for (let k = 0; k < n; k++) emit(p.x + rand(-.1, .1), p.y + rand(-.1, .1), p.z + rand(-.1, .1), rand(-.5, .5), rand(0, 1), rand(-.5, .5), typeof c === 'function' ? c() : c, sz * (s.sc || 1), life, grav); }
     }
@@ -420,16 +421,33 @@ function renderAuras(src, dt, t) {
     // arcane charges whirl round you, quick and small
     const ac = pool(v.arc, R[2] || 0, () => model('arcane__orb', EL.arcane.color));
     ac.forEach((o, i) => { const a = t * 3.2 + TAU * i / 4, rr = mine ? .9 : .7; o.position.set(pos.x + Math.cos(a) * rr, pos.y + (mine ? .9 : 1.3) + Math.sin(t * 4 + i) * .06, pos.z + Math.sin(a) * rr); o.rotation.z += dt * 6; o.scale.setScalar(.35); });
-    // Illusion's mirror images at your sides (a little ahead of you in your own view, so you can see them)
-    const im = pool(v.imgs, bf.mirror > 0 ? 2 : 0, () => ghostWizard(EL.illusion.color));
-    im.forEach((o, i) => { const s = i ? 1 : -1, fx = -Math.sin(yaw), fz = -Math.cos(yaw), rx = Math.cos(yaw), rz = -Math.sin(yaw), side = mine ? 2.5 : 1.6, fw = mine ? 2.1 : 0; o.position.set(pos.x + rx * side * s + fx * fw, pos.y, pos.z + rz * side * s + fz * fw); o.rotation.y = yaw + Math.PI; tint(o, shimmer(t + i)); fade(o, Math.min(1, bf.mirror * 2) * (mine ? .28 : .45) * (1 + .2 * Math.sin(t * 7 + i))); });
+    // Illusion's mirror images at your sides (a little ahead of you in your own view, so you can see them).
+    // They slide out of you when cast, hover with mirror shards circling their feet, recoil when they fire (u.kick, set by the 'mimic' fx), and shatter when they end.
+    const on = bf.mirror > 0 && !down;
+    if (on && !v.imgOn) v.imgT = t;
+    if (!on && v.imgOn) for (const o of v.imgs) if (o.visible) { burst(o.position.x, o.position.y + 1.1, o.position.z, 40, 0xffc8ff, 5, .2, .5, 4); flash(o.position.x, o.position.y + 1, o.position.z, 0xf0a6ff, 10, .2); sfx('tink'); }
+    v.imgOn = on;
+    const im = pool(v.imgs, on ? 2 : 0, () => { const g = ghostWizard(EL.illusion.color), sh = ringOf('illusion__shard', EL.illusion.color, 5, .6, .3); g.add(sh); g.userData.shards = sh; g.userData.mats.push(...sh.userData.mats); return g; });
+    const out = easeOutBack(Math.min(1, (t - v.imgT) / .4)), sliding = t - v.imgT < .4;
+    im.forEach((o, i) => {
+      const u = o.userData, s = i ? 1 : -1, fx = -Math.sin(yaw), fz = -Math.cos(yaw), rx = Math.cos(yaw), rz = -Math.sin(yaw), side = (mine ? 2.5 : 1.6) * out, fw = mine ? 2.1 : 0; // in your own view they part sideways from in front of you, not out of the camera
+      u.kick = Math.max(0, (u.kick || 0) - dt * 5);
+      const back = u.kick * .35, bob = .15 + Math.sin(t * 2.2 + i * 1.7) * .1;
+      o.position.set(pos.x + rx * side * s + fx * (fw - back), pos.y + bob, pos.z + rz * side * s + fz * (fw - back));
+      o.rotation.set(-u.kick * .25, yaw + Math.PI, Math.sin(t * 1.6 + i * 2) * .06); // recoil leans back; idle sway
+      u.shards.rotation.y += dt * 1.8 * s; u.shards.position.y = .1 + Math.sin(t * 3 + i) * .05;
+      tint(o, shimmer(t + i));
+      const flick = bf.mirror < 1 ? (Math.sin(t * 40 + i) > 0 ? 1 : .3) : 1; // about to break
+      fade(o, Math.min(1, (t - v.imgT) * 4) * (mine ? .28 : .45) * (1 + .2 * Math.sin(t * 7 + i) + u.kick * 1.5) * flick);
+      if (sliding && Math.random() < .25 && o.position.distanceTo(camera.position) > 2.2) { const g = ghostWizard(EL.illusion.color); g.position.copy(o.position); g.rotation.copy(o.rotation); tint(g, shimmer(t + i)); addFx(g, .25, (g, k) => fade(g, (1 - k) * (mine ? .08 : .15))); } // afterimages as they slide out
+    });
     // Plasma: sparks off your hand as Heat builds, smoke while overheated
     if (!down && ((R[0] || 0) > 35 || bf.overheat > 0) && Math.random() < (bf.overheat > 0 ? .6 : (R[0] - 35) / 80)) {
       const h = handPos(p.id), hot = bf.overheat > 0;
       emit(h.x, h.y, h.z, rand(-.5, .5), rand(.5, 2), rand(-.5, .5), hot ? 0x6a5a66 : Math.random() < .5 ? 0xff3ca8 : 0xffd0f0, hot ? rand(.15, .3) : rand(.03, .07), hot ? .9 : .35, hot ? -1 : 2);
     }
   }
-  for (const [id, v] of views.aura) if (!live.has(id)) { for (const k in v) v[k].forEach(o => o.removeFromParent()); views.aura.delete(id); }
+  for (const [id, v] of views.aura) if (!live.has(id)) { for (const k in v) if (Array.isArray(v[k])) v[k].forEach(o => o.removeFromParent()); views.aura.delete(id); }
 }
 let reticle = null, reticleEl = null, chargeCircle = null;
 function renderAim(mp, dt) {
@@ -632,7 +650,7 @@ $('modeBack').onclick = () => { $('lobby').classList.add('hidden'); $('modes').c
 $('menuBtn').onclick = () => location.reload(); // back to the mode browser (also leaves any online room)
 renderModes();
 
-// ===================== lobby: 29 elements =====================
+// ===================== lobby: 30 elements =====================
 let myEl = 'fire', myEl2 = null, hoverEl = null;
 try { const s = JSON.parse(localStorage.getItem('magepact_pick') || '{}'); if (EL[s.el]) myEl = s.el; if (EL[s.el2] && s.el2 !== myEl) myEl2 = s.el2; } catch {}
 function bestFor(el) { try { return JSON.parse(localStorage.getItem(myMode === 'dungeon' ? 'magepact_best_floor' : 'magepact_best_el') || '{}')[el] || 0; } catch { return 0; } }

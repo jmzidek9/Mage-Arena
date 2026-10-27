@@ -627,6 +627,8 @@ const SFX = {
   arcane_big: [['magical_3', .7, { r: 1.1, rev: .6 }], ['spell_0', .6, { r: .9, rev: .4 }], ['impactBell_heavy_002', .4, { r: 1.6, rev: .6 }]],
   blades: [['drawKnife', .6, { r: [1.05, 1.25] }], ['blade', .3, { r: [1.2, 1.4] }]],
   blades_big: [['drawKnife', .9, { r: .85, rev: .3 }], ['metal_0', .6, { r: .9 }], ['impactBell_heavy_004', .35, { r: 1.5, rev: .5 }]],
+  ink: [['slime_000', .45, { r: [1.3, 1.6] }], ['cloth', .25, { r: [1.5, 1.8] }]],
+  ink_big: [['creature_slime', .6, { r: [.6, .7], rev: .3 }], ['bookFlip', .45, { r: .8 }], ['cloth', .5, { r: .7 }], ['magical_4', .25, { r: .7, len: .5, rev: .4 }]],
 };
 const REV = new WeakMap(); // reversed copies, made on first use
 const live = {}; // per sound: the copies still ringing, oldest first

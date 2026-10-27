@@ -1,4 +1,4 @@
-// Mage Arena elements: 29 elements x 5 moves (LMB, RMB, Q, E, R=ultimate).
+// Mage Arena elements: 30 elements x 5 moves (LMB, RMB, Q, E, R=ultimate).
 // A move: { name, icon, desc, cd, mode: 'tap' | 'aim' (hold to aim, release to cast) | 'charge' (hold to power up) | 'channel' (hold),
 //   cast(p, c)      host: damage, projectiles (shoot), entities (ent)       c = ctxOf(): o (hand), d (aim dir), k (charge), dmg (multiplier), tgt (aim point)...
 //   self(p, c)      owner: movement and self-buffs (dashes, leaps, glides) so the guest's own body moves instantly
@@ -136,6 +136,13 @@ function ghostWizard(color) {
   g.traverse(o => { if (o.isMesh) { o.material = m; o.castShadow = false; } });
   g.userData.mats = [m];
   return g;
+}
+// Ink: a projectile's splash (host) and the wet splat it leaves on the floor (client). Ink lies just above the arena's raised tiles (0.085 m).
+const INK_Y = .09;
+function inkSplash(s, e, r, k) { blast(s.x, s.z, r, s.dmg * k, ctxS(s), { kb: 1, skip: e ? [e.id] : [] }); fxe('ink.0', 'splash', { x: s.x, y: s.y, z: s.z, r }); }
+function inkDecal(x, z, r, life) {
+  const yaw = rand(0, TAU);
+  modelFx('ink__pool', 0x3a52ff, V(x, INK_Y + rand(0, .01), z), life, (o, k) => { const s = r * easeOut(Math.min(1, k * life * 8)); o.rotation.y = yaw; o.scale.set(s, 1, s); fade(o, k < .7 ? 1 : 1 - (k - .7) / .3); }, { flat: true });
 }
 // soft smoke puffs that can be dark (particles are additive, so they can only ever glow): one shared material per cloud
 let _puffTex;
@@ -1311,7 +1318,11 @@ illusion: {
     { name: 'Mirror Images', icon: '👥', cd: 16, desc: 'Two mirror images of you stand at your sides for 8 s, copying your basic attack at 40% power, whichever element you are using.',
       cast(p, c) { buff(p, 'mirror', 8); fxe(c.m.key, 'split', { x: p.x, y: p.y, z: p.z }); },
       fx: { split(e) { ringFx(e.x, e.y + .1, e.z, 2.4, 0xf0a6ff, .5); burst(e.x, e.y + 1, e.z, 50, 0xffc8ff, 5, .25, .6); flash(e.x, e.y + 1.4, e.z, 0xf0a6ff, 25, .3); sfx('illusion_big'); },
-        mimic(e) { burst(e.x, e.y, e.z, 8, 0xffc8ff, 3, .12, .25); flash(e.x, e.y, e.z, 0xf0a6ff, 5, .12); } } },
+        mimic(e) { // the mirror image nearest the shot recoils as it fires
+          burst(e.x, e.y, e.z, 8, 0xffc8ff, 3, .12, .25); flash(e.x, e.y, e.z, 0xf0a6ff, 5, .12);
+          let best = null, bd = 6; for (const v of views.aura.values()) for (const o of v.imgs) { const d = o.visible ? Math.hypot(o.position.x - e.x, o.position.z - e.z) : 99; if (d < bd) { bd = d; best = o; } }
+          if (best) best.userData.kick = 1;
+        } } },
     { name: 'Phantasmagoria', icon: '🎪', desc: 'ULTIMATE. Trap everything within 14 m in a hall of mirrors: monsters are charmed and fight each other for 5 s, then the mirrors shatter for 120 damage to every one of them.',
       cast(p, c) { ent(p, c, p.x, p.z, { life: 5, r: 14 * c.st.aoe }); },
       ent: { tick(n) { for (const e of enemiesNear(n.x, n.z, n.r)) { if (ready(n, e, 99)) { cc(e, 'charm', n.life, own(n)); applyStatus(e, 'illusion', own(n)); } e.fs = Math.max(e.fs || 0, .3); } },
@@ -1818,6 +1829,89 @@ blades: {
       fx: { fall(e) { circleFx('blades', V(e.x, .08, e.z), e.r, { life: 1.1 }); const yaw = rand(0, TAU); modelFx('blades__colossal', 0xffcc33, V(e.x, 60, e.z), .56, (o, k) => { o.rotation.y = yaw; o.position.y = 60 * (1 - k * k) - 1.3 * k; for (let i = 0; i < 4; i++) emit(e.x + rand(-1, 1), o.position.y + rand(0, 8), e.z + rand(-1, 1), 0, 10, 0, 0xffe08a, rand(.3, .6), .5); }); sfx('blades_big'); },
         impact(e) { boomFx(e.x, 1, e.z, e.r, 0xffcc33, 2.6); pillarFx(e.x, .05, e.z, e.r * .5, 14, 0xffcc33, 1); ringFx(e.x, .1, e.z, e.r * 1.6, 0xfff0b0, .8); dustFx(e.x, e.z, e.r, 0x8a7a60); flash(e.x, 3, e.z, 0xffe08a, 90, .5); shake(.9); sfx('ult'); sfx('smash'); },
         wave(e) { ringFx(e.x, .15, e.z, e.r, 0xffcc33, .55); burst(e.x, 1, e.z, 20, 0xffe08a, 6, .2, .4); sfx('blades'); } } },
+  ],
+},
+// ================================================================== INK
+ink: {
+  name: 'Ink', color: 0x3a52ff, glyph: '🖌️', adj: 'INKED', react: { name: 'INKBLOT', kind: 'spread' },
+  blurb: 'A calligrapher. Living ink: brush strokes that mire, koi that hunt, and a dragon painted across the sky.',
+  passive: 'Bleeding Ink: monsters you kill with Ink burst in a splash that hits everything within 3 m for 15 and inks it. Inked enemies are 25% slower.',
+  st: { slow: .25 },
+  onKill(e, p) { const c = { p, el: 'ink', m: MOVE['ink.0'], dmg: stats(p).dmgMul }, x = e.x, z = e.z; later(.08, () => boomAt(c, x, .5, z, 3, 15 * c.dmg, { kb: 2 }, 'splash')); },
+  moves: [
+    { name: 'Ink Bolt', icon: '💧', cd: .4, desc: 'Fling a glob of ink that splashes where it lands, inking everything within 2 m.',
+      cast(p, c) { for (let k = 0; k < c.multi; k++) shoot(p, c, 34, { d: lob(spread(c.d, k, c.multi, .1), .04), grav: 5, r: .3, dmg: 12 * c.dmg, kb: 2, sc: c.mega ? 1.8 : 1 }); },
+      shot: { end: (s, why, e) => why !== 'life' && inkSplash(s, e, 2, .4) },
+      look: { m: 'ink__drop', s: .9, trail: [0x3a52ff, .08, .3, 2, 1], light: 2 },
+      fx: { splash(e) { inkDecal(e.x, e.z, e.r * .55, 1.6); burst(e.x, Math.max(.3, e.y), e.z, Math.round(10 + e.r * 5), 0x5a70ff, 4 + e.r, .14, .35, 8); if (e.r > 2.5) sfx('ink'); },
+        det: e => boomFx(e.x, e.y, e.z, 2.5, 0x3a52ff, .6), nova: e => boomFx(e.x, .5, e.z, 4.5, 0x3a52ff, .8) } },
+    { name: 'Brush Stroke', icon: '🖌️', cd: 5, desc: 'Sweep a giant brush through a 120° arc in front of you: 30 damage to everything within 7.5 m and a hard shove, leaving a crescent of wet ink that mires anything on it (50% slower) for 5 s.',
+      cast(p, c) {
+        const R = 7.5 * c.st.aoe, f = c.flat;
+        for (const e of enemiesNear(p.x, p.z, R)) { const dx = e.x - p.x, dz = e.z - p.z, d = Math.hypot(dx, dz) || 1; if ((dx * f.x + dz * f.z) / d > .5) hitEnemy(e, 'ink', 30 * c.dmg, p, dx, dz, 6, { aoe: true }); }
+        ent(p, c, p.x, p.z, { life: 5, r: R, yaw: Math.atan2(f.x, f.z) });
+      },
+      ent: { tick(n) { const fx = Math.sin(n.yaw), fz = Math.cos(n.yaw); for (const e of enemiesNear(n.x, n.z, n.r * 1.1)) { const dx = e.x - n.x, dz = e.z - n.z, d = Math.hypot(dx, dz) || 1; if (d > n.r * .62 && (dx * fx + dz * fz) / d > .5) e.fs = Math.max(e.fs || 0, .5); } } },
+      view: { make(n) {
+          const o = model('ink__stroke', 0x3a52ff, { flat: true }); o.scale.set(n.r, 1, n.r); o.rotation.y = n.yaw; o.position.y = INK_Y;
+          // the brush itself sweeps the arc a moment ahead of the ink (local frame: +Z forward, +X to the side)
+          const cy = Math.cos(n.yaw), sy = Math.sin(n.yaw), R = n.r * .86, w = (lx, lz) => V(n.x + lx * cy + lz * sy, 0, n.z - lx * sy + lz * cy);
+          modelFx('ink__brush', 0x3a52ff, w(-R, 0), .32, (b, k) => { const a = (-60 + 120 * easeOut(k)) * Math.PI / 180, q = w(Math.sin(a) * R, Math.cos(a) * R); b.position.set(q.x, .15 + Math.sin(k * Math.PI) * .3, q.z); b.rotation.set(0, n.yaw + a, 0); b.rotateZ(-.55); b.scale.setScalar(1.5); fade(b, k > .8 ? (1 - k) * 5 : 1); if (Math.random() < .8) burst(q.x, .2, q.z, 3, 0x5a70ff, 3, .12, .3, 6); });
+          sfx('ink_big'); return o;
+        },
+        upd(o, n) { o.position.y = INK_Y; fade(o, Math.min(1, n.t * 4, n.l * 5)); }, drop: dropFade(.3) } }, // (renderEnts eases y back to the entity's 0 every frame)
+    { name: 'Ink Koi', icon: '🐟', cd: 9, desc: 'Paint three koi of living ink that swim through the air, hunting the nearest enemies. Each one bites for 26 and bursts in a splash of ink.',
+      cast(p, c) { for (let i = 0; i < 3; i++) later(i * .1, () => { if (p.down) return; const c2 = ctxOf(p, c.m); shoot(p, c2, 16, { d: c2.d.clone().applyAxisAngle(UP, (i - 1) * .5).add(V(0, .15, 0)).normalize(), r: .45, life: 3.5, dmg: 26 * c.dmg, kb: 3, home: 5 }); }); },
+      shot: { end: (s, why, e) => why !== 'life' && inkSplash(s, e, 2.2, .4) },
+      look: { m: 'ink__koi', s: 1.6, wag: 'ink__koi_tail', trail: [() => Math.random() < .5 ? 0x3a52ff : 0x9aa8ff, .1, .5, 0, 1], light: 2 } },
+    { name: 'Ink Pool', icon: '🫧', cd: 12, mode: 'aim', range: 20, aimR: 4.5, desc: 'Pour a pool of ink at the target for 6 s. Every enemy that wades in is seized by the ink and stuck fast for 1.5 s, then mired (50% slower) while it stays, taking damage every second.',
+      cast(p, c) { ent(p, c, c.tgt.x, c.tgt.z, { life: 6, r: 4.5 * c.st.aoe }); },
+      ent: { tick(n, dt) {
+        const p = own(n), es = enemiesNear(n.x, n.z, n.r), tick = pulse(n, dt, 1);
+        for (const e of es) {
+          e.fs = Math.max(e.fs || 0, .5);
+          if (ready(n, e, 99)) { hitEnemy(e, 'ink', 14 * n.mul, p, 0, 0, 0, { aoe: true }); cc(e, 'root', 1.5, p); fxe(n.mv, 'seize', { x: e.x, z: e.z }); }
+          else if (tick) hitEnemy(e, 'ink', 8 * n.mul, p, 0, 0, 0, { aoe: true, noCombo: true });
+        }
+      } },
+      view: { make(n) { const o = model('ink__pool', 0x3a52ff, { flat: true }); o.rotation.y = rand(0, TAU); burst(n.x, .3, n.z, 40, 0x5a70ff, 6, .2, .5, 8); sfx('ink_big'); return o; },
+        upd(o, n, dt) { const s = n.r * easeOutBack(Math.min(1, n.t * 3)); o.scale.set(s, 1, s); o.position.y = INK_Y; o.rotation.y += dt * .05; fade(o, Math.min(1, n.l * 6));
+          if (Math.random() < .25) { const a = rand(0, TAU), d = rand(0, n.r * .8); emit(n.x + Math.cos(a) * d, .05, n.z + Math.sin(a) * d, 0, rand(.4, 1), 0, 0x9aa8ff, rand(.08, .16), .5, 2); } }, // bubbles
+        drop: dropFade(.4) },
+      fx: { seize(e) { burst(e.x, .3, e.z, 18, 0x5a70ff, 3, .2, .5, -3); ringFx(e.x, .08, e.z, 1.2, 0x3a52ff, .35); inkDecal(e.x, e.z, .7, 1.5); sfx('ink'); } } },
+    { name: 'Ink Dragon', icon: '🐉', mode: 'aim', range: 26, aimR: 9, desc: 'ULTIMATE. Paint a great ink dragon that bursts from the floor and coils around the target for 4 s, raining ink on everything beneath it, then dives into the centre: 90 damage and a 1.2 s stun.',
+      cast(p, c) { const t = c.tgt, R = 9 * c.st.aoe; ent(p, c, t.x, t.z, { life: 4.6, r: R, y: -1.5, cx: t.x, cz: t.z, a0: Math.atan2(p.z - t.z, p.x - t.x) }); fxe(c.m.key, 'rise', { x: t.x, z: t.z, r: R }); },
+      ent: { tick(n, dt) { // coil inward round the centre for 4 s, then dive into it
+        const T = 4, t = n.t;
+        if (t < T) {
+          const a = n.a0 + t * 1.9, r = n.r * (1 - .45 * t / T);
+          n.x = n.cx + Math.cos(a) * r; n.z = n.cz + Math.sin(a) * r; n.y = -1.5 + 6 * Math.min(1, t * 1.6) + Math.sin(t * 3.1) * 1.1;
+          if (t > .5 && pulse(n, dt, .25)) blast(n.x, n.z, 3, 16 * n.mul, ctxN(n), { raw: true, kb: 2 });
+        } else {
+          n.d0 ??= [n.x, n.y, n.z]; const k = Math.min(1, (t - T) / .45);
+          n.x = n.d0[0] + (n.cx - n.d0[0]) * k; n.y = n.d0[1] + (-2 - n.d0[1]) * k * k; n.z = n.d0[2] + (n.cz - n.d0[2]) * k;
+          if (k >= 1 && !n.hitDone) { n.hitDone = 1; boomAt(ctxN(n), n.cx, .2, n.cz, 5.5, 90 * n.mul, { kb: 6, cc: ['stun', 1.2] }, 'crash'); }
+        }
+      } },
+      view: { make(n) {
+          const SEGS = 30, o = model('ink__dragon_head', 0x3a52ff, { shadow: true }), u = o.userData; o.scale.setScalar(2.4);
+          u.body = new THREE.Group(); scene.add(u.body); u.trail = [];
+          u.segs = Array.from({ length: SEGS }, (_, k) => { const s = model('ink__dragon_seg', 0x3a52ff, { shadow: true }); s.scale.setScalar(2.2 * (1 - .7 * (k / SEGS) ** 1.5)); u.body.add(s); u.mats.push(...s.userData.mats); return s; }); // tapering to the tail
+          sfx('ult'); return o;
+        },
+        upd(o, n, dt, t) { // the body follows the path the head has drawn, like a brush stroke
+          const u = o.userData, h = o.position, tr = u.trail, last = tr[tr.length - 1];
+          if (!last || last.distanceTo(h) > .2) { tr.push(h.clone()); if (tr.length > 120) tr.shift(); }
+          const at = dist => { for (let i = tr.length - 1; i > 0; i--) { const L = tr[i].distanceTo(tr[i - 1]); if (dist <= L) return tr[i].clone().lerp(tr[i - 1], dist / L); dist -= L; } return tr[0].clone(); };
+          if (tr.length > 1) o.lookAt(h.clone().add(h.clone().sub(at(.6)))); // face the way it is flying
+          u.segs.forEach((s, k) => { const q = at(1.3 + k * .5); s.position.copy(q); s.lookAt(at(.8 + k * .5)); s.rotateZ(Math.sin(t * 4 - k * .3) * .2); s.visible = q.y > -1.2; }); // overlapping, so they read as one body
+          fade(o, Math.min(1, n.l * 12));
+          if (Math.random() < .7) { const s = pick(u.segs); emit(s.position.x, s.position.y - .2, s.position.z, rand(-.3, .3), -rand(2, 5), rand(-.3, .3), Math.random() < .6 ? 0x3a52ff : 0x9aa8ff, rand(.12, .25), .7, 6); } // ink raining off it
+          if (h.y < .4 && h.y > -.8 && Math.random() < .5) burst(h.x, .1, h.z, 6, 0x5a70ff, 4, .2, .4, 8); // breaking the surface
+        },
+        drop(o) { o.userData.body.removeFromParent(); o.removeFromParent(); } },
+      fx: { rise(e) { circleFx('ink', V(e.x, .08, e.z), e.r, { life: 4.6 }); inkDecal(e.x, e.z, e.r * .5, 4.6); shake(.3); },
+        crash(e) { inkDecal(e.x, e.z, e.r * .9, 3.5); boomFx(e.x, .5, e.z, e.r, 0x3a52ff, 1.6); pillarFx(e.x, .05, e.z, e.r * .5, 10, 0x3a52ff, .7); burst(e.x, .5, e.z, 70, 0x9aa8ff, 10, .3, .8, 10); shake(.7); sfx('ink_big'); } } },
   ],
 },
 };
