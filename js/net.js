@@ -2,7 +2,7 @@
 'use strict';
 
 // bump when the network format or game rules change: players on different builds get told to refresh
-const GAME_VERSION = '2.4.0';
+const GAME_VERSION = '2.5.0';
 
 // ===================== snapshot (sent to the guest, and what both sides render from) =====================
 const bfSnap = bf => { const o = {}; for (const k in bf) if (bf[k] > 0) o[k] = r2(bf[k]); return o; };

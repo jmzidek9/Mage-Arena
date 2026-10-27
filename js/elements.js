@@ -157,9 +157,12 @@ function smokeCloud(n, r, color) {
   return g;
 }
 // billowing smoke or dust: puffs that swell, drift up and outward, and fade
+// ponytail: one live-count cap for smoke and debris (fx scan), halved on Low graphics; a pooled renderer if big fights still stutter
+const fxRoom = (tag, max) => Math.max(0, (HQ ? max : max / 2) - fx.reduce((a, f) => a + (f.obj.userData.tag === tag), 0));
 function smokeFx(x, y, z, r, color = 0x2a2622, life = 1.8, n = 10, rise = 1.2) {
+  n = Math.min(n, fxRoom('puff', 140));
   for (let i = 0; i < n; i++) {
-    const m = new THREE.SpriteMaterial({ map: puffTex(), color: new THREE.Color(color).multiplyScalar(rand(.8, 1.15)), transparent: true, opacity: 0, depthWrite: false, rotation: rand(0, TAU) }), o = new THREE.Sprite(m);
+    const m = new THREE.SpriteMaterial({ map: puffTex(), color: new THREE.Color(color).multiplyScalar(rand(.8, 1.15)), transparent: true, opacity: 0, depthWrite: false, rotation: rand(0, TAU) }), o = new THREE.Sprite(m); o.userData.tag = 'puff';
     const a = rand(0, TAU), d = rand(0, r * .5), v = V(Math.cos(a) * rand(.5, 1.5) * r * .6, rand(.4, 1) * rise * 1.5, Math.sin(a) * rand(.5, 1.5) * r * .6), s0 = r * rand(.45, .8), L = life * rand(.7, 1.15);
     o.position.set(x + Math.cos(a) * d, y + rand(0, r * .3), z + Math.sin(a) * d);
     addFx(o, L, (o, k, dt) => { o.position.addScaledVector(v, dt * (1 - k) * 1.6); o.scale.setScalar(s0 * (.5 + 1.3 * easeOut(k))); m.opacity = (k < .12 ? k / .12 : 1 - (k - .12) / .88) * .9; m.rotation += dt * .25; });
@@ -167,8 +170,9 @@ function smokeFx(x, y, z, r, color = 0x2a2622, life = 1.8, n = 10, rise = 1.2) {
 }
 // chunks thrown out by an impact: they tumble, bounce and settle, then shrink away
 function debrisFx(x, y, z, n, name, color, s = .3, spd = 7) {
+  n = Math.min(n, fxRoom('chunk', 70));
   for (let i = 0; i < n; i++) {
-    const o = model(name, color), v = V(rand(-1, 1), rand(.5, 1.5), rand(-1, 1)).normalize().multiplyScalar(spd * rand(.5, 1)), sp = V(rand(-10, 10), rand(-10, 10), rand(-10, 10)), sc = s * rand(.6, 1.3);
+    const o = model(name, color); o.userData.tag = 'chunk'; const v = V(rand(-1, 1), rand(.5, 1.5), rand(-1, 1)).normalize().multiplyScalar(spd * rand(.5, 1)), sp = V(rand(-10, 10), rand(-10, 10), rand(-10, 10)), sc = s * rand(.6, 1.3);
     o.position.set(x, y, z); o.scale.setScalar(sc);
     addFx(o, rand(1, 1.5), (o, k, dt) => {
       v.y -= 20 * dt; o.position.addScaledVector(v, dt);
