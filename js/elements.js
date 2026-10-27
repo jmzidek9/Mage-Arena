@@ -103,8 +103,10 @@ function skyFx(x, y, z, color) {
   pts.push([x, y, z]);
   boltFx(pts, color); burst(x, y, z, 18, color, 7, .2, .3); flash(x, y + 1, z, color, 40, .2);
 }
+// dust kicked up off the floor: real (normal-blended) puffs, plus a little bright grit
 function dustFx(x, z, r, color = 0x9a8a78) {
-  for (let k = 0; k < 24 * Math.min(3, r); k++) { const a = rand(0, TAU), d = rand(0, r); emit(x + Math.cos(a) * d, .1, z + Math.sin(a) * d, Math.cos(a) * rand(1, 4), rand(1, 4), Math.sin(a) * rand(1, 4), color, rand(.25, .5), rand(.5, 1), 4, 2); }
+  smokeFx(x, .3, z, r, color, 1.3, Math.round(4 + 2 * Math.min(r, 4)), .8);
+  for (let k = 0; k < 6 * Math.min(3, r); k++) { const a = rand(0, TAU), d = rand(0, r); emit(x + Math.cos(a) * d, .1, z + Math.sin(a) * d, Math.cos(a) * rand(1, 4), rand(2, 5), Math.sin(a) * rand(1, 4), 0xd8c8a8, rand(.06, .12), rand(.5, .9), 9, 1); }
 }
 function riseFx(name, color, x, z, s = 1, life = 1, yaw = rand(0, TAU)) {
   const o = model(name, color, { shadow: true }); o.position.set(x, -2 * s, z); o.rotation.y = yaw; o.scale.setScalar(s);
@@ -144,14 +146,52 @@ function inkDecal(x, z, r, life) {
   const yaw = rand(0, TAU);
   modelFx('ink__pool', 0x3a52ff, V(x, INK_Y + rand(0, .01), z), life, (o, k) => { const s = r * easeOut(Math.min(1, k * life * 8)); o.rotation.y = yaw; o.scale.set(s, 1, s); fade(o, k < .7 ? 1 : 1 - (k - .7) / .3); }, { flat: true });
 }
-// soft smoke puffs that can be dark (particles are additive, so they can only ever glow): one shared material per cloud
+// soft smoke puffs that can be dark (particles are additive, so they can only ever glow)
 let _puffTex;
+const puffTex = () => _puffTex ??= (() => { const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d'), gr = g.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(.45, 'rgba(255,255,255,.55)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(c); })();
+// a lingering cloud with one shared material (Shadow's Blackout)
 function smokeCloud(n, r, color) {
-  _puffTex ??= (() => { const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d'), gr = g.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(.45, 'rgba(255,255,255,.55)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(c); })();
-  const g = new THREE.Group(), m = new THREE.SpriteMaterial({ map: _puffTex, color, transparent: true, opacity: 0, depthWrite: false });
+  const g = new THREE.Group(), m = new THREE.SpriteMaterial({ map: puffTex(), color, transparent: true, opacity: 0, depthWrite: false });
   g.userData.puffs = Array.from({ length: n }, () => { const s = new THREE.Sprite(m), a = rand(0, TAU), d = Math.sqrt(Math.random()) * r * .85; s.position.set(Math.cos(a) * d, rand(.4, 1.6), Math.sin(a) * d); s.userData.s = rand(1.8, 3); s.userData.ph = rand(0, TAU); g.add(s); return s; });
   g.userData.puffMat = m;
   return g;
+}
+// billowing smoke or dust: puffs that swell, drift up and outward, and fade
+function smokeFx(x, y, z, r, color = 0x2a2622, life = 1.8, n = 10, rise = 1.2) {
+  for (let i = 0; i < n; i++) {
+    const m = new THREE.SpriteMaterial({ map: puffTex(), color: new THREE.Color(color).multiplyScalar(rand(.8, 1.15)), transparent: true, opacity: 0, depthWrite: false, rotation: rand(0, TAU) }), o = new THREE.Sprite(m);
+    const a = rand(0, TAU), d = rand(0, r * .5), v = V(Math.cos(a) * rand(.5, 1.5) * r * .6, rand(.4, 1) * rise * 1.5, Math.sin(a) * rand(.5, 1.5) * r * .6), s0 = r * rand(.45, .8), L = life * rand(.7, 1.15);
+    o.position.set(x + Math.cos(a) * d, y + rand(0, r * .3), z + Math.sin(a) * d);
+    addFx(o, L, (o, k, dt) => { o.position.addScaledVector(v, dt * (1 - k) * 1.6); o.scale.setScalar(s0 * (.5 + 1.3 * easeOut(k))); m.opacity = (k < .12 ? k / .12 : 1 - (k - .12) / .88) * .9; m.rotation += dt * .25; });
+  }
+}
+// chunks thrown out by an impact: they tumble, bounce and settle, then shrink away
+function debrisFx(x, y, z, n, name, color, s = .3, spd = 7) {
+  for (let i = 0; i < n; i++) {
+    const o = model(name, color), v = V(rand(-1, 1), rand(.5, 1.5), rand(-1, 1)).normalize().multiplyScalar(spd * rand(.5, 1)), sp = V(rand(-10, 10), rand(-10, 10), rand(-10, 10)), sc = s * rand(.6, 1.3);
+    o.position.set(x, y, z); o.scale.setScalar(sc);
+    addFx(o, rand(1, 1.5), (o, k, dt) => {
+      v.y -= 20 * dt; o.position.addScaledVector(v, dt);
+      if (o.position.y < .12) { o.position.y = .12; v.y *= -.35; v.x *= .55; v.z *= .55; sp.multiplyScalar(.5); }
+      o.rotation.x += sp.x * dt; o.rotation.y += sp.y * dt; o.rotation.z += sp.z * dt;
+      if (k > .75) o.scale.setScalar(sc * (1 - (k - .75) / .25));
+    });
+  }
+}
+// a mark left on the floor (Ink's splat model: glossy black with a rim in the given colour): scorches, craters
+function scarFx(x, z, r, color, life = 4) {
+  const yaw = rand(0, TAU);
+  modelFx('ink__pool', color, V(x, INK_Y + rand(0, .01), z), life, (o, k) => { const s = r * easeOut(Math.min(1, k * life * 10)); o.rotation.y = yaw; o.scale.set(s, 1, s); fade(o, k < .6 ? 1 : 1 - (k - .6) / .4); }, { flat: true });
+}
+// Explosion's booms: a burst of fire-lit smoke rolling into grey, flying debris, embers and a scorch mark
+function blastFx(e, k = 1) {
+  boomFx(e.x, e.y, e.z, e.r, 0xffa020, .8 * k);
+  smokeFx(e.x, Math.max(e.y, .5), e.z, e.r * .5 * k, 0xffa040, .55, 5, 2.2); // the fireball: bright fire-lit puffs that burn out fast
+  smokeFx(e.x, Math.max(e.y, .5), e.z, e.r * .6, 0xc0662a, 1, 4, 1.8);
+  smokeFx(e.x, Math.max(e.y, .5), e.z, e.r * .8, 0x5a5047, 2.4, Math.round(4 + e.r * 1.5), 1.4);
+  debrisFx(e.x, .4, e.z, Math.round(2 + e.r), 'earth__pebble', 0xff8a20, .2, 8);
+  scarFx(e.x, e.z, e.r * .6, 0xff5a10, 4);
+  burst(e.x, e.y + .3, e.z, 14, 0xffb050, 7, .08, 1.1, 9, 3); // embers
 }
 // curl an abyss tentacle (a chain of 6 segments): k = how hard it curls toward its suckers, ph = phase of its writhing
 function curlTentacle(o, k, ph, sway = .25) {
@@ -443,12 +483,12 @@ earth: {
     { name: 'Boulder', icon: '🌑', cd: 5, desc: 'Roll a huge boulder that plows straight through every enemy in its path.',
       cast(p, c) { const f = c.flat; shoot(p, c, 14, { o: V(p.x + f.x * 1.3, 1.1, p.z + f.z * 1.3), d: f, r: 1.1, life: 2.8, pierce: 99, dmg: 38 * c.dmg, kb: 9, sc: 1.1, poise: 2 }); },
       shot: { ground(s) { s.vy = 0; s.y = 1.1; }, end(s) { boomAt(ctxS(s), s.x, .5, s.z, 2.5, 20 * s.mul, { kb: 6 }); } },
-      look: { m: 'earth__boulder', s: 1.1, roll: 1 },
-      fx: { boom(e) { boomFx(e.x, e.y, e.z, e.r, 0xd9913a, .7); dustFx(e.x, e.z, e.r); for (let i = 0; i < 6; i++) meshFx(NODE.earth__pebble, V(e.x + rand(-1, 1), .3, e.z + rand(-1, 1)), .7, 1.5, .5, 6); } } },
+      look: { m: 'earth__boulder', s: 1.1, roll: 1, dust: 0x8a7a62 },
+      fx: { boom(e) { boomFx(e.x, e.y, e.z, e.r, 0xd9913a, .7); dustFx(e.x, e.z, e.r); debrisFx(e.x, .8, e.z, 9, 'earth__pebble', 0xd9913a, .45, 9); } } },
     { name: 'Stone Pillar', icon: '🗿', cd: 9, mode: 'aim', range: 16, aimR: 2.2, desc: 'Erupt a stone pillar that launches enemies skyward. Aim at your own feet to ride it up.',
       self(p, c) { if (Math.hypot(c.tgt.x - p.x, c.tgt.z - p.z) < 2.2) { p.vy = 16; p.y = Math.max(p.y, .1); } },
       cast(p, c) { const t = c.tgt; boomAt(c, t.x, 0, t.z, 2.4, 26 * c.dmg, { lift: 12, kb: 3 }, 'rise'); ent(p, c, t.x, t.z, { life: 6, r: 1.2, solid: [{ x: t.x, z: t.z, r: 1.1 }], h: 3.2 }); },
-      view: { make(n) { const o = model('earth__pillar', 0xd9913a, { shadow: true }); o.rotation.y = rand(0, TAU); return o; },
+      view: { make(n) { const o = model('earth__pillar', 0xd9913a, { shadow: true }); o.rotation.y = rand(0, TAU); debrisFx(n.x, .5, n.z, 7, 'earth__pebble', 0xd9913a, .35, 9); return o; },
         upd(o, n) { o.position.y = -3.5 * (1 - easeOutBack(Math.min(1, n.t * 6))); if (n.l < .08) o.position.y = -3.5 * (1 - n.l / .08); },
         drop(o, n) { dustFx(n.x, n.z, 1.5); addFx(o, .3, (o, k) => { o.position.y = -3.5 * k; }); } },
       fx: { rise(e) { dustFx(e.x, e.z, e.r); ringFx(e.x, .1, e.z, e.r * 1.4, 0xd9913a); sfx('earth_big'); shake(.2); } } },
@@ -460,13 +500,13 @@ earth: {
           later(i * .045, () => { const h = boomAt(c, q.x, 0, q.z, 1.6, 28 * c.dmg, { lift: 9, kb: 2, skip: hit, poise: 2, raw: true }, 'spike'); hit.push(...h.map(e => e.id)); });
         }
       },
-      fx: { spike(e) { riseFx('earth__spike', 0xd9913a, e.x, e.z, rand(.9, 1.3), 1.1); dustFx(e.x, e.z, 1.2); if (Math.random() < .5) sfx('earth'); shake(.06); } } },
+      fx: { spike(e) { riseFx('earth__spike', 0xd9913a, e.x, e.z, rand(.9, 1.3), 1.1); dustFx(e.x, e.z, 1.2); debrisFx(e.x, .3, e.z, 2, 'earth__pebble', 0xd9913a, .25, 6); scarFx(e.x, e.z, 1.1, 0xd9913a, 1.6); if (Math.random() < .5) sfx('earth'); shake(.06); } } },
     { name: 'Tectonic Quake', icon: '🌋', desc: 'ULTIMATE. Shake the island with four quakes that stun every grounded enemy nearby. You take half damage meanwhile.',
       cast(p, c) { buff(p, 'quake', 3.6); for (let i = 0; i < 4; i++) later(i * .8, () => { if (!p.down) boomAt(c, p.x, 0, p.z, 12, 40 * c.dmg, { ground: true, cc: ['stun', 1.2], lift: 5, kb: 3 }, 'quake'); }); },
       fx: { quake(e) {
         ringFx(e.x, .1, e.z, e.r, 0xd9913a, .8, 1); ringFx(e.x, .2, e.z, e.r * .6, 0xffd08a, .6);
         for (let i = 0; i < 16; i++) { const a = rand(0, TAU), d = rand(2, e.r); riseFx('earth__spike', 0xd9913a, e.x + Math.cos(a) * d, e.z + Math.sin(a) * d, rand(.5, 1), .9); }
-        dustFx(e.x, e.z, e.r * .6); shake(.6); sfx('earth_big'); sfx('smash');
+        dustFx(e.x, e.z, e.r * .6); debrisFx(e.x, .5, e.z, 10, 'earth__pebble', 0xd9913a, .4, 11); shake(.6); sfx('earth_big'); sfx('smash');
       } } },
   ],
 },
@@ -889,11 +929,12 @@ crystal: {
       cast(p, c) { for (let k = 0; k < c.multi; k++) shoot(p, c, 40, { d: spread(c.d, k, c.multi), r: .3, dmg: 14 * c.dmg, sc: c.mega ? 1.8 : 1 }); },
       shot: { hit(s, e, hd) {
         const p = own(s); hitEnemy(e, 'crystal', s.dmg, p, s.vx, s.vz, s.kb, { crit: hd ? 1.5 : 1, src: { x: s.x - s.vx, z: s.z - s.vz } });
-        if (!s.child) { const d = V(s.vx, s.vy, s.vz).normalize(); for (const k of [-1, 0, 1]) shoot(p, ctxS(s), 30, { o: V(s.x, s.y, s.z), d: d.clone().applyAxisAngle(UP, k * .45), life: .35, dmg: 5 * s.mul, child: 1, hit: [e.id], sc: .6 }); }
+        if (!s.child) { fxe(s.mv, 'crack', { x: s.x, y: s.y, z: s.z }); const d = V(s.vx, s.vy, s.vz).normalize(); for (const k of [-1, 0, 1]) shoot(p, ctxS(s), 30, { o: V(s.x, s.y, s.z), d: d.clone().applyAxisAngle(UP, k * .45), life: .35, dmg: 5 * s.mul, child: 1, hit: [e.id], sc: .6 }); }
         return 'end';
       } },
       look: { m: 'crystal__prism', spin: [0, 0, 6], trail: [0xffb0f0, .14, .25, 0, 1], light: 4 },
-      fx: { det: e => boomFx(e.x, e.y, e.z, 2.5, 0xff5ad8, .6), nova: e => boomFx(e.x, .5, e.z, 4.5, 0xff5ad8, .8) } },
+      fx: { crack(e) { debrisFx(e.x, e.y, e.z, 3, 'crystal__prism', 0xff5ad8, .14, 5); burst(e.x, e.y, e.z, 8, 0xffd0f6, 4, .1, .25); }, // the shard shatters on impact
+        det: e => boomFx(e.x, e.y, e.z, 2.5, 0xff5ad8, .6), nova: e => boomFx(e.x, .5, e.z, 4.5, 0xff5ad8, .8) } },
     { name: 'Geode Bomb', icon: '🪩', cd: 6, desc: 'Lob a geode that cracks open and sprays crystal shards in every direction.',
       cast(p, c) { shoot(p, c, 22, { d: lob(c.d, .15), grav: 16, r: .4, dmg: 10 * c.dmg, rest: .35, fuse: 1.2 }); },
       shot: { hit: () => 'end', end(s) {
@@ -902,10 +943,15 @@ crystal: {
         for (let i = 0; i < 14; i++) { const a = TAU * i / 14; shoot(c.p, cs, 25, { o: V(s.x, Math.max(s.y, .4) + .2, s.z), d: V(Math.sin(a), .08, Math.cos(a)), life: .6, dmg: 12 * s.mul, child: 1, sc: .8 }); }
       } },
       look: { m: 'crystal__geode', spin: [3, 4, 0], light: 4 },
-      fx: { boom: e => { boomFx(e.x, e.y, e.z, e.r, 0xff5ad8, .8); sfx('crystal_big'); } } },
+      fx: { boom: e => { boomFx(e.x, e.y, e.z, e.r, 0xff5ad8, .8); debrisFx(e.x, e.y + .2, e.z, 9, 'crystal__prism', 0xff5ad8, .2, 9); debrisFx(e.x, e.y + .2, e.z, 2, 'crystal__geode', 0xff5ad8, .35, 4); dustFx(e.x, e.z, 1.2, 0x8a6a80); sfx('crystal_big'); } } },
     { name: 'Diamond Shell', icon: '🛡️', cd: 13, desc: 'Encase yourself in a diamond shell that absorbs 60 damage. When it breaks or fades, it bursts into shards.',
-      cast(p, c) { buff(p, 'shell', 6); p.bd.shell = 60; fxe(c.m.key, 'shell', { x: p.x, z: p.z }); },
-      fx: { shell(e) { burst(e.x, 1, e.z, 30, 0xffb0f0, 5, .25, .5); sfx('crystal_big'); }, burst(e) { burst(e.x, e.y, e.z, 60, 0xff8ae8, 10, .3, .5, 4); sfx('tink'); shake(.15); } } },
+      cast(p, c) { buff(p, 'shell', 6); p.bd.shell = 60; fxe(c.m.key, 'shell', { id: p.id, x: p.x, z: p.z }); },
+      fx: { shell(e) { // the shell grows around you out of shards
+          burst(e.x, 1, e.z, 30, 0xffb0f0, 5, .25, .5); sfx('crystal_big');
+          modelFx('crystal__shell', 0xff5ad8, V(e.x, 1.1, e.z), .9, (o, k) => { o.scale.setScalar(1.3 * easeOutBack(Math.min(1, k * 3))); o.rotation.y = k * 2; fade(o, (k < .6 ? .8 : (1 - k) / .4 * .8) * (isMe(e.id) ? .4 : 1)); }); // you're inside it: fainter, or it tints your whole view
+          for (let i = 0; i < 10; i++) { const a = TAU * i / 10, from = V(e.x + Math.cos(a) * 4, rand(.3, 2.5), e.z + Math.sin(a) * 4), to = V(e.x + Math.cos(a) * 1.2, rand(.6, 1.8), e.z + Math.sin(a) * 1.2); modelFx('crystal__prism', 0xff5ad8, from, .35, (o, k) => { o.position.lerpVectors(from, to, easeOut(k)); o.scale.setScalar(.25); o.lookAt(e.x, o.position.y, e.z); fade(o, 1 - k * .5); }); }
+        },
+        burst(e) { burst(e.x, e.y, e.z, 60, 0xff8ae8, 10, .3, .5, 4); debrisFx(e.x, e.y, e.z, 12, 'crystal__prism', 0xff5ad8, .2, 10); sfx('tink'); shake(.15); } } },
     { name: 'Crystal Spire', icon: '🔮', cd: 14, mode: 'aim', range: 14, aimR: 1.5, desc: 'Grow a crystal spire that shoots enemies. Your own projectiles that pass by it refract into three.',
       cast(p, c) { ent(p, c, c.tgt.x, c.tgt.z, { life: 10, r: 16, solid: [{ x: c.tgt.x, z: c.tgt.z, r: .8 }], h: 3 }); },
       ent: { tick(n, dt) {
@@ -920,9 +966,9 @@ crystal: {
         const o = V(n.x, 2.3, n.z), d = center(e).sub(o).normalize();
         shoot(own(n), { ...ctxN(n), m: MOVE['crystal.0'] }, 34, { o, d, r: .3, dmg: 10 * n.mul, child: 1, mul: n.mul });
       } },
-      view: { make(n) { const o = model('crystal__spire', 0xff5ad8, { shadow: true }); dustFx(n.x, n.z, 1.5); sfx('crystal_big'); return o; },
+      view: { make(n) { const o = model('crystal__spire', 0xff5ad8, { shadow: true }); dustFx(n.x, n.z, 1.5); debrisFx(n.x, .4, n.z, 6, 'earth__pebble', 0xff5ad8, .3, 7); sfx('crystal_big'); return o; },
         upd(o, n, dt, t) { o.scale.setScalar(easeOutBack(Math.min(1, n.t * 3))); o.rotation.y += dt * .3; if (Math.random() < .3) emit(n.x + rand(-.5, .5), rand(.5, 3), n.z + rand(-.5, .5), 0, .5, 0, 0xffb0f0, .1, .8); },
-        drop(o, n) { burst(n.x, 1.5, n.z, 50, 0xff8ae8, 7, .3, .6, 6); addFx(o, .3, (o, k) => { o.scale.setScalar(1 - k); }); } },
+        drop(o, n) { burst(n.x, 1.5, n.z, 50, 0xff8ae8, 7, .3, .6, 6); debrisFx(n.x, 1.5, n.z, 10, 'crystal__prism', 0xff5ad8, .25, 8); addFx(o, .3, (o, k) => { o.scale.setScalar(1 - k); }); } },
       fx: { refract(e) { burst(e.x, e.y, e.z, 10, 0xffb0f0, 4, .2, .25); flash(e.x, e.y, e.z, 0xff5ad8, 10, .1); } } },
     { name: 'Crystal Tomb', icon: '🏺', mode: 'aim', range: 20, aimR: 8, desc: 'ULTIMATE. Encase every enemy in the area in crystal. After 2.5 seconds the tombs shatter for massive damage.',
       cast(p, c) {
@@ -932,7 +978,7 @@ crystal: {
         later(2.5, () => { for (const e of es) if (!e.dead) { const q = center(e); fxe(c.m.key, 'shatter', { x: q.x, y: q.y, z: q.z }); hitEnemy(e, 'crystal', 180 * c.dmg, p, 0, 0, 2, { aoe: true }); } });
       },
       fx: { tomb(e) { circleFx('crystal', V(e.x, .08, e.z), e.r, { life: 1.4 }); flash(e.x, 2, e.z, 0xff5ad8, 50, .4); sfx('crystal_big'); sfx('ult'); },
-        shatter(e) { meshFx(NODE.crystal__prism, V(e.x, e.y, e.z), .6, 1, 3, 5); burst(e.x, e.y, e.z, 60, 0xff8ae8, 12, .3, .6, 6); flash(e.x, e.y, e.z, 0xff5ad8, 25, .2); sfx('tink'); shake(.15); } } },
+        shatter(e) { meshFx(NODE.crystal__prism, V(e.x, e.y, e.z), .6, 1, 3, 5); debrisFx(e.x, e.y, e.z, 7, 'crystal__prism', 0xff5ad8, .3, 10); burst(e.x, e.y, e.z, 60, 0xff8ae8, 12, .3, .6, 6); flash(e.x, e.y, e.z, 0xff5ad8, 25, .2); sfx('tink'); shake(.15); } } },
   ],
 },
 // ================================================================== SONIC
@@ -997,21 +1043,26 @@ gravity: {
     { name: 'Graviton', icon: '⚫', cd: .55, desc: 'A slow, heavy orb that drags nearby enemies toward its path and implodes on impact.',
       cast(p, c) { for (let k = 0; k < c.multi; k++) shoot(p, c, 20, { d: spread(c.d, k, c.multi, .12), r: .45, life: 1.6, dmg: 22 * c.dmg, sc: c.mega ? 1.8 : 1 }); },
       shot: { tick(s, dt) { if (pulse(s, dt, .05, 'g')) for (const e of enemiesNear(s.x, s.z, 3.5, s.hit)) pull(e, s.x, s.z, 1.4); }, hit: () => 'end', end(s) { boomAt(ctxS(s), s.x, s.y, s.z, 2, s.dmg, { kb: -6 }); } /* the implosion carries the shot damage */ },
-      look: { m: 'gravity__orb', spin: [1, 3, 0], trail: [0x6a20cc, .3, .4, 0, 2], light: 5 },
-      fx: { boom: e => { ringFx(e.x, e.y, e.z, e.r, 0xa040ff, .35, e.r * 1.5); burst(e.x, e.y, e.z, 30, 0xc080ff, -6, .25, .4); sfx('gravity'); }, det: e => boomFx(e.x, e.y, e.z, 2.5, 0xa040ff, .6), nova: e => boomFx(e.x, .5, e.z, 4.5, 0xa040ff, .8) } },
+      look: { m: 'gravity__orb', spin: [1, 3, 0], trail: [0x6a20cc, .3, .4, 0, 2], light: 5, suck: [0xc080ff, 2.4] },
+      fx: { boom: e => { // it implodes: a black core collapses to nothing
+          ringFx(e.x, e.y, e.z, e.r, 0xa040ff, .35, e.r * 1.5); burst(e.x, e.y, e.z, 30, 0xc080ff, -6, .25, .4); sfx('gravity');
+          modelFx('gravity__hole', 0xa040ff, V(e.x, e.y, e.z), .35, (o, k) => { o.scale.setScalar(e.r * .45 * (1 - k * k)); o.rotation.y = k * 6; });
+        }, det: e => boomFx(e.x, e.y, e.z, 2.5, 0xa040ff, .6), nova: e => boomFx(e.x, .5, e.z, 4.5, 0xa040ff, .8) } },
     { name: 'Crush', icon: '⬇️', cd: 6, mode: 'aim', range: 22, aimR: 3.5, desc: 'Multiply gravity at the target, crushing and stunning enemies. Airborne enemies are slammed into the floor.',
       cast(p, c) { for (const e of boomAt(c, c.tgt.x, 0, c.tgt.z, 3.5, 55 * c.dmg, { kb: 0, cc: ['stun', 1] }, 'crush')) if (e.y > .3) e.vy = -26; },
-      fx: { crush(e) { modelFx('gravity__rings', 0xa040ff, V(e.x, 6, e.z), .45, (o, k) => { o.position.y = 6 * (1 - k); o.scale.setScalar(e.r * (1.4 - k * .4)); fade(o, 1 - k * .5); }, { flat: true }); ringFx(e.x, .1, e.z, e.r, 0xa040ff, .4); dustFx(e.x, e.z, e.r); shake(.25); sfx('gravity_big'); } } },
+      fx: { crush(e) { modelFx('gravity__rings', 0xa040ff, V(e.x, 6, e.z), .45, (o, k) => { o.position.y = 6 * (1 - k); o.scale.setScalar(e.r * (1.4 - k * .4)); fade(o, 1 - k * .5); }, { flat: true }); ringFx(e.x, .1, e.z, e.r, 0xa040ff, .4); dustFx(e.x, e.z, e.r); scarFx(e.x, e.z, e.r * .85, 0xa040ff, 3); debrisFx(e.x, .3, e.z, 6, 'earth__pebble', 0xa040ff, .3, 4); shake(.25); sfx('gravity_big'); } } },
     { name: 'Levitate', icon: '🎈', cd: 9, mode: 'aim', range: 20, aimR: 4.5, desc: 'Lift every enemy in the area helplessly into the air for 2 seconds, then drop them hard.',
       cast(p, c) { for (const e of enemiesNear(c.tgt.x, c.tgt.z, 4.5 * c.st.aoe)) { hitEnemy(e, 'gravity', 22 * c.dmg, p, 0, 0, 0, { aoe: true }); cc(e, 'lift', 2.2, p); } fxe(c.m.key, 'lift', { x: c.tgt.x, z: c.tgt.z, r: 4.5 * c.st.aoe }); },
-      fx: { lift(e) { circleFx('gravity', V(e.x, .08, e.z), e.r, { life: 2.2 }); for (let i = 0; i < 40; i++) { const a = rand(0, TAU), d = rand(0, e.r); emit(e.x + Math.cos(a) * d, .2, e.z + Math.sin(a) * d, 0, rand(2, 5), 0, 0xc080ff, rand(.15, .3), 1, -1, .5); } sfx('gravity_big'); } } },
+      fx: { lift(e) { circleFx('gravity', V(e.x, .08, e.z), e.r, { life: 2.2 });
+        for (let i = 0; i < 10; i++) { const a = rand(0, TAU), d = rand(.5, e.r), x = e.x + Math.cos(a) * d, z = e.z + Math.sin(a) * d, top = rand(1.5, 4), sp = rand(-2, 2), sc = rand(.25, .5); // rubble floats up with them, then drops
+          modelFx('earth__pebble', 0xa040ff, V(x, .2, z), 2.4, (o, k) => { o.position.y = k < .9 ? .2 + top * easeOut(Math.min(1, k * 2)) + Math.sin(k * 12 + i) * .15 : .2 + top * (1 - (k - .9) / .1) ** 2; o.rotation.set(k * sp, k * sp * 2, 0); o.scale.setScalar(sc); }); } for (let i = 0; i < 40; i++) { const a = rand(0, TAU), d = rand(0, e.r); emit(e.x + Math.cos(a) * d, .2, e.z + Math.sin(a) * d, 0, rand(2, 5), 0, 0xc080ff, rand(.15, .3), 1, -1, .5); } sfx('gravity_big'); } } },
     { name: 'Repulsor', icon: '💫', cd: 9, desc: 'Blast everything away from you and reflect nearby enemy projectiles back at them.',
       cast(p, c) {
         boomAt(c, p.x, .8, p.z, 7, 24 * c.dmg, { kb: 18 }, 'push');
         for (const s of S.shots) if (s.foe && Math.hypot(s.x - p.x, s.z - p.z) < 9) Object.assign(s, { foe: 0, own: p.id, mv: 'gravity.3', el: 'gravity', dmg: 20 * c.dmg, vx: -s.vx * 1.4, vy: -s.vy * 1.4, vz: -s.vz * 1.4, hit: [], life: 2, mul: c.dmg, r: .4, pierce: 0, bounce: 0, grav: 0, t: 0, sc: .7 });
       },
       look: { m: 'gravity__orb', spin: [1, 3, 0], trail: [0x6a20cc, .3, .4, 0, 2], light: 5 },
-      fx: { push(e) { ringFx(e.x, .3, e.z, e.r, 0xa040ff, .4); ringFx(e.x, 1.2, e.z, e.r * .8, 0xe0c0ff, .3); burst(e.x, 1, e.z, 50, 0xc080ff, 14, .25, .4); shake(.15); sfx('gravity_big'); } } },
+      fx: { push(e) { modelFx('gen__dome', 0xc080ff, V(e.x, 0, e.z), .4, (o, k) => { o.scale.setScalar(1 + e.r * easeOut(k)); fade(o, (1 - k) * .55); }); dustFx(e.x, e.z, 2.5); ringFx(e.x, .3, e.z, e.r, 0xa040ff, .4); ringFx(e.x, 1.2, e.z, e.r * .8, 0xe0c0ff, .3); burst(e.x, 1, e.z, 50, 0xc080ff, 14, .25, .4); shake(.15); sfx('gravity_big'); } } },
     { name: 'Singularity', icon: '🌌', mode: 'aim', range: 22, aimR: 6, desc: 'ULTIMATE. Open a black hole that drags in every enemy nearby, grinds them down, then collapses in a huge explosion.',
       cast(p, c) { ent(p, c, c.tgt.x, c.tgt.z, { life: 4.5, r: 15, y: 2 }); },
       ent: {
@@ -1247,7 +1298,7 @@ explosion: {
       cast(p, c) { for (let k = 0; k < c.multi; k++) shoot(p, c, 22, { d: lob(spread(c.d, k, c.multi, .12), .15), grav: 16, r: .25, dmg: 21 * c.dmg, rest: .45, fuse: .9, sc: c.mega ? 1.8 : 1, big: c.mega }); },
       shot: { hit: () => 'end', end(s) { boomAt(ctxS(s), s.x, Math.max(s.y, .2), s.z, 2.6 * (s.big ? 1.5 : 1), s.dmg, { kb: 6 }); } },
       look: { m: 'explosion__grenade', spin: [8, 0, 3], trail: [0xffd080, .08, .2, 0, 1], light: 2, blink: 1 },
-      fx: { boom: e => { boomFx(e.x, e.y, e.z, e.r, e.foe ? 0xff4020 : 0xffa020, 1.1); burst(e.x, e.y, e.z, 20, 0x2a2420, 5, .5, .8, -1); }, det: e => boomFx(e.x, e.y, e.z, 2.5, 0xffa020, .6), nova: e => boomFx(e.x, .5, e.z, 4.5, 0xffa020, .8) } },
+      fx: { boom: e => blastFx(e), det: e => boomFx(e.x, e.y, e.z, 2.5, 0xffa020, .6), nova: e => boomFx(e.x, .5, e.z, 4.5, 0xffa020, .8) } },
     { name: 'Sticky Bomb', icon: '🧨', cd: 3, desc: 'Throw a sticky bomb that clings to whatever it hits and blows a moment later in a big blast.',
       cast(p, c) {
         shoot(p, c, 30, { r: .35, life: 12, fuse: 2.5, dmg: 70 * c.dmg, grav: 6 });
@@ -1258,11 +1309,11 @@ explosion: {
         end(s) { boomAt(ctxS(s), s.x, Math.max(s.y, .2), s.z, 3.2, s.dmg, { kb: 8 }); },
       },
       look: { m: 'explosion__sticky', spin: [3, 5, 0], light: 3, blink: 1 },
-      fx: { boom: e => { boomFx(e.x, e.y, e.z, e.r, 0xffa020, 1.4); burst(e.x, e.y, e.z, 30, 0x2a2420, 6, .5, .8, -1); } } },
+      fx: { boom: e => blastFx(e, 1.3) } },
     { name: 'Rocket Jump', icon: '🚀', cd: 6, desc: 'Blast the ground under your feet to rocket up and forward, flattening whatever is nearby.',
       self(p, c) { p.vy = 13; p.y = Math.max(p.y, .05); const f = flatAim(p); p.mo = { t: 0, T: .45, vx: f.x * 16, vz: f.z * 16, trail: 0xffa020 }; },
       cast(p, c) { buff(p, 'inv', .25); boomAt(c, p.x, .3, p.z, 3.5, 30 * c.dmg, { kb: 10 }, 'boom'); },
-      fx: { boom: e => { boomFx(e.x, e.y, e.z, e.r, 0xffa020, 1.2); burst(e.x, e.y, e.z, 20, 0x2a2420, 5, .5, .8, -1); } } },
+      fx: { boom: e => blastFx(e, 1.1) } },
     { name: 'Proximity Mines', icon: '🎯', cd: 12, desc: 'Toss four mines ahead of you. Each one blows when an enemy walks over it.',
       cast(p, c) { const f = c.flat; for (let k = 0; k < 4; k++) { const d = f.clone().applyAxisAngle(UP, (k - 1.5) * .35), q = clampArena(V(p.x + d.x * (7 + (k % 2) * 2.5), 0, p.z + d.z * (7 + (k % 2) * 2.5)), .8); ent(p, c, q.x, q.z, { life: 20, r: 1.6, fx0: p.x, fz0: p.z }); } },
       ent: { tick(n, dt) {
@@ -1274,11 +1325,11 @@ explosion: {
         upd(o, n, dt, t) { const k = Math.min(1, n.t / .6); if (k < 1) { o.position.lerpVectors(o.userData.from, V(n.x, 0, n.z), k); o.position.y += Math.sin(k * Math.PI) * 2.5; o.rotation.x += dt * 10; } else { o.position.y = .02; o.rotation.x = 0; }
           o.userData.mats.forEach(m => m.uniforms && (m.uniforms.uA.value = .5 + .5 * Math.sin(t * (n.s ? 40 : 4)))); },
         drop: (o) => o.removeFromParent() },
-      fx: { beep(e) { sfx('fuse'); flash(e.x, .5, e.z, 0xff4020, 10, .2); }, boom: e => { boomFx(e.x, e.y, e.z, e.r, 0xffa020, 1.2); burst(e.x, e.y, e.z, 20, 0x2a2420, 5, .5, .8, -1); } } },
+      fx: { beep(e) { sfx('fuse'); flash(e.x, .5, e.z, 0xff4020, 10, .2); }, boom: e => blastFx(e, 1.1) } },
     { name: 'Carpet Bomb', icon: '✈️', desc: 'ULTIMATE. Call in a bombing run: fourteen bombs drop in a line ahead of you, one after another.',
       cast(p, c) { const f = c.flat, x0 = p.x, z0 = p.z; for (let i = 0; i < 14; i++) { const q = clampArena(V(x0 + f.x * (4 + i * 2), 0, z0 + f.z * (4 + i * 2)), .8); later(.25 + i * .12, () => { fxe(c.m.key, 'drop', { x: q.x, z: q.z }); later(.4, () => boomAt(c, q.x, .3, q.z, 4.5, 130 * c.dmg, { kb: 8, lift: 4, raw: true })); }); } fxe(c.m.key, 'run', {}); },
       fx: { drop(e) { modelFx('explosion__bomb', 0xffa020, V(e.x, 25, e.z), .41, (o, k) => { o.position.y = 25 * (1 - k * k); }); },
-        boom: e => { boomFx(e.x, e.y, e.z, e.r, 0xffa020, 1.4); burst(e.x, e.y, e.z, 24, 0x2a2420, 6, .6, 1, -1); },
+        boom: e => blastFx(e, 1.2),
         run() { sfx('ult'); } } },
   ],
 },

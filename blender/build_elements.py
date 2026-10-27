@@ -48,6 +48,8 @@ G = {k: (mat(k + '_glow', g, emit=6), mat(k + '_core', c, emit=10)) for k, (g, c
 # solid (PBR) materials
 ice = mat('ice_solid', (0.55, 0.85, 1.0), emit=1.2, ecolor=(0.3, 0.8, 1.0), rough=0.05)
 rockm = mat('el_rock', (0.26, 0.22, 0.2), rough=0.92)
+stone_l = mat('earth_stone', (0.5, 0.4, 0.3), rough=0.85)  # Earth's warm sandstone, lit
+stone_d = mat('earth_stone_dark', (0.31, 0.25, 0.2), rough=0.9)
 basalt = mat('basalt', (0.07, 0.06, 0.06), rough=0.85)
 metal = mat('el_metal', (0.62, 0.64, 0.7), rough=0.25, metal=1)
 darkmetal = mat('dark_metal', (0.08, 0.08, 0.1), rough=0.35, metal=0.9)
@@ -715,17 +717,34 @@ m.ico(rockm, 1, sub=2, noise=0.1)
 for k in range(3):
     m.lathe(eg, [(0.99, -0.03), (1.02, 0), (0.99, 0.03), (0.96, 0)], n=36, M=TRS(rot=(k * 1.1 + 0.3, k * 0.6, 0)), closed=True)
 put('earth', m.done())
-m = M('earth__pillar')  # basalt column cluster, pivot at ground
-for i, (x, y, h) in enumerate([(0, 0, 3.2), (0.55, 0.3, 2.5), (-0.5, 0.35, 2.7), (0.1, -0.6, 2.2), (-0.45, -0.4, 1.8), (0.6, -0.35, 1.6)]):
+m = M('earth__pillar')  # basalt column cluster in two tones of stone, glowing seams up the edges, rubble at the foot; pivot at ground
+cols = [(0, 0, 3.2), (0.55, 0.3, 2.5), (-0.5, 0.35, 2.7), (0.1, -0.6, 2.2), (-0.45, -0.4, 1.8), (0.6, -0.35, 1.6)]
+for i, (x, y, h) in enumerate(cols):
     r = 0.42 if i else 0.55
-    m.prism(rockm, [(x + r * math.cos(TAU * k / 6 + i), y + r * math.sin(TAU * k / 6 + i)) for k in range(6)], -0.3, h)
+    ring = [(x + r * math.cos(TAU * k / 6 + i), y + r * math.sin(TAU * k / 6 + i)) for k in range(6)]
+    m.prism(stone_l if i % 2 == 0 else stone_d, ring, -0.3, h)
     m.prism(eg, [(x + r * 0.7 * math.cos(TAU * k / 6 + i), y + r * 0.7 * math.sin(TAU * k / 6 + i)) for k in range(6)], h, h + 0.03)
+    for k in (0, 3) if i == 0 else (i % 6,):  # a glowing seam running up one edge, wavering a little
+        vx, vy = ring[k]
+        m.tube(eh, [(vx * 1.0 + 0.012 * math.sin(t * 2.1 + i), vy + 0.012 * math.cos(t * 1.7), -0.1 + (h - 0.1) * t / 8) for t in range(9)], 0.022, n=4)
+    for z in (h * 0.35, h * 0.7):  # strata bands
+        m.prism(stone_d if i % 2 == 0 else stone_l, [(x + r * 1.03 * math.cos(TAU * k / 6 + i), y + r * 1.03 * math.sin(TAU * k / 6 + i)) for k in range(6)], z, z + 0.08)
+for k in range(9):  # rubble round the foot
+    a = TAU * k / 9 + 0.3
+    m.ico(stone_d if k % 2 else stone_l, random.uniform(0.12, 0.24), TRS((math.cos(a) * random.uniform(1.0, 1.4), math.sin(a) * random.uniform(1.0, 1.4), 0.05)), sub=1, noise=0.03)
 pil = m.done()
 apply_bevel(pil, 0.04, segs=1)
 put('earth', pil)
-m = M('earth__spike')
-m.lathe(rockm, [(0.45, -0.2), (0.38, 0.3), (0.2, 1.1), (0, 1.9)], n=6, noise=0.05, jag=0.0)
+m = M('earth__spike')  # a cluster of jagged stone shards bursting up, with a glowing seam on the big one
+for k, (ang, tilt, h, r) in enumerate([(0, 0, 1.9, 0.42), (2.1, 0.38, 1.25, 0.3), (4.2, 0.42, 1.05, 0.27)]):
+    d = (math.sin(tilt) * math.cos(ang), math.sin(tilt) * math.sin(ang), math.cos(tilt))
+    m.lathe(stone_l if k == 0 else stone_d, [(r, -0.2), (r * 0.85, 0.3), (r * 0.45, h * 0.6), (0, h)], n=5, M=aim(d, (math.cos(ang) * 0.18 * k, math.sin(ang) * 0.18 * k, 0)), noise=0.035)
+prof = lambda z: 0.42 + (0.357 - 0.42) * min(1, (z + 0.2) / 0.5) if z < 0.3 else 0.357 + (0.189 - 0.357) * (z - 0.3) / (1.14 - 0.3) if z < 1.14 else 0.189 * (1.9 - z) / 0.76
+m.tube(eh, [(prof(z) * 1.01 * math.cos(0.3 + 0.08 * math.sin(z * 5)), prof(z) * 1.01 * math.sin(0.3 + 0.08 * math.sin(z * 5)), z) for z in [i * 0.17 for i in range(11)]], [0.03 - 0.0022 * i for i in range(11)], n=4)
 m.lathe(eg, [(0.39, 0.25), (0.41, 0.3), (0.39, 0.35)], n=6, closed=True)
+for k in range(5):  # broken rock at the base
+    a = TAU * k / 5
+    m.ico(stone_d, random.uniform(0.09, 0.16), TRS((math.cos(a) * 0.5, math.sin(a) * 0.5, 0.0)), sub=1, noise=0.025)
 put('earth', m.done())
 
 # ---------- WIND ----------

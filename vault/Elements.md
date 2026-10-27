@@ -434,6 +434,14 @@ Ink splats are real geometry (glossy black PBR with an indigo energy rim) laid a
 ## Balance
 Tuned with an automated bench (a bot plays every element through the same fights: 40 s against 8 respawning mixed monsters, 30 s against a boss, and each ultimate on its own). After the pass every element's core kit lands within about 0.85–1.2x of the median damage, the spread the bench's own run-to-run noise allows. Elements built for control, defence or bosses (Wind, Sonic, Soul, Gravity) sit lower against crowds or bosses on purpose; Blood sits higher because it pays for it in health. Fixed along the way: Graviton, Venom Spit and Magma Glob ignored their listed damage; Sticky Bomb could be thrown and detonated every 0.6 s (now it sticks and blows on its own).
 
+## Visual pass
+A capture of every move in action, plus a count of each element's bespoke effects, picked out the plainest four, and they were reworked:
+- **Explosion:** every blast is a burst of fire-lit smoke rolling into grey smoke, with flying debris, embers and a glowing scorch mark.
+- **Earth:** new pillar and spike models (warm two-tone stone, glowing amber seams, rubble); real dust instead of glowing dust; rock debris off every impact; the Boulder trails dust as it rolls.
+- **Crystal:** shards shatter into crystal fragments on hit; Geode Bomb and the Spire burst into crystals; Diamond Shell visibly forms around you out of shards.
+- **Gravity:** Graviton visibly drags matter into itself and collapses into a black core; Crush leaves a crater; Levitate lifts rubble with the enemies; Repulsor throws out a force dome.
+Every element that kicks up dust now gets real dust too.
+
 ## Element resources
 Some elements build up something you can see above your ability bar and around your wizard: Plasma's **Heat** (a bar that turns into OVERHEATED), Soul's **Souls** (pale flames circling you), Arcane's **charges** (orbs whirling round you), Blades' **swords** (orbiting your waist), Bone's armor **plates**, Rune's count toward the next **Empowered** spell and Laser's **Focus** pips.
 

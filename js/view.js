@@ -331,6 +331,8 @@ function renderShots(src, dt, t, a) {
       if (L.jaw) { const j = v.jaw ??= v.o.getObjectByName(L.jaw); if (j) j.rotation.x = Math.abs(Math.sin(t * 16 + s.id)) * .55; }
       if (L.wag) { const j = v.wag ??= v.o.getObjectByName(L.wag), w = Math.sin(t * 13 + s.id); if (j) j.rotation.y = w * .6; v.o.rotateY(-w * .15); } // a swimming tail
       if (L.blink) fade(v.o, .6 + .4 * Math.sin(t * 20));
+      if (L.dust && v.o.position.y < 2.5 && Math.random() < .35) smokeFx(v.o.position.x, .3, v.o.position.z, .9, L.dust, 1, 1, .5); // kicks up real dust as it rolls
+      if (L.suck) { const [c, R] = L.suck, p = v.o.position; for (let k = 0; k < 2; k++) { const a = rand(0, TAU), b = rand(-.6, .6), d = V(Math.cos(a) * Math.cos(b), Math.sin(b), Math.sin(a) * Math.cos(b)); emit(p.x + d.x * R, p.y + d.y * R, p.z + d.z * R, -d.x * R * 3.2, -d.y * R * 3.2, -d.z * R * 3.2, c, rand(.05, .1), .3, 0, 0); } } // matter dragged into it
       if (L.trail) { const [c, sz, life, grav, n] = L.trail; const p = v.o.position; for (let k = 0; k < n; k++) emit(p.x + rand(-.1, .1), p.y + rand(-.1, .1), p.z + rand(-.1, .1), rand(-.5, .5), rand(0, 1), rand(-.5, .5), typeof c === 'function' ? c() : c, sz * (s.sc || 1), life, grav); }
     }
     if (v.light) v.light.position.copy(v.o.position);
