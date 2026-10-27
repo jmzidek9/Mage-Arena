@@ -102,6 +102,7 @@ function boomFx(x, y, z, r, color, k = 1) {
   burst(x, y, z, Math.round(18 * k), new THREE.Color(color).lerp(new THREE.Color(1, 1, 1), .5).getHex(), 5, .5 * k, .35);
   flash(x, y + .5, z, color, 35 * k, .35);
   shake(clamp((.5 - distTo(x, z) * .03) * Math.min(1.6, r / 2.6), .04, .5)); sfx('boom');
+  cityPush(x, y, z, r + 2.5, 7 * k); // Mage City: blasts throw the rubble around
 }
 const REAP_ARC = new THREE.RingGeometry(4.6, 6.4, 32, 1, -Math.PI / 2 - 1.35, 2.7).rotateX(-Math.PI / 2); // Reap's crescent, centred on +z
 const _bgeo = new THREE.CylinderGeometry(1, 1, 1, 10, 1, true).rotateX(Math.PI / 2).translate(0, 0, .5);
