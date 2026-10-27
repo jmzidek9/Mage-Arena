@@ -86,15 +86,107 @@ const FOE_FX = {
     dustFx(e.x2, e.z2, 1.2); sfx('bash');
   },
   meteor(e) { fireBoom(e.x, 0, e.z, e.r, .8); debrisFx(e.x, .5, e.z, 6, 'earth__pebble', 0x5a3a2a, .35, 9); },
+  // ----- the Arena areas' attack kinds (areas.js), styled by s: bile, wail, soul, bone, snow, ice, frost, boulder, fire, breath, meteor, void, tentacle, shadow -----
+  cone(e) { // breath / wail / blizzard pouring forward
+    const f = V(Math.sin(e.yaw), 0, Math.cos(e.yaw)), fire = e.c === C_FIRE, n = Math.round(30 + e.r * 4);
+    for (let i = 0; i < n; i++) {
+      const a = e.yaw + rand(-1, 1) * e.ang * Math.PI / 360, sp = e.r * rand(1.4, 2.2), up = rand(-.15, .25);
+      emit(e.x + f.x * .8, e.y, e.z + f.z * .8, Math.sin(a) * sp, up * sp, Math.cos(a) * sp, fire ? flameColor() : Math.random() < .3 ? 0xffffff : e.c, rand(.2, .45) * (e.s === 'wail' ? .5 : 1), rand(.4, .6), e.s === 'frost' ? 1 : -1, .6);
+    }
+    if (e.s === 'wail') for (let i = 1; i <= 3; i++) setTimeout(() => ringFx(e.x + f.x * e.r * i / 4, e.y, e.z + f.z * e.r * i / 4, 1 + i * .8, e.c, .35), i * 70);
+    else smokeFx(e.x + f.x * e.r * .6, 1, e.z + f.z * e.r * .6, e.r * .3, fire ? 0x2e2428 : e.c, 1, 3, 1);
+    flash(e.x + f.x * 3, e.y, e.z + f.z * 3, e.c, 30, .35); sfx(STYLE_SND[e.s] || 'boom');
+  },
+  lob(e) { // the thrown thing flies its arc and lands as the warning fills
+    const P0 = V(e.x, e.y, e.z), P1 = V(e.x2, .3, e.z2), H = 3 + P0.distanceTo(P1) * .25, s = e.s;
+    const o = s === 'boulder' ? tintModel(model('earth__boulder', 0, { shadow: true }), e.c) : s === 'fire' ? model('fire__ball', C_FIRE) : model('gen__orb', e.c);
+    o.scale.setScalar(s === 'boulder' ? .9 : .45);
+    addFx(o, e.d, (o, k, dt) => {
+      o.position.lerpVectors(P0, P1, k); o.position.y += Math.sin(k * Math.PI) * H; o.rotation.x += 6 * dt; o.rotation.y += 4 * dt;
+      if (Math.random() < .7) emit(o.position.x, o.position.y, o.position.z, rand(-.3, .3), rand(-.3, .3), rand(-.3, .3), s === 'fire' ? flameColor() : e.c, rand(.12, .25), .4, s === 'bile' ? 6 : 0);
+    });
+    sfx('swing');
+  },
+  splash(e) {
+    if (e.s === 'fire') fireBoom(e.x, .3, e.z, e.r, .6);
+    else { boomFx(e.x, .3, e.z, e.r, e.c, .7); if (e.s === 'boulder') { dustFx(e.x, e.z, e.r); debrisFx(e.x, .5, e.z, 7, 'earth__pebble', 0xd8e8f0, .35, 8); } }
+    sfx(STYLE_SND[e.s] || 'boom');
+  },
+  pool(e) { // a lingering hazard on the floor: bubbling bile, burning ground, frost, a swirling rift
+    const d = T.disc.clone(), m = discMat(e.c); d.material = m; d.position.set(e.x, .06, e.z); d.scale.setScalar(e.r * 1.1);
+    addFx(d, e.l, (o, k) => {
+      m.uniforms.uA.value = Math.min(1, k * 8) * (k > .8 ? (1 - k) / .2 : 1) * (.65 + .2 * Math.sin(k * 40));
+      if (e.s === 'void') o.rotation.y += .05;
+      if (Math.random() < .5) { const a = rand(0, TAU), r = Math.sqrt(Math.random()) * e.r;
+        const x = e.x + Math.cos(a) * r, z = e.z + Math.sin(a) * r;
+        if (e.s === 'fire') emit(x, .1, z, 0, rand(1.5, 3), 0, flameColor(), rand(.2, .4), rand(.3, .5), -2);
+        else if (e.s === 'void') emit(x, .2, z, -Math.cos(a) * 2, rand(.2, .8), -Math.sin(a) * 2, Math.random() < .5 ? 0xc890ff : 0x4a1080, rand(.1, .2), .6);
+        else emit(x, .1, z, 0, rand(.4, 1.2), 0, Math.random() < .4 ? 0xffffff : e.c, rand(.1, .22), rand(.5, .9), -.5); }
+    });
+  },
+  ray(e) { // a beam down the lane
+    const a = V(e.x, e.y, e.z), b = V(e.x + Math.sin(e.yaw) * e.len, 1, e.z + Math.cos(e.yaw) * e.len);
+    beamFx(a, b, e.c, e.w * .35, .45); beamFx(a, b, 0xffffff, e.w * .12, .3);
+    for (let i = 0; i < 20; i++) { const q = a.clone().lerp(b, Math.random()); emit(q.x, q.y, q.z, rand(-2, 2), rand(0, 3), rand(-2, 2), e.c, rand(.1, .2), .4); }
+    burst(b.x, 1, b.z, 20, e.c, 6, .2, .4); flash(a.x, a.y, a.z, e.c, 40, .3); shake(.12); sfx('laser_big');
+  },
+  nova(e) {
+    boomFx(e.x, .5, e.z, e.r, e.c, .9); ringFx(e.x, .15, e.z, e.r * 1.1, 0xffffff, .5);
+    if (e.s === 'ice') for (let i = 0; i < 10; i++) { const a = TAU * i / 10, o = glowify(T.spike.clone(), glowMats(e.c)); o.position.set(e.x + Math.cos(a) * e.r * .7, 0, e.z + Math.sin(a) * e.r * .7); o.rotation.set(rand(-.3, .3), a, rand(-.3, .3));
+      addFx(o, .9, (o, k) => { o.scale.setScalar(k < .2 ? easeOutBack(k / .2) : 1 - ((k - .2) / .8) ** 3); }); }
+    else if (e.s === 'shadow' || e.s === 'void') smokeFx(e.x, .5, e.z, e.r * .5, 0x1a1030, 1.2, 6, .8);
+    else if (e.s === 'soul') pillarFx(e.x, 0, e.z, e.r * .4, 6, e.c, .6);
+    sfx(STYLE_SND[e.s] || 'boom');
+  },
+  spike(e) { // one piece of a rolling line: bone spikes, ice spikes, fire geysers, tentacles
+    if (distTo(e.x, e.z) > 2.2) {
+      if (e.s === 'fire') { pillarFx(e.x, 0, e.z, .8, 3.5, C_FIRE, .5); for (let i = 0; i < 6; i++) emit(e.x + rand(-.4, .4), .2, e.z + rand(-.4, .4), rand(-1, 1), rand(4, 8), rand(-1, 1), flameColor(), rand(.3, .5), .5, 4); }
+      else {
+        const o = e.s === 'tentacle' ? model('abyss__tentacle', C_VOID, { shadow: true }) : e.s === 'ice' ? glowify(T.spike.clone(), glowMats(C_ICE)) : tintModel(model('earth__pillar', 0, { shadow: true }), e.c);
+        const sc = e.s === 'tentacle' ? rand(.5, .7) : e.s === 'ice' ? rand(.8, 1.1) : rand(.26, .34);
+        o.position.set(e.x, -2, e.z); o.rotation.set(rand(-.35, .35), rand(0, TAU), rand(-.35, .35)); o.scale.setScalar(sc);
+        addFx(o, 1, (o, k) => { o.position.y = k < .15 ? -1.4 + 1.2 * easeOutBack(k / .15) : k > .7 ? -.2 - 1.3 * ((k - .7) / .3) ** 2 : -.2; if (e.s === 'tentacle') o.rotation.y += .08; });
+      }
+    }
+    dustFx(e.x, e.z, 1, e.s === 'ice' ? 0xd8e8f0 : e.s === 'void' || e.s === 'tentacle' ? 0x2a1840 : 0x9a8a78);
+    if (distTo(e.x, e.z) < 20) { shake(.06); if (e.i % 2 === 0) sfx(STYLE_SND[e.s] || 'earth'); }
+    cityPush(e.x, 0, e.z, 2.5, 3);
+  },
+  impact(e) { // a falling thing lands
+    if (e.s === 'meteor' || e.s === 'fire') { fireBoom(e.x, 0, e.z, e.r, .8); debrisFx(e.x, .5, e.z, 6, 'earth__pebble', 0x5a3a2a, .35, 9); return; }
+    boomFx(e.x, .3, e.z, e.r, e.c, .8);
+    if (e.s === 'bone') debrisFx(e.x, .4, e.z, 6, 'earth__pebble', 0xe8dcc0, .3, 8);
+    if (e.s === 'ice') burst(e.x, .4, e.z, 30, 0xffffff, 8, .15, .5, 9);
+    if (e.s === 'void' || e.s === 'shadow') smokeFx(e.x, .5, e.z, e.r * .6, 0x1a1030, 1, 4, .6);
+    sfx(STYLE_SND[e.s] || 'boom');
+  },
+  summon(e) {
+    circleFx('sigil', V(e.x, .08, e.z), 3.4, { life: 1.1, color: e.c }); pillarFx(e.x, 0, e.z, 1.4, 5, e.c, .7);
+    burst(e.x, 1, e.z, 40, e.c, 5, .3, .6, -1, 3); sfx('spawn'); sfx('soul_big');
+  },
+  buff(e) { // war-chant: a fiery ring and sparks on every monster in reach
+    ringFx(e.x, .12, e.z, e.r, 0xff8a3a, .6); burst(e.x, 2, e.z, 40, 0xffb040, 8, .25, .6, -2, 4); flash(e.x, 2, e.z, 0xff8a3a, 35, .4); sfx('fire_big');
+    for (const v of views.e.values()) if (v.g.position.distanceTo(V(e.x, v.g.position.y, e.z)) < e.r) burst(v.g.position.x, v.g.position.y + 1, v.g.position.z, 10, 0xff8a3a, 3, .2, .5, -2);
+  },
+  pull(e) { // a lash of void reaching down the lane and dragging back
+    const a = V(e.x, e.y, e.z), b = V(e.x + Math.sin(e.yaw) * e.len, 1.2, e.z + Math.cos(e.yaw) * e.len), o = beamMesh(e.c, .18);
+    addFx(o, .55, (o, k) => { const u = k < .4 ? k / .4 : 1 - (k - .4) / .6; aimBeam(o, a, a.clone().lerp(b, u), .18); fade(o, 1 - k * .5); });
+    sfx('abyss_big');
+  },
 };
-// the boss's rock: hidden until the last half second of its warning, then it falls blazing onto the circle
+const STYLE_SND = { bile: 'venom_big', wail: 'soul_big', soul: 'soul_big', bone: 'bone_big', snow: 'frost', ice: 'frost_big', frost: 'frost_big', boulder: 'earth_big', fire: 'fire_boom', breath: 'fire_big', meteor: 'fire_boom', void: 'abyss_big', tentacle: 'abyss_big', shadow: 'shadow_big' };
+function tintModel(o, c) { o.traverse(m => { if (m.isMesh && m.material.color && !m.material.uniforms && c) m.material.color.set(c); }); return o; }
+// something falling onto a marked circle: hidden until the last half second of its warning (s: what it is)
 function meteorFall(e) {
-  const o = model('earth__boulder', 0x6a4030, { shadow: true }), d = e.d, fall = Math.min(.5, d), ox = rand(-5, 5), oz = rand(-5, 5);
-  o.scale.setScalar(.8); o.visible = false;
+  const s = e.s || 'meteor', rock = s === 'meteor' || s === 'fire', d = e.d, fall = Math.min(.5, d), ox = rand(-5, 5), oz = rand(-5, 5);
+  const o = rock ? model('earth__boulder', 0x6a4030, { shadow: true }) : s === 'ice' || s === 'bone' ? glowify(T.spike.clone(), glowMats(e.c)) : model('gen__orb', e.c);
+  o.scale.setScalar(rock ? .8 : s === 'ice' || s === 'bone' ? 1.3 : .6); o.visible = false;
+  if (!rock && o.rotation) o.rotation.x = Math.PI; // spears point down
   addFx(o, d, (o, k, dt) => {
     const u = (k * d - (d - fall)) / fall; if (u < 0) return;
-    o.visible = true; o.position.set(e.x + ox * (1 - u), 20 * (1 - u) + .5, e.z + oz * (1 - u)); o.rotation.x += 9 * dt; o.rotation.z += 5 * dt;
-    for (let i = 0; i < 3; i++) emit(o.position.x + rand(-.4, .4), o.position.y + rand(-.4, .4), o.position.z + rand(-.4, .4), 0, rand(1, 3), 0, flameColor(), rand(.3, .55), rand(.25, .45), -2);
+    o.visible = true; o.position.set(e.x + ox * (1 - u), 20 * (1 - u) + .5, e.z + oz * (1 - u));
+    if (rock) { o.rotation.x += 9 * dt; o.rotation.z += 5 * dt; }
+    for (let i = 0; i < 3; i++) emit(o.position.x + rand(-.4, .4), o.position.y + rand(-.4, .4), o.position.z + rand(-.4, .4), 0, rand(1, 3), 0, rock ? flameColor() : e.c, rand(.2, .45), rand(.25, .45), rock ? -2 : 0);
   });
 }
 const COMBO_FX = {
@@ -137,7 +229,7 @@ function onEvent(e) {
       burst(e.x, e.y + 1 * s, e.z, e.boss ? 120 : 18, 0x2a1840, 5 * s, .4 * s, .8, 4);
       ringFx(e.x, .08, e.z, 2 * s, col, .4);
       const v = views.e.get(e.id); if (v) v.died = { col, kx: e.x - camera.position.x, kz: e.z - camera.position.z };
-      if (e.boss || e.elite) { flash(e.x, 2, e.z, col, 70, .8); shake(.8); banner(e.boss ? 'TYRANT SLAIN' : 'ELITE SLAIN', '#ffd36a'); }
+      if (e.boss || e.elite) { flash(e.x, 2, e.z, col, 70, .8); shake(.8); banner(e.boss ? `${(ET[e.type]?.name || 'The Tyrant').toUpperCase()} IS SLAIN` : 'ELITE SLAIN', '#ffd36a'); }
       sfx(e.boss ? 'ring' : 'die');
       break;
     }
@@ -167,7 +259,7 @@ function onEvent(e) {
     case 'dodge':
       if (e.id === myId) { banner('PERFECT DODGE', '#8ae8ff', 1000); dodgeFx = .6; sfx('dodge'); const m = me(); if (m) m.dcd = 0; }
       break;
-    case 'enrage': banner('THE TYRANT IS ENRAGED', '#ff5a3a', 2200); shake(.6); sfx('ring'); break;
+    case 'enrage': banner(`${(ET[views.e.get(e.id)?.type]?.name || 'The Tyrant').toUpperCase()} IS ENRAGED`, '#ff5a3a', 2200); shake(.6); sfx('ring'); break;
     case 'ult': if (e.id !== myId) banner(`PARTNER: ${e.name.toUpperCase()}`, css(EL[e.el].color), 1300); else sfx('ult'); break;
     case 'echo': if (e.id === myId) popNum(camera.position.x, camera.position.y + .3, camera.position.z, 'ECHO', '#ffd36a', 'tag'); break;
     case 'heal': if (e.id === myId) { healT = 1; } break;
@@ -176,7 +268,9 @@ function onEvent(e) {
     case 'down': banner(e.id === myId ? 'YOU ARE DOWN' : 'PARTNER DOWN, REVIVE THEM', '#ff6a8a'); break;
     case 'up': banner(e.id === myId ? 'REVIVED' : 'PARTNER REVIVED', '#8affc0'); sfx('pick'); break;
     case 'wave': {
-      banner(e.boss ? `WAVE ${e.n}: THE TYRANT` : `WAVE ${e.n}`, e.boss ? '#ff8a4a' : '#e8dcff', 2200);
+      const ar = e.area && AREAS.find(a => a.id === e.area);
+      if (ar && e.n > 1) { banner(ar.name.toUpperCase(), '#ffd8a0', 3000); setTimeout(() => banner(`WAVE ${e.n}`, '#e8dcff', 1800), 3000); sfx('ring'); }
+      else banner(e.boss ? `WAVE ${e.n}: ${(e.bn || 'The Tyrant').toUpperCase()}` : `WAVE ${e.n}`, e.boss ? '#ff8a4a' : '#e8dcff', 2200);
       $('mod').textContent = e.mod ? { swarm: '⚠ Swarm: twice the enemies, half the health', haste: '⚠ Haste: enemies move faster', darkness: '⚠ Darkness falls', elite: '⚠ An elite stalks you' }[e.mod] : '';
       sfx('wave');
       break;
@@ -220,8 +314,15 @@ function sync(map, list, make, upd, drop) {
 const ETPL = {};
 for (const k in ET) ETPL[k] = enemiesG.children.find(c => c.name.replace(/\d+$/, '') === k) || null;
 const FALLBACK = { stalker: 'grunt', bomber: 'runner', knight: 'grunt', shaman: 'shooter', skeleton: 'grunt', rat: 'runner', archer: 'shooter', ghoul: 'splitter', dknight: 'knight', warden: 'boss' };
-const PART_RE = /_(body|head|jaw|armL|armR|legL|legR|leg\d|tail|wingL|wingR|ring|tent\d|shield|weapon|eye|fuse|staff|crown)$/;
+// Arena area monsters without a rig of their own yet borrow the closest one, tinted their area's colour
+Object.assign(FALLBACK, { zombie: 'grunt', bonehound: 'runner', banshee: 'shaman', bloater: 'bomber', colossus: 'brute', necromancer: 'shaman', lich: 'shaman', bonedragon: 'boss',
+  snowfiend: 'grunt', icewolf: 'runner', icesprite: 'shooter', frostmite: 'bomber', yeti: 'brute', glacier: 'knight', frostgiant: 'boss', frostqueen: 'shaman',
+  hellhound: 'runner', cinderimp: 'grunt', magmaling: 'bomber', infernal: 'brute', hellknight: 'knight', pyrepriest: 'shaman', pitlord: 'boss', archdemon: 'boss',
+  voidling: 'runner', gazer: 'shooter', riftmite: 'bomber', voidspawn: 'splitter', horror: 'brute', mindflayer: 'shaman', watcher: 'shooter', devourer: 'boss', umbra: 'boss' });
+const PART_RE =/_(body|head|jaw|armL|armR|legL|legR|leg\d|tail|wingL|wingR|ring|tent\d|shield|weapon|eye|fuse|staff|crown)$/;
 const RIM = { stalker: 0x9a4cff, boss: 0xff5a20, bomber: 0xffa020, knight: 0xa0c0ff, shaman: 0x40ff90, skeleton: 0xbfd4ff, rat: 0xffb060, archer: 0xbfd4ff, ghoul: 0x7aff6a, dknight: 0xff4a4a, warden: 0x5ad8ff };
+for (const k in ET) if (RIM[k] == null && ET[k].zone && { crypt: 1, frost: 1, hell: 1, void: 1 }[ET[k].zone]) RIM[k] = { crypt: 0x6aff9a, frost: 0x9fe6ff, hell: 0xff6a1a, void: 0xb04cff }[ET[k].zone];
+RIM.umbra = 0x9a4cff;
 function makeEnemy(e) {
   const tpl = ETPL[e.type] || ETPL[FALLBACK[e.type]] || ETPL.grunt;
   const g = tpl.clone(), mats = [], parts = {};
@@ -236,7 +337,7 @@ function makeEnemy(e) {
   let ring = null;
   if (e.elite) { ring = makeCircle('sigil', 0xffc640); ring.scale.setScalar(1.4); ring.position.y = .05; g.add(ring); }
   scene.add(g);
-  return { g, mats, parts, flash: 0, flinch: 0, strike: 0, wind: 0, ph: rand(0, TAU), spd: 0, last: null, ring, ov: {}, bar: null, sc: e.sc };
+  return { type: e.type, g, mats, parts, flash: 0, flinch: 0, strike: 0, wind: 0, ph: rand(0, TAU), spd: 0, last: null, ring, ov: {}, bar: null, sc: e.sc };
 }
 const CC_OV = {
   freeze: (r, h) => { const o = model('frost__block', 0x4cc8ff); o.scale.set(r * 2.2, h * 1.05, r * 2.2); return o; },
@@ -398,10 +499,10 @@ function renderEnemies(src, dt, t, a) {
 const ICE_TINT = new THREE.Color(0x3fc8ff), WARN_TINT = new THREE.Color(0xff2020);
 
 // ---------- projectiles ----------
-const FOE_MAT = new THREE.MeshBasicMaterial({ color: new THREE.Color(0x40ff70).multiplyScalar(2.5) });
+const FOE_MAT = new THREE.MeshBasicMaterial({ color: new THREE.Color(0x40ff70).multiplyScalar(2.5) }), FOE_MATS = {};
 function makeShot(s) {
   let o, look = null;
-  if (s.foe) { o = new THREE.Group(); T.fireball.forEach(t => o.add(t.clone())); o.traverse(c => c.isMesh && (c.material = FOE_MAT)); o.scale.setScalar(.6); }
+  if (s.foe) { const m = s.c ? (FOE_MATS[s.c] ||= new THREE.MeshBasicMaterial({ color: new THREE.Color(s.c).multiplyScalar(2.5) })) : FOE_MAT; o = new THREE.Group(); T.fireball.forEach(t => o.add(t.clone())); o.traverse(c => c.isMesh && (c.material = m)); o.scale.setScalar(.6); }
   else {
     const m = MOVE[s.mv]; look = m?.look || { m: 'gen__orb', s: .3 };
     if (look.m === 'T.shard') { o = T.shard.clone(); o.userData.mats = []; }
@@ -612,14 +713,13 @@ function hud(src, mp) {
   $('wave').textContent = src.mode === 'dungeon' && U ? `Floor ${U.floor}` : src.mode === 'duel' && D ? `Round ${D.round} · ${D.wins[myId]} – ${D.wins[opp]}` : src.phase === 'rest' ? `Wave ${src.wave + 1} incoming` : src.wave ? `Wave ${src.wave}` : '';
   const boss = src.enemies.find(e => ET[e.type].boss);
   $('boss').classList.toggle('hidden', !boss);
-  if (boss) { $('bossHp').style.width = Math.max(0, boss.hp / boss.max * 100) + '%'; $('boss').firstChild.textContent = boss.type === 'warden' ? 'THE BONE WARDEN' : 'THE OBSIDIAN TYRANT'; }
-  if (src.mode === 'dungeon' && U) $('mod').textContent = U.wait ? 'Waiting for your partner on the stairs' : U.st.includes(1) ? 'Monsters are hunting you' : U.stairs ? 'The way down is open: take the stairs' : `Explore · ${U.st.filter(s => s === 2).length - 1}/${U.st.length - 1} chambers cleared`;
+  if (boss) { $('bossHp').style.width = Math.max(0, boss.hp / boss.max * 100) + '%'; $('boss').firstChild.textContent = (ET[boss.type].name || 'The Obsidian Tyrant').toUpperCase(); }  if (src.mode === 'dungeon' && U) $('mod').textContent = U.wait ? 'Waiting for your partner on the stairs' : U.st.includes(1) ? 'Monsters are hunting you' : U.stairs ? 'The way down is open: take the stairs' : `Explore · ${U.st.filter(s => s === 2).length - 1}/${U.st.length - 1} chambers cleared`;
   $('downMsg').classList.toggle('hidden', !sp.down || src.phase === 'over');
   if (sp.down) $('downMsg').textContent = other && !other.down ? `YOU ARE DOWN · revive ${Math.round(sp.rev * 100)}%` : 'YOU ARE DOWN';
   $('lock').classList.toggle('hidden', locked() || usingVirt());
   $('touch').classList.toggle('hidden', !document.body.classList.contains('touching'));
   hurtT = Math.max(0, hurtT - 1 / 60 * 2.5); healT = Math.max(0, healT - 1 / 60 * 2);
-  $('vignette').style.boxShadow = `inset 0 0 ${120 + hurtT * 80}px rgba(255,20,50,${hurtT * .8})` + (healT > 0 ? `, inset 0 0 140px rgba(60,255,140,${healT * .35})` : '');
+  $('vignette').style.boxShadow = `inset 0 0 ${120 + hurtT * 80}px rgba(255,20,50,${hurtT * .8})` + (healT > 0 ? `, inset 0 0 140px rgba(60,255,140,${healT * .35})` : '') + (bf.chill > 0 ? `, inset 0 0 160px rgba(150,220,255,${Math.min(.6, bf.chill * .4)})` : ''); // frosted edges while chilled
 }
 
 // ===================== screens =====================

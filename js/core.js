@@ -112,8 +112,7 @@ const sky = new THREE.Mesh(new THREE.SphereGeometry(1500, 48, 24), new THREE.Sha
       vec3 dc = mix(white, mix(amber, dust, smoothstep(3.,7.,ax)), smoothstep(1.2,3.5,ax) * right);
       col += disk * dc * (.7 + .5 * fbm(vec3(ax * 2. - uTime * .5, y0 * 10., 1.))) * mix(2., 1.1, smoothstep(1.,4.,ax));
       col += dust * exp(-abs(y0) * 2.5) * smoothstep(10.,2.,ax) * right * .14;         // dusty haze round the tail
-    }
-    gl_FragColor = vec4(col, 1.); }`,
+    }    gl_FragColor = vec4(col, 1.); }`,
 }));
 scene.add(sky);
 const skyBits = [sky]; // the open-sky scenery the dungeon hides
@@ -235,10 +234,12 @@ const addShader = (frag, extraU = {}) => new THREE.ShaderMaterial({
   vertexShader: `varying vec3 lp; varying vec2 vUv; void main(){ lp = position; vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }`,
   fragmentShader: `uniform float uTime; varying vec3 lp; varying vec2 vUv; ${GLSL_NOISE}\n${frag}`,
 });
-const FIRE_MAT = addShader(`void main(){
+const FIRE_MAT = addShader(`uniform vec3 uHue; uniform float uHueK; void main(){
   float h = clamp(lp.y / 1.25, 0., 1.), n = fbm(vec3(lp.x * 3., lp.y * 2.6 - uTime * 2.4, lp.z * 3.));
   float a = smoothstep(.25, .7, n + (1. - h) * .5 - h * .2) * (1. - h);
-  gl_FragColor = vec4(mix(vec3(1.,.8,.4) * 1.5, vec3(1.,.22,.04) * .9, smoothstep(0.,.7,h)) * a * .8, a); }`);
+  vec3 col = mix(vec3(1.,.8,.4) * 1.5, vec3(1.,.22,.04) * .9, smoothstep(0.,.7,h));
+  col = mix(col, mix(vec3(1.) * 1.5, uHue * 1.3, smoothstep(0.,.6,h)), uHueK); // Arena areas recolour the brazier fire (soul green, ice blue, void violet)
+  gl_FragColor = vec4(col * a * .8, a); }`, { uHue: { value: new THREE.Color(1, .4, .1) }, uHueK: { value: 0 } });
 // per-instance animated flame (FIRE_MAT look + fade), for element flame tongues
 const flameMat = () => addShader(`uniform float uA; void main(){
   float h = clamp(lp.y / 1.4, 0., 1.), n = fbm(vec3(lp.x * 4.5, lp.y * 3.2 - uTime * 3.4, lp.z * 4.5));
@@ -828,7 +829,7 @@ function animateArena(dt, t, dark) {
   amb.rocks.forEach(r => r.o.position.y = r.y + Math.sin(t * .4 + r.ph) * .6);
   amb.flames.forEach((f, i) => {
     const s = 1 + Math.sin(t * 13 + i * 2) * .08 + Math.sin(t * 7.3 + i) * .06; f.scale.set(s, s * 1.1, s);
-    if (Math.random() < .5) emit(f.position.x + rand(-.25, .25), f.position.y + rand(.3, .9), f.position.z + rand(-.25, .25), rand(-.3, .3), rand(1.5, 3.2), rand(-.3, .3), Math.random() < .5 ? 0xff9a3a : 0xffd27a, rand(.05, .12), rand(.8, 1.6), -.4, .4);
+    if (Math.random() < .5) emit(f.position.x + rand(-.25, .25), f.position.y + rand(.3, .9), f.position.z + rand(-.25, .25), rand(-.3, .3), rand(1.5, 3.2), rand(-.3, .3), Math.random() < .5 ? areaFire : 0xffd27a, rand(.05, .12), rand(.8, 1.6), -.4, .4);
   });
   amb.banners.forEach((b, i) => b.o.quaternion.setFromAxisAngle(b.axis, Math.sin(t * 1.3 + i * 2) * .07 + Math.sin(t * 3.1 + i) * .02));
   amb.monos.forEach(m => {
@@ -842,6 +843,7 @@ function animateArena(dt, t, dark) {
   }
   amb.lights.forEach((l, i) => l.intensity = (dark ? 8 : 16) + Math.sin(t * 11 + i * 3) * 4);
   [...amb.cry].forEach((m, i) => m.emissiveIntensity = cryBase[i] * (.75 + .35 * Math.sin(t * 1.5 + i)));
-  scene.fog.density += ((dark ? .07 : .007) - scene.fog.density) * Math.min(1, dt * 2);
+  scene.fog.density += ((dark ? .07 : areaFog) - scene.fog.density) * Math.min(1, dt * 2); // each Arena area has its own haze (areas.js)
+  areaMotes(dt);
   if (Math.random() < .3) { const a = rand(0, TAU), r = rand(3, 21); emit(Math.cos(a) * r, rand(0, .3), Math.sin(a) * r, 0, rand(.3, .8), 0, 0xe0d2b8, rand(.08, .16), rand(2, 4), -.05, .2); }
 }

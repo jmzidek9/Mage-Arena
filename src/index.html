@@ -325,7 +325,7 @@ body.touching #me{top:14px;bottom:auto;left:14px}body.touching #lock{display:non
       : Promise.resolve(window.fflateGunzip(u8).buffer); // Safari before 16.4
     const loader = new GLTFLoader(), names = ['arena', 'duel', 'fp_rig', 'spells', 'enemies', 'wizard', 'elements'];
     window.GLB = Object.fromEntries(await Promise.all(names.map(async n => [n, (await loader.parseAsync(await gunzip(bytes(window.MAGE_ASSETS_GZ[n])), '')).scene])));
-    for (const src of ['core.js', 'elements.js', 'sim.js', 'modes.js', 'dungeon.js', 'city.js', 'view.js', 'net.js']) {
+    for (const src of ['core.js', 'elements.js', 'sim.js', 'modes.js', 'dungeon.js', 'city.js', 'areas.js', 'view.js', 'net.js']) {
       const code = document.querySelector(`script[data-src="js/${src}"]`);
       if (!code) throw new Error(`this file is incomplete (${src} missing). Download index.html again`);
       const s = document.createElement('script'); s.text = code.textContent; document.body.appendChild(s);

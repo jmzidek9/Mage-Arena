@@ -405,10 +405,10 @@ function enemyHits(p, dmg, e) {
   if (p.down) return;
   if (p.dashT > 0 || p.bf.inv > 0) {
     if (S.t - p.dashAt < .4 && !(p.pdCd > S.t)) { p.pdCd = S.t + 1; S.slowmo = .55; addUlt(p, .12); p.stats.dodges++; ev({ k: 'dodge', id: p.id }); }
-    return;
+    return false;
   }
-  if (e?.st?.illusion > 0 && Math.random() < 1 / 3) { ev({ k: 'miss', x: r2(p.x), y: r2(p.y + 1.6), z: r2(p.z), id: p.id }); return; } // Misdirection: it struck a phantom
-  hurt(p, dmg * (1 - (e?.m?.weak || 0)), e);
+  if (e?.st?.illusion > 0 && Math.random() < 1 / 3) { ev({ k: 'miss', x: r2(p.x), y: r2(p.y + 1.6), z: r2(p.z), id: p.id }); return false; } // Misdirection: it struck a phantom
+  return hurt(p, dmg * (1 - (e?.m?.weak || 0)), e);
 }
 
 // ===================== projectiles =====================
@@ -539,6 +539,7 @@ function stepMove(p, i, dt) {
   if (L > 1) { vx /= L; vz /= L; }
   p.dcd -= dt;
   for (const k in p.bf) if (p.bf[k] > 0) p.bf[k] -= dt;
+  if (p.bf.chill > 0) { vx *= .55; vz *= .55; } // chilled by frost attacks
   if (p.bf.stun > 0 || p.bf.root > 0) { vx = vz = 0; i = { ...i, dashN: p.dashN, jumpN: p.jumpN }; } // held in place (duel crowd control)
   const kk = p.kick || [0, 0, 0], ks = p.kickSeen || kk; // knockback handed over by the host as running totals, so none is lost or doubled
   p.kx = (p.kx || 0) + kk[0] - ks[0]; p.kz = (p.kz || 0) + kk[1] - ks[1]; if (kk[2] - ks[2] > .1) p.vy = Math.max(p.vy, kk[2] - ks[2]); p.kickSeen = kk.slice();
@@ -665,7 +666,8 @@ function spawnEnemy(type, x, z, elite = false, sc = 1) {
 function bomberBlast(e, p, early) {
   const R = 3.2 * e.sc;
   ev({ k: 'fx', m: 'explosion.0', f: 'boom', x: r2(e.x), y: r2(e.y + .6), z: r2(e.z), r: R, foe: early ? 0 : 1 });
-  if (!early) for (const q of players()) if (Math.hypot(q.x - e.x, q.z - e.z) < R) enemyHits(q, ET.bomber.dmg * (1 + .06 * (S.wave - 1)), e);
+  if (!early) for (const q of players()) if (Math.hypot(q.x - e.x, q.z - e.z) < R) enemyHits(q, ET[e.type].dmg * (1 + .06 * (S.wave - 1)), e);
+  const pl = ET[e.type].pool; if (pl && !early) addPool(e.x, e.z, pl.r, pl); // area bombers leave poison, ice, fire or a rift behind
   aoe(e.x, e.z, R, early ? 70 : 45, 'explosion', p, e.id, 10);
 }
 // telegraphed attacks: start (windup with a ground warning) -> resolve
@@ -679,7 +681,7 @@ function startAttack(e, tgt, al = null) {
     e.x = q.x; e.z = q.z;
     return startAttack(e, tgt, { atk: 'swipe', wind: al.wind, dmg: al.dmg });
   }
-  e.atk = { k, t: wind, max: wind, yaw, tx: tgt.x, tz: tgt.z, lure: tgt.lure, dmg: al?.dmg, chain: al?.chain || 0 };
+  e.atk = { k, t: wind, max: wind, yaw, tx: tgt.x, tz: tgt.z, lure: tgt.lure, dmg: al?.dmg, chain: al?.chain || 0, al: al || t };
   e.yaw = yaw;
   let tele;
   switch (k) {
@@ -688,6 +690,7 @@ function startAttack(e, tgt, al = null) {
     case 'bash': tele = { shape: 'line', x: e.x, z: e.z, yaw, len: al.max + 1, w: 1.8 }; break;
     case 'hex': Object.assign(e.atk, { hx: tgt.x, hz: tgt.z }); tele = { shape: 'circle', x: tgt.x, z: tgt.z, r: 2.6 }; break;
     case 'volley': tele = null; break;
+    default: if (FOE_ATK[k]) { tele = FOE_ATK[k].start(e, tgt, al || t, yaw); if (tele === 'done') { e.atk = null; return; } } // the area kinds (areas.js)
     case 'swipe': tele = { shape: 'cone', x: e.x, z: e.z, yaw, r: t.reach * e.sc + .4, ang: 110 }; break;
     case 'lunge': tele = { shape: 'line', x: e.x, z: e.z, yaw, len: t.reach * e.sc + 1, w: 1.3 }; break;
     case 'slam': tele = { shape: 'circle', x: e.x, z: e.z, r: t.reach * e.sc }; break;
@@ -705,7 +708,7 @@ function foeOrb(e, a, ps, off, dmg, spd = 15) {
   const tgt = a.lure ? { x: a.tx, y: 0, z: a.tz } : ps.reduce((b, p) => !b || Math.hypot(p.x - e.x, p.z - e.z) < Math.hypot(b.x - e.x, b.z - e.z) ? p : b, null);
   if (!tgt) return;
   const o = V(e.x, e.y + 1.75 * e.sc, e.z), v = V(tgt.x, tgt.y + 1.2, tgt.z).sub(o).normalize().applyAxisAngle(V(0, 1, 0), off).multiplyScalar(spd);
-  S.shots.push({ id: S.nid++, foe: 1, mv: 'foe', el: 'foe', x: o.x, y: o.y, z: o.z, vx: v.x, vy: v.y, vz: v.z, life: 3, dmg, sc: 1 });
+  S.shots.push({ id: S.nid++, foe: 1, mv: 'foe', el: 'foe', x: o.x, y: o.y, z: o.z, vx: v.x, vy: v.y, vz: v.z, life: 3, dmg, sc: 1, c: ET[e.type].oc });
 }
 // boss: call down a rain of burning rocks, three marked circles on each player, falling one after another
 function bossMeteors(e, ps, scale) {
@@ -719,7 +722,7 @@ function bossMeteors(e, ps, scale) {
     });
   }
 }
-const LOCKED = new Set(['smash', 'thrust', 'lunge', 'leap', 'quake', 'bash', 'hex']); // committed: no turning to follow you mid-windup
+const LOCKED = new Set(['smash', 'thrust', 'lunge', 'leap', 'quake', 'bash', 'hex', 'cone', 'lob', 'ray', 'nova', 'spikes', 'pull']); // committed: no turning to follow you mid-windup
 function resolveAttack(e) {
   const t = ET[e.type], a = e.atk, sc = 1 + .06 * (S.wave - 1), dmg = (a.dmg ?? t.dmg) * sc * (e.elite ? 1.5 : 1), ps = players().filter(p => !p.down);
   e.atk = null; e.acd = t.cd * rand(.85, 1.15) * (e.enraged ? .7 : 1);
@@ -766,6 +769,7 @@ function resolveAttack(e) {
       break;
     case 'fuse': e.blown = 1; bomberBlast(e, null, false); kill(e, null, null); break;
     case 'mend': for (const o of enemiesNear(e.x, e.z, 9)) if (o !== e && !ET[o.type].boss) { o.hp = Math.min(o.max, o.hp + o.max * .25); o.sh = Math.max(o.sh, 25 * sc); } ev({ k: 'fx', m: 'foe', f: 'mend', x: r2(e.x), z: r2(e.z) }); break;
+    default: FOE_ATK[a.k]?.hit(e, a, dmg, ps);
   }
   // combos: follow straight up with a quicker blow at whoever is nearest (each one telegraphed again)
   if (a.chain > 0 && !e.dead && !e.cc && !e.leap) {
@@ -842,7 +846,7 @@ function stepEnemies(dt) {
     if (hard || e.y > .3) continue;
     // field effects (slow fields, heat waves) are written onto e.fs by entity ticks each frame
     const fieldSlow = e.fs || 0; e.fs = 0;
-    const slow = Math.min(.85, Math.max(e.m.slow, fieldSlow)), rate = (1 - slow) * haste;
+    const slow = Math.min(.85, Math.max(e.m.slow, fieldSlow)), rate = (1 - slow) * haste * (e.rage > S.t ? 1.4 : 1); // rage: a Pyre Priest's war-chant
     let tgt = null, bd = 1e9;
     for (const p of ps) { const d = Math.hypot(p.x - e.x, p.z - e.z); if (d < bd) { bd = d; tgt = p; } }
     for (const n of lures) { const d = Math.hypot(n.x - e.x, n.z - e.z); if (d < n.r && d * .5 < bd) { bd = d * .5; tgt = { x: n.x, y: 0, z: n.z, lure: 1 }; } } // Illusion decoys draw them in
@@ -901,11 +905,12 @@ function stepEnemies(dt) {
       }
       if ((e.acd -= dt * rate) <= 0 && d < t.reach * e.sc + (t.atk === 'fuse' ? 0 : .3) && tgt.y < 1.5) startAttack(e, tgt);
     }
-    if (t.boss && (e.sp -= dt) <= 0) {
+    if (t.boss && !e.atk && (e.sp -= dt) <= 0) {
       e.sp = rand(3.5, 5.5) * (e.enraged ? .7 : 1);
-      const roll = Math.random();
-      if (roll < .3) bossMeteors(e, ps, scale);
-      else if (roll < .65) { S.rings.push({ x: e.x, z: e.z, r: R, life: 2.4, hit: [] }); ev({ k: 'ring', x: r2(e.x), z: r2(e.z), r: R }); }
+      const sp = pick(t.spec || ['meteor', 'ring', 'ring', 'charge', 'charge']); // each boss its own specials (areas.js)
+      if (typeof sp === 'object') startAttack(e, tgt, sp);
+      else if (sp === 'meteor') bossMeteors(e, ps, scale);
+      else if (sp === 'ring') { S.rings.push({ x: e.x, z: e.z, r: R, life: 2.4, hit: [] }); ev({ k: 'ring', x: r2(e.x), z: r2(e.z), r: R }); }
       else { e.ch = .9; e.cdx = dx / d; e.cdz = dz / d; e.chHit = []; ev({ k: 'roar', x: r2(e.x), z: r2(e.z), yaw: r2(e.yaw) }); }
     }
   }
@@ -976,7 +981,9 @@ function startWave() {
   S.mod = !boss && S.wave > 1 && Math.random() < .34 ? pick(['swarm', 'haste', 'darkness', 'elite']) : null;
   S.budget = Math.round(waveBudget(S.wave) * (S.mod === 'swarm' ? 1.6 : 1) * (boss ? .5 : 1) * (S.players.g ? 1 : .6));
   S.bossLeft = boss ? 1 : 0; S.eliteLeft = S.mod === 'elite' ? 1 : 0; S.spawnT = 1.5; S.phase = 'fight';
-  ev({ k: 'wave', n: S.wave, mod: S.mod, boss });
+  const A = areaNow(), lw = areaWave(S.wave);
+  S.bossType = A.bosses[lw === 10 ? 1 : 0];
+  ev({ k: 'wave', n: S.wave, mod: S.mod, boss, bn: boss ? ET[S.bossType].name : 0, area: S.mode === 'arena' && lw === 1 ? A.id : 0 });
 }
 function stepSpawner(dt) {
   if (S.phase === 'rest') { if ((S.restT -= dt) <= 0) startWave(); return; }
@@ -985,9 +992,10 @@ function stepSpawner(dt) {
     S.spawnT = rand(1.3, 2.6) * (S.mod === 'swarm' ? .6 : 1);
     const a = rand(0, TAU);
     const city = S.mode === 'city', at = city ? citySpawnSpot() : null; // Mage City: somewhere on the streets, 34-70 m from every player
-    if (S.bossLeft) { S.bossLeft = 0; const q = city ? citySpawnSpot(40, 75) : { x: Math.sin(a) * 15, z: Math.cos(a) * 15 }; spawnEnemy('boss', q.x, q.z); }
+    if (S.bossLeft) { S.bossLeft = 0; const q = city ? citySpawnSpot(40, 75) : { x: Math.sin(a) * 15, z: Math.cos(a) * 15 }; spawnEnemy(S.bossType || 'boss', q.x, q.z); }
+    const zone = areaNow().zone, lw = areaWave(S.wave);
     for (let n = 1 + Math.floor(Math.random() * 4); n > 0 && S.budget > 0; n--) {
-      const pool = Object.keys(ET).filter(k => ET[k].cost && !ET[k].zone && ET[k].from <= S.wave && ET[k].cost <= S.budget);
+      const pool = Object.keys(ET).filter(k => ET[k].cost && ET[k].zone === zone && ET[k].from <= lw + (S.wave > 10 ? 2 : 0) && ET[k].cost <= S.budget); // later areas bring their monsters in a little sooner
       if (!pool.length) { S.budget = 0; break; }
       const type = weighted(pool, k => 1 / ET[k].cost), b = a + rand(-.4, .4), elite = S.eliteLeft > 0;
       S.budget -= ET[type].cost; if (elite) S.eliteLeft--;
@@ -1002,7 +1010,7 @@ function endWave() {
     p.hp = Math.min(p.max, p.hp + p.max * .15);
     p.ch = null; p.chg = null;
   }
-  S.rings = []; S.shots = []; S.ents = S.ents.filter(n => n.mv === 'orb'); S.timers = []; S.tstop = 0;
+  S.rings = []; S.hz = []; S.shots = []; S.ents = S.ents.filter(n => n.mv === 'orb'); S.timers = []; S.tstop = 0;
   S.phase = 'rest'; S.restT = 4; // short breather, then the next wave (no upgrade picks)
   ev({ k: 'clear', n: S.wave });
 }
@@ -1017,7 +1025,7 @@ function hostStep(dt) {
   S.actor = null;
   stepTimers(dt);
   for (let k = 0, n = Math.ceil(dt / .017); k < n; k++) stepShots(dt / n); // ~60 Hz projectile steps even on a slow host, so fast shots can't skip past enemies
-  stepEnts(dt); stepEnemies(dt); stepRings(dt); stepPlayers(dt);
+  stepEnts(dt); stepEnemies(dt); stepRings(dt); stepHazards(dt); stepPlayers(dt);
   if (S.mode === 'duel') stepDuel(dt);
   else { stepRevive(dt); if (S.mode === 'dungeon') stepDungeon(dt); else stepSpawner(dt); if (S.mode === 'city') cityStep(dt); }
 }
