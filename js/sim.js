@@ -49,7 +49,7 @@ const ET = {
 };
 const waveBudget = w => 10 + w * 6;
 // ===================== state =====================
-const S = { phase: 'lobby', mode: 'arena', actor: null, t: 0, wave: 0, players: {}, enemies: [], shots: [], ents: [], rings: [], timers: [], events: [], nid: 1,
+const S = { phase: 'lobby', mode: 'arena', actor: null, t: 0, wave: 0, isl: 0, ib: 1, brs: 0, br: null, players: {}, enemies: [], shots: [], ents: [], rings: [], timers: [], events: [], nid: 1,
   budget: 0, bossLeft: 0, eliteLeft: 0, spawnT: 0, restT: 0, hitstop: 0, slowmo: 0, tstop: 0, mod: null };
 const ev = e => S.events.push(e);
 function later(t, fn) { S.timers.push({ t, fn, a: S.actor }); } // remembers who scheduled it (see alive)
@@ -117,9 +117,24 @@ function solids() { const out = PILLARS.slice(); for (const n of S.ents) if (n.s
 // the current map's shape: arena and duel are floating discs of radius MAP.r (in a duel you can go off the edge),
 // the dungeon is a set of walkable rectangles: the rooms, plus the corridors of rooms already cleared
 // (monsters use MAP.erects, which leaves out the stairs)
-const MAP = { r: ARENA_R, rects: null, erects: null };
+// The Arena is several islands joined by bridges: MAP.caps, walkable capsules (a disc is a capsule of length 0), see areas.js
+const MAP = { r: ARENA_R, rects: null, erects: null, caps: null };
 const inRects = (x, z, pad = 0, rs = MAP.rects) => rs.some(q => x > q.x0 + pad && x < q.x1 - pad && z > q.z0 + pad && z < q.z1 - pad);
+function capNear(x, z) { // the capsule nearest the point: { d: distance outside it (negative inside), px, pz: its spine point, c }
+  let best = null;
+  for (const c of MAP.caps) {
+    const dx = c.bx - c.ax, dz = c.bz - c.az, L2 = dx * dx + dz * dz, t = L2 ? clamp(((x - c.ax) * dx + (z - c.az) * dz) / L2, 0, 1) : 0;
+    const px = c.ax + dx * t, pz = c.az + dz * t, d = Math.hypot(x - px, z - pz) - c.r;
+    if (!best || d < best.d) best = { d, px, pz, c };
+  }
+  return best;
+}
 function confine(o, pad = 0) {
+  if (MAP.caps && !MAP.rects) {
+    const n = capNear(o.x, o.z); if (n.d + pad <= 0) return o;
+    const dx = o.x - n.px, dz = o.z - n.pz, d = Math.hypot(dx, dz) || 1, m = Math.max(0, n.c.r - pad);
+    o.x = n.px + dx / d * m; o.z = n.pz + dz / d * m; return o;
+  }
   const rs = (o.type && MAP.erects) || MAP.rects;
   if (rs) {
     if (inRects(o.x, o.z, pad, rs)) return o;
@@ -129,7 +144,7 @@ function confine(o, pad = 0) {
   }
   const d = Math.hypot(o.x, o.z), m = MAP.r - pad; if (d > m) { o.x *= m / d; o.z *= m / d; } return o;
 }
-const offMap = (x, z, pad = 0) => MAP.rects ? !inRects(x, z, -pad) : Math.hypot(x, z) > MAP.r + pad;
+const offMap = (x, z, pad = 0) => MAP.rects ? !inRects(x, z, -pad) : MAP.caps ? capNear(x, z).d > pad : Math.hypot(x, z) > MAP.r + pad;
 function collide(o, r, sol = solids()) {
   if (S.mode !== 'duel') confine(o, r);
   for (const c of sol) { const dx = o.x - c.x, dz = o.z - c.z, dd = Math.hypot(dx, dz), m = r + c.r; if (dd < m && dd > 0) { o.x = c.x + dx / dd * m; o.z = c.z + dz / dd * m; } }
@@ -986,20 +1001,22 @@ function startWave() {
   ev({ k: 'wave', n: S.wave, mod: S.mod, boss, bn: boss ? ET[S.bossType].name : 0, area: S.mode === 'arena' && lw === 1 ? A.id : 0 });
 }
 function stepSpawner(dt) {
+  if (S.phase === 'travel') { stepTravel(dt); return; }
   if (S.phase === 'rest') { if ((S.restT -= dt) <= 0) startWave(); return; }
   if (S.phase !== 'fight') return;
   if ((S.spawnT -= dt) <= 0 && (S.budget > 0 || S.bossLeft)) {
     S.spawnT = rand(1.3, 2.6) * (S.mod === 'swarm' ? .6 : 1);
     const a = rand(0, TAU);
     const city = S.mode === 'city', at = city ? citySpawnSpot() : null; // Mage City: somewhere on the streets, 34-70 m from every player
-    if (S.bossLeft) { S.bossLeft = 0; const q = city ? citySpawnSpot(40, 75) : { x: Math.sin(a) * 15, z: Math.cos(a) * 15 }; spawnEnemy(S.bossType || 'boss', q.x, q.z); }
+    const I = isleCenter(); // the island you're fighting on
+    if (S.bossLeft) { S.bossLeft = 0; const q = city ? citySpawnSpot(40, 75) : { x: I.x + Math.sin(a) * 15, z: I.z + Math.cos(a) * 15 }; spawnEnemy(S.bossType || 'boss', q.x, q.z); }
     const zone = areaNow().zone, lw = areaWave(S.wave);
     for (let n = 1 + Math.floor(Math.random() * 4); n > 0 && S.budget > 0; n--) {
       const pool = Object.keys(ET).filter(k => ET[k].cost && ET[k].zone === zone && ET[k].from <= lw + (S.wave > 10 ? 2 : 0) && ET[k].cost <= S.budget); // later areas bring their monsters in a little sooner
       if (!pool.length) { S.budget = 0; break; }
       const type = weighted(pool, k => 1 / ET[k].cost), b = a + rand(-.4, .4), elite = S.eliteLeft > 0;
       S.budget -= ET[type].cost; if (elite) S.eliteLeft--;
-      if (city) { const q = confine({ x: at.x + rand(-2, 2), z: at.z + rand(-2, 2) }, 1); spawnEnemy(type, q.x, q.z, elite); } else spawnEnemy(type, Math.sin(b) * 19.5, Math.cos(b) * 19.5, elite);
+      if (city) { const q = confine({ x: at.x + rand(-2, 2), z: at.z + rand(-2, 2) }, 1); spawnEnemy(type, q.x, q.z, elite); } else spawnEnemy(type, I.x + Math.sin(b) * 19.5, I.z + Math.cos(b) * 19.5, elite);
     }
   }
   if (S.budget <= 0 && !S.bossLeft && !S.enemies.length) endWave();
@@ -1013,6 +1030,7 @@ function endWave() {
   S.rings = []; S.hz = []; S.shots = []; S.ents = S.ents.filter(n => n.mv === 'orb'); S.timers = []; S.tstop = 0;
   S.phase = 'rest'; S.restT = 4; // short breather, then the next wave (no upgrade picks)
   ev({ k: 'clear', n: S.wave });
+  if (S.mode === 'arena' && S.wave % 10 === 0) startTravel(); // an area's done: the bridge to the next island builds (areas.js)
 }
 function hostStep(dt) {
   if (S.hitstop > 0) { S.hitstop -= dt; dt *= .06; }

@@ -206,11 +206,11 @@ addEventListener('resize', () => {
 
 // ===================== Blender assets =====================
 // index.html parsed every glb before loading the scripts (window.GLB); see blender/build_*.py
-const { arena, duel: duelG, fp_rig: rig, spells: spellsG, enemies: enemiesG, wizard: wizardG, elements: elementsG } = window.GLB;
-for (const root of [arena, duelG, rig, spellsG, enemiesG, wizardG, elementsG]) root.traverse(o => { if (o.isMesh) o.material.emissiveIntensity *= .6; });
+const { arena, duel: duelG, fp_rig: rig, spells: spellsG, enemies: enemiesG, wizard: wizardG, elements: elementsG, islands: islandsG } = window.GLB;
+for (const root of [arena, duelG, rig, spellsG, enemiesG, wizardG, elementsG, islandsG]) root.traverse(o => { if (o.isMesh) o.material.emissiveIntensity *= .6; });
 // solid things cast and catch moon shadows; glowing bits (eyes, flames, crystals, sigils) don't cast
 const glows = m => m.emissive && m.emissive.getHex() && m.emissiveIntensity > .4;
-for (const root of [arena, duelG, enemiesG, wizardG]) root.traverse(o => { if (o.isMesh) { o.receiveShadow = true; o.castShadow = !glows(o.material) && !/sigil_/.test(o.parent?.name + o.name); } });
+for (const root of [arena, duelG, enemiesG, wizardG, islandsG]) root.traverse(o => { if (o.isMesh) { o.receiveShadow = true; o.castShadow = !glows(o.material) && !/sigil_/.test(o.parent?.name + o.name); } });
 rig.traverse(o => { if (o.isMesh) o.receiveShadow = true; });
 // Blender dedupes names across the .blend (ring_outer, ring_outer.001 -> "ring_outer001"), so ignore numeric suffixes
 const grab = (root, name) => { const o = root.children.find(c => c.name.replace(/\d+$/, '') === name); o.position.set(0, 0, 0); return o; };
@@ -234,12 +234,14 @@ const addShader = (frag, extraU = {}) => new THREE.ShaderMaterial({
   vertexShader: `varying vec3 lp; varying vec2 vUv; void main(){ lp = position; vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }`,
   fragmentShader: `uniform float uTime; varying vec3 lp; varying vec2 vUv; ${GLSL_NOISE}\n${frag}`,
 });
-const FIRE_MAT = addShader(`uniform vec3 uHue; uniform float uHueK; void main(){
+// brazier fire; hue (an island's soul green, ice blue, void violet) turns it from orange to that colour
+const fireMat = (hue = null) => addShader(`uniform vec3 uHue; uniform float uHueK; void main(){
   float h = clamp(lp.y / 1.25, 0., 1.), n = fbm(vec3(lp.x * 3., lp.y * 2.6 - uTime * 2.4, lp.z * 3.));
   float a = smoothstep(.25, .7, n + (1. - h) * .5 - h * .2) * (1. - h);
   vec3 col = mix(vec3(1.,.8,.4) * 1.5, vec3(1.,.22,.04) * .9, smoothstep(0.,.7,h));
-  col = mix(col, mix(vec3(1.) * 1.5, uHue * 1.3, smoothstep(0.,.6,h)), uHueK); // Arena areas recolour the brazier fire (soul green, ice blue, void violet)
-  gl_FragColor = vec4(col * a * .8, a); }`, { uHue: { value: new THREE.Color(1, .4, .1) }, uHueK: { value: 0 } });
+  col = mix(col, mix(vec3(1.) * 1.5, uHue * 1.3, smoothstep(0.,.6,h)), uHueK);
+  gl_FragColor = vec4(col * a * .8, a); }`, { uHue: { value: new THREE.Color(hue ?? 0xff6a1a) }, uHueK: { value: hue == null ? 0 : 1 } });
+const FIRE_MAT = fireMat();
 // per-instance animated flame (FIRE_MAT look + fade), for element flame tongues
 const flameMat = () => addShader(`uniform float uA; void main(){
   float h = clamp(lp.y / 1.4, 0., 1.), n = fbm(vec3(lp.x * 4.5, lp.y * 3.2 - uTime * 3.4, lp.z * 4.5));
@@ -834,7 +836,7 @@ function animateArena(dt, t, dark) {
   amb.banners.forEach((b, i) => b.o.quaternion.setFromAxisAngle(b.axis, Math.sin(t * 1.3 + i * 2) * .07 + Math.sin(t * 3.1 + i) * .02));
   amb.monos.forEach(m => {
     const a = m.a - t * .02;
-    m.o.position.set(Math.cos(a) * m.r, m.y + Math.sin(t * .5 + m.ph) * .8, Math.sin(a) * m.r);
+    m.o.position.set(Math.cos(a) * m.r, m.y + Math.sin(t * .5 + m.ph) * .8, Math.sin(a) * m.r); m.o.position.y += laneLift(m.o.position.x, m.o.position.z); // up and over the bridges
     m.o.rotation.y = m.ry + t * .02;
   });
   for (const [k, fa] of [[0, -.9], [1, 2.3]]) if (Math.random() < .6) { // spray where the mana falls leave the island

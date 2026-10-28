@@ -1,17 +1,17 @@
 # Graph Report - Test Game  (2026-10-27)
 
 ## Corpus Check
-- 29 files · ~163,254 words
+- 30 files · ~168,869 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 2 file(s) not represented in the graph (top: (none) 2)
 
 ## Summary
-- 757 nodes · 1404 edges · 34 communities (27 shown, 7 thin omitted)
-- Extraction: 96% EXTRACTED · 4% INFERRED · 0% AMBIGUOUS · INFERRED: 52 edges (avg confidence: 0.9)
+- 803 nodes · 1508 edges · 35 communities (29 shown, 6 thin omitted)
+- Extraction: 95% EXTRACTED · 5% INFERRED · 0% AMBIGUOUS · INFERRED: 68 edges (avg confidence: 0.89)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `bc6e2790`
+- Built from commit: `1ea177c4`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -32,13 +32,14 @@
 - modes.js
 - renderWorld
 - city.js
-- pol
+- build_crypt
 - boltFx
 - addShader
 - rand
-- Blender Assets
+- .__init__
 - Mage Arena
 - clamp
+- chain
 - renderLobby
 - Elements
 - onEvent
@@ -52,15 +53,15 @@
 
 ## God Nodes (most connected - your core abstractions)
 1. `Elements` - 36 edges
-2. `ev()` - 24 edges
-3. `Mesh` - 23 edges
-4. `stepEnemies()` - 22 edges
-5. `react()` - 21 edges
-6. `stats()` - 18 edges
-7. `push()` - 17 edges
-8. `buildCityView()` - 16 edges
-9. `TRS()` - 15 edges
-10. `damage()` - 15 edges
+2. `build_crypt()` - 26 edges
+3. `Mesh` - 26 edges
+4. `ev()` - 24 edges
+5. `stepEnemies()` - 22 edges
+6. `react()` - 21 edges
+7. `TRS()` - 20 edges
+8. `stats()` - 18 edges
+9. `push()` - 17 edges
+10. `pol()` - 16 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `Finishing pass` --references--> `bake_ao()`  [INFERRED]
@@ -77,11 +78,11 @@
 ## Import Cycles
 - None detected.
 
-## Communities (34 total, 7 thin omitted)
+## Communities (35 total, 6 thin omitted)
 
 ### Community 0 - "sim.js"
-Cohesion: 0.07
-Nodes (89): addUlt(), aimOf(), alive(), aoe(), applyStatus(), blast(), bomberBlast(), bondMul() (+81 more)
+Cohesion: 0.06
+Nodes (92): r2(), addUlt(), aimOf(), alive(), aoe(), applyStatus(), blast(), bomberBlast() (+84 more)
 
 ### Community 1 - "core.js"
 Cohesion: 0.02
@@ -96,8 +97,8 @@ Cohesion: 0.06
 Nodes (33): buildBar(), CASTS, CC_OV, COMBO_FX, DIFF, ELMETA, ETPL, FALLBACK (+25 more)
 
 ### Community 4 - "build_enemies.py"
-Cohesion: 0.10
-Nodes (31): digit(), finger(), fist(), limb(), open_hand(), palm(), sleeve(), arm() (+23 more)
+Cohesion: 0.11
+Nodes (30): digit(), finger(), fist(), limb(), open_hand(), palm(), sleeve(), arm() (+22 more)
 
 ### Community 5 - "net.js"
 Cohesion: 0.11
@@ -105,19 +106,19 @@ Nodes (32): applySettings(), autoQuality(), bfSnap(), bgTick(), BIND_NAMES, drop
 
 ### Community 6 - "Mesh"
 Cohesion: 0.10
-Nodes (5): spell_circle(), part(), apply_subsurf(), area(), Mesh
+Nodes (6): spell_circle(), part(), bridge(), apply_subsurf(), area(), Mesh
 
 ### Community 7 - "elements.js"
-Cohesion: 0.05
-Nodes (36): energyMat(), flameMat(), model(), r2(), aimBeam(), beamFx(), beamMesh(), _bgeo (+28 more)
+Cohesion: 0.06
+Nodes (34): energyMat(), model(), aimBeam(), beamFx(), beamMesh(), _bgeo, blastFx(), boomAt() (+26 more)
 
 ### Community 8 - "Elements.md"
 Cohesion: 0.07
-Nodes (25): Combos (reactions), Named reactions, Reaction kinds (for every other pair), Enemies, Fighting them, Wave budget, Wave modifiers, Cross-platform (+17 more)
+Nodes (26): Blender Assets, Finishing pass, Combos (reactions), Named reactions, Reaction kinds (for every other pair), Enemies, Fighting them, Wave budget (+18 more)
 
 ### Community 9 - "lib.py"
-Cohesion: 0.11
-Nodes (6): apply_bevel(), bake_ao(), pack_bundle(), Previewer, runes(), uv_ribbon()
+Cohesion: 0.12
+Nodes (6): apply_bevel(), bake_ao(), mat(), pack_bundle(), Previewer, uv_ribbon()
 
 ### Community 10 - "Audio credits"
 Cohesion: 0.33
@@ -125,11 +126,11 @@ Nodes (5): Audio credits, Music (`audio/music/`), Sound effects (`audio/sfx/`, f
 
 ### Community 11 - "build_elements.py"
 Cohesion: 0.14
-Nodes (14): arcpts(), crescent(), crescent_blade(), lens(), M(), mirror_shard(), plated_rock(), put() (+6 more)
+Nodes (15): arcpts(), crescent(), crescent_blade(), lens(), M(), mirror_shard(), plated_rock(), put() (+7 more)
 
 ### Community 12 - "areas.js"
-Cohesion: 0.18
-Nodes (7): areaIdx(), areaNow(), AREAS, FOE_ATK, RIMC, shove(), stepHazards()
+Cohesion: 0.10
+Nodes (16): AREAS, bridgeEnds(), easeBack(), FOE_ATK, islandFrame(), islandInit(), islandMap(), ISLE_FIRE (+8 more)
 
 ### Community 13 - "modes.js"
 Cohesion: 0.27
@@ -143,17 +144,25 @@ Nodes (15): animEnemy(), makeEnemy(), makeEnt(), makeShot(), makeWizard(), me(),
 Cohesion: 0.05
 Nodes (70): arenaMat(), arenaObj(), blockAt(), buildCityView(), buildKit(), cboxGeo(), CBX, CITY (+62 more)
 
+### Community 16 - "build_crypt"
+Cohesion: 0.16
+Nodes (11): blob_cloud(), build_crypt(), branch(), gravestone(), skull(), circle(), flame(), Isle (+3 more)
+
 ### Community 18 - "boltFx"
 Cohesion: 0.27
 Nodes (12): addFx(), boltFx(), circleFx(), easeOut(), easeOutBack(), glowify(), glowMats(), makeCircle() (+4 more)
 
 ### Community 19 - "addShader"
-Cohesion: 0.50
-Nodes (5): addShader(), beamMat(), discMat(), pillarFx(), waveMat()
+Cohesion: 0.33
+Nodes (7): addShader(), beamMat(), discMat(), fireMat(), flameMat(), pillarFx(), waveMat()
 
 ### Community 20 - "rand"
 Cohesion: 0.40
 Nodes (6): animateArena(), burst(), emit(), popNum(), rand(), V()
+
+### Community 21 - ".__init__"
+Cohesion: 0.40
+Nodes (3): center(), lane_angle(), coll()
 
 ### Community 23 - "clamp"
 Cohesion: 0.50
@@ -175,7 +184,7 @@ Nodes (6): castFx(), distTo(), meteorFall(), onEvent(), teleFx(), teleMat()
 Cohesion: 0.47
 Nodes (6): gainXP(), needXP(), renderProg(), renderTalents(), saveProg(), xpBar()
 
-### Community 31 - "grab"
+### Community 30 - "grab"
 Cohesion: 0.67
 Nodes (3): grab(), sp(), Conventions
 
@@ -188,22 +197,22 @@ Cohesion: 1.00
 Nodes (3): MUSIC, playMood(), track()
 
 ## Knowledge Gaps
-- **7 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **6 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `Blender Assets` connect `Blender Assets` to `Mesh`, `elements.js`, `Elements.md`, `build_elements.py`, `grab`?**
-  _High betweenness centrality (0.296) - this node is a cross-community bridge._
-- **Are the 2 inferred relationships involving `react()` (e.g. with `r2()` and `Combos (reactions)`) actually correct?**
-  _`react()` has 2 INFERRED edges - model-reasoned connections that need verification._
+- **Why does `Blender Assets` connect `Elements.md` to `build_elements.py`, `elements.js`, `Mesh`, `grab`?**
+  _High betweenness centrality (0.313) - this node is a cross-community bridge._
+- **Are the 12 inferred relationships involving `build_crypt()` (e.g. with `skull()` and `.base()`) actually correct?**
+  _`build_crypt()` has 12 INFERRED edges - model-reasoned connections that need verification._
 - **Should `sim.js` be split into smaller, more focused modules?**
-  _Cohesion score 0.06572164948453608 - nodes in this community are weakly interconnected._
-- **Why does `r2()` connect `elements.js` to `sim.js`, `core.js`?**
-  _High betweenness centrality (0.187) - this node is a cross-community bridge._
+  _Cohesion score 0.06363636363636363 - nodes in this community are weakly interconnected._
+- **Why does `Mesh` connect `Mesh` to `Elements.md`, `lib.py`, `build_elements.py`, `build_crypt`, `.__init__`?**
+  _High betweenness centrality (0.181) - this node is a cross-community bridge._
 - **Should `core.js` be split into smaller, more focused modules?**
   _Cohesion score 0.023255813953488372 - nodes in this community are weakly interconnected._
-- **Why does `Mesh` connect `Mesh` to `pol`, `lib.py`, `build_elements.py`, `Blender Assets`?**
-  _High betweenness centrality (0.167) - this node is a cross-community bridge._
+- **Why does `r2()` connect `sim.js` to `core.js`, `elements.js`?**
+  _High betweenness centrality (0.174) - this node is a cross-community bridge._
 - **Should `dungeon.js` be split into smaller, more focused modules?**
   _Cohesion score 0.07486338797814207 - nodes in this community are weakly interconnected._

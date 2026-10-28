@@ -9,8 +9,9 @@ let mapMode = null;
 function applyMap(mode) {
   S.mode = mode;
   MAP.r = mode === 'duel' ? DUEL_R : ARENA_R;
-  MAP.rects = MAP.erects = null;
+  MAP.rects = MAP.erects = null; MAP.caps = null;
   PILLARS.length = 0; PILLARS.push(...(mode === 'duel' ? DUEL_PILLARS : ARENA_PILLARS));
+  if (mode === 'arena') islandMap(); // the islands and bridges built so far (areas.js)
   if (mode === 'dungeon') dunMap(); // the floor itself is in dungeon.js
   if (mode === 'city') cityMap(); // and the city in city.js
   if (mapMode !== mode) { mapMode = mode; showScenery(mode); }

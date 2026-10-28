@@ -7,7 +7,7 @@ const GAME_VERSION = '2.5.0';
 // ===================== snapshot (sent to the guest, and what both sides render from) =====================
 const bfSnap = bf => { const o = {}; for (const k in bf) if (bf[k] > 0) o[k] = r2(bf[k]); return o; };
 const snap = () => ({
-  phase: S.phase, mode: S.mode, wave: S.wave, mod: S.mod, ts: S.tstop > 0 ? 1 : 0,
+  phase: S.phase, mode: S.mode, wave: S.wave, mod: S.mod, ts: S.tstop > 0 ? 1 : 0, isl: S.isl, ib: S.ib, brs: S.brs, br: S.br && { k: S.br.k, t: r2(S.br.t) },
   duel: S.duel, dun: S.dun && { floor: S.dun.floor, seed: S.dun.seed, o: S.dun.o, st: S.dun.st, stairs: S.dun.stairs, wait: S.dun.wait },
   players: Object.fromEntries(Object.values(S.players).map(p => [p.id, { id: p.id, ai: p.ai ? 1 : 0, kick: p.kick, spawn: p.spawn, tp: p.tp, el: p.el, el2: p.el2, cur: p.cur, x: r2(p.x), y: r2(p.y), z: r2(p.z), yaw: r2(p.yaw), pitch: r2(p.pitch),
     hp: Math.round(p.hp), max: p.max, down: p.down, rev: r2(p.rev), up: p.up, ult: r2(p.ult), bf: bfSnap(p.bf), ch: p.ch, chT: r2(p.chT), combo: p.combo, stats: p.stats,
@@ -21,7 +21,7 @@ const snap = () => ({
 // ===================== start =====================
 function startGame() {
   initAudio();
-  Object.assign(S, { duel: null, dun: null, phase: 'rest', mode: myMode, t: 0, wave: 0, enemies: [], shots: [], ents: [], rings: [], hz: [], timers: [], events: [], restT: 2.5, hitstop: 0, slowmo: 0, tstop: 0, mod: null });
+  Object.assign(S, { duel: null, dun: null, phase: 'rest', mode: myMode, t: 0, wave: 0, isl: 0, ib: 1, brs: 0, br: null, enemies: [], shots: [], ents: [], rings: [], hz: [], timers: [], events: [], restT: 2.5, hitstop: 0, slowmo: 0, tstop: 0, mod: null });
   S.players = { h: withTalents(newPlayer('h', myEl, myEl2), PROG.tal) };
   if (myEl2) S.players.h.up.second = 1;
   if (conn && guestEl) { S.players.g = withTalents(newPlayer('g', guestEl, guestEl2), guestTal); if (guestEl2) S.players.g.up.second = 1; }
@@ -204,6 +204,7 @@ function onGuestData(m) {
   R = m.s;
   if (R.dun) dunSync(R.dun); // before applyMap, so the guest's first dungeon frame already has its floor
   if (R.mode && R.mode !== S.mode) applyMap(R.mode);
+  if (R.mode === 'arena') { Object.assign(S, { isl: R.isl, ib: R.ib, brs: R.brs, br: R.br }); islandMap(R); } // walk the same islands and bridges as the host
   const mine = R.players.g;
   if (mine) {
     const restart = lastPhase === 'over' && R.phase !== 'over';
@@ -348,6 +349,7 @@ function frame(now, manual = false) {
   music(!playing || !src ? 'menu' : src.phase === 'over' ? 'over' : src.enemies.some(e => ET[e.type].boss) ? 'boss' : src.mode);
   if (playing && mp) footsteps(mp, src?.mode, dt);
   animateArena(dt, t, src?.mod === 'darkness' && src?.phase === 'fight');
+  islandFrame(src, dt); // the other islands and bridges, building themselves (areas.js)
   updateDungeonView(dt, t);
   if (playing && mp && src) {
     renderWorld(src, dt, t);

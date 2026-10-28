@@ -268,13 +268,13 @@ function onEvent(e) {
     case 'down': banner(e.id === myId ? 'YOU ARE DOWN' : 'PARTNER DOWN, REVIVE THEM', '#ff6a8a'); break;
     case 'up': banner(e.id === myId ? 'REVIVED' : 'PARTNER REVIVED', '#8affc0'); sfx('pick'); break;
     case 'wave': {
-      const ar = e.area && AREAS.find(a => a.id === e.area);
-      if (ar && e.n > 1) { banner(ar.name.toUpperCase(), '#ffd8a0', 3000); setTimeout(() => banner(`WAVE ${e.n}`, '#e8dcff', 1800), 3000); sfx('ring'); }
-      else banner(e.boss ? `WAVE ${e.n}: ${(e.bn || 'The Tyrant').toUpperCase()}` : `WAVE ${e.n}`, e.boss ? '#ff8a4a' : '#e8dcff', 2200);
+      banner(e.boss ? `WAVE ${e.n}: ${(e.bn || 'The Tyrant').toUpperCase()}` : `WAVE ${e.n}`, e.boss ? '#ff8a4a' : '#e8dcff', 2200);
       $('mod').textContent = e.mod ? { swarm: '⚠ Swarm: twice the enemies, half the health', haste: '⚠ Haste: enemies move faster', darkness: '⚠ Darkness falls', elite: '⚠ An elite stalks you' }[e.mod] : '';
       sfx('wave');
       break;
     }
+    case 'travel': setTimeout(() => { banner(`ONWARD: ${AREAS[e.to].name.toUpperCase()}`, '#ffd8a0', 3200); sfx('wave'); shake(.3); }, 1600); break;
+    case 'arrive': banner(AREAS[e.i].name.toUpperCase(), '#ffd8a0', 2600); sfx('ring'); break;
     case 'clear': banner(`WAVE ${e.n} CLEARED`, '#8affc0'); $('mod').textContent = ''; timeFx = 0; break;
     case 'ring': {
       const mats = glowMats(0xff6a2a), o = glowify(T.shock.clone(), mats); o.position.set(e.x, .12, e.z);
@@ -710,7 +710,7 @@ function hud(src, mp) {
   if (other) { $('mateHp').style.width = other.hp / other.max * 100 + '%'; $('mateName').textContent = `${other.down ? '💀 DOWN · ' : ''}${src.mode === 'duel' ? other.ai ? 'AI Wizard' : 'Opponent' : 'Partner'} · ${EL[other.cur || other.el].glyph} ${EL[other.cur || other.el].name}`; $('mateUlt').style.width = (other.ult || 0) * 100 + '%'; }
   const D = src.duel, opp = other?.id || (myId === 'h' ? 'g' : 'h');
   const U = src.dun;
-  $('wave').textContent = src.mode === 'dungeon' && U ? `Floor ${U.floor}` : src.mode === 'duel' && D ? `Round ${D.round} · ${D.wins[myId]} – ${D.wins[opp]}` : src.phase === 'rest' ? `Wave ${src.wave + 1} incoming` : src.wave ? `Wave ${src.wave}` : '';
+  $('wave').textContent = src.mode === 'dungeon' && U ? `Floor ${U.floor}` : src.mode === 'duel' && D ? `Round ${D.round} · ${D.wins[myId]} – ${D.wins[opp]}` : src.phase === 'travel' ? `Cross the bridge to ${AREAS[(src.br.k + 1) % 5].name}` : src.phase === 'rest' ? `Wave ${src.wave + 1} incoming` : src.wave ? `Wave ${src.wave}` : '';
   const boss = src.enemies.find(e => ET[e.type].boss);
   $('boss').classList.toggle('hidden', !boss);
   if (boss) { $('bossHp').style.width = Math.max(0, boss.hp / boss.max * 100) + '%'; $('boss').firstChild.textContent = (ET[boss.type].name || 'The Obsidian Tyrant').toUpperCase(); }  if (src.mode === 'dungeon' && U) $('mod').textContent = U.wait ? 'Waiting for your partner on the stairs' : U.st.includes(1) ? 'Monsters are hunting you' : U.stairs ? 'The way down is open: take the stairs' : `Explore · ${U.st.filter(s => s === 2).length - 1}/${U.st.length - 1} chambers cleared`;

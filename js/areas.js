@@ -103,12 +103,68 @@ ET.boss.name = 'The Obsidian Tyrant'; ET.warden.name = 'The Bone Warden';
 const AREAS = [
   { id: 'shadow', name: 'The Shadow Realm', zone: undefined, bosses: ['boss', 'umbra'] },
   { id: 'crypt', name: 'The Undead Crypt', zone: 'crypt', bosses: ['lich', 'bonedragon'] },
-  { id: 'frost', name: 'The Frost Giants\' Peaks', zone: 'frost', bosses: ['frostgiant', 'frostqueen'] },
+  { id: 'frost', name: 'The Frost Peaks', zone: 'frost', bosses: ['frostgiant', 'frostqueen'] },
   { id: 'hell', name: 'The Infernal Legion', zone: 'hell', bosses: ['pitlord', 'archdemon'] },
   { id: 'void', name: 'The Void', zone: 'void', bosses: ['watcher', 'devourer'] },
 ];
 const areaIdx = w => Math.floor(Math.max(0, w - 1) / 10) % AREAS.length;
-const areaNow = () => S.mode === 'arena' ? AREAS[areaIdx(S.wave)] : AREAS[0]; // Mage City keeps the Shadow roster
+const areaNow = () => S.mode === 'arena' ? AREAS[S.isl || 0] : AREAS[0]; // Mage City keeps the Shadow roster
+
+// ===================== the islands and their bridges (both machines) =====================
+// The five areas are islands in a ring (the same layout as blender/build_islands.py). Clearing an area's 10th wave builds
+// the bridge to the next one, and the next island with it; the next wave starts once everyone has walked across.
+// State: S.isl the island you fight on, S.ib built islands (bits), S.brs finished bridges (bits), S.br the one being built { k, t }.
+const ISLES = AREAS.map((a, k) => { const th = Math.PI + k * TAU / 5; return { id: a.id, k, x: k ? 64 * Math.sin(th) : 0, z: k ? 64 + 64 * Math.cos(th) : 0, r: ARENA_R }; });
+const BRIDGE_R = 1.9, BRIDGE_T = 9; // walkable half-width, seconds to build
+function bridgeEnds(k) {
+  const A = ISLES[k], B = ISLES[(k + 1) % 5], dx = B.x - A.x, dz = B.z - A.z, L = Math.hypot(dx, dz), ux = dx / L, uz = dz / L;
+  return { ax: A.x + ux * (A.r - 1.5), az: A.z + uz * (A.r - 1.5), bx: B.x - ux * (B.r - 1.5), bz: B.z - uz * (B.r - 1.5), ux, uz };
+}
+// how far to lift a floating decoration (the arena's orbiting monoliths) so it passes over the bridges, not through them
+function laneLift(x, z) {
+  let d = 1e9;
+  for (const k of [0, 4]) { const b = bridgeEnds(k), dx = b.bx - b.ax, dz = b.bz - b.az, t = clamp(((x - b.ax) * dx + (z - b.az) * dz) / (dx * dx + dz * dz), 0, 1); d = Math.min(d, Math.hypot(x - b.ax - dx * t, z - b.az - dz * t)); }
+  return Math.max(0, 1 - d / 8) ** 2 * 10;
+}
+const isleCenter = () => ISLES[S.mode === 'arena' ? S.isl || 0 : 0];
+// the walkable shape: every built island, every finished bridge, and as much of the one being built as exists so far
+function islandMap(src = S) {
+  if (src.mode && src.mode !== 'arena') return;
+  const caps = [];
+  for (const I of ISLES) if (I.k === 0 || (src.ib & 1 << I.k)) caps.push({ ax: I.x, az: I.z, bx: I.x, bz: I.z, r: I.r });
+  for (let k = 0; k < 5; k++) {
+    const t = src.brs & 1 << k ? 1 : src.br?.k === k ? src.br.t : 0;
+    if (t <= 0) continue;
+    const b = bridgeEnds(k);
+    caps.push({ ax: b.ax, az: b.az, bx: b.ax + (b.bx - b.ax) * t, bz: b.az + (b.bz - b.az) * t, r: BRIDGE_R });
+  }
+  MAP.caps = caps;
+}
+// host: the 10th wave of an area is cleared
+function startTravel() {
+  const k = S.isl || 0;
+  S.br = { k, t: S.brs & 1 << k ? 1 : 0 }; S.phase = 'travel';
+  ev({ k: 'travel', to: (k + 1) % 5 });
+}
+function stepTravel(dt) {
+  const B = S.br, next = (B.k + 1) % 5, N = ISLES[next];
+  B.t = Math.min(1, B.t + dt / BRIDGE_T);
+  if (B.t >= 1) { S.brs |= 1 << B.k; S.ib |= 1 << next; }
+  islandMap();
+  const ps = players().filter(p => !p.down);
+  if (B.t >= 1 && ps.length && ps.every(p => Math.hypot(p.x - N.x, p.z - N.z) < N.r - 2)) { // everyone's across
+    S.isl = next; S.br = null; S.phase = 'rest'; S.restT = 3; islandMap();
+    ev({ k: 'arrive', i: next });
+  }
+}
+// obstacles on the other islands, from their Blender pieces (<id>_pillar_<n>_r<radius*10>, braziers)
+for (const I of ISLES) {
+  const root = islandsG.getObjectByName('isle_' + I.id); if (!root) continue;
+  for (const o of root.children) {
+    const m = o.name.match(/_pillar_\d+_r(\d+)/), br = /_brazier_\d+$/.test(o.name);
+    if (m || br) ARENA_PILLARS.push({ x: I.x + o.position.x, z: I.z + o.position.z, r: m ? +m[1] / 10 : .65 });
+  }
+}
 const areaWave = w => (Math.max(1, w) - 1) % 10 + 1; // 1..10 within the area
 
 // ===================== player-side effects of the new attacks =====================
@@ -249,6 +305,111 @@ const FOE_ATK = {
   },
 };
 const RIMC = { necromancer: 0x9a6aff, lich: 0x7ae8ff, frostqueen: 0x9fe6ff, archdemon: 0xff6a1a, watcher: 0xb04cff, umbra: 0x9a4cff };
+
+// ===================== the islands and bridges on screen =====================
+// An island being built flies together out of the clouds: the rock underneath first, then the floor wedges (nearest the
+// bridge first), then its landmarks, braziers and floating rocks. Bridges lay one segment at a time from the island you
+// leave, keeping just ahead of you as you walk.
+const ISLE_FIRE = { crypt: 0x6aff8a, frost: 0x7ad8ff, hell: null, void: 0xb04cff };
+const ISLE_MOTE = { crypt: 1, frost: 2, hell: 3, void: 4 };
+const IV = { isles: [], bridges: [], lightIsle: 0, init: false };
+const easeBack = x => 1 + 2.2 * (x - 1) ** 3 + 1.2 * (x - 1) ** 2;
+function islandInit() {
+  IV.init = true;
+  // the original arena: its far-off decorative islets would sit where the real islands are now, and some floating rocks in the bridges' way
+  arena.traverse(o => { if (/^far_island_\d+$/.test(o.name)) o.visible = false; });
+  for (const r of amb.rocks) {
+    const p = r.o.position;
+    for (let k = 0; k < 2; k++) { const b = k ? bridgeEnds(4) : bridgeEnds(0), [ax, az, bx, bz] = k ? [b.bx, b.bz, b.ax, b.az] : [b.ax, b.az, b.bx, b.bz];
+      const dx = bx - ax, dz = bz - az, t = clamp(((p.x - ax) * dx + (p.z - az) * dz) / (dx * dx + dz * dz), 0, 1);
+      if (Math.hypot(p.x - ax - dx * t, p.z - az - dz * t) < 6 && p.y > -4) r.o.visible = false; }
+  }
+  for (const I of ISLES) {
+    const root = islandsG.getObjectByName('isle_' + I.id);
+    if (!root || I.k === 0) { IV.isles.push(null); continue; }
+    scene.add(root); root.position.set(I.x, 0, I.z); root.visible = false;
+    const prev = ISLES[(I.k + 4) % 5], ex = prev.x - I.x, ez = prev.z - I.z, el = Math.hypot(ex, ez), entry = V(ex / el * I.r, 0, ez / el * I.r); // where the bridge comes in
+    const fire = fireMat(ISLE_FIRE[I.id]), pieces = [], flames = [];
+    for (const o of [...root.children]) {
+      const kind = /_under_/.test(o.name) ? 0 : /_(sector|core)/.test(o.name) ? 1 : /_float_/.test(o.name) ? 3 : 2;
+      if (/_flame_/.test(o.name)) { o.traverse(c => { if (c.isMesh) { c.material = fire; c.castShadow = false; } }); flames.push(o); }
+      const d = o.position.clone().setY(0).distanceTo(entry) / (I.r * 2); // 0 at the bridge, 1 across the island
+      pieces.push({ o, p: o.position.clone(), q: o.quaternion.clone(), at: [0, .2, .5, .62][kind] + d * .3, kind, spin: V(rand(-1, 1), rand(-1, 1), rand(-1, 1)).normalize(), done: false });
+    }
+    IV.isles.push({ I, root, pieces, flames, last: -1 });
+  }
+  for (let k = 0; k < 5; k++) {
+    const b = bridgeEnds(k), L = Math.hypot(b.bx - b.ax, b.bz - b.az), n = Math.ceil(L / 2.2), yaw = Math.atan2(b.ux, b.uz);
+    const tpl = islandsG.getObjectByName('bridge_' + ISLES[(k + 1) % 5].id) || islandsG.getObjectByName('bridge_shadow');
+    const segs = [];
+    for (let i = 0; i < n; i++) {
+      if (!tpl) break;
+      const o = tpl.clone(); o.visible = false; scene.add(o);
+      const u = (i + .5) / n; o.position.set(b.ax + (b.bx - b.ax) * u, 0, b.az + (b.bz - b.az) * u); o.rotation.y = yaw;
+      segs.push({ o, p: o.position.clone(), t0: -1 });
+    }
+    IV.bridges.push({ segs, n });
+  }
+}
+function islandFrame(src, dt) {
+  if (!IV.init) islandInit();
+  const on = !!src && src.mode === 'arena' && arena.visible;
+  const now = performance.now() / 1000;
+  for (const v of IV.isles) {
+    if (!v) continue;
+    const k = v.I.k, p = !on ? 0 : src.ib & 1 << k ? 1 : src.br && (src.br.k + 1) % 5 === k ? Math.min(1, src.br.t * 1.08) : 0;
+    v.root.visible = p > 0;
+    if (p === v.last) continue;
+    const fresh = p > v.last; v.last = p;
+    for (const q of v.pieces) {
+      const u = clamp((p - q.at * .82) / .2, 0, 1), e = easeBack(u);
+      q.o.visible = u > 0;
+      q.o.position.copy(q.p); q.o.position.y += (1 - e) * (q.kind === 0 ? -34 : -26) + (q.kind === 3 ? 0 : 0);
+      q.o.quaternion.copy(q.q); if (u < 1) q.o.rotateOnAxis(q.spin, (1 - e) * 1.6);
+      q.o.scale.setScalar(.55 + .45 * Math.min(1, u * 1.4));
+      if (u >= 1 && !q.done && fresh && p < 1.01) { // slammed into place: a puff of dust (and a thud when it's near you)
+        q.done = true;
+        if (q.kind && q.kind < 3) {
+          const w = q.o.getWorldPosition(V());
+          for (let j = 0; j < 14; j++) emit(w.x + rand(-2, 2), .2, w.z + rand(-2, 2), rand(-2, 2), rand(1, 4), rand(-2, 2), 0xb8a890, rand(.08, .16), rand(.5, .9), 9, 1);
+          if (Math.random() < .25) smokeFx(w.x, .4, w.z, 1, 0x8a7a68, 1, 2, .6);
+          if (distTo(w.x, w.z) < 40 && Math.random() < .35) sfx(q.kind === 1 ? 'earth' : 'smash');
+        }
+      }
+      if (u < 1) q.done = false;
+    }
+  }
+  for (let k = 0; k < 5; k++) {
+    const B = IV.bridges[k], t = !on ? 0 : src.brs & 1 << k ? 1 : src.br?.k === k ? src.br.t : 0;
+    for (let i = 0; i < B.segs.length; i++) {
+      const s = B.segs[i], want = t * B.n > i;
+      if (!want) { s.o.visible = false; s.t0 = -1; continue; }
+      if (s.t0 < 0) { s.t0 = t >= 1 && !(src.br?.k === k) ? now - 1 : now; if (now - s.t0 < .5 && i % 2 === 0 && distTo(s.p.x, s.p.z) < 35) sfx('earth'); }
+      const u = clamp((now - s.t0) / .45, 0, 1), e = easeBack(u);
+      if (u >= 1 && !s.land) { s.land = 1; for (let j = 0; j < 10; j++) emit(s.p.x + rand(-2, 2), .1, s.p.z + rand(-1, 1), rand(-2, 2), rand(1, 3), rand(-2, 2), 0xb8a890, rand(.08, .14), .6, 9, 1); }
+      if (u < 1) s.land = 0;
+      s.o.visible = true; s.o.position.set(s.p.x, -7 * (1 - e), s.p.z); s.o.rotation.z = (1 - e) * .5;
+      if (u < 1 && Math.random() < .4) emit(s.p.x + rand(-2, 2), -1, s.p.z + rand(-2, 2), 0, rand(2, 5), 0, 0xd8c8a8, rand(.06, .12), .5, 6);
+    }
+  }
+  if (!on) { areaMote = 0; return; }
+  // the island the camera's on: its braziers get the four brazier lights, its motes drift about
+  let best = 0, bd = 1e9;
+  for (const I of ISLES) { const d = Math.hypot(camera.position.x - I.x, camera.position.z - I.z); if (d < bd && (I.k === 0 || src.ib & 1 << I.k)) { bd = d; best = I.k; } }
+  areaMote = bd < ARENA_R + 12 ? ISLE_MOTE[ISLES[best].id] || 0 : 0;
+  if (best !== IV.lightIsle) {
+    IV.lightIsle = best;
+    const v = IV.isles[best], col = ISLE_FIRE[ISLES[best].id] ?? 0xff8a3a;
+    amb.lights.forEach((l, i) => {
+      const f = v?.flames[i] || amb.flames[i];
+      if (f) { f.getWorldPosition(l.position); l.position.y += .7; } l.color.set(best ? col : 0xff8a3a);
+    });
+    areaFire = best ? col : 0xff8a3a;
+  }
+  // the key light's shadows follow you from island to island
+  const cx = Math.round(camera.position.x / 4) * 4, cz = Math.round(camera.position.z / 4) * 4;
+  moon.target.position.set(cx, 0, cz); moon.target.updateMatrixWorld(); moon.position.set(cx + BH.x * 70, BH.y * 70, cz + BH.z * 70);
+}
 
 // ===================== atmosphere =====================
 // the drifting motes of the island you stand on (set by the island code): 1 crypt ash, 2 frost snow, 3 hell embers, 4 void sparks

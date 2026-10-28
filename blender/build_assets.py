@@ -295,6 +295,8 @@ while a < TAU - 0.3:
     for k in range(steps):
         b0 = a + k * 0.05
         h = random.uniform(0.3, 1.4) * (0.4 + 0.6 * math.sin((k + 0.5) / steps * math.pi))
+        if any(abs((b0 + 0.025 - g + math.pi) % TAU - math.pi) < 0.16 for g in (3.7699, 5.6549)):
+            continue  # open where the bridges to the Crypt and from the Void land (blender/build_islands.py lane_angle)
         m.prism(random.choice([stone_a, stone_b]), [pol(21.8, b0), pol(22.5, b0), pol(22.5, b0 + 0.05), pol(21.8, b0 + 0.05)], 0, h + 0.1)
     a += span + gap
 walls = m.done()
