@@ -2272,6 +2272,22 @@ ink: {
         crash(e) { inkDecal(e.x, e.z, e.r * .9, 3.5); boomFx(e.x, .5, e.z, e.r, 0x3a52ff, 1.6); pillarFx(e.x, .05, e.z, e.r * .5, 10, 0x3a52ff, .7); burst(e.x, .5, e.z, 70, 0x9aa8ff, 10, .3, .8, 10); shake(.7); sfx('ink_big'); } } },
   ],
 },
+// ================================================================== GOD (secret: the cheat code in the Arena lobby, not in ELIST)
+god: {
+  name: 'God Mode', color: 0xfff2a0, glyph: '👑', adj: 'SMITTEN', react: { name: 'JUDGEMENT', kind: 'blast' },
+  blurb: 'You found the cheat. One button, everything dies.',
+  passive: 'Omnipotence: every hit is lethal, nothing reloads.',
+  st: {},
+  moves: [
+    { name: 'Smite', icon: '⚡', cd: .08, desc: 'Strike the aimed spot: everything within 16 m dies, bosses included.',
+      cast(p, c) {
+        const q = groundAt(p, 60), r = 16 * c.st.aoe;
+        fxe(c.m.key, 'smite', { x: q.x, z: q.z, r });
+        for (const e of enemiesNear(q.x, q.z, r)) damage(e, 1e9, 'god', p, { raw: true });
+      },
+      fx: { smite(e) { boomFx(e.x, .5, e.z, e.r, 0xfff2a0, 1.2); pillarFx(e.x, .05, e.z, 1.5, 30, 0xffffff, .5); shake(.25); sfx('light_big'); } } },
+  ],
+},
 };
 
 // each element's cast sounds plug into the synth table (slot LMB/RMB use <el>, skills and ultimates use <el>_big)

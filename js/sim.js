@@ -5,9 +5,9 @@
 
 // ===================== data =====================
 const EL = ELEMENTS;
-const ELIST = Object.keys(EL);
+const ELIST = Object.keys(EL).filter(k => k !== 'god'); // God Mode is secret: no lobby button, unlocks, AI or reactions
 const MOVE = {};
-for (const el of ELIST) EL[el].moves.forEach((m, i) => { Object.assign(m, { key: el + '.' + i, el, slot: i }); m.mode ??= 'tap'; MOVE[m.key] = m; });
+for (const el in EL) EL[el].moves.forEach((m, i) => { Object.assign(m, { key: el + '.' + i, el, slot: i }); m.mode ??= 'tap'; MOVE[m.key] = m; });
 
 // status on an enemy (from element A) hit by a different element B -> reaction. Named pairs get their own effect,
 // everything else is "<A adjective> <B reaction>" with B's reaction kind, so all 380 ordered pairs do something.
@@ -658,7 +658,7 @@ function stepCast(p, i, dt, host = true) {
   for (let s = 0; s < 5; s++) {
     if (!held[s]) continue;
     const m = kit.moves[s];
-    if (!canCast(p, m)) continue;
+    if (!m || !canCast(p, m)) continue; // God Mode has only the LMB move
     if (m.slot === 4 && p.prevK[s]) continue; // ultimates need a fresh press
     if (m.mode === 'channel') { p.ch = m.key; p.chT = 0; if (host) { ev(castEv(p, m, ctxOf(p, m))); m.start?.(p, ctxOf(p, m)); } else castFx(castEv(p, m, ctxOf(p, m))); }
     else if (m.mode === 'charge' || m.mode === 'aim') p.chg = { m: m.key, t: 0 };

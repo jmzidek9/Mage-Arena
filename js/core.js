@@ -341,7 +341,7 @@ function glowify(obj, mats) { obj.traverse(o => { if (o.isMesh) { o.material = /
 const setOpacity = (mats, a) => mats.forEach(m => m.opacity = a);
 function makeCircle(el, color = EL[el]?.color ?? 0x9a5cff) {
   const mats = glowMats(color), g = new THREE.Group();
-  for (const t of CTPL[el]) g.add(glowify(t.clone(), mats));
+  for (const t of CTPL[el] ?? CTPL.sigil) g.add(glowify(t.clone(), mats));
   g.userData.mats = mats;
   return g;
 }
