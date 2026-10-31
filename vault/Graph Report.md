@@ -1,17 +1,17 @@
 # Graph Report - Test Game  (2026-10-31)
 
 ## Corpus Check
-- 31 files · ~183,560 words
+- 31 files · ~183,728 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 2 file(s) not represented in the graph (top: (none) 2)
 
 ## Summary
-- 895 nodes · 1803 edges · 36 communities (31 shown, 5 thin omitted)
+- 896 nodes · 1806 edges · 36 communities (31 shown, 5 thin omitted)
 - Extraction: 93% EXTRACTED · 7% INFERRED · 0% AMBIGUOUS · INFERRED: 120 edges (avg confidence: 0.87)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `0da68687`
+- Built from commit: `3ebbd6ec`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -128,7 +128,7 @@ Nodes (17): arcpts(), blob_cloud(), crescent(), crescent_blade(), lens(), M(), m
 
 ### Community 12 - "areas.js"
 Cohesion: 0.10
-Nodes (16): AREAS, bridgeEnds(), easeBack(), FOE_ATK, islandFrame(), islandInit(), islandMap(), ISLE_FIRE (+8 more)
+Nodes (17): AREAS, bridgeEnds(), easeBack(), FOE_ATK, goIsland(), islandFrame(), islandInit(), islandMap() (+9 more)
 
 ### Community 13 - "modes.js"
 Cohesion: 0.27
@@ -213,7 +213,7 @@ Nodes (3): MUSIC, playMood(), track()
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `Blender Assets` connect `build_elements.py` to `Elements.md`, `elements.js`, `Mesh`, `grab`?**
-  _High betweenness centrality (0.364) - this node is a cross-community bridge._
+  _High betweenness centrality (0.363) - this node is a cross-community bridge._
 - **Are the 14 inferred relationships involving `build_hell()` (e.g. with `rim()` and `cage()`) actually correct?**
   _`build_hell()` has 14 INFERRED edges - model-reasoned connections that need verification._
 - **Should `sim.js` be split into smaller, more focused modules?**

@@ -92,6 +92,13 @@ function renderSwap() {
   if (!playing || !p) return;
   $('swapGrid').innerHTML = ELIST.filter(k => unlocked(k) || k === p.cur).map(k => `<button class="elc${k === p.cur ? ' sel' : ''}" data-el="${k}" title="${EL[k].name}" style="--c:${css(EL[k].color)}"><span class="g">${EL[k].glyph}</span></button>`).join('');
   for (const b of $('swapGrid').children) b.onclick = () => pickEl(b.dataset.el);
+  // test cheat (host / solo, Arena): jump straight to an island, at the start of its first wave
+  const tp = role !== 'guest' && S.mode === 'arena';
+  $('islTp').classList.toggle('hidden', !tp);
+  if (tp) {
+    $('islGrid').innerHTML = AREAS.map((a, k) => `<button class="ghost${k === (S.isl || 0) ? ' on' : ''}" data-k="${k}">${a.name.replace(/^The /, '')}</button>`).join('');
+    for (const b of $('islGrid').children) b.onclick = () => { goIsland(+b.dataset.k); renderSwap(); };
+  }
 }
 function pickEl(el) {
   const p = meP();

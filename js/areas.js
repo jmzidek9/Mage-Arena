@@ -146,6 +146,14 @@ function startTravel() {
   S.br = { k, t: S.brs & 1 << k ? 1 : 0 }; S.phase = 'travel';
   ev({ k: 'travel', to: (k + 1) % 5 });
 }
+// test cheat (Esc menu): every island and bridge built, the field cleared, everyone on island k, its first wave next
+function goIsland(k) {
+  Object.assign(S, { ib: 31, brs: 31, br: null, isl: k, wave: k * 10, enemies: [], shots: [], ents: [], timers: [], rings: [], hz: [], budget: 0, bossLeft: 0, phase: 'rest', restT: 3 });
+  const I = ISLES[k];
+  players().forEach((p, i) => Object.assign(p, { x: I.x + (i ? 2 : -2), z: I.z + 6, y: 0, vy: 0, down: false, hp: p.max, mo: null, dashT: 0 }));
+  islandMap();
+  ev({ k: 'arrive', i: k });
+}
 function stepTravel(dt) {
   const B = S.br, next = (B.k + 1) % 5, N = ISLES[next];
   B.t = Math.min(1, B.t + dt / BRIDGE_T);
