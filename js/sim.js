@@ -602,7 +602,7 @@ const castEv = (p, m, c) => ({ k: 'cast', id: p.id, m: m.key, x: r2(p.x), y: r2(
 const kitOf = p => EL[p.cur || p.el];
 const cdOf = (p, m) => m.slot === 4 ? 0 : m.cd * stats(p).cdMul * (m.slot === 2 || m.slot === 3 ? stats(p).skillCd : 1);
 function canCast(p, m) {
-  if (m.slot === 4) return p.ult >= 1;
+  if (m.slot === 4) return p.ult >= 1 || m.el === 'god';
   if ((p.cds[m.el]?.[m.slot] || 0) > 0) return false;
   if (m.cost && p.hp <= m.cost(p) + 1) return false;
   if (m.el === 'plasma' && p.bf.overheat > 0) return false;

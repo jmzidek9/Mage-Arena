@@ -252,6 +252,8 @@ function wardUpd(o, n, dt, t) {
 }
 const wardView = (top, ts) => ({ make: n => wardMake(n, top, ts), upd: wardUpd, drop: dropFade(.25) });
 
+const godKill = (e, p) => damage(e, 1e9, 'god', p, { raw: true }); // God Mode: lethal through shields, stasis and time stop
+
 // ---------- the elements ----------
 const ELEMENTS = {
 // ================================================================== FIRE
@@ -2275,7 +2277,7 @@ ink: {
 // ================================================================== GOD (secret: the cheat code in the Arena lobby, not in ELIST)
 god: {
   name: 'God Mode', color: 0xfff2a0, glyph: '👑', adj: 'SMITTEN', react: { name: 'JUDGEMENT', kind: 'blast' },
-  blurb: 'You found the cheat. One button, everything dies.',
+  blurb: 'You found the cheat. Every button, everything dies.',
   passive: 'Omnipotence: every hit is lethal, nothing reloads.',
   st: {},
   moves: [
@@ -2283,9 +2285,28 @@ god: {
       cast(p, c) {
         const q = groundAt(p, 60), r = 16 * c.st.aoe;
         fxe(c.m.key, 'smite', { x: q.x, z: q.z, r });
-        for (const e of enemiesNear(q.x, q.z, r)) damage(e, 1e9, 'god', p, { raw: true });
+        for (const e of enemiesNear(q.x, q.z, r)) godKill(e, p);
       },
       fx: { smite(e) { boomFx(e.x, .5, e.z, e.r, 0xfff2a0, 1.2); pillarFx(e.x, .05, e.z, 1.5, 30, 0xffffff, .5); shake(.25); sfx('light_big'); } } },
+    { name: 'Divine Beam', icon: '🔆', cd: .08, desc: 'A 6 m wide beam of light 80 m long: everything in its path dies.',
+      cast(p, c) {
+        const d = c.flat, w = 3 * c.st.aoe;
+        for (const e of S.enemies) { if (!alive(e)) continue; const dx = e.x - p.x, dz = e.z - p.z, t = dx * d.x + dz * d.z; if (t > 0 && t < 80 && Math.abs(dx * d.z - dz * d.x) < w + ET[e.type].r * e.sc) godKill(e, p); }
+        ev({ k: 'bolt', el: 'god', pts: [[c.o.x, c.o.y, c.o.z], [p.x + d.x * 80, c.o.y, p.z + d.z * 80]].map(a => a.map(r2)) });
+      } },
+    { name: 'Heaven\'s Wrath', icon: '🌟', cd: .08, desc: 'A nova of holy fire: everything within 30 m of you dies.',
+      cast(p, c) { const r = 30 * c.st.aoe; fxe(c.m.key, 'nova', { x: p.x, z: p.z, r }); for (const e of enemiesNear(p.x, p.z, r)) godKill(e, p); },
+      fx: { nova(e) { boomFx(e.x, .5, e.z, e.r, 0xfff2a0, 1.6); ringFx(e.x, .1, e.z, e.r, 0xffffff, .6); shake(.4); sfx('light_big'); } } },
+    { name: 'Chain of Judgement', icon: '⛓️', cd: .08, desc: 'Lightning leaps from your hand to the 25 nearest enemies anywhere on the map and kills each one.',
+      cast(p, c) {
+        const es = S.enemies.filter(alive).sort((a, b) => Math.hypot(a.x - p.x, a.z - p.z) - Math.hypot(b.x - p.x, b.z - p.z)).slice(0, 25);
+        if (!es.length) return;
+        ev({ k: 'bolt', el: 'god', pts: [c.o, ...es.map(center)].map(q => [q.x, q.y, q.z].map(r2)) });
+        for (const e of es) godKill(e, p);
+      } },
+    { name: 'Armageddon', icon: '☀️', desc: 'ULTIMATE, always ready. The sky falls: every enemy on the map dies.',
+      cast(p, c) { for (const e of S.enemies.filter(alive)) { fxe(c.m.key, 'fall', { x: e.x, z: e.z }); godKill(e, p); } },
+      fx: { fall(e) { shake(.5); pillarFx(e.x, .05, e.z, 2, 40, 0xfff2a0, .7); boomFx(e.x, .5, e.z, 4, 0xffffff, 1); sfx('light_big'); } } },
   ],
 },
 };

@@ -680,7 +680,7 @@ function hud(src, mp) {
   for (let i = 0; i < 5; i++) {
     const m = kit.moves[i], el = slots[i]; if (!el) continue;
     let f = 0, label = '';
-    if (i === 4) { f = 1 - (sp.ult ?? mp.ult ?? 0); el.classList.toggle('ready', f <= 0); }
+    if (i === 4) { f = cur === 'god' ? 0 : 1 - (sp.ult ?? mp.ult ?? 0); el.classList.toggle('ready', f <= 0); }
     else { const full = cdOf(mp, m), c = Math.max(0, cds[i] || 0); f = full ? c / full : 0; if (c > .05 && full > 1.5) label = c.toFixed(c < 3 ? 1 : 0); }
     const hot = cur === 'plasma' && i < 4 ? sp.bf?.overheat || 0 : 0; // overheated: Plasma spells are locked
     if (hot > 0) { f = Math.max(f, hot / 2.5); label = hot.toFixed(1); }
