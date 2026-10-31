@@ -2274,10 +2274,10 @@ ink: {
         crash(e) { inkDecal(e.x, e.z, e.r * .9, 3.5); boomFx(e.x, .5, e.z, e.r, 0x3a52ff, 1.6); pillarFx(e.x, .05, e.z, e.r * .5, 10, 0x3a52ff, .7); burst(e.x, .5, e.z, 70, 0x9aa8ff, 10, .3, .8, 10); shake(.7); sfx('ink_big'); } } },
   ],
 },
-// ================================================================== GOD (secret: the cheat code in the Arena lobby, not in ELIST)
+// ================================================================== GOD (the owner's own, see OWNER in view.js; not in ELIST)
 god: {
   name: 'God Mode', color: 0xfff2a0, glyph: '👑', adj: 'SMITTEN', react: { name: 'JUDGEMENT', kind: 'blast' },
-  blurb: 'You found the cheat. Every button, everything dies.',
+  blurb: 'The owner\'s own element. Every button, everything dies.',
   passive: 'Omnipotence: every hit is lethal, nothing reloads.',
   st: {},
   moves: [

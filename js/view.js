@@ -982,7 +982,11 @@ let PROG = { xp: 0, lvl: 1, keys: 0, pts: 0, unl: STARTERS.slice(), tal: {}, mas
 try { PROG = { ...PROG, ...JSON.parse(localStorage.getItem('magepact_prog') || '{}') }; } catch {}
 PROG.tal = cleanTal(PROG.tal); PROG.unl = PROG.unl.filter(k => EL[k]);
 const saveProg = () => { try { localStorage.setItem('magepact_prog', JSON.stringify(PROG)); } catch {} };
-const unlocked = k => k === 'god' || PROG.unl.includes(k);
+// God Mode is the owner's own: there are no accounts, so it is unlocked only when the game runs on the owner's computer
+// (opened from their folder, or served from it on localhost). Everywhere else it doesn't show at all.
+const OWNER = location.protocol === 'file:' ? /\/Users\/jmzid\//i.test(decodeURIComponent(location.pathname)) : ['localhost', '127.0.0.1'].includes(location.hostname);
+const PICKABLE = () => OWNER ? [...ELIST, 'god'] : ELIST; // every element the pickers list
+const unlocked = k => k === 'god' ? OWNER : PROG.unl.includes(k);
 const stars = k => MASTERY.filter(x => (PROG.mast[k] || 0) >= x).length;
 // end of a run: XP for you and the elements you carried; every level gives an unlock key (while any element is locked) and a talent point
 function gainXP(xp, els) {
@@ -1028,11 +1032,11 @@ const ELMETA = {
 };
 const DIFF = ['', 'Easy', 'Medium', 'Hard'];
 let myEl = 'fire', myEl2 = null, hoverEl = null;
-try { const s = JSON.parse(localStorage.getItem('magepact_pick') || '{}'); if (EL[s.el] && s.el !== 'god') myEl = s.el; if (EL[s.el2] && s.el2 !== myEl) myEl2 = s.el2; } catch {}
+try { const s = JSON.parse(localStorage.getItem('magepact_pick') || '{}'); if (EL[s.el]) myEl = s.el; if (EL[s.el2] && s.el2 !== myEl) myEl2 = s.el2; } catch {}
 if (!unlocked(myEl)) myEl = PROG.unl[0]; if (myEl2 && !unlocked(myEl2)) myEl2 = null;
 function bestFor(el) { try { return JSON.parse(localStorage.getItem(myMode === 'dungeon' ? 'magepact_best_floor' : 'magepact_best_el') || '{}')[el] || 0; } catch { return 0; } }
 function renderLobby() {
-  $('grid').innerHTML = ELIST.map(k => { const e = EL[k], b = bestFor(k), lock = !unlocked(k), st = stars(k); return `<button class="elc${k === myEl ? ' sel' : ''}${k === myEl2 ? ' sel2' : ''}${lock ? ' lock' : ''}${lock && PROG.keys ? ' can' : ''}" data-el="${k}" style="--c:${css(e.color)}"><span class="g">${lock ? '🔒' : e.glyph}</span><span class="n">${e.name}</span>${st ? `<span class="st">${'★'.repeat(st)}</span>` : ''}${b && myMode !== 'duel' ? `<span class="best">${myMode === 'dungeon' ? 'F' : 'W'}${b}</span>` : ''}${k === myEl2 ? '<span class="tab">TAB</span>' : ''}</button>`; }).join('');
+  $('grid').innerHTML = PICKABLE().map(k => { const e = EL[k], b = bestFor(k), lock = !unlocked(k), st = stars(k); return `<button class="elc${k === myEl ? ' sel' : ''}${k === myEl2 ? ' sel2' : ''}${lock ? ' lock' : ''}${lock && PROG.keys ? ' can' : ''}" data-el="${k}" style="--c:${css(e.color)}"><span class="g">${lock ? '🔒' : e.glyph}</span><span class="n">${e.name}</span>${st ? `<span class="st">${'★'.repeat(st)}</span>` : ''}${b && myMode !== 'duel' ? `<span class="best">${myMode === 'dungeon' ? 'F' : 'W'}${b}</span>` : ''}${k === myEl2 ? '<span class="tab">TAB</span>' : ''}</button>`; }).join('');
   for (const b of $('grid').children) {
     b.onclick = () => {
       const k = b.dataset.el;
@@ -1043,7 +1047,7 @@ function renderLobby() {
     b.onmouseenter = () => { hoverEl = b.dataset.el; renderDetail(); };
     b.onmouseleave = () => { hoverEl = null; renderDetail(); };
   }
-  $('pickinfo').innerHTML = `<label>Second element<select id="el2Sel"><option value="">none</option>${ELIST.filter(x => x !== myEl && unlocked(x)).map(x => `<option value="${x}"${x === myEl2 ? ' selected' : ''}>${EL[x].name}</option>`).join('')}</select></label><span>Click an element to make it your main one. Right-click one (or pick it here) to carry a second element; Tab swaps between them in battle.</span>`;
+  $('pickinfo').innerHTML = `<label>Second element<select id="el2Sel"><option value="">none</option>${PICKABLE().filter(x => x !== myEl && unlocked(x)).map(x => `<option value="${x}"${x === myEl2 ? ' selected' : ''}>${EL[x].name}</option>`).join('')}</select></label><span>Click an element to make it your main one. Right-click one (or pick it here) to carry a second element; Tab swaps between them in battle.</span>`;
   $('el2Sel').onchange = ev => { myEl2 = ev.target.value || null; savePick(); renderLobby(); };
   renderProg(); renderDetail();
 }
@@ -1072,15 +1076,6 @@ function pvShow(el) {
   g.add(c, w); g.userData = { c, m: w }; PV.sc.add(g); PV.g = g;
   if (!unlocked(el)) w.traverse(o => { if (o.isMesh && !o.material.uniforms) { o.material = o.material.clone(); o.material.color.setScalar(.05); o.material.emissive?.setScalar(0); } }); // locked: a silhouette
 }
-// God Mode: type ↑ ↑ ↓ ↓ ← → ← → A B O P in any mode's lobby
-const GOD_CODE = ['arrowup', 'arrowup', 'arrowdown', 'arrowdown', 'arrowleft', 'arrowright', 'arrowleft', 'arrowright', 'a', 'b', 'o', 'p'];
-const godKeys = [];
-addEventListener('keydown', e => {
-  if ($('lobby').classList.contains('hidden')) return;
-  godKeys.push(e.key.toLowerCase()); if (godKeys.length > GOD_CODE.length) godKeys.shift();
-  if (godKeys.join() !== GOD_CODE.join()) return;
-  godKeys.length = 0; myEl = 'god'; myEl2 = null; renderLobby(); sfx('ready'); banner('👑 GOD MODE', css(EL.god.color), 1500);
-});
 function savePick() { try { localStorage.setItem('magepact_pick', JSON.stringify({ el: myEl, el2: myEl2 })); } catch {} }
 function renderDetail() {
   const k = hoverEl || myEl, e = EL[k], [t1, t2, dif] = ELMETA[k], st = stars(k), mx = PROG.mast[k] || 0, nxt = MASTERY[st];

@@ -93,7 +93,7 @@ function renderSwap() {
   if (!playing || !p) return;
   const all = role !== 'guest' && S.cheat?.allEl; // test cheat: every element, locked or not, God Mode too, with names
   $('swapGrid').classList.toggle('big', !!all);
-  $('swapGrid').innerHTML = (all ? [...ELIST, 'god'] : ELIST.filter(k => unlocked(k) || k === p.cur)).map(k => `<button class="elc${k === p.cur ? ' sel' : ''}" data-el="${k}" title="${EL[k].name}" style="--c:${css(EL[k].color)}"><span class="g">${EL[k].glyph}</span>${all ? `<span class="n">${EL[k].name}</span>` : ''}</button>`).join('');
+  $('swapGrid').innerHTML = (all ? PICKABLE() : PICKABLE().filter(k => unlocked(k) || k === p.cur)).map(k => `<button class="elc${k === p.cur ? ' sel' : ''}" data-el="${k}" title="${EL[k].name}" style="--c:${css(EL[k].color)}"><span class="g">${EL[k].glyph}</span>${all ? `<span class="n">${EL[k].name}</span>` : ''}</button>`).join('');
   for (const b of $('swapGrid').children) b.onclick = () => pickEl(b.dataset.el);
   renderCheats();
 }

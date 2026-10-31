@@ -1,17 +1,17 @@
 # Graph Report - Test Game  (2026-10-31)
 
 ## Corpus Check
-- 31 files · ~184,252 words
+- 31 files · ~184,244 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 2 file(s) not represented in the graph (top: (none) 2)
 
 ## Summary
-- 899 nodes · 1811 edges · 36 communities (31 shown, 5 thin omitted)
+- 898 nodes · 1811 edges · 36 communities (31 shown, 5 thin omitted)
 - Extraction: 93% EXTRACTED · 7% INFERRED · 0% AMBIGUOUS · INFERRED: 120 edges (avg confidence: 0.87)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `887b8893`
+- Built from commit: `61b02c4b`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -96,7 +96,7 @@ Nodes (55): add(), anchor(), ARRIVE, block(), BUCKET, buildDungeonView(), buildF
 
 ### Community 3 - "view.js"
 Cohesion: 0.05
-Nodes (38): BOSS_COL, buildBar(), CASTS, CC_OV, COMBO_FX, DIFF, ELMETA, ETPL (+30 more)
+Nodes (36): BOSS_COL, buildBar(), CASTS, CC_OV, COMBO_FX, DIFF, ELMETA, ETPL (+28 more)
 
 ### Community 4 - "lib.py"
 Cohesion: 0.07
@@ -175,8 +175,8 @@ Cohesion: 0.50
 Nodes (4): Enemies, Fighting them, Wave budget, Wave modifiers
 
 ### Community 25 - "renderLobby"
-Cohesion: 0.25
-Nodes (11): bestFor(), pickMode(), pvShow(), renderDetail(), renderLobby(), renderModes(), runXP(), savePick() (+3 more)
+Cohesion: 0.23
+Nodes (12): bestFor(), PICKABLE(), pickMode(), pvShow(), renderDetail(), renderLobby(), renderModes(), runXP() (+4 more)
 
 ### Community 26 - "Elements"
 Cohesion: 0.06
