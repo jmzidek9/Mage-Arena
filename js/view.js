@@ -860,7 +860,7 @@ function renderModes() {
 }
 addEventListener('keydown', e => { const k = Object.keys(MODES)[+e.key - 1]; if (k && !$('modes').classList.contains('hidden')) pickMode(k); });
 function pickMode(k) {
-  myMode = k; if (k !== 'arena' && myEl === 'god') myEl = PROG.unl[0];
+  myMode = k;
   $('modes').classList.add('hidden'); $('lobby').classList.remove('hidden');
   $('modeName').textContent = MODES[k].name; $('soloBtn').textContent = MODES[k].play; sfx('pick'); renderLobby();
 }
@@ -974,11 +974,11 @@ function pvShow(el) {
   g.add(c, w); g.userData = { c, m: w }; PV.sc.add(g); PV.g = g;
   if (!unlocked(el)) w.traverse(o => { if (o.isMesh && !o.material.uniforms) { o.material = o.material.clone(); o.material.color.setScalar(.05); o.material.emissive?.setScalar(0); } }); // locked: a silhouette
 }
-// God Mode: type ↑ ↑ ↓ ↓ ← → ← → A B O P in the Arena lobby
+// God Mode: type ↑ ↑ ↓ ↓ ← → ← → A B O P in any mode's lobby
 const GOD_CODE = ['arrowup', 'arrowup', 'arrowdown', 'arrowdown', 'arrowleft', 'arrowright', 'arrowleft', 'arrowright', 'a', 'b', 'o', 'p'];
 const godKeys = [];
 addEventListener('keydown', e => {
-  if (myMode !== 'arena' || $('lobby').classList.contains('hidden')) return;
+  if ($('lobby').classList.contains('hidden')) return;
   godKeys.push(e.key.toLowerCase()); if (godKeys.length > GOD_CODE.length) godKeys.shift();
   if (godKeys.join() !== GOD_CODE.join()) return;
   godKeys.length = 0; myEl = 'god'; myEl2 = null; renderLobby(); sfx('ready'); banner('👑 GOD MODE', css(EL.god.color), 1500);
