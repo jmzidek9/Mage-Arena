@@ -204,7 +204,7 @@ const FOE_ATK = {
     start: (e, t, al, yaw) => ({ shape: 'cone', x: e.x, z: e.z, yaw, r: al.r, ang: al.ang }),
     hit(e, a, dmg, ps) {
       const al = a.al;
-      ev({ k: 'fx', m: 'foe', f: 'cone', x: r2(e.x), y: r2(e.y + ET[e.type].h * e.sc * .7), z: r2(e.z), yaw: r2(a.yaw), r: al.r, ang: al.ang, c: al.c, s: al.s });
+      ev({ k: 'fx', m: 'foe', b: ET[e.type].boss || 0, f: 'cone', x: r2(e.x), y: r2(e.y + ET[e.type].h * e.sc * .7), z: r2(e.z), yaw: r2(a.yaw), r: al.r, ang: al.ang, c: al.c, s: al.s });
       for (const p of ps) if (inCone(p, e.x, e.z, a.yaw, al.r + .4, al.ang + 6) && p.y < 3) foeHit(p, dmg, e, al);
       if (al.pool) for (let i = 1; i <= 2; i++) addPool(e.x + Math.sin(a.yaw) * al.r * i / 3, e.z + Math.cos(a.yaw) * al.r * i / 3, al.r * .25, al.pool, al);
     },
@@ -229,7 +229,7 @@ const FOE_ATK = {
       for (let i = 0; i < n; i++) {
         const yaw = a.yaw + (i - (n - 1) / 2) * .45;
         if (i) ev({ k: 'tele', shape: 'line', x: r2(e.x), z: r2(e.z), yaw: r2(yaw), len: al.len, w: al.w, d: .01 });
-        ev({ k: 'fx', m: 'foe', f: 'ray', x: r2(e.x), y: r2(e.y + ET[e.type].h * e.sc * .7), z: r2(e.z), yaw: r2(yaw), len: al.len, w: al.w, c: al.c });
+        ev({ k: 'fx', m: 'foe', b: ET[e.type].boss || 0, f: 'ray', x: r2(e.x), y: r2(e.y + ET[e.type].h * e.sc * .7), z: r2(e.z), yaw: r2(yaw), len: al.len, w: al.w, c: al.c });
         for (const p of ps) if (inLine(p, e.x, e.z, yaw, al.len, al.w) && p.y < 2.5) foeHit(p, dmg, e, al);
         if (al.pool) for (let j = 1; j <= 3; j++) addPool(e.x + Math.sin(yaw) * al.len * j / 4, e.z + Math.cos(yaw) * al.len * j / 4, al.w, al.pool, al);
       }
@@ -239,7 +239,7 @@ const FOE_ATK = {
     start: (e, t, al) => ({ shape: 'circle', x: e.x, z: e.z, r: al.r }),
     hit(e, a, dmg, ps) {
       const al = a.al;
-      ev({ k: 'fx', m: 'foe', f: 'nova', x: r2(e.x), z: r2(e.z), r: al.r, c: al.c, s: al.s });
+      ev({ k: 'fx', m: 'foe', b: ET[e.type].boss || 0, f: 'nova', x: r2(e.x), z: r2(e.z), r: al.r, c: al.c, s: al.s });
       for (const p of ps) if (Math.hypot(p.x - e.x, p.z - e.z) < al.r + .3 && p.y < 2) foeHit(p, dmg, e, al);
       if (al.pool) addPool(e.x, e.z, al.r * .6, al.pool, al);
     },
@@ -267,7 +267,7 @@ const FOE_ATK = {
         const q = i ? confine({ x: p.x + rand(-4, 4), z: p.z + rand(-4, 4) }, 1) : { x: p.x, z: p.z }, d = 1.1 + i * .35;
         ev({ k: 'tele', a: 'meteor', s: al.s, c: al.c, shape: 'circle', x: r2(q.x), z: r2(q.z), r: al.r, d: r2(d) });
         later(d, () => {
-          ev({ k: 'fx', m: 'foe', f: 'impact', x: r2(q.x), z: r2(q.z), r: al.r, c: al.c, s: al.s });
+          ev({ k: 'fx', m: 'foe', b: ET[e.type].boss || 0, f: 'impact', x: r2(q.x), z: r2(q.z), r: al.r, c: al.c, s: al.s });
           for (const o of players()) if (!o.down && Math.hypot(o.x - q.x, o.z - q.z) < al.r + .3 && o.y < 1.5) foeHit(o, dmg, e, al);
           if (al.pool) addPool(q.x, q.z, al.r, al.pool, al);
         });
@@ -280,7 +280,7 @@ const FOE_ATK = {
     hit(e, a) {
       const al = a.al, t = ET[e.type], type = al.type || t.type, n = al.n || t.n || 2, cap = al.cap || t.cap || 6;
       const have = S.enemies.filter(o => !o.dead && o.type === type).length;
-      ev({ k: 'fx', m: 'foe', f: 'summon', x: r2(e.x), z: r2(e.z), c: RIMC[e.type] || 0xff3050 });
+      ev({ k: 'fx', m: 'foe', b: ET[e.type].boss || 0, f: 'summon', x: r2(e.x), z: r2(e.z), c: RIMC[e.type] || 0xff3050 });
       for (let i = 0; i < Math.min(n, cap - have); i++) { const ang = TAU * i / n + rand(-.3, .3), q = confine({ x: e.x + Math.sin(ang) * 3, z: e.z + Math.cos(ang) * 3 }, 1); spawnEnemy(type, q.x, q.z); }
     },
   },

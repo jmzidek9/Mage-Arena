@@ -926,7 +926,7 @@ function stepEnemies(dt) {
       if (typeof sp === 'object') startAttack(e, tgt, sp);
       else if (sp === 'meteor') bossMeteors(e, ps, scale);
       else if (sp === 'ring') { S.rings.push({ x: e.x, z: e.z, r: R, life: 2.4, hit: [] }); ev({ k: 'ring', x: r2(e.x), z: r2(e.z), r: R }); }
-      else { e.ch = .9; e.cdx = dx / d; e.cdz = dz / d; e.chHit = []; ev({ k: 'roar', x: r2(e.x), z: r2(e.z), yaw: r2(e.yaw) }); }
+      else { e.ch = .9; e.cdx = dx / d; e.cdz = dz / d; e.chHit = []; ev({ k: 'roar', id: e.id, x: r2(e.x), z: r2(e.z), yaw: r2(e.yaw) }); }
     }
   }
   S.enemies = S.enemies.filter(e => !e.dead);

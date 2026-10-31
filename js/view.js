@@ -96,6 +96,11 @@ const FOE_FX = {
     if (e.s === 'wail') for (let i = 1; i <= 3; i++) setTimeout(() => ringFx(e.x + f.x * e.r * i / 4, e.y, e.z + f.z * e.r * i / 4, 1 + i * .8, e.c, .35), i * 70);
     else smokeFx(e.x + f.x * e.r * .6, 1, e.z + f.z * e.r * .6, e.r * .3, fire ? 0x2e2428 : e.c, 1, 3, 1);
     flash(e.x + f.x * 3, e.y, e.z + f.z * 3, e.c, 30, .35); sfx(STYLE_SND[e.s] || 'boom');
+    if (e.b) { // a boss's breath: a second, fuller torrent, the floor scorched where it pours, the air shaking
+      for (let i = 0; i < n; i++) { const a = e.yaw + rand(-1, 1) * e.ang * Math.PI / 400, sp = e.r * rand(1, 1.8); emit(e.x + f.x, e.y - .3, e.z + f.z, Math.sin(a) * sp, rand(-.2, .1) * sp, Math.cos(a) * sp, Math.random() < .2 ? 0xffffff : e.c, rand(.35, .7), rand(.5, .8), -1, .5); }
+      for (let i = 1; i <= 4; i++) { const d = e.r * i / 5; scarFx(e.x + f.x * d, e.z + f.z * d, .8 + d * .35, e.c, 3); }
+      shake(.25);
+    }
   },
   lob(e) { // the thrown thing flies its arc and lands as the warning fills
     const P0 = V(e.x, e.y, e.z), P1 = V(e.x2, .3, e.z2), H = 3 + P0.distanceTo(P1) * .25, s = e.s;
@@ -129,6 +134,11 @@ const FOE_FX = {
     beamFx(a, b, e.c, e.w * .35, .45); beamFx(a, b, 0xffffff, e.w * .12, .3);
     for (let i = 0; i < 20; i++) { const q = a.clone().lerp(b, Math.random()); emit(q.x, q.y, q.z, rand(-2, 2), rand(0, 3), rand(-2, 2), e.c, rand(.1, .2), .4); }
     burst(b.x, 1, b.z, 20, e.c, 6, .2, .4); flash(a.x, a.y, a.z, e.c, 40, .3); shake(.12); sfx('laser_big');
+    if (e.b) { // a boss's beam: wider, held a moment, burning a trench down the lane and blowing up where it ends
+      beamFx(a, b, e.c, e.w * .7, .8); beamFx(a, b, 0xffffff, e.w * .25, .7);
+      for (let i = 1; i <= 6; i++) { const q = a.clone().lerp(b, i / 6); scarFx(q.x, q.z, e.w * .6, e.c, 3.5); dustFx(q.x, q.z, .8); }
+      boomFx(b.x, 1, b.z, 2.6, e.c, 1); debrisFx(b.x, .5, b.z, 6, 'earth__pebble', 0x4a3a3a, .3, 8); flash(b.x, 1, b.z, e.c, 50, .4); shake(.3);
+    }
   },
   nova(e) {
     boomFx(e.x, .5, e.z, e.r, e.c, .9); ringFx(e.x, .15, e.z, e.r * 1.1, 0xffffff, .5);
@@ -137,6 +147,11 @@ const FOE_FX = {
     else if (e.s === 'shadow' || e.s === 'void') smokeFx(e.x, .5, e.z, e.r * .5, 0x1a1030, 1.2, 6, .8);
     else if (e.s === 'soul') pillarFx(e.x, 0, e.z, e.r * .4, 6, e.c, .6);
     sfx(STYLE_SND[e.s] || 'boom');
+    if (e.b) { // a boss's nova: a column of power, a second wave hard behind the first, the floor cracked open
+      pillarFx(e.x, 0, e.z, e.r * .35, 14, e.c, .8); scarFx(e.x, e.z, e.r * .8, e.c, 4); debrisFx(e.x, .5, e.z, 12, 'earth__pebble', 0x4a3a3a, .4, 11);
+      setTimeout(() => { ringFx(e.x, .2, e.z, e.r * 1.5, e.c, .55); boomFx(e.x, .4, e.z, e.r * .7, 0xffffff, .5); }, 140);
+      flash(e.x, 2, e.z, e.c, 90, .5); shake(.45);
+    }
   },
   spike(e) { // one piece of a rolling line: bone spikes, ice spikes, fire geysers, tentacles
     if (distTo(e.x, e.z) > 2.2) {
@@ -155,6 +170,7 @@ const FOE_FX = {
   impact(e) { // a falling thing lands
     if (e.s === 'meteor' || e.s === 'fire') { fireBoom(e.x, 0, e.z, e.r, .8); debrisFx(e.x, .5, e.z, 6, 'earth__pebble', 0x5a3a2a, .35, 9); return; }
     boomFx(e.x, .3, e.z, e.r, e.c, .8);
+    if (e.b) { pillarFx(e.x, 0, e.z, e.r * .5, 9, e.c, .5); scarFx(e.x, e.z, e.r, e.c, 3); }
     if (e.s === 'bone') debrisFx(e.x, .4, e.z, 6, 'earth__pebble', 0xe8dcc0, .3, 8);
     if (e.s === 'ice') burst(e.x, .4, e.z, 30, 0xffffff, 8, .15, .5, 9);
     if (e.s === 'void' || e.s === 'shadow') smokeFx(e.x, .5, e.z, e.r * .6, 0x1a1030, 1, 4, .6);
@@ -162,6 +178,7 @@ const FOE_FX = {
   },
   summon(e) {
     circleFx('sigil', V(e.x, .08, e.z), 3.4, { life: 1.1, color: e.c }); pillarFx(e.x, 0, e.z, 1.4, 5, e.c, .7);
+    if (e.b) { circleFx('sigil', V(e.x, .1, e.z), 6, { life: 1.6, color: e.c }); pillarFx(e.x, 0, e.z, 2.5, 12, e.c, 1); ringFx(e.x, .15, e.z, 7, e.c, .6); shake(.2); }
     burst(e.x, 1, e.z, 40, e.c, 5, .3, .6, -1, 3); sfx('spawn'); sfx('soul_big');
   },
   buff(e) { // war-chant: a fiery ring and sparks on every monster in reach
@@ -175,6 +192,43 @@ const FOE_FX = {
   },
 };
 const STYLE_SND = { bile: 'venom_big', wail: 'soul_big', soul: 'soul_big', bone: 'bone_big', snow: 'frost', ice: 'frost_big', frost: 'frost_big', boulder: 'earth_big', fire: 'fire_boom', breath: 'fire_big', meteor: 'fire_boom', void: 'abyss_big', tentacle: 'abyss_big', shadow: 'shadow_big' };
+// a boss winds up: its spell circle opens under it and a ball of power swells where the blow will come from
+function bossWind(v, a, d) {
+  const col = bossCol(v.type), tp = ET[v.type], R = tp.r * v.sc;
+  v.ak = a;
+  const c = circleFx('sigil', V(v.g.position.x, .07, v.g.position.z), R * 2.2 + 1.5, { life: d + .25, color: col });
+  addFx(new THREE.Group(), d + .25, (o, k, dt) => { c.position.x = v.g.position.x; c.position.z = v.g.position.z; spinCircle(c, dt, 3); });
+  const orb = model('gen__orb', col);
+  addFx(orb, d, (o, k) => {
+    const p = v.core || v.g.position; o.position.copy(p); o.scale.setScalar((.15 + k * k * .9) * (1 + R * .25) * (1 + Math.sin(k * 60) * .06 * k));
+    fade(o, .3 + .6 * k);
+    if (k > .97 && !o.userData.popped) { o.userData.popped = 1; flash(p.x, p.y, p.z, col, 60, .2); burst(p.x, p.y, p.z, 24, col, 8, .2, .35); }
+  });
+  flash(v.g.position.x, 2, v.g.position.z, col, 25, d);
+}
+// a boss dies: it reels, sinks to its knees with light splitting out of it, then bursts apart (about 2.4 s)
+function bossDeath(v) {
+  const g = v.g, col = bossCol(v.type), p0 = g.position.clone(), rx = g.rotation.x, tp = ET[v.type], h = tp.h * v.sc, R = tp.r * v.sc, white = new THREE.Color(1, 1, 1);
+  let blown = false;
+  addFx(g, 2.4, (o, k) => {
+    const u = Math.min(1, k / .62);
+    o.position.set(p0.x + Math.sin(k * 90) * .08 * (1 - u * .5), p0.y - u * u * h * .28, p0.z + Math.cos(k * 77) * .08 * (1 - u * .5));
+    o.rotation.x = rx + easeOutBack(u) * .45; o.rotation.z = Math.sin(k * 23) * .06 * u;
+    for (const m of v.mats) { m.m.emissive.setHex(col).lerp(white, u * .6); m.m.emissiveIntensity = 1 + u * 4; }
+    if (!blown && Math.random() < .8) { const a = rand(0, TAU); emit(p0.x + Math.cos(a) * R, p0.y + rand(.3, h), p0.z + Math.sin(a) * R, Math.cos(a) * rand(1, 4), rand(2, 6), Math.sin(a) * rand(1, 4), Math.random() < .4 ? 0xffffff : col, rand(.15, .35), rand(.4, .8), -1); }
+    if (!blown && k > .45 && Math.random() < .12) { flash(p0.x, h * .6, p0.z, col, 50, .15); shake(.15); }
+    if (!blown && k >= .62) { // the burst
+      blown = true; const c = V(p0.x, h * .5, p0.z);
+      boomFx(c.x, c.y, c.z, 4 + R * 2, col, 2); pillarFx(p0.x, 0, p0.z, R * 1.4 + 1, 34, col, 1.2); pillarFx(p0.x, 0, p0.z, R * .6 + .5, 40, 0xffffff, .8);
+      ringFx(p0.x, .15, p0.z, 14, col, .9); ringFx(p0.x, .2, p0.z, 9, 0xffffff, .6);
+      burst(c.x, c.y, c.z, 220, col, 14, .35, 1.2, 4); burst(c.x, c.y, c.z, 80, 0xffffff, 10, .25, .8, 2);
+      debrisFx(c.x, c.y, c.z, 16, 'earth__pebble', 0x3a2a2a, .45, 12); scarFx(p0.x, p0.z, 5 + R, col, 8); smokeFx(p0.x, 1, p0.z, 4, 0x2a2026, 3, 10, 1.6);
+      flash(c.x, c.y, c.z, col, 140, 1); shake(1); sfx('explosion_big');
+    }
+    for (const m of v.mats) if (m.m.userData.dis) m.m.userData.dis.value = k < .62 ? .02 : .05 + (k - .62) / .38 * .95;
+    if (k >= .62) o.scale.setScalar(v.sc * (1 + (k - .62) * 1.5));
+  });
+}
 function tintModel(o, c) { o.traverse(m => { if (m.isMesh && m.material.color && !m.material.uniforms && c) m.material.color.set(c); }); return o; }
 // something falling onto a marked circle: hidden until the last half second of its warning (s: what it is)
 function meteorFall(e) {
@@ -228,7 +282,7 @@ function onEvent(e) {
       burst(e.x, e.y + 1 * s, e.z, e.boss ? 260 : 36, col, 7 * s, .3 * s, .7, 3);
       burst(e.x, e.y + 1 * s, e.z, e.boss ? 120 : 18, 0x2a1840, 5 * s, .4 * s, .8, 4);
       ringFx(e.x, .08, e.z, 2 * s, col, .4);
-      const v = views.e.get(e.id); if (v) v.died = { col, kx: e.x - camera.position.x, kz: e.z - camera.position.z };
+      const v = views.e.get(e.id); if (v) v.died = { col, kx: e.x - camera.position.x, kz: e.z - camera.position.z, boss: e.boss };
       if (e.boss || e.elite) { flash(e.x, 2, e.z, col, 70, .8); shake(.8); banner(e.boss ? `${(ET[e.type]?.name || 'The Tyrant').toUpperCase()} IS SLAIN` : 'ELITE SLAIN', '#ffd36a'); }
       sfx(e.boss ? 'ring' : 'die');
       break;
@@ -242,7 +296,7 @@ function onEvent(e) {
       sfx('spawn');
       break;
     }
-    case 'tele': teleFx(e); if (e.a === 'meteor') meteorFall(e); { const v = views.e.get(e.id); if (v) { v.wind = e.d; if (e.a === 'swipe') v.side = !v.side; } } break;
+    case 'tele': teleFx(e); if (e.a === 'meteor') meteorFall(e); { const v = views.e.get(e.id); if (v) { v.wind = e.d; if (e.a === 'swipe') v.side = !v.side; if (ET[v.type]?.boss && e.d > .2) bossWind(v, e.a, e.d); } } break;
     case 'strike': {
       const v = views.e.get(e.id); if (!v) break;
       v.strike = 1; v.ak = e.a; const near = distTo(v.g.position.x, v.g.position.z) < 15;
@@ -250,6 +304,13 @@ function onEvent(e) {
       else if (e.a === 'call') sfx('ring');
       else if (near && SWINGS.has(e.a)) sfx('swing');
       if (e.a === 'leap' || e.a === 'lunge') dustFx(v.g.position.x, v.g.position.z, .8 * v.sc);
+      if (ET[v.type]?.boss) { // a boss's blow lands with a shockwave, a flash of its colour and the ground shaking
+        const p = v.g.position, col = bossCol(v.type), fy = v.g.rotation.y, R = ET[v.type].r * v.sc, heavy = e.a === 'smash' || e.a === 'slam' || e.a === 'spikes';
+        const x = p.x + Math.sin(fy) * R * (heavy ? 1.2 : .3), z = p.z + Math.cos(fy) * R * (heavy ? 1.2 : .3);
+        ringFx(x, .12, z, heavy ? 5 : 3.5, col, .45); flash(x, 1.5, z, col, 45, .3);
+        if (heavy) { dustFx(x, z, 2.2); debrisFx(x, .4, z, 8, 'earth__pebble', 0x6a5a4a, .35, 9); scarFx(x, z, 2.2, col, 3); }
+        shake(clamp(.35 - distTo(x, z) * .012, 0, .3));
+      }
       break;
     }
     case 'stagger': popNum(e.x, e.y + .4, e.z, 'STAGGER', '#ffd36a', 'tag'); ringFx(e.x, e.y, e.z, 1.5, 0xffd36a, .3); sfx('stagger'); break;
@@ -282,7 +343,7 @@ function onEvent(e) {
       shake(.35); sfx('ring');
       break;
     }
-    case 'roar': circleFx('sigil', V(e.x, .08, e.z), 4, { life: 1, color: 0xff2020 }); teleFx({ shape: 'line', x: e.x, z: e.z, yaw: e.yaw, len: 14, w: 4.4, d: .25 }); shake(.25); sfx('ring'); break;
+    case 'roar': { const v = views.e.get(e.id); if (v) { v.strike = 1; v.ak = 'roar'; } ringFx(e.x, 2, e.z, 6, 0xffffff, .35); smokeFx(e.x, .4, e.z, 2, 0x5a4a3a, .8, 5, .6); } circleFx('sigil', V(e.x, .08, e.z), 4, { life: 1, color: 0xff2020 }); teleFx({ shape: 'line', x: e.x, z: e.z, yaw: e.yaw, len: 14, w: 4.4, d: .25 }); shake(.25); sfx('ring'); break;
     case 'swap': break;
     case 'over': setTimeout(showOver, 1400, e); break;
     case 'floor': banner(`FLOOR ${e.n}${e.boss ? ' · THE WARDEN WAITS' : ''}`, e.boss ? '#ff8a4a' : '#ffd8a0', 2400); sfx('wave'); break;
@@ -367,8 +428,42 @@ const POSE = {
   mend:   { w: [-.3, 0, -.05, 2.4, 2.4, 0], s: [0, 0, 0, 0, 0, 0] },
   call:   { w: [0, 0, 0, 0, 0, 0],          s: [-.4, 0, -.1, 3, 3, 0] }, // the boss throws its arms up to call the rocks
   fuse:   { w: [0, 0, .08, 0, 0, 0],        s: [0, 0, 0, 0, 0, 0] },
+  // the area monsters' and bosses' specials (areas.js)
+  cone:   { w: [-.4, 0, -.06, .7, .7, 0],   s: [.5, 0, .12, -.5, -.5, 0] },   // rear back, then pour it out
+  ray:    { w: [-.25, 0, .06, 1.7, 1.7, 0], s: [.3, 0, .05, 1.4, 1.4, 0] },   // gather at the hands, thrust them forward
+  nova:   { w: [.35, 0, .28, -.7, -.7, 0],  s: [-.45, 0, -.18, 3.1, 3.1, 0] }, // curl up tight, then burst open
+  spikes: { w: [-.35, .35, -.06, 0, 2.9, 0], s: [.65, -.25, .22, 0, -3.3, 0] }, // one fist high, driven into the floor
+  summon: { w: [-.2, 0, 0, 2.6, 2.6, 0],    s: [-.5, 0, -.12, 3.1, 3.1, 0] },
+  buff:   { w: [-.2, 0, 0, 2.6, 2.6, 0],    s: [-.5, 0, -.12, 3.1, 3.1, 0] },
+  pull:   { w: [.15, 0, .1, 1.9, 1.9, 0],   s: [-.4, 0, -.06, -.9, -.9, 0] }, // reach out, yank back
+  lob:    { w: [-.35, .45, 0, .4, 2.9, 0],  s: [.45, -.65, 0, 0, -2.1, 0] },
+  roar:   { w: [0, 0, 0, 0, 0, 0],          s: [-.55, 0, -.12, 2.3, 2.3, 0] }, // the boss's charge: head back, arms wide
 };
+// bosses: the colour of their power, for wind-ups, auras and their bigger attack effects
+const BOSS_COL = { boss: 0xff5a20, umbra: 0x9a4cff, warden: 0x5ad8ff, bonedragon: 0x8aff50, frostgiant: 0x9fe6ff, pitlord: 0xff6a1a, devourer: 0xb04cff };
+const bossCol = k => BOSS_COL[k] ?? RIMC[k] ?? 0xff5a20;
+// where a boss's power gathers while it winds up: the mouth for breaths and beams, the raised hands for the rest
+const MOUTH = new Set(['cone', 'ray', 'pull']), HANDS_UP = new Set(['nova', 'summon', 'buff', 'call', 'spikes', 'lob', 'smash', 'slam', 'volley', 'hex']);
 const CASTS = { orb: 0x40ff70, volley: 0x40ff70, hex: 0x40ff90, mend: 0x80ffb0 };
+// bosses on top of the usual rig: heavy footfalls, a smouldering aura, energy pouring into them as they wind up
+function bossAnim(v, e, dt, t, w0, walk, frozen) {
+  const tp = ET[e.type], pos = v.g.position, col = bossCol(e.type), h = tp.h * v.sc, r = tp.r * v.sc, f = v.g.rotation.y;
+  if (frozen) return;
+  if (Math.random() < .35) emit(pos.x + rand(-r, r), pos.y + rand(0, h * .6), pos.z + rand(-r, r), rand(-.2, .2), rand(.6, 1.6), rand(-.2, .2), col, rand(.08, .16), rand(.6, 1), -.4); // its power smoulders off it
+  const step = Math.floor(v.ph / Math.PI); // a footfall every half stride: dust, and the ground shakes when it's near
+  if (step !== v.step && walk > .3) { const d = distTo(pos.x, pos.z), side = step % 2 ? 1 : -1;
+    dustFx(pos.x + Math.cos(f) * r * .5 * side, pos.z - Math.sin(f) * r * .5 * side, .6 + r * .25); if (d < 18) shake(.05 * (1 - d / 18)); }
+  v.step = step;
+  if (w0 > 0) { // energy streams in from all round while it winds up, faster as the blow nears
+    const up = HANDS_UP.has(v.ak), mouth = MOUTH.has(v.ak), fx = Math.sin(f), fz = Math.cos(f);
+    const c = V(pos.x + fx * r * (mouth ? .9 : .4), pos.y + h * (up ? 1.05 : mouth ? .78 : .6), pos.z + fz * r * (mouth ? .9 : .4));
+    for (let i = 0; i < 1 + w0 * 4; i++) { const a = rand(0, TAU), b = rand(-.6, .9), d = rand(2, 4) * (1 + r * .3);
+      const x = c.x + Math.cos(a) * Math.cos(b) * d, y = c.y + Math.sin(b) * d, z = c.z + Math.sin(a) * Math.cos(b) * d;
+      emit(x, y, z, (c.x - x) * 2.6, (c.y - y) * 2.6, (c.z - z) * 2.6, Math.random() < .25 ? 0xffffff : col, rand(.08, .18) * (1 + w0), .38); }
+    if (Math.random() < w0 * .5) emit(pos.x + rand(-r, r) * 1.6, .1, pos.z + rand(-r, r) * 1.6, rand(-.5, .5), rand(.5, 2), rand(-.5, .5), 0xb8a890, rand(.08, .15), .6, 6); // grit lifts off the floor round it
+    v.core = c;
+  } else v.core = null;
+}
 function animEnemy(v, e, dt, t) {
   const tp = ET[e.type], P = v.parts, g = v.g, pos = g.position, ID = 1 / Math.max(dt, 1e-4);
   const last = v.last || pos.clone(), sp = Math.hypot(pos.x - last.x, pos.z - last.z) * ID, vy = (pos.y - last.y) * ID;
@@ -396,7 +491,9 @@ function animEnemy(v, e, dt, t) {
   g.rotation.x = bp + shiver * .3 - v.flinch * .22 + (tp.boss ? 0 : walk * .06) + (rising ? .35 : 0) + v.airK * .2;
   g.rotation.z = (stun ? Math.sin(t * 13) * .14 : 0) - clamp(v.turn * .035, -.18, .18) * Math.min(1, walk + .3) + v.flinch * .12 * fd;
   g.position.y += Math.abs(Math.sin(v.ph)) * .06 * walk * v.sc;
-  g.scale.set(v.sc * (1 + cr * .5), v.sc * (1 - cr + breath * .015), v.sc * (1 + cr * .5));
+  const swell = tp.boss ? 1 + wind * .08 + str * .05 : 1; // bosses visibly gather themselves up before a blow
+  g.scale.set(v.sc * (1 + cr * .5) * swell, v.sc * (1 - cr + breath * (tp.boss ? .03 : .015)) * swell, v.sc * (1 + cr * .5) * swell);
+  if (tp.boss) bossAnim(v, e, dt, t, w0, walk, frozen);
   // casters gather power at the hands while they chant
   if (CASTS[ak] && w0 > 0 && !frozen && Math.random() < .6) {
     const h = tp.h * v.sc, f = g.rotation.y, a = rand(0, TAU), r = rand(.5, 1);
@@ -479,6 +576,7 @@ function renderEnemies(src, dt, t, a) {
     for (const k in v.ov) v.ov[k].removeFromParent();
     for (const m of v.mats) { m.m.emissive.copy(m.c); m.m.emissiveIntensity = m.i; }
     const parts = Object.values(v.parts);
+    if (v.died?.boss) { bossDeath(v); return; }
     if (parts.length && v.died) {
       const d = v.died, L = Math.hypot(d.kx, d.kz) || 1;
       v.g.updateMatrixWorld(true);
