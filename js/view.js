@@ -312,7 +312,7 @@ function sync(map, list, make, upd, drop) {
 
 // ---------- enemies: articulated rigs (parts named <type>_armL etc. in enemies.glb) ----------
 const ETPL = {};
-for (const k in ET) ETPL[k] = enemiesG.children.find(c => c.name.replace(/\d+$/, '') === k) || null;
+for (const k in ET) ETPL[k] = [...enemiesG.children, ...foesG.children].find(c => c.name.replace(/\d+$/, '') === k) || null; // foes.glb: the Arena islands' monsters
 const FALLBACK = { stalker: 'grunt', bomber: 'runner', knight: 'grunt', shaman: 'shooter', skeleton: 'grunt', rat: 'runner', archer: 'shooter', ghoul: 'splitter', dknight: 'knight', warden: 'boss' };
 // Arena area monsters without a rig of their own yet borrow the closest one, tinted their area's colour
 Object.assign(FALLBACK, { zombie: 'grunt', bonehound: 'runner', banshee: 'shaman', bloater: 'bomber', colossus: 'brute', necromancer: 'shaman', lich: 'shaman', bonedragon: 'boss',
@@ -321,8 +321,9 @@ Object.assign(FALLBACK, { zombie: 'grunt', bonehound: 'runner', banshee: 'shaman
   voidling: 'runner', gazer: 'shooter', riftmite: 'bomber', voidspawn: 'splitter', horror: 'brute', mindflayer: 'shaman', watcher: 'shooter', devourer: 'boss', umbra: 'boss' });
 const PART_RE =/_(body|head|jaw|armL|armR|legL|legR|leg\d|tail|wingL|wingR|ring|tent\d|shield|weapon|eye|fuse|staff|crown)$/;
 const RIM = { stalker: 0x9a4cff, boss: 0xff5a20, bomber: 0xffa020, knight: 0xa0c0ff, shaman: 0x40ff90, skeleton: 0xbfd4ff, rat: 0xffb060, archer: 0xbfd4ff, ghoul: 0x7aff6a, dknight: 0xff4a4a, warden: 0x5ad8ff };
-for (const k in ET) if (RIM[k] == null && ET[k].zone && { crypt: 1, frost: 1, hell: 1, void: 1 }[ET[k].zone]) RIM[k] = { crypt: 0x6aff9a, frost: 0x9fe6ff, hell: 0xff6a1a, void: 0xb04cff }[ET[k].zone];
-RIM.umbra = 0x9a4cff;
+// the islands' monsters get a softer rim light in their island's colour (their own models are paler than the originals)
+for (const k in ET) if (RIM[k] == null && ET[k].zone && { crypt: 1, frost: 1, hell: 1, void: 1 }[ET[k].zone]) RIM[k] = { crypt: 0x2a6a40, frost: 0x40607a, hell: 0x7a3010, void: 0x50247a }[ET[k].zone];
+RIM.umbra = 0x50247a; RIM.stalker = 0x50247a;
 function makeEnemy(e) {
   const tpl = ETPL[e.type] || ETPL[FALLBACK[e.type]] || ETPL.grunt;
   const g = tpl.clone(), mats = [], parts = {};
@@ -331,8 +332,7 @@ function makeEnemy(e) {
     if (o !== g) { const m = o.name.match(PART_RE); if (m) parts[m[1]] = { o, r: o.rotation.clone(), p: o.position.clone() }; }
     if (o.isMesh) { o.material = o.material.clone(); enhance(o.material, e.elite ? 0xffc640 : RIM[e.type] ?? 0x7a4cff); mats.push({ m: o.material, c: o.material.emissive.clone(), i: o.material.emissiveIntensity }); }
   });
-  if (e.type === 'stalker') for (const m of mats) m.m.color.setHex(0x1a1424); // a shadow-black grunt: only its eyes glow, the rim light outlines it violet
-  else if (!ETPL[e.type]) for (const m of mats) m.c.set(RIM[e.type]), m.i = .5; // placeholder tint until the rig exists
+  if (!ETPL[e.type]) for (const m of mats) m.c.set(RIM[e.type]), m.i = .5; // placeholder tint until the rig exists
   g.scale.setScalar(e.sc);
   let ring = null;
   if (e.elite) { ring = makeCircle('sigil', 0xffc640); ring.scale.setScalar(1.4); ring.position.y = .05; g.add(ring); }

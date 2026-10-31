@@ -323,7 +323,7 @@ body.touching #me{top:14px;bottom:auto;left:14px}body.touching #lock{display:non
     const gunzip = u8 => window.DecompressionStream
       ? new Response(new Blob([u8]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer()
       : Promise.resolve(window.fflateGunzip(u8).buffer); // Safari before 16.4
-    const loader = new GLTFLoader(), names = ['arena', 'duel', 'fp_rig', 'spells', 'enemies', 'wizard', 'elements', 'islands'];
+    const loader = new GLTFLoader(), names = ['arena', 'duel', 'fp_rig', 'spells', 'enemies', 'wizard', 'elements', 'islands', 'foes'];
     window.GLB = Object.fromEntries(await Promise.all(names.map(async n => [n, (await loader.parseAsync(await gunzip(bytes(window.MAGE_ASSETS_GZ[n])), '')).scene])));
     for (const src of ['core.js', 'elements.js', 'sim.js', 'modes.js', 'dungeon.js', 'city.js', 'areas.js', 'view.js', 'net.js']) {
       const code = document.querySelector(`script[data-src="js/${src}"]`);

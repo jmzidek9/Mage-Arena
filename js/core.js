@@ -206,11 +206,11 @@ addEventListener('resize', () => {
 
 // ===================== Blender assets =====================
 // index.html parsed every glb before loading the scripts (window.GLB); see blender/build_*.py
-const { arena, duel: duelG, fp_rig: rig, spells: spellsG, enemies: enemiesG, wizard: wizardG, elements: elementsG, islands: islandsG } = window.GLB;
-for (const root of [arena, duelG, rig, spellsG, enemiesG, wizardG, elementsG, islandsG]) root.traverse(o => { if (o.isMesh) o.material.emissiveIntensity *= .6; });
+const { arena, duel: duelG, fp_rig: rig, spells: spellsG, enemies: enemiesG, wizard: wizardG, elements: elementsG, islands: islandsG, foes: foesG } = window.GLB;
+for (const root of [arena, duelG, rig, spellsG, enemiesG, wizardG, elementsG, islandsG, foesG]) root.traverse(o => { if (o.isMesh) o.material.emissiveIntensity *= .6; });
 // solid things cast and catch moon shadows; glowing bits (eyes, flames, crystals, sigils) don't cast
 const glows = m => m.emissive && m.emissive.getHex() && m.emissiveIntensity > .4;
-for (const root of [arena, duelG, enemiesG, wizardG, islandsG]) root.traverse(o => { if (o.isMesh) { o.receiveShadow = true; o.castShadow = !glows(o.material) && !/sigil_/.test(o.parent?.name + o.name); } });
+for (const root of [arena, duelG, enemiesG, wizardG, islandsG, foesG]) root.traverse(o => { if (o.isMesh) { o.receiveShadow = true; o.castShadow = !glows(o.material) && !/sigil_/.test(o.parent?.name + o.name); } });
 rig.traverse(o => { if (o.isMesh) o.receiveShadow = true; });
 // Blender dedupes names across the .blend (ring_outer, ring_outer.001 -> "ring_outer001"), so ignore numeric suffixes
 const grab = (root, name) => { const o = root.children.find(c => c.name.replace(/\d+$/, '') === name); o.position.set(0, 0, 0); return o; };

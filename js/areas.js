@@ -402,7 +402,7 @@ function islandFrame(src, dt) {
     const v = IV.isles[best], col = ISLE_FIRE[ISLES[best].id] ?? 0xff8a3a;
     amb.lights.forEach((l, i) => {
       const f = v?.flames[i] || amb.flames[i];
-      if (f) { f.getWorldPosition(l.position); l.position.y += .7; } l.color.set(best ? col : 0xff8a3a);
+      if (f) { f.getWorldPosition(l.position); l.position.y += .7; } l.color.set(best ? col : 0xff8a3a); if (best) l.color.lerp(new THREE.Color(0xfff0e0), .55); // a hint of the fire's colour, not a flood of it
     });
     areaFire = best ? col : 0xff8a3a;
   }
