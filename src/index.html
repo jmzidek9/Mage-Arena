@@ -186,7 +186,7 @@ input::placeholder{color:#b9add8;opacity:.8}input:focus{box-shadow:0 0 0 2px var
 #over .stats{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin-top:12px}
 #over .stats span{display:flex;flex-direction:column;align-items:center;font-size:12px;color:var(--dim);letter-spacing:.1em;text-transform:uppercase}
 #over .stats b{font-family:Cinzel,Georgia,serif;font-size:22px;color:#fff6d8}
-#settings{position:fixed;right:16px;top:16px;z-index:8;padding:16px;border-radius:14px;background:rgba(14,8,30,.92);border:1px solid rgba(233,196,106,.4);display:grid;gap:10px;font-family:Cinzel,Georgia,serif;font-size:13px;min-width:250px}
+#settings{position:fixed;right:16px;top:16px;z-index:8;padding:16px;max-height:calc(100vh - 32px);overflow-y:auto;max-width:min(440px,calc(100vw - 32px));border-radius:14px;background:rgba(14,8,30,.92);border:1px solid rgba(233,196,106,.4);display:grid;gap:10px;font-family:Cinzel,Georgia,serif;font-size:13px;min-width:250px}
 #settings label{display:grid;grid-template-columns:90px 1fr 46px;align-items:center;gap:8px}
 #settings input{width:100%;padding:0;text-transform:none;letter-spacing:0}
 #settings .pane{display:grid;gap:10px}
@@ -196,7 +196,9 @@ input::placeholder{color:#b9add8;opacity:.8}input:focus{box-shadow:0 0 0 2px var
 #pauseTag{text-align:center;font-size:18px;letter-spacing:.2em;color:#fff6d8}#pauseTag small{display:block;font-size:11px;letter-spacing:.05em;color:var(--dim)}
 #swapGrid{display:grid;grid-template-columns:repeat(5,44px);gap:6px;margin-top:6px}
 #swapGrid .elc{padding:6px 0}#swapGrid .elc .g{font-size:20px}
-#islGrid{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}#islGrid button{padding:6px 10px;font-size:12px}
+#swapGrid.big{grid-template-columns:repeat(auto-fill,minmax(70px,1fr));max-height:300px;overflow-y:auto}#swapGrid.big .elc{display:flex;flex-direction:column;align-items:center;gap:2px}#swapGrid.big .elc .n{font-size:10px;opacity:.85}
+#cheatBody .row{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;align-items:center}#cheatBody button{padding:6px 10px;font-size:12px}#cheatBody button.on{border-color:var(--gold);color:#fff6d8;background:rgba(255,200,90,.15)}
+#cheatBody input,#cheatBody select{background:#1a1428;color:#eee;border:1px solid #4a3a6a;border-radius:6px;padding:5px;font-size:12px}#cheatBody input{width:60px}#cheatBody small{opacity:.6;width:100%}
 #me .bar,#me #dash{width:230px}
 /* ---- touch controls (shown after the first touch) ---- */
 #touch{position:fixed;inset:0;z-index:3;touch-action:none}
@@ -273,7 +275,7 @@ body.touching #me{top:14px;bottom:auto;left:14px}body.touching #lock{display:non
     <label>Screen shake<input id="sShake" type="range" min="0" max="1.5" step=".05"><span id="sShakeV"></span></label>
     <label class="ck">Damage numbers<input id="cNums" type="checkbox"></label>
     <div id="elSwap" class="hidden">Switch element<div id="swapGrid"></div></div>
-    <div id="islTp" class="hidden">Cheat: go to island<div id="islGrid"></div></div>
+    <div id="cheats" class="hidden">Cheats (testing)<div id="cheatBody"></div></div>
   </div>
   <div class="pane hidden" data-pane="visuals">
     <label>Field of view<input id="sFov" type="range" min="60" max="100" step="1"><span id="sFovV"></span></label>

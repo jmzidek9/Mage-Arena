@@ -335,6 +335,7 @@ function hitEnemy(e, el, amount, p, kx = 0, kz = 0, kb = 3, o = {}) {
 }
 function damage(e, amount, el, p, o = {}) {
   if (e.dead || amount <= 0) return 0;
+  if (p && S.cheat?.ohk) amount = Math.max(amount, e.hp + (e.sh || 0) + 1);
   if (e.cc?.type === 'stasis' && !o.raw) { e.stored += amount; return 0; }
   if (S.tstop > 0 && !o.raw) { e.tsd = (e.tsd || 0) + amount; e.tsBy = p?.id; return 0; }
   amount *= (1 + (e.m?.vuln || 0)) * (e.cc?.type === 'freeze' ? 1.4 : 1) * (e.cc?.type === 'bubble' ? 1.3 : 1) * (e.fvU > S.t ? 1 + e.fv : 1) * (el === 'soul' && e.hol > S.t ? 1.25 : 1); // fv: extra damage taken (Binding Circle, Snare, Levitate, marks); hol: Soul Rend's Hollowed
@@ -406,6 +407,7 @@ function kill(e, el, p) {
   if (Math.random() < (t.boss ? 1 : e.elite ? 1 : .07)) dropOrb(e.x, e.z, t.boss ? 'big' : 'hp');
 }
 function hurt(p, n, src = null) {
+  if (S.cheat?.inv) return false;
   if (p.down || p.dashT > 0 || p.bf.phoenix > 0 || p.bf.inv > 0 || S.phase !== 'fight') return false;
   n *= stats(p).dr;
   if (src && p.cur === 'magma' && !src.dead) applyStatus(src, 'magma', p);
@@ -602,7 +604,7 @@ const castEv = (p, m, c) => ({ k: 'cast', id: p.id, m: m.key, x: r2(p.x), y: r2(
 const kitOf = p => EL[p.cur || p.el];
 const cdOf = (p, m) => m.slot === 4 ? 0 : m.cd * stats(p).cdMul * (m.slot === 2 || m.slot === 3 ? stats(p).skillCd : 1);
 function canCast(p, m) {
-  if (m.slot === 4) return p.ult >= 1 || m.el === 'god';
+  if (m.slot === 4) return p.ult >= 1 || m.el === 'god' || !!S.cheat?.cd;
   if ((p.cds[m.el]?.[m.slot] || 0) > 0) return false;
   if (m.cost && p.hp <= m.cost(p) + 1) return false;
   if (m.el === 'plasma' && p.bf.overheat > 0) return false;
@@ -611,7 +613,7 @@ function canCast(p, m) {
 function fire(p, m, k, host) {
   if (m.slot === 0) p.casts++;
   const c = ctxOf(p, m, k), cds = p.cds[m.el] ??= [0, 0, 0, 0, 0];
-  cds[m.slot] = cdOf(p, m);
+  cds[m.slot] = S.cheat?.cd ? 0 : cdOf(p, m);
   if (host) {
     if (m.slot === 4) { p.ult = 0; ev({ k: 'ult', id: p.id, el: m.el, name: m.name }); }
     if (m.cost) p.hp = Math.max(1, p.hp - m.cost(p));
@@ -640,7 +642,7 @@ function stepCast(p, i, dt, host = true) {
     if (host) m.tick?.(p, ctxOf(p, m), dt);
     if (!held[m.slot] || p.chT >= m.max || m.el !== p.cur) {
       if (host) m.end?.(p, ctxOf(p, m));
-      (p.cds[m.el] ??= [0, 0, 0, 0, 0])[m.slot] = cdOf(p, m);
+      (p.cds[m.el] ??= [0, 0, 0, 0, 0])[m.slot] = S.cheat?.cd ? 0 : cdOf(p, m);
       p.ch = null;
     }
     p.prevK = held.slice(); return;
@@ -820,6 +822,7 @@ function stepEnemies(dt) {
       if (e.dead) continue;
     }
     if (e.cc) { e.cc.t -= dt * (e.cc.type === 'stasis' ? 1 : 1); if (e.cc.t <= 0) ccEnd(e); }
+    if (S.cheat?.freeze) { e.atk = null; continue; } // test cheat: everything stands still
     const ctype = e.cc?.type, hard = ctype && HARD.has(ctype);
     if (e.pid) { handToWizard(e, hard, ctype); continue; }
     if (e.leap && (hard || ctype === 'bubble' || ctype === 'lift')) e.leap = null; // knocked out of the air: just falls
@@ -1033,6 +1036,7 @@ function endWave() {
   if (S.mode === 'arena' && S.wave % 10 === 0) startTravel(); // an area's done: the bridge to the next island builds (areas.js)
 }
 function hostStep(dt) {
+  dt *= S.cheat?.spd || 1;
   if (S.hitstop > 0) { S.hitstop -= dt; dt *= .06; }
   else if (S.slowmo > 0) { S.slowmo -= dt; dt *= .3; }
   S.t += dt;

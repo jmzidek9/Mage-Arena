@@ -22,6 +22,7 @@ const snap = () => ({
 function startGame() {
   initAudio();
   Object.assign(S, { duel: null, dun: null, phase: 'rest', mode: myMode, t: 0, wave: 0, isl: 0, ib: 1, brs: 0, br: null, enemies: [], shots: [], ents: [], rings: [], hz: [], timers: [], events: [], restT: 2.5, hitstop: 0, slowmo: 0, tstop: 0, mod: null });
+  if (myMode === 'duel') S.cheat = {}; // no test cheats in a duel (the menu hides them there)
   S.players = { h: withTalents(newPlayer('h', myEl, myEl2), PROG.tal) };
   if (myEl2) S.players.h.up.second = 1;
   if (conn && guestEl) { S.players.g = withTalents(newPlayer('g', guestEl, guestEl2), guestTal); if (guestEl2) S.players.g.up.second = 1; }
@@ -90,15 +91,49 @@ function renderSwap() {
   $('pauseTag').innerHTML = paused() ? 'PAUSED' : 'MENU<small>Online: the game keeps running</small>';
   $('elSwap').classList.toggle('hidden', !playing || !p);
   if (!playing || !p) return;
-  $('swapGrid').innerHTML = ELIST.filter(k => unlocked(k) || k === p.cur).map(k => `<button class="elc${k === p.cur ? ' sel' : ''}" data-el="${k}" title="${EL[k].name}" style="--c:${css(EL[k].color)}"><span class="g">${EL[k].glyph}</span></button>`).join('');
+  const all = role !== 'guest' && S.cheat?.allEl; // test cheat: every element, locked or not, God Mode too, with names
+  $('swapGrid').classList.toggle('big', !!all);
+  $('swapGrid').innerHTML = (all ? [...ELIST, 'god'] : ELIST.filter(k => unlocked(k) || k === p.cur)).map(k => `<button class="elc${k === p.cur ? ' sel' : ''}" data-el="${k}" title="${EL[k].name}" style="--c:${css(EL[k].color)}"><span class="g">${EL[k].glyph}</span>${all ? `<span class="n">${EL[k].name}</span>` : ''}</button>`).join('');
   for (const b of $('swapGrid').children) b.onclick = () => pickEl(b.dataset.el);
-  // test cheat (host / solo, Arena): jump straight to an island, at the start of its first wave
-  const tp = role !== 'guest' && S.mode === 'arena';
-  $('islTp').classList.toggle('hidden', !tp);
-  if (tp) {
-    $('islGrid').innerHTML = AREAS.map((a, k) => `<button class="ghost${k === (S.isl || 0) ? ' on' : ''}" data-k="${k}">${a.name.replace(/^The /, '')}</button>`).join('');
-    for (const b of $('islGrid').children) b.onclick = () => { goIsland(+b.dataset.k); renderSwap(); };
+  renderCheats();
+}
+// test cheats (host / solo only: the host runs the game). Islands and waves are Arena only.
+const CHEAT_TOGGLES = { allEl: 'All elements', inv: 'Invincible', cd: 'No cooldowns', ohk: 'One-hit kills', freeze: 'Freeze enemies' };
+function renderCheats() {
+  const on = role !== 'guest' && S.mode !== 'duel', arena = S.mode === 'arena', C = S.cheat ||= {};
+  $('cheats').classList.toggle('hidden', !on);
+  if (!on) return;
+  const foes = Object.keys(ET).filter(k => k !== 'duelist' && (S.mode === 'dungeon' ? ET[k].zone === 'dungeon' : ET[k].zone !== 'dungeon'));
+  const bosses = arena ? AREAS[S.isl || 0].bosses : S.mode === 'dungeon' ? ['warden'] : ['boss', 'umbra'];
+  $('cheatBody').innerHTML = `
+    <div class="row">${Object.entries(CHEAT_TOGGLES).map(([k, n]) => `<button class="ghost${C[k] ? ' on' : ''}" data-t="${k}">${n}</button>`).join('')}</div>
+    <div class="row">Game speed ${[.5, 1, 2, 4].map(s => `<button class="ghost${(C.spd || 1) === s ? ' on' : ''}" data-spd="${s}">${s}×</button>`).join('')}</div>
+    <div class="row"><button class="ghost" data-a="heal">Full heal + ultimate</button><button class="ghost" data-a="kill">Kill all enemies</button>${arena ? '<button class="ghost" data-a="skip">Skip wave</button>' : ''}</div>
+    ${arena ? `<div class="row">Island ${AREAS.map((a, k) => `<button class="ghost${k === (S.isl || 0) ? ' on' : ''}" data-isl="${k}">${a.name.replace(/^The /, '')}</button>`).join('')}</div>
+    <div class="row">Wave <input id="chWave" type="number" min="1" max="200" value="${S.wave + 1}"><button class="ghost" data-a="wave">Go</button><small>Bosses come on waves 5 and 10 of each island (5, 10, 15, 20...)</small></div>` : ''}
+    <div class="row">Boss ${bosses.map(k => `<button class="ghost" data-spawn="${k}">${ET[k].name || k}</button>`).join('')}</div>
+    <div class="row">Spawn <select id="chFoe">${foes.map(k => `<option value="${k}">${ET[k].boss ? '★ ' + (ET[k].name || k) : k}</option>`).join('')}</select><button class="ghost" data-a="spawn">×1</button><button class="ghost" data-a="spawn5">×5</button></div>`;
+  for (const b of $('cheatBody').querySelectorAll('button')) b.onclick = () => {
+    const d = b.dataset;
+    if (d.t) C[d.t] = !C[d.t];
+    else if (d.spd) C.spd = +d.spd;
+    else if (d.isl) goIsland(+d.isl);
+    else if (d.spawn) cheatSpawn(d.spawn, 1);
+    else if (d.a === 'wave') { const n = clamp(Math.round(+$('chWave').value || 1), 1, 200); goIsland(areaIdx(n), n); }
+    else if (d.a === 'spawn' || d.a === 'spawn5') cheatSpawn($('chFoe').value, d.a === 'spawn' ? 1 : 5);
+    else if (d.a === 'heal') for (const p of players()) Object.assign(p, { hp: p.max, ult: 1, down: false });
+    else if (d.a === 'kill' || d.a === 'skip') { if (d.a === 'skip') Object.assign(S, { budget: 0, bossLeft: 0 }); for (const e of S.enemies) if (!e.dead && !e.pid) damage(e, 1e9, 'fire', S.players[myId], { raw: true }); }
+    sfx('pick'); if (d.t === 'allEl') renderSwap(); else renderCheats();
+  };
+}
+// a monster (or several) a little way in front of you, ready to fight at once
+function cheatSpawn(type, n) {
+  const p = S.players[myId]; if (!p) return;
+  for (let i = 0; i < n; i++) {
+    const a = p.yaw + Math.PI + (i - (n - 1) / 2) * .35, d = ET[type].boss ? 14 : 9, q = confine({ x: p.x + Math.sin(a) * d, z: p.z + Math.cos(a) * d }, 1);
+    const e = spawnEnemy(type, q.x, q.z); e.rise = 0; e.y = 0;
   }
+  if (S.phase === 'rest') { S.phase = 'fight'; S.budget = 0; } // so the wave doesn't roll on over them
 }
 function pickEl(el) {
   const p = meP();

@@ -1,17 +1,17 @@
 # Graph Report - Test Game  (2026-10-31)
 
 ## Corpus Check
-- 31 files · ~183,728 words
+- 31 files · ~184,252 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 2 file(s) not represented in the graph (top: (none) 2)
 
 ## Summary
-- 896 nodes · 1806 edges · 36 communities (31 shown, 5 thin omitted)
+- 899 nodes · 1811 edges · 36 communities (31 shown, 5 thin omitted)
 - Extraction: 93% EXTRACTED · 7% INFERRED · 0% AMBIGUOUS · INFERRED: 120 edges (avg confidence: 0.87)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `3ebbd6ec`
+- Built from commit: `887b8893`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -103,8 +103,8 @@ Cohesion: 0.07
 Nodes (30): build_crypt(), branch(), gravestone(), build_frost(), rim(), build_hell(), rim(), build_void() (+22 more)
 
 ### Community 5 - "net.js"
-Cohesion: 0.11
-Nodes (32): applySettings(), autoQuality(), bfSnap(), bgTick(), BIND_NAMES, dropGuest(), footsteps(), frame() (+24 more)
+Cohesion: 0.10
+Nodes (35): applySettings(), autoQuality(), bfSnap(), bgTick(), BIND_NAMES, CHEAT_TOGGLES, cheatSpawn(), dropGuest() (+27 more)
 
 ### Community 6 - "Mesh"
 Cohesion: 0.10
@@ -112,7 +112,7 @@ Nodes (6): spell_circle(), part(), bridge(), apply_subsurf(), area(), Mesh
 
 ### Community 7 - "elements.js"
 Cohesion: 0.05
-Nodes (34): energyMat(), model(), aimBeam(), beamFx(), beamMesh(), _bgeo, blastFx(), boomAt() (+26 more)
+Nodes (35): energyMat(), flameMat(), model(), aimBeam(), beamFx(), beamMesh(), _bgeo, blastFx() (+27 more)
 
 ### Community 9 - "TRS"
 Cohesion: 0.05
@@ -155,8 +155,8 @@ Cohesion: 0.27
 Nodes (12): addFx(), boltFx(), circleFx(), easeOut(), easeOutBack(), glowify(), glowMats(), makeCircle() (+4 more)
 
 ### Community 19 - "addShader"
-Cohesion: 0.33
-Nodes (7): addShader(), beamMat(), discMat(), fireMat(), flameMat(), pillarFx(), waveMat()
+Cohesion: 0.40
+Nodes (6): addShader(), beamMat(), discMat(), fireMat(), pillarFx(), waveMat()
 
 ### Community 20 - "rand"
 Cohesion: 0.40
@@ -213,16 +213,16 @@ Nodes (3): MUSIC, playMood(), track()
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `Blender Assets` connect `build_elements.py` to `Elements.md`, `elements.js`, `Mesh`, `grab`?**
-  _High betweenness centrality (0.363) - this node is a cross-community bridge._
+  _High betweenness centrality (0.361) - this node is a cross-community bridge._
 - **Are the 14 inferred relationships involving `build_hell()` (e.g. with `rim()` and `cage()`) actually correct?**
   _`build_hell()` has 14 INFERRED edges - model-reasoned connections that need verification._
 - **Should `sim.js` be split into smaller, more focused modules?**
   _Cohesion score 0.06072720350276033 - nodes in this community are weakly interconnected._
 - **Why does `Mesh` connect `Mesh` to `TRS`, `build_elements.py`, `lib.py`?**
-  _High betweenness centrality (0.236) - this node is a cross-community bridge._
+  _High betweenness centrality (0.234) - this node is a cross-community bridge._
 - **Are the 14 inferred relationships involving `build_frost()` (e.g. with `cluster()` and `fallen()`) actually correct?**
   _`build_frost()` has 14 INFERRED edges - model-reasoned connections that need verification._
 - **Should `core.js` be split into smaller, more focused modules?**
   _Cohesion score 0.023255813953488372 - nodes in this community are weakly interconnected._
 - **Why does `r2()` connect `sim.js` to `core.js`, `elements.js`?**
-  _High betweenness centrality (0.159) - this node is a cross-community bridge._
+  _High betweenness centrality (0.158) - this node is a cross-community bridge._
