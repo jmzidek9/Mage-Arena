@@ -776,9 +776,9 @@ function bossGait(v, e, t, walk, wind, G) {
     const hov = ((G.lift || 0) + (Math.sin(t * 1.6 + e.id) * .5 + .5) * G.hover) * sc * (e.y > .5 ? 0 : 1);
     g.position.y += hov - Math.abs(S1) * .06 * walk * sc; v.hov = hov; // (taken back off before the next frame's lerp, renderEnemies) // held up off the floor (and none of the walk's bob)
     add('armL', S1 * .5 * walk); add('armR', -S1 * .5 * walk); // nor its arm swing: it drifts, it doesn't stride
-    g.rotation.x += G.lean * k; g.rotation.z += Math.sin(t * 1.1 + e.id) * .04;
+    g.rotation.x += (G.lean || 0) * k; g.rotation.z += Math.sin(t * 1.1 + e.id) * .04;
     add('body', Math.sin(t * 2 + e.id) * .04, Math.sin(t * .9) * .06);
-    add('armL', -G.arm * .5 * k, 0, G.arm * (.4 + .2 * Math.sin(t * 1.7))); add('armR', -G.arm * .5 * k, 0, -G.arm * (.4 + .2 * Math.sin(t * 1.7 + 1)));
+    const ga = G.arm || 0; add('armL', -ga * .5 * k, 0, ga * (.4 + .2 * Math.sin(t * 1.7))); add('armR', -ga * .5 * k, 0, -ga * (.4 + .2 * Math.sin(t * 1.7 + 1)));
     add('staff', .2 * k + Math.sin(t * 1.4) * .08);
     for (let i = 0; i < 6; i++) add('tent' + i, -(G.tent || 0) * k + Math.sin(t * 3 + i * 1.1) * .15 * walk);
     if (walk > .2 && Math.random() < walk * .8) { const p = g.position, f = g.rotation.y; emit(p.x - Math.sin(f) * .8 * sc + rand(-.4, .4), p.y + rand(.1, .6), p.z - Math.cos(f) * .8 * sc + rand(-.4, .4), 0, rand(.2, .8), 0, G.trail, rand(.15, .3), rand(.6, 1), -.3); }
@@ -787,7 +787,7 @@ function bossGait(v, e, t, walk, wind, G) {
   // walking: the body sinks as a foot plants (legs at full stretch) and rises as they pass, sways over the planted foot a
   // beat late, leans forward as it gets going and back as it pulls up; arms and head follow through behind the hips
   const acc = (v.spd - (v.spd0 ?? v.spd)) / Math.max(1e-3, v.dt0 || .016); v.spd0 = v.spd; v.acc = (v.acc || 0) + (clamp(acc, -6, 6) - (v.acc || 0)) * .1;
-  g.position.y += G.bob * sc * k * .5 * Math.cos(2 * v.ph);
+  g.position.y += (G.bob || 0) * sc * k * .5 * Math.cos(2 * v.ph);
   g.rotation.z += Math.sin(v.ph - .6) * (G.roll || 0) * .6 * k + (G.lurch ? Math.sin(v.ph * .5 + 1) * .08 * k : 0);
   g.rotation.x += (G.hunch || 0) * .6 * k + clamp(v.acc * .012, -.05, .05) + (G.lurch ? Math.abs(Math.sin(v.ph * .5)) * .08 * k : 0);
   const twist = Math.sin(v.ph - .3) * ((G.twist || 0) + (G.spine || 0)) * k;
@@ -823,7 +823,7 @@ function bossGait(v, e, t, walk, wind, G) {
     add('tail', -.06 * k, -Math.sin(v.ph - 1.4) * .12 * k); // the tail's weight drags behind the spine's swing
   }
   if (P.wingL) { // big wings beat slowly (the shared rig flaps them like an insect's), and properly when it flies
-    const sky = e.vs === 'sky' || e.y > 1.5, a = sky ? Math.sin(t * 5) * .9 : Math.sin(t * 1.8 + e.id) * G.wing + S1 * G.wing * .5 * k;
+    const sky = e.vs === 'sky' || e.y > 1.5, a = sky ? Math.sin(t * 5) * .9 : Math.sin(t * 1.8 + e.id) * (G.wing || 0) + S1 * (G.wing || 0) * .5 * k;
     P.wingL.o.rotation.z = P.wingL.r.z + a; P.wingR.o.rotation.z = P.wingR.r.z - a;
   }
   if (G.stalk) { // Belphegor: the hips ride down onto each planted (knee-less) leg so its feet meet the floor instead of floating;
