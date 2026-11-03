@@ -825,6 +825,9 @@ function bossGait(v, e, t, walk, wind, G) {
   if (P.wingL) { // big wings beat slowly (the shared rig flaps them like an insect's), and properly when it flies
     const sky = e.vs === 'sky' || e.y > 1.5, a = sky ? Math.sin(t * 5) * .9 : Math.sin(t * 1.8 + e.id) * (G.wing || 0) + S1 * (G.wing || 0) * .5 * k;
     P.wingL.o.rotation.z = P.wingL.r.z + a; P.wingR.o.rotation.z = P.wingR.r.z - a;
+    if (P.leg0 && !sky) { // the Bone Dragon on the ground: wings folded down and swept back along its flanks (modelled spread out), stirring with its stride
+      const fo = .55 + .06 * Math.sin(v.ph); P.wingL.o.rotation.z += fo; P.wingR.o.rotation.z -= fo; P.wingL.o.rotation.y = P.wingL.r.y - .8; P.wingR.o.rotation.y = P.wingR.r.y + .8;
+    }
   }
   if (G.stalk) { // Belphegor: the hips ride down onto each planted (knee-less) leg so its feet meet the floor instead of floating;
     g.position.y += legLen(v) * (Math.cos(A * kk * S1) - 1) * G.stalk; // wings held half-spread, swept back and a little raised,
