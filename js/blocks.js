@@ -90,7 +90,7 @@ function guardFrame(src, dt, t) {
     if (v.a < .1 && !on) { v.g.removeFromParent(); GV.delete(id); continue; }
     const mine = id === myId, k = v.a, hp = p.gm ? clamp(p.gh / p.gm, 0, 1) : 1;
     const kp = v.kp, punch = 1 + Math.max(-.15, -kp * .5) + v.hit * .06; // squashed by the blow, then a bounce back
-    if (mine && !v.omni) { if (v.g.parent !== camera) camera.add(v.g); v.g.position.set(-.16 + Math.sin(v.tilt) * kp * .08, -.2 - kp * .05, -1.3 + kp * .3); v.g.rotation.set(kp * .45, -v.tilt * kp * 1.2, Math.sin(v.tilt) * kp * .3); v.g.scale.setScalar(.42 * (.6 + .4 * k) * punch); }
+    if (mine && !v.omni) { if (v.g.parent !== camera) camera.add(v.g); v.g.position.set(.16 + Math.sin(v.tilt) * kp * .08, -.2 - kp * .05, -1.3 + kp * .3); v.g.rotation.set(kp * .45, -v.tilt * kp * 1.2, Math.sin(v.tilt) * kp * .3); v.g.scale.setScalar(.42 * (.6 + .4 * k) * punch); }
     else {
       if (v.g.parent !== scene) scene.add(v.g);
       const f = V(-Math.sin(p.yaw), 0, -Math.cos(p.yaw));
@@ -155,6 +155,6 @@ function guardEv(e) {
   }
   if (e.f === 'ready') { if (mine) { popNum(camera.position.x, camera.position.y - .3, camera.position.z, 'BLOCK READY', '#9fe6ff', 'tag'); sfx('pick'); } return; }
 }
-// the first-person hand: the left hand thrown up, palm out, while the block is held
+// the first-person hand: the right hand thrown up, palm out, while the block is held
 let guardHand = 0, guardJolt = 0; // jolt: the hand knocked back by a blow on the shield
 function guardPose(mp, dt) { const on = mp && myGuard(mp); guardHand += ((on ? 1 : 0) - guardHand) * Math.min(1, dt * (on ? 12 : 24)); guardJolt = Math.max(0, guardJolt - dt * 5); return guardHand - guardJolt * .45 * guardHand; }

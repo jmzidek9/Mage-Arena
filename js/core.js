@@ -321,10 +321,12 @@ amb.sig.forEach(s => s.traverse(o => { if (o.isMesh) { const c = /core/.test(o.m
 const vm = new THREE.Group(); camera.add(vm);
 const handL = rig.getObjectByName('hand_L'), handR = rig.getObjectByName('hand_R');
 vm.add(handL, handR);
-handR.position.add(V(.05, -.1, .02)); handR.rotation.z -= .3; // staff leans out of the line of sight
+handR.visible = false; // no staff in first person: the left hand casts, a mirror of it (handB, below) raises the block
 const hL0 = handL.position.clone(), hR0 = handR.position.clone(), hLr = handL.rotation.clone();
 const rigMats = {};
 vm.traverse(o => { if (o.isMesh && /staff_gem|hand_rune/.test(o.material.name)) rigMats[o.material.name] = o.material = o.material.clone(); });
+const handB = handL.clone(true); vm.add(handB); // (after the clone above, so it shares the tinted rune)
+handB.scale.x *= -1; handB.position.set(-hL0.x, hL0.y, hL0.z); handB.rotation.set(hLr.x, -hLr.y, -hLr.z);
 function tintRig(el) {
   for (const m of Object.values(rigMats)) { m.color.set(EL[el].color); m.emissive.set(EL[el].color); m.emissiveIntensity = 4; }
   document.documentElement.style.setProperty('--el', css(EL[el].color));
