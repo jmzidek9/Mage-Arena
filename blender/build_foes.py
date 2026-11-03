@@ -795,10 +795,71 @@ def eyeball(m, c, r, look=(0, -1, 0)):
     m.sphere(black, r * 0.22, TRS(tuple(Vector(c) + d * r * 0.95), scale=(0.5, 0.3, 1)), u=6, v=4)
 
 
-# voidling: a skittering chitin crawler with a cluster of glowing eyes
-rt, body, head = beast('voidling', dict(hide=chitin, leg=chitin2, eye=vglow, tooth=chitin2, mouth=vglow,
-    back=lambda m: ([crystal(m, chitin2, aim((0, 0.3, 1), (0, -0.4 + k * 0.2, 0.15)), 0.06, 0.18) for k in range(5)], [m.tube(vglow, [(sx * 0.2, -0.3, 0.02), (sx * 0.2, 0.3, 0.02)], 0.01, n=4) for sx in (-1, 1)]),
-    head_fn=lambda m: [ell(m, vglow, (x, -0.28, 0.08 + abs(x) * 0.4), (0.02, 0.015, 0.02), u=6, v=4) for x in (-0.06, -0.02, 0.02, 0.06)]))
+mirror = mat('vo_mirror', (0.75, 0.72, 0.85), rough=0.03, metal=1)
+vsteel = mat('vo_steel', (0.12, 0.08, 0.18), rough=0.2, metal=0.9)
+
+# mirror shade: a faceless figure built of floating shards of black mirror, its reflections walking beside it
+def ms_torso(m):
+    for k in range(18):  # shards hovering off the body
+        d = Vector((random.uniform(-1, 1), random.uniform(-1, 1), random.uniform(-0.3, 1))).normalized()
+        crystal(m, mirror if k % 3 else vcrys, aim(d, (d.x * 0.38, d.y * 0.3, 0.3 + d.z * 0.35)), random.uniform(0.03, 0.06), random.uniform(0.12, 0.25))
+    m.tube(vglow, [(0, -0.2, -0.05), (0, -0.28, 0.35), (0, -0.2, 0.68)], 0.012, n=4)  # a seam of light down the front
+rt, body, head = biped('shade', dict(skin=black, belly=chitin, arm=black, leg=black, shoulder=mirror, eye=vglow, mouth=black, claw=mirror, tooth=black, hunch=0.15, reach=1.15, torso=ms_torso,
+    crown_fn=lambda m: (ell(m, mirror, (0, -0.2, 0.14), (0.16, 0.06, 0.19), u=14, v=10),  # a blank mirror for a face
+                        [crystal(m, mirror, aim((math.cos(a), math.sin(a) * 0.5, 1.4), (math.cos(a) * 0.14, math.sin(a) * 0.1, 0.3)), 0.03, 0.3) for a in (1.0, 1.6, 2.2, 0.4, 2.8)])))
+bake_scale(rt, 1.05)
+
+# gravity maw: a floating ball of void that is nothing but a ringed mouth turned inside out, sucking at the air
+def mw_body(m):
+    m.sphere(chitin, 0.62, TRS((0, 0, 0)), u=24, v=16)
+    m.sphere(black, 0.5, TRS((0, -0.3, 0), scale=(1, 0.5, 1)), u=20, v=12)  # the gullet
+    m.sphere(vglow, 0.14, TRS((0, -0.12, 0)), u=12, v=8)
+    for ring in range(3):  # rings of teeth spiralling down into it
+        r = 0.48 - ring * 0.12
+        for k in range(14):
+            a = TAU * k / 14 + ring * 0.2
+            m.lathe(eyew, [(0.03, 0), (0, 0.09)], n=4, M=aim((-math.cos(a), 0.4, -math.sin(a)), (r * math.cos(a), -0.5 + ring * 0.1, r * math.sin(a))))
+    for a in (0.8, 2.3, 3.9, 5.4):
+        eyeball(m, (0.55 * math.cos(a), 0.15, 0.55 * math.sin(a)), 0.07, (math.cos(a), 0, math.sin(a)))
+    spikes_on(m, chitin2, (0, 0.2, 0), (0.6, 0.5, 0.6), 10, 0.25, 0.05, up=0, seed=81)
+rt, body = floater('maw', dict(body=mw_body, tent=vflesh, tip=vglow, tents=5, tr=0.06, tlen=0.16,
+    ring=lambda m: (m.lathe(vglow, [(0.9, -0.02), (0.96, -0.02), (0.96, 0.02), (0.9, 0.02)], n=48, M=TRS(rot=(1.4, 0, 0)), closed=True),
+                    m.lathe(vglow, [(1.2, -0.015), (1.24, -0.015), (1.24, 0.015), (1.2, 0.015)], n=48, M=TRS(rot=(1.75, 0, 0)), closed=True))), z=1.5)
+
+# phase lancer: a void knight in angular violet plate, cloak of torn space behind it, a long lance of light
+def pl_torso(m):
+    m.lathe(vsteel, [(0, 0.1), (0.3, 0.15), (0.38, 0.45), (0.3, 0.68), (0, 0.72)], n=8, M=TRS(scale=(1, 0.75, 1)))  # faceted breastplate
+    for sx in (-1, 1):
+        m.lathe(vsteel, [(0, 0), (0.2, 0.02), (0.22, 0.12), (0, 0.18)], n=6, M=TRS((sx * 0.38, 0, 0.6), (0, sx * 0.4, 0)))
+        crystal(m, vcrys, aim((sx * 0.6, 0.3, 1), (sx * 0.42, 0.02, 0.72)), 0.04, 0.3)
+    m.prism(goo, [(-0.32, 0), (0.32, 0), (0.42, -1.1), (0.1, -0.95), (-0.15, -1.2), (-0.4, -1.0)], -0.01, 0.01, M=TRS((0, 0.28, 0.65), (math.pi / 2 - 0.15, 0, 0)))  # the cloak of torn space
+rt, body, head = biped('lancer', dict(skin=vsteel, belly=chitin, arm=vsteel, leg=vsteel, shoulder=vsteel, eye=vcyan, mouth=black, claw=chitin2, tooth=chitin2, hunch=0.05, reach=1.05, torso=pl_torso,
+    crown_fn=lambda m: (m.lathe(vsteel, [(0, -0.05), (0.2, 0.0), (0.23, 0.2), (0.15, 0.38), (0, 0.48)], n=6, M=TRS((0, -0.02, 0))),
+                        m.prism(vcyan, [(-0.12, 0), (0.12, 0), (0.1, 0.025), (-0.1, 0.025)], 0, 0.02, M=TRS((0, -0.22, 0.17), (math.pi / 2, 0, 0))),
+                        crystal(m, vcrys, aim((0, 0.5, 1), (0, 0.05, 0.4)), 0.05, 0.4))))
+part(rt, 'weapon', [o for o in PARTS['lancer'] if o.name.endswith('_armR')][0], (0.1, -0.32, -0.75), lambda m: (
+    m.lathe(vsteel, [(0.035, 0.35), (0.035, -0.3)], n=6),
+    m.lathe(vsteel, [(0, -0.3), (0.12, -0.35), (0.08, -0.45), (0, -0.45)], n=8),
+    m.lathe(vcyan, [(0.06, 0), (0.04, 0.9), (0, 1.6)], n=6, M=aim((0, -1, 0), (0, -0.5, 0)))))  # the lance of light, pointing ahead
+bake_scale(rt, 1.15)
+
+# star weaver: a slowly turning knot of violet crystal round a white star, three great star-blades circling it
+def ow_body(m):
+    m.ico(vcyan, 0.2, sub=2)
+    for d in ((0, 0, 1), (0, 0, -1), (1, 0, 0.2), (-1, 0, 0.2), (0, 1, 0.2), (0, -1, 0.2), (.7, .7, -.6), (-.7, -.7, -.6), (.7, -.7, .6), (-.7, .7, .6)):
+        crystal(m, vcrys, aim(d, (0, 0, 0)), 0.1, 0.7)
+    m.lathe(vglow, [(0.42, -0.02), (0.45, -0.02), (0.45, 0.02), (0.42, 0.02)], n=32, M=TRS(rot=(0.5, 0.3, 0)), closed=True)
+def ow_ring(m):  # the blades, out at the radius they cut (3.2 m in the game)
+    for k in range(3):
+        a = TAU * k / 3
+        c = (3.2 * math.cos(a), 3.2 * math.sin(a), 0)
+        for j in range(4):  # a four-pointed star blade
+            b = a + j * math.pi / 2
+            crystal(m, vcyan if j % 2 else vcrys, aim((math.cos(b), math.sin(b), 0), c), 0.08, 0.55)
+        m.ico(vcyan, 0.09, Matrix.Translation(c), sub=1)
+    m.annulus(vglow, 3.15, 3.2, 0, 96)
+rt, body = floater('orbiter', dict(body=ow_body, ring=ow_ring, tent=vcrys, tip=vcyan, tents=3, tr=0.04, tlen=0.14), z=1.8)
+
 # gazer: a floating eye wreathed in smaller eyes and feelers
 def gz_body(m):
     eyeball(m, (0, 0, 0), 0.45)
@@ -809,33 +870,6 @@ def gz_body(m):
 rt, body = floater('gazer', dict(body=gz_body, tent=vflesh, tip=vglow, tents=6,
     ring=lambda m: (m.lathe(vglow, [(0.62, -0.025), (0.7, -0.025), (0.7, 0.025), (0.62, 0.025)], n=48, M=TRS(rot=(0.35, 0, 0)), closed=True),
                     [crystal(m, chitin2, TRS(rot=(0.35, 0, 0)) @ Matrix.Translation((*pol(0.66, TAU * k / 6), -0.08)), 0.06, 0.22) for k in range(6)])))
-# riftmite: a crystal shell around a tiny rift that wants out
-rt, body = keg('riftmite', dict(body=chitin, limb=chitin2,
-    face=lambda m: (m.sphere(vglow, 0.3, TRS((0, -0.18, 0.32)), u=14, v=10), m.sphere(black, 0.2, TRS((0, -0.3, 0.32), scale=(1, .3, 1)), u=12, v=8),
-                    spikes_on(m, vcrys, (0, 0, 0.32), (0.42, 0.42, 0.42), 8, 0.32, 0.06, up=0.2, seed=55)),
-    fuse=lambda m: (crystal(m, vcyan, TRS(), 0.07, 0.35), crystal(m, vcrys, TRS(rot=(0.5, 0, 0)), 0.05, 0.25))))
-# voidspawn: a heaving lump of violet goo full of eyes
-rt = root('voidspawn')
-part(rt, 'body', rt, (0, 0, 0), lambda m: (
-    m.sphere(goo, 0.62, TRS((0, 0, 0.44), scale=(1, 1, 0.74)), u=28, v=18, noise=0.03),
-    m.sphere(vglow, 0.16, TRS((0, 0.05, 0.42)), u=14, v=10),
-    [eyeball(m, (0.5 * math.cos(a), 0.5 * math.sin(a) - 0.05, z), r, (math.cos(a), math.sin(a), 0.2)) for a, z, r in ((4.4, 0.6, 0.11), (5.0, 0.4, 0.08), (3.9, 0.45, 0.07), (4.7, 0.75, 0.06), (5.4, 0.62, 0.07))],
-    [m.sphere(goo, random.uniform(0.06, 0.12), TRS((*pol(0.5, random.uniform(0, TAU)), random.uniform(0.1, 0.55))), u=10, v=6) for _ in range(6)]))
-# horror: a bloated tentacled thing, all mouths and eyes
-def ho_body(m):
-    m.ico(vflesh, 1, TRS((0, 0, 0.75), (0.2, 0, 0), (0.85, 0.7, 0.8)), sub=2, noise=0.05)
-    for k in range(8):
-        a, z = random.uniform(3.3, 6.1), random.uniform(0.4, 1.2)
-        eyeball(m, (0.8 * math.cos(a) * 0.95, 0.65 * math.sin(a) * 0.95, z), random.uniform(0.07, 0.14), (math.cos(a), math.sin(a), 0))
-    spikes_on(m, chitin, (0, 0.2, 1.1), (0.7, 0.5, 0.4), 9, 0.4, 0.08, seed=66)
-    ell(m, black, (0, -0.62, 0.55), (0.3, 0.08, 0.16))
-    teeth(m, eyew, (0, -0.66, 0.68), 0.5, 8, 0.1)
-    teeth(m, eyew, (0, -0.66, 0.42), 0.5, 8, 0.1, down=False)
-def ho_head(m):
-    m.ico(chitin, 0.3, TRS((0, -0.05, 0.12)), sub=1, noise=0.04)
-    eyeball(m, (0, -0.25, 0.14), 0.14)
-    for sx in (-1, 1):
-        horn(m, chitin2, (sx * 0.18, -0.05, 0.25), (sx * 0.6, 0.3, 0.7), 0.5, 0.07, curl=(0, 0.8, -0.5))
 def ho_arm(m, sx):  # each arm is a tentacle
     pts, rad = [], []
     for k in range(10):
@@ -850,7 +884,6 @@ def ho_leg(m, sx):
     m.tube(vflesh, [(0, 0, 0), (sx * 0.1, -0.05, -0.45), (sx * 0.15, 0, -0.85)], [0.3, 0.25, 0.2], n=8)
     for k in range(3):
         m.tube(vflesh, [(sx * 0.15, 0, -0.8), (sx * 0.15 + math.cos(k * 2.1) * 0.4, math.sin(k * 2.1) * 0.4, -0.9)], [0.1, 0.02], n=5)
-rt, body, head = golem('horror', dict(body=ho_body, head=ho_head, arm=ho_arm, leg=ho_leg))
 # mind flayer: a robed thing with a squid's head
 rt, body = caster('mindflayer', dict(robe=vrobe, trim=vglow, hand=vflesh, glow=vglow,
     head=lambda m: (ell(m, vflesh, (0, 0, 0.2), (0.16, 0.17, 0.22), u=16, v=10), [ell(m, vcyan, (sx * 0.06, -0.14, 0.24), (0.03, 0.015, 0.02), u=6, v=4) for sx in (-1, 1)],
@@ -922,7 +955,7 @@ pv = Previewer(res=420)
 GROUPS = {'crypt': ['crawler', 'bonearcher', 'plaguebearer', 'banshee', 'colossus', 'necromancer', 'lich', 'bonedragon'],
           'frost': ['snowcat', 'ram', 'cryomancer', 'frosttotem', 'icegolem', 'harpy', 'yeti', 'frostgiant', 'frostqueen'],
           'hell': ['cinderimp', 'berserker', 'cannoneer', 'tormentor', 'pyrepriest', 'gorger', 'pitlord', 'archdemon'],
-          'void': ['voidling', 'gazer', 'riftmite', 'voidspawn', 'horror', 'mindflayer', 'watcher', 'devourer'], 'shadow': ['umbra', 'stalker']}
+          'void': ['shade', 'maw', 'lancer', 'orbiter', 'gazer', 'mindflayer', 'watcher', 'devourer'], 'shadow': ['umbra', 'stalker']}
 pv.scene.render.resolution_x, pv.scene.render.resolution_y = 1400, 420
 for g, names in GROUPS.items():
     obs = [o for o in ROOTS if o.name in names]

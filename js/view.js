@@ -133,7 +133,7 @@ const FOE_FX = {
     const a = V(e.x, e.y, e.z), b = V(e.x + Math.sin(e.yaw) * e.len, 1, e.z + Math.cos(e.yaw) * e.len);
     beamFx(a, b, e.c, e.w * .35, .45); beamFx(a, b, 0xffffff, e.w * .12, .3);
     for (let i = 0; i < 20; i++) { const q = a.clone().lerp(b, Math.random()); emit(q.x, q.y, q.z, rand(-2, 2), rand(0, 3), rand(-2, 2), e.c, rand(.1, .2), .4); }
-    burst(b.x, 1, b.z, 20, e.c, 6, .2, .4); flash(a.x, a.y, a.z, e.c, 40, .3); shake(.12); sfx('laser_big');
+    burst(b.x, 1, b.z, 20, e.c, 6, .2, .4); flash(a.x, a.y, a.z, e.c, 40, .3); if (!e.q) { shake(.12); sfx('laser_big'); }
     if (e.b) { // a boss's beam: wider, held a moment, burning a trench down the lane and blowing up where it ends
       beamFx(a, b, e.c, e.w * .7, .8); beamFx(a, b, 0xffffff, e.w * .25, .7);
       for (let i = 1; i <= 6; i++) { const q = a.clone().lerp(b, i / 6); scarFx(q.x, q.z, e.w * .6, e.c, 3.5); dustFx(q.x, q.z, .8); }
@@ -218,6 +218,15 @@ const FOE_FX = {
   whirl(e) { ringFx(e.x, .6, e.z, 2.8, 0xff8a3a, .3); for (let i = 0; i < 12; i++) { const a = rand(0, TAU); emit(e.x + Math.cos(a) * 2.4, rand(.6, 1.6), e.z + Math.sin(a) * 2.4, -Math.sin(a) * 8, 0, Math.cos(a) * 8, flameColor(), rand(.12, .2), .3); } sfx('swing'); },
   muzzle(e) { fireBoom(e.x, e.y, e.z, 1, .35); smokeFx(e.x, e.y + .4, e.z, .6, 0x2e2428, .8, 4, .8); shake(clamp(.15 - distTo(e.x, e.z) * .006, 0, .12)); sfx('fire_boom'); },
   devour(e) { for (let i = 0; i < 30; i++) emit(e.x + rand(-.5, .5), .4, e.z + rand(-.5, .5), rand(-2, 2), rand(1, 4), rand(-2, 2), Math.random() < .5 ? 0x8a1010 : 0xff6a1a, rand(.1, .2), .6, 9); sfx('venom_big'); },
+  mirror(e) { burst(e.x, 1.2, e.z, 30, 0xe8e0ff, 6, .15, .5); ringFx(e.x, .1, e.z, 2.5, 0xb04cff, .4); sfx('foe_blink'); },
+  shatter(e) { for (let i = 0; i < 26; i++) emit(e.x + rand(-.4, .4), rand(.4, 1.8), e.z + rand(-.4, .4), rand(-4, 4), rand(1, 4), rand(-4, 4), Math.random() < .5 ? 0xffffff : 0xb04cff, rand(.08, .16), .5, 9); sfx('frost_big'); },
+  phase(e) { const a = V(e.x, 1.2, e.z), b = V(e.x2, 1.2, e.z2); beamFx(a, b, C_VOID, .35, .35); beamFx(a, b, 0xffffff, .1, .25); smokeFx(e.x, 1, e.z, .6, 0x1a1030, .6, 3, .5); sfx('foe_blink'); },
+  fling(e) { // a star-blade spins out down the lane and back
+    const fx = Math.sin(e.yaw), fz = Math.cos(e.yaw), o = glowify(T.spike.clone(), glowMats(0x7ae8ff)); o.scale.setScalar(.8);
+    addFx(o, 1.4, (o, k, dt) => { const d = Math.sin(k * Math.PI) * e.len; o.position.set(e.x + fx * d, 1.4, e.z + fz * d); o.rotation.set(Math.PI / 2, 0, o.rotation.z + dt * 20); emit(o.position.x, 1.4, o.position.z, 0, 0, 0, 0xb04cff, .15, .25); });
+    sfx('swing');
+  },
+  null(e) { circleFx('sigil', V(e.x, .08, e.z), 4, { life: 5, color: 0x7a3aff }); pillarFx(e.x, 0, e.z, 4, 3, 0x3a1060, .6); sfx('abyss_big'); },
   bind(e) { // a chain of soul light snaps from the binder to its ward
     const a = V(e.x2, 1.6, e.z2), b = V(e.x, 1.2, e.z); beamFx(a, b, C_SOUL, .15, .5);
     circleFx('sigil', V(e.x, .08, e.z), 1.6, { life: .8, color: C_SOUL }); burst(e.x, 1.2, e.z, 24, C_SOUL, 4, .2, .5, -1); sfx('soul_big');
@@ -409,9 +418,9 @@ for (const k in ET) ETPL[k] = [...enemiesG.children, ...foesG.children].find(c =
 const FALLBACK = { stalker: 'grunt', bomber: 'runner', knight: 'grunt', shaman: 'shooter', skeleton: 'grunt', rat: 'runner', archer: 'shooter', ghoul: 'splitter', dknight: 'knight', warden: 'boss' };
 // Arena area monsters without a rig of their own yet borrow the closest one, tinted their area's colour
 Object.assign(FALLBACK, { berserker: 'grunt', cannoneer: 'brute', tormentor: 'grunt', gorger: 'bomber', snowcat: 'runner', ram: 'runner', cryomancer: 'shaman', frosttotem: 'shaman', icegolem: 'brute', harpy: 'grunt', crawler: 'grunt', bonearcher: 'grunt', plaguebearer: 'shaman', banshee: 'shaman', colossus: 'brute', necromancer: 'shaman', lich: 'shaman', bonedragon: 'boss',
-  snowfiend: 'grunt', icewolf: 'runner', icesprite: 'shooter', frostmite: 'bomber', yeti: 'brute', glacier: 'knight', frostgiant: 'boss', frostqueen: 'shaman',
+  yeti: 'brute', frostgiant: 'boss', frostqueen: 'shaman',
   cinderimp: 'grunt', pyrepriest: 'shaman', pitlord: 'boss', archdemon: 'boss',
-  voidling: 'runner', gazer: 'shooter', riftmite: 'bomber', voidspawn: 'splitter', horror: 'brute', mindflayer: 'shaman', watcher: 'shooter', devourer: 'boss', umbra: 'boss' });
+  shade: 'stalker', maw: 'shooter', lancer: 'knight', orbiter: 'shooter', gazer: 'shooter', mindflayer: 'shaman', watcher: 'shooter', devourer: 'boss', umbra: 'boss' });
 const PART_RE =/_(body|head|jaw|armL|armR|legL|legR|leg\d|tail|wingL|wingR|ring|tent\d|shield|weapon|eye|fuse|staff|crown)$/;
 const RIM = { stalker: 0x9a4cff, boss: 0xff5a20, bomber: 0xffa020, knight: 0xa0c0ff, shaman: 0x40ff90, skeleton: 0xbfd4ff, rat: 0xffb060, archer: 0xbfd4ff, ghoul: 0x7aff6a, dknight: 0xff4a4a, warden: 0x5ad8ff };
 // the islands' monsters get a softer rim light in their island's colour (their own models are paler than the originals)
@@ -495,6 +504,11 @@ const POSE = {
   firewall: { w: [-.2, 0, 0, 2.4, 2.4, 0],  s: [.6, 0, .2, -1.5, -1.5, 0] },
   pyre:   { w: [-.3, 0, -.05, 2.8, 2.8, 0], s: [.3, 0, .05, 3, 3, 0] },
   flop:   { w: [.35, 0, .3, 1.5, 1.5, 0],   s: [-.2, 0, -.2, 2, 2, 0] },
+  chomp:  { w: [-.3, 0, 0, 0, 0, 0],        s: [.4, 0, 0, 0, 0, 0] },
+  zigzag: { w: [.4, .2, .25, -.4, 1.4, 0],  s: [.3, 0, -.05, -.6, 1.6, 0] },   // lance levelled, low for the dash
+  fling:  { w: [-.2, .8, 0, 2.2, .4, 0],    s: [.3, -.8, 0, .4, .4, 0] },
+  beam:   { w: [-.3, 0, 0, 0, 0, 0],        s: [.15, 0, 0, 0, 0, 0] },
+  null:   { w: [-.3, 0, -.05, 2.6, 2.6, 0], s: [.45, 0, .15, -.8, -.8, 0] },
 };
 // bosses: the colour of their power, for wind-ups, auras and their bigger attack effects
 const BOSS_COL = { boss: 0xff5a20, umbra: 0x9a4cff, warden: 0x5ad8ff, bonedragon: 0x8aff50, frostgiant: 0x9fe6ff, pitlord: 0xff6a1a, devourer: 0xb04cff };

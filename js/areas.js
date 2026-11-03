@@ -186,23 +186,63 @@ Object.assign(ET, {
       { atk: 'nova', wind: 1.1, r: 8, dmg: 24, c: C_FIRE, s: 'fire', pool: { life: 3, dps: 10 } }, { atk: 'rain', n: 4, r: 2.4, dmg: 20, c: C_FIRE, s: 'meteor' }] },
 
   // ---------- 5: the Void ----------
-  voidling:   { hp: 30,  spd: 6.8, r: .45, h: 1.1, dmg: 9,  reach: 3.2, cost: 1, from: 1, kb: 1.4, poise: 15,  atk: 'lunge', wind: .36, cd: 1.5, zone: 'void',
-    alt: { atk: 'blink', min: 5, max: 16, wind: .5, cd: 6, dmg: 10 } },
-  gazer:      { hp: 34,  spd: 3,   r: .6,  h: 2.3, dmg: 9,  reach: 26,  cost: 3, from: 2, kb: 1,   poise: 25,  atk: 'orb',   wind: .65, cd: 2.2, ranged: 1, keep: [10, 16], oc: C_VOID, zone: 'void',
-    alt: { atk: 'ray', min: 0, max: 24, wind: 1, cd: 7, dmg: 16, len: 26, w: 1.2, c: C_VOID, s: 'void' } },
-  riftmite:   { hp: 26,  spd: 6.2, r: .5,  h: 1.2, dmg: 22, reach: 2.4, cost: 2, from: 3, kb: 1.2, poise: 10,  atk: 'fuse',  wind: .95, cd: 9, zone: 'void', pool: { r: 3.6, life: 4, dps: 7, c: C_VOID, s: 'void', pull: 1 } },
-  voidspawn:  { hp: 70,  spd: 2.8, r: .65, h: 1.0, dmg: 12, reach: 2.0, cost: 2, from: 4, kb: .8,  poise: 40,  atk: 'slam',  wind: .55, cd: 1.4, split: 1, zone: 'void',
-    alt: { atk: 'leap', min: 3.5, max: 8, wind: .5, cd: 6, dmg: 12 } },
-  horror:     { hp: 220, spd: 2.3, r: 1.1, h: 2.8, dmg: 24, reach: 3.4, cost: 5, from: 5, kb: .25, poise: 140, atk: 'smash', wind: .95, cd: 2.1, zone: 'void',
-    alt: { atk: 'spikes', min: 4, max: 15, wind: 1.1, cd: 8, dmg: 20, c: C_VOID, s: 'tentacle' } },
-  mindflayer: { hp: 62,  spd: 2.9, r: .55, h: 2.1, dmg: 0,  reach: 9,   cost: 4, from: 6, kb: 1,   poise: 30,  atk: 'mend',  wind: 1.1, cd: 4, ranged: 1, keep: [12, 18], zone: 'void',
+  // Mirror Shade: walks in with two reflections of itself that shatter at a touch; only one of the three is real, and it can trade places with a reflection
+  shade:      { hp: 50,  spd: 4,   r: .5,  h: 1.9, dmg: 13, reach: 2.2, cost: 1, from: 1, kb: 1,   poise: 25,  atk: 'swipe', wind: .5,  cd: 1.4, zone: 'void', name: 'Mirror Shade',
+    alt: { atk: 'mirror', min: 0, max: 30, cd: 6 },
+    tick(e, dt, tgt, d) {
+      if (e.fake) { // a reflection: shadows the real one's moves but never strikes, and fades after a while
+        if ((e.life -= dt) <= 0) { kill(e, null, null); return true; }
+        if (d > 1.6) { e.x += (tgt.x - e.x) / d * 4 * dt; e.z += (tgt.z - e.z) / d * 4 * dt; }
+        e.yaw = Math.atan2(tgt.x - e.x, tgt.z - e.z); return true;
+      }
+      if ((e.mt = (e.mt ?? 0) - dt) <= 0 && S.enemies.filter(o => o.fake === e.id && !o.dead).length < 2) {
+        e.mt = 9;
+        for (const s of [-1, 1]) { const q = confine({ x: e.x + s * 2, z: e.z }, 1), o = spawnEnemy('shade', q.x, q.z); Object.assign(o, { fake: e.id, life: 12, hp: e.hp, max: e.max, rise: 0, y: 0 }); }
+        ev({ k: 'fx', m: 'foe', f: 'mirror', x: r2(e.x), z: r2(e.z) });
+      }
+      return false;
+    },
+    ward(e, n) { if (e.fake) { ev({ k: 'fx', m: 'foe', f: 'shatter', x: r2(e.x), z: r2(e.z) }); kill(e, null, null); return 0; } return n; },
+    die(e) { for (const o of S.enemies) if (o.fake === e.id) o.life = 0; } },
+  // Gravity Maw: a floating mouth that drags everyone near it in, steadily, and bites whatever arrives
+  maw:        { hp: 90,  spd: 2.2, r: .7,  h: 2.2, dmg: 22, reach: 2.8, cost: 2, from: 2, kb: .3,  poise: 70,  atk: 'chomp', wind: .7, cd: 1.8, zone: 'void', name: 'Gravity Maw',
+    tick(e, dt, tgt, d, ps) {
+      if ((e.gt = (e.gt ?? 0) - dt) > 0) return false;
+      e.gt = .25;
+      for (const p of ps) { const dx = e.x - p.x, dz = e.z - p.z, k = Math.hypot(dx, dz) || 1; if (k < 13 && k > 1.5 && p.y < 3) shove(p, dx / k * 2.2 * (1.4 - k / 13), dz / k * 2.2 * (1.4 - k / 13)); }
+      return false;
+    } },
+  // Phase Lancer: three dashes through you in a zigzag, each lane marked an instant before, then it stops to catch its breath
+  lancer:     { hp: 80,  spd: 3.4, r: .55, h: 2.2, dmg: 15, reach: 11,  cost: 3, from: 3, kb: .7,  poise: 50,  atk: 'zigzag', wind: .75, cd: 4.5, zone: 'void', name: 'Phase Lancer', n: 3 },
+  // Star Weaver: three star-blades circle it, cutting anything that crosses their ring; it flings one at you, and it comes back
+  orbiter:    { hp: 65,  spd: 2.6, r: .6,  h: 2.4, dmg: 14, reach: 16,  cost: 3, from: 4, kb: .8,  poise: 40,  atk: 'fling', wind: .8, cd: 3.5, ranged: 1, keep: [5, 9], zone: 'void', name: 'Star Weaver',
+    tick(e, dt, tgt, d, ps) {
+      e.hitT ??= {};
+      for (const p of ps) { const k = Math.hypot(p.x - e.x, p.z - e.z) / e.sc; if (k > 2.5 && k < 3.9 && p.y < 2.5 && !(e.hitT[p.id] > S.t)) { e.hitT[p.id] = S.t + .6; foeHit(p, 9 * (1 + .06 * (S.wave - 1)), e); } }
+      return false;
+    } },
+  // Unraveler: a great eye that locks a beam on you and holds it there for three seconds, slowly turning to follow you
+  gazer:      { hp: 60,  spd: 2.4, r: .6,  h: 2.3, dmg: 6,  reach: 22,  cost: 4, from: 5, kb: .8,  poise: 35,  atk: 'beam',  wind: .9,  cd: 6, ranged: 1, keep: [10, 16], oc: C_VOID, zone: 'void', name: 'Unraveler',
+    tick(e, dt, tgt, d, ps) {
+      const B = e.bm; if (!B) return false;
+      B.t -= dt; const want = Math.atan2(tgt.x - e.x, tgt.z - e.z), da = Math.atan2(Math.sin(want - B.yaw), Math.cos(want - B.yaw));
+      B.yaw += Math.max(-.8 * dt, Math.min(.8 * dt, da)); e.yaw = B.yaw;
+      if ((B.k -= dt) <= 0) {
+        B.k = .25; ev({ k: 'fx', m: 'foe', f: 'ray', x: r2(e.x), y: r2(e.y + 1.9 * e.sc), z: r2(e.z), yaw: r2(B.yaw), len: 22, w: .7, c: C_VOID, q: 1 });
+        for (const p of ps) if (inLine(p, e.x, e.z, B.yaw, 22, 1.2) && p.y < 2.5) foeHit(p, B.dmg, e);
+      }
+      if (B.t <= 0) e.bm = null;
+      return true;
+    } },
+  // Null Priest: lays a field where no spell can be cast (step out of it!), and lashes you in with a tendril of void
+  mindflayer: { hp: 62,  spd: 2.9, r: .55, h: 2.1, dmg: 0,  reach: 18,  cost: 4, from: 6, kb: 1,   poise: 30,  atk: 'null',  wind: 1.1, cd: 7, ranged: 1, keep: [12, 18], zone: 'void', name: 'Null Priest',
     alt: { atk: 'pull', min: 4, max: 20, wind: .9, cd: 6, dmg: 8, len: 20, w: 1.8, c: C_VOID } },
   watcher:    { hp: 1700, spd: 2, r: 1.6, h: 5.2, dmg: 14, reach: 26, cost: 0, from: 99, kb: .04, poise: 650, atk: 'volley', wind: .85, cd: 2.2, boss: 1, ranged: 1, keep: [10, 16], oc: C_VOID, zone: 'void',
-    name: 'The Watcher Beyond', minions: ['voidling', 'gazer'],
+    name: 'The Watcher Beyond', minions: ['shade', 'gazer'],
     spec: [{ atk: 'ray', wind: 1, len: 28, w: 2, dmg: 26, c: C_VOID, s: 'void', n: 3 }, { atk: 'rain', n: 4, r: 2.4, dmg: 20, c: C_VOID, s: 'void' },
       { atk: 'nova', wind: 1.1, r: 8, dmg: 22, c: C_VOID, s: 'void' }, { atk: 'summon', wind: 1, n: 2, type: 'gazer', cap: 6 }] },
   devourer:   { hp: 2000, spd: 2.1, r: 2.2, h: 5, dmg: 31, reach: 5, cost: 0, from: 99, kb: .04, poise: 700, atk: 'smash', wind: 1.05, cd: 2.2, boss: 1, zone: 'void',
-    name: 'The Devourer of Stars', minions: ['voidling', 'voidspawn'],
+    name: 'The Devourer of Stars', minions: ['shade', 'maw'],
     spec: [{ atk: 'spikes', wind: 1.1, dmg: 24, c: C_VOID, s: 'tentacle', n: 3 }, { atk: 'pull', wind: 1, len: 24, w: 3, dmg: 10, c: C_VOID, then: 'nova' },
       { atk: 'rain', n: 4, r: 2.6, dmg: 20, c: C_VOID, s: 'void' }, { atk: 'nova', wind: 1.1, r: 9, dmg: 24, c: C_VOID, s: 'void', pool: { life: 4, dps: 7, pull: 1 } }] },
 
@@ -637,8 +677,57 @@ const FOE_ATK = {
     },
     hit(e, a, dmg) { e.leap = { x0: e.x, z0: e.z, x1: a.lx, z1: a.lz, t: 0, dmg, r: 3 * e.sc ** .5 }; },
   },
+  // ----- the Void's own -----
+  mirror: { // trades places with one of its reflections, in a flash
+    start(e) {
+      const o = S.enemies.filter(q => q.fake === e.id && !q.dead)[0]; e.acd2 = 6;
+      if (o) { const x = e.x, z = e.z; ev({ k: 'fx', m: 'foe', f: 'blink', x: r2(x), z: r2(z), x2: r2(o.x), z2: r2(o.z), h: 1.9 }); e.x = o.x; e.z = o.z; o.x = x; o.z = z; }
+      return 'done';
+    },
+  },
+  chomp: { // a lunge of the jaws at whatever has been dragged in
+    start: (e, t, al, yaw) => ({ shape: 'cone', x: e.x, z: e.z, yaw, r: 3.4, ang: 80 }),
+    hit(e, a, dmg, ps) {
+      ev({ k: 'fx', m: 'foe', f: 'nova', x: r2(e.x + Math.sin(a.yaw) * 1.5), z: r2(e.z + Math.cos(a.yaw) * 1.5), r: 1.8, c: C_VOID, s: 'void' });
+      for (const p of ps) if (inCone(p, e.x, e.z, a.yaw, 3.8, 86) && p.y < 3) foeHit(p, dmg, e);
+    },
+  },
+  zigzag: { // one dash through you, angled off to one side; it chains into the next straight away
+    start(e, t, al, yaw) {
+      const n = e.atk.al.zn ?? ET[e.type].n, side = n % 2 ? 1 : -1, y = yaw + side * .35;
+      Object.assign(e.atk, { yaw: y, zn: n }); e.yaw = y;
+      return { shape: 'line', x: e.x, z: e.z, yaw: y, len: 11, w: 1.5 };
+    },
+    hit(e, a, dmg, ps) {
+      const x0 = e.x, z0 = e.z, fx = Math.sin(a.yaw), fz = Math.cos(a.yaw), q = confine({ x: e.x + fx * 11, z: e.z + fz * 11 }, 1);
+      e.x = q.x; e.z = q.z; collide(e, ET[e.type].r * e.sc);
+      ev({ k: 'fx', m: 'foe', f: 'phase', x: r2(x0), z: r2(z0), x2: r2(e.x), z2: r2(e.z) });
+      for (const p of ps) if (inLine(p, x0, z0, a.yaw, 11, 1.5) && p.y < 1.8) foeHit(p, dmg, e);
+      if (a.zn > 1) later(.12, () => { const p = near(e, players().filter(o => !o.down)); if (p && !e.dead && !e.atk && !e.cc) startAttack(e, p, { atk: 'zigzag', wind: .4, zn: a.zn - 1 }); });
+    },
+  },
+  fling: { // a star-blade thrown out down a lane and back
+    start: (e, t, al, yaw) => ({ shape: 'line', x: e.x, z: e.z, yaw, len: 15, w: 1.4 }),
+    hit(e, a, dmg, ps) {
+      ev({ k: 'fx', m: 'foe', f: 'fling', x: r2(e.x), z: r2(e.z), yaw: r2(a.yaw), len: 15 });
+      const x0 = e.x, z0 = e.z, cut = () => { for (const p of players()) if (!p.down && inLine(p, x0, z0, a.yaw, 15, 1.4) && p.y < 2.5) foeHit(p, dmg, e); };
+      cut(); later(.7, cut); // out, and back again
+    },
+  },
+  beam: { // the eye opens wide: a beam it then holds on you (see the Unraveler's tick)
+    start: (e, t, al, yaw) => ({ shape: 'line', x: e.x, z: e.z, yaw, len: 22, w: 1.2 }),
+    hit(e, a, dmg) { e.bm = { t: 3, k: 0, yaw: a.yaw, dmg }; },
+  },
+  null: { // a field where no spell works, for five seconds
+    start(e, t) { Object.assign(e.atk, { lx: t.x, lz: t.z }); return { shape: 'circle', x: t.x, z: t.z, r: 4 }; },
+    hit(e, a) {
+      (S.nulls ||= []).push({ x: a.lx, z: a.lz, r: 4, end: S.t + 5 }); S.nulls = S.nulls.filter(z => z.end > S.t);
+      addPool(a.lx, a.lz, 4, { life: 5, dps: 0, c: 0x3a1060, s: 'void' });
+      ev({ k: 'fx', m: 'foe', f: 'null', x: r2(a.lx), z: r2(a.lz) });
+    },
+  },
 };
-for (const k of ['erupt', 'cage', 'siphon', 'stampede', 'dive', 'roll', 'hurl', 'pounce', 'blast', 'lash', 'hook', 'firewall', 'pyre', 'flop']) LOCKED.add(k);
+for (const k of ['erupt', 'cage', 'siphon', 'stampede', 'dive', 'roll', 'hurl', 'pounce', 'blast', 'lash', 'hook', 'firewall', 'pyre', 'flop', 'zigzag', 'fling', 'beam', 'null']) LOCKED.add(k);
 const RIMC = { necromancer: 0x9a6aff, lich: 0x7ae8ff, frostqueen: 0x9fe6ff, archdemon: 0xff6a1a, watcher: 0xb04cff, umbra: 0x9a4cff };
 
 // ===================== how the island monsters' states look (view side) =====================
@@ -658,6 +747,7 @@ function foeLook(v, e, src, t) {
   if (e.vs === 'run') for (let i = 0; i < 2; i++) emit(P.x + rand(-.6, .6), .15, P.z + rand(-.6, .6), rand(-2, 2), rand(1.5, 3.5), rand(-2, 2), 0xf0f6ff, rand(.12, .22), rand(.4, .7), 8);
   if (e.vs === 'rage' && Math.random() < .5) emit(P.x + rand(-.5, .5), P.y + rand(.4, 2), P.z + rand(-.5, .5), 0, rand(1, 2.5), 0, flameColor(), rand(.12, .25), .4, -2);
   if (e.sc !== v.sc) v.sc += (e.sc - v.sc) * .1; // a Gorger swelling after a meal
+  if (e.type === 'orbiter' && v.parts.ring) v.parts.ring.o.rotation.y = t * 4; // the blades spin fast enough to be a saw
   if (e.bd) { // a stream of soul light from the binder
     const b = src.enemies.find(o => o.id === e.bd);
     if (b) for (let i = 0; i < 2; i++) { const k = Math.random(); emit(b.x + (e.x - b.x) * k, 1.6 + (1.2 - 1.6) * k + Math.sin(k * Math.PI) * .6, b.z + (e.z - b.z) * k, 0, 0, 0, C_SOUL, rand(.08, .15), .25); }
