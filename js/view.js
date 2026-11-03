@@ -268,6 +268,58 @@ function bossWind(v, a, d) {
     if (k > .97 && !o.userData.popped) { o.userData.popped = 1; flash(p.x, p.y, p.z, col, 60, .2); burst(p.x, p.y, p.z, 24, col, 8, .2, .35); }
   });
   flash(v.g.position.x, 2, v.g.position.z, col, 25, d);
+  if (d < .5) return;
+  const c2 = circleFx('sigil', V(v.g.position.x, .1, v.g.position.z), R * 1.2 + .8, { life: d + .25, color: 0xffffff });
+  const h = tp.h * v.sc, rings = [];
+  for (let i = 0; i < 3; i++) { const m = glowMats(i === 1 ? 0xffffff : col), o = glowify(T.shock.clone(), m); o.userData.m = m; rings.push(o); scene.add(o); }
+  addFx(new THREE.Group(), d + .25, (o, k, dt) => {
+    const p = v.g.position; c2.position.x = p.x; c2.position.z = p.z; spinCircle(c2, dt, -(3 + k * 8));
+    rings.forEach((g, i) => { const u = (k * 1.6 + i / 3) % 1; g.position.set(p.x, h * u * 1.1, p.z); g.scale.setScalar((R * 1.5 + 1) * (1 - u * .6)); setOpacity(g.userData.m, Math.sin(u * Math.PI) * .8); });
+    for (let i = 0; i < 6; i++) if (Math.random() < .3 + k) { const a = i * TAU / 6 + k * 3, L = R * 2.2 + 1.5; emit(p.x + Math.cos(a) * L, .12, p.z + Math.sin(a) * L, -Math.cos(a) * L * 2.4, 0, -Math.sin(a) * L * 2.4, col, .16, .4, 0, 0); } // ley lines feeding its circle
+    if (k > .99) rings.forEach(g => g.removeFromParent());
+  });
+  setTimeout(() => { rings.forEach(g => g.removeFromParent()); const p = v.g.position; ringFx(p.x, .15, p.z, R * 3 + 3, col, .4); pillarFx(p.x, 0, p.z, R + .5, h * 2.2, col, .3); }, d * 1000);
+}
+const _hot = new THREE.Color();
+// a jagged arc of power from a to b
+function arcFx(a, b, col, n = 5) {
+  const L = a.distanceTo(b), pts = [[a.x, a.y, a.z]];
+  for (let i = 1; i < n; i++) { const q = a.clone().lerp(b, i / n); pts.push([q.x + rand(-1, 1) * L * .12, q.y + rand(-1, 1) * L * .12, q.z + rand(-1, 1) * L * .12]); }
+  pts.push([b.x, b.y, b.z]); boltFx(pts, col);
+}
+// always under a boss: its sigil turning on the floor (ended when the boss's view goes)
+function bossAura(v, id) {
+  const col = bossCol(v.type), tp = ET[v.type], g = new THREE.Group(), outer = makeCircle('sigil', col), inner = makeCircle('sigil', 0xffffff);
+  g.add(outer, inner);
+  return addFx(g, 1e9, (o, k, dt) => {
+    if (views.e.get(id) !== v || !v.g.parent) { o.userData.done = 1; return; }
+    const p = v.g.position, R = tp.r * v.sc, t = performance.now() / 1000, beat = v.pulse || 1;
+    o.position.set(p.x, .06, p.z); o.visible = p.y > -1 && v.e?.vs !== 'hide' && v.e?.vs !== 'sky';
+    outer.scale.setScalar(R * (v.en ? 2.6 : 2.1) + 1 + Math.sin(t * 2) * .1); inner.scale.setScalar(R * (v.en ? 1.5 : 1.1) + .5);
+    spinCircle(outer, dt, v.en ? 1.6 : .5); spinCircle(inner, dt, v.en ? -3 : -1);
+    setOpacity(outer.userData.mats, (v.en ? .55 : .3) * Math.min(1.6, beat)); setOpacity(inner.userData.mats, (v.en ? .35 : .15) * Math.min(1.6, beat));
+  });
+}
+// phase two: it rears up white-hot and shakes, power spirals up round it, then it blasts out in its new form
+function bossTransform(v) {
+  const col = bossCol(v.type), tp = ET[v.type], h = tp.h * v.sc, R = tp.r * v.sc, near = distTo(v.g.position.x, v.g.position.z) < 45;
+  v.en = true; v.tf = 1.6; v.strike = 1; v.ak = 'roar';
+  sfx('ring'); if (near) whiteFx = .5;
+  addFx(new THREE.Group(), 1.6, (o, k) => {
+    const p = v.g.position;
+    for (let i = 0; i < 6; i++) { const a = k * 30 + i * TAU / 6, rr = (R * 2.5 + 2) * (1 - k * .6), y = k * h * 2 + rand(0, h); emit(p.x + Math.cos(a) * rr, y, p.z + Math.sin(a) * rr, -Math.sin(a) * 8, rand(2, 6), Math.cos(a) * 8, i % 2 ? 0xffffff : col, rand(.15, .3), .5); } // a vortex climbing round it
+    if (Math.random() < .4) arcFx(V(p.x, h * rand(.3, 1.2), p.z), V(p.x + rand(-6, 6), .1, p.z + rand(-6, 6)), Math.random() < .5 ? 0xffffff : col);
+    if (near && Math.random() < .5) shake(.12 + k * .25);
+  });
+  setTimeout(() => { // the blast
+    const p = v.g.position; if (!v.g.parent) return;
+    for (let i = 0; i < 4; i++) setTimeout(() => ringFx(p.x, .3 + i * .8, p.z, 10 + i * 6, i % 2 ? 0xffffff : col, .7), i * 90);
+    boomFx(p.x, h * .5, p.z, 4 + R * 2, col, 1.4); pillarFx(p.x, 0, p.z, R * 1.2 + 1, 40, col, 1); pillarFx(p.x, 0, p.z, R * .5 + .4, 46, 0xffffff, .7);
+    burst(p.x, h * .5, p.z, 160, col, 16, .3, 1, 3); burst(p.x, h * .5, p.z, 60, 0xffffff, 12, .2, .6);
+    for (let i = 0; i < 10; i++) { const a = i * TAU / 10; arcFx(V(p.x, h * .5, p.z), V(p.x + Math.cos(a) * rand(7, 12), .1, p.z + Math.sin(a) * rand(7, 12)), i % 2 ? 0xffffff : col, 6); }
+    debrisFx(p.x, .6, p.z, 18, 'earth__pebble', 0x4a3a32, .45, 14); scarFx(p.x, p.z, 6 + R, col, 8); dustFx(p.x, p.z, 8);
+    flash(p.x, 4, p.z, col, 200, .8); if (near) { whiteFx = 1; shake(1); } sfx('explosion_big'); sfx('smash');
+  }, 1600);
 }
 // a boss arrives: its summoning circle spreads over the floor, the ground cracks and shakes harder and harder, power
 // streams in from all round, then it rises out of the ground (or comes down out of a vortex in the sky)
@@ -296,6 +348,8 @@ function bossArrive(e) {
   for (let i = 0; i < 3; i++) setTimeout(() => { ringFx(e.x, .3 + i * .6, e.z, 6 + i * 5, i % 2 ? 0xffffff : col, .5); }, i * 110);
   boomFx(e.x, 1, e.z, 4, col, .8); dustFx(e.x, e.z, 6); debrisFx(e.x, .6, e.z, 14, 'earth__pebble', 0x5a4a3a, .45, 12); scarFx(e.x, e.z, 5, col, 4);
   flash(e.x, 4, e.z, col, 160, .6); shake(clamp(1 - distTo(e.x, e.z) / 50, .2, .9)); sfx('ring'); sfx('smash');
+  if (distTo(e.x, e.z) < 50) whiteFx = .7; pillarFx(e.x, 0, e.z, 4, 40, col, .9); burst(e.x, 3, e.z, 120, col, 16, .3, .9, 3);
+  for (let i = 0; i < 12; i++) { const a = i * TAU / 12; arcFx(V(e.x, 3, e.z), V(e.x + Math.cos(a) * rand(6, 11), .1, e.z + Math.sin(a) * rand(6, 11)), i % 2 ? 0xffffff : col, 6); }
   banner(name, '#' + new THREE.Color(col).getHexString(), 2800);
 }
 // a boss dies: it reels, sinks to its knees with light splitting out of it, then bursts apart (about 2.4 s)
@@ -309,13 +363,19 @@ function bossDeath(v) {
     for (const m of v.mats) { m.m.emissive.setHex(col).lerp(white, u * .6); m.m.emissiveIntensity = 1 + u * 4; }
     if (!blown && Math.random() < .8) { const a = rand(0, TAU); emit(p0.x + Math.cos(a) * R, p0.y + rand(.3, h), p0.z + Math.sin(a) * R, Math.cos(a) * rand(1, 4), rand(2, 6), Math.sin(a) * rand(1, 4), Math.random() < .4 ? 0xffffff : col, rand(.15, .35), rand(.4, .8), -1); }
     if (!blown && k > .45 && Math.random() < .12) { flash(p0.x, h * .6, p0.z, col, 50, .15); shake(.15); }
+    if (!blown && k > .15 && Math.random() < .2 + u * .6) { const a = rand(0, TAU), b = rand(-.3, .9), L = rand(6, 14) * (.5 + u), c = V(p0.x, h * .55, p0.z); beamFx(c, V(c.x + Math.cos(a) * Math.cos(b) * L, c.y + Math.sin(b) * L, c.z + Math.sin(a) * Math.cos(b) * L), Math.random() < .5 ? 0xffffff : col, .1 + u * .25, .25); } // light splitting out of it
+    if (!blown && Math.random() < u) arcFx(V(p0.x + rand(-R, R), h * rand(.2, .9), p0.z + rand(-R, R)), V(p0.x + rand(-R, R) * 2, .1, p0.z + rand(-R, R) * 2), col);
     if (!blown && k >= .62) { // the burst
       blown = true; const c = V(p0.x, h * .5, p0.z);
       boomFx(c.x, c.y, c.z, 4 + R * 2, col, 2); pillarFx(p0.x, 0, p0.z, R * 1.4 + 1, 34, col, 1.2); pillarFx(p0.x, 0, p0.z, R * .6 + .5, 40, 0xffffff, .8);
       ringFx(p0.x, .15, p0.z, 14, col, .9); ringFx(p0.x, .2, p0.z, 9, 0xffffff, .6);
       burst(c.x, c.y, c.z, 220, col, 14, .35, 1.2, 4); burst(c.x, c.y, c.z, 80, 0xffffff, 10, .25, .8, 2);
       debrisFx(c.x, c.y, c.z, 16, 'earth__pebble', 0x3a2a2a, .45, 12); scarFx(p0.x, p0.z, 5 + R, col, 8); smokeFx(p0.x, 1, p0.z, 4, 0x2a2026, 3, 10, 1.6);
-      flash(c.x, c.y, c.z, col, 140, 1); shake(1); sfx('explosion_big');
+      flash(c.x, c.y, c.z, col, 220, 1.2); shake(1); sfx('explosion_big'); if (distTo(p0.x, p0.z) < 50) whiteFx = 1.2;
+      for (let i = 0; i < 5; i++) setTimeout(() => ringFx(p0.x, .3 + i * 1.2, p0.z, 12 + i * 7, i % 2 ? 0xffffff : col, .9), i * 100);
+      for (let i = 0; i < 14; i++) { const a = i * TAU / 14; arcFx(V(c.x, c.y, c.z), V(p0.x + Math.cos(a) * rand(8, 15), .1, p0.z + Math.sin(a) * rand(8, 15)), i % 2 ? 0xffffff : col, 7); }
+      addFx(new THREE.Group(), 3, (o, k) => { for (let i = 0; i < 4; i++) emit(p0.x + rand(-.6, .6), h * .5 + k * 22 + rand(-1, 1), p0.z + rand(-.6, .6), rand(-.5, .5), rand(1, 3), rand(-.5, .5), i ? col : 0xffffff, rand(.3, .6) * (1 - k * .6), .8, -1); }); // its soul climbing away
+      banner(`${(tp.name || 'The Obsidian Tyrant').toUpperCase()} HAS FALLEN`, '#' + new THREE.Color(col).getHexString(), 3200);
     }
     for (const m of v.mats) if (m.m.userData.dis) m.m.userData.dis.value = k < .62 ? .02 : .05 + (k - .62) / .38 * .95;
     if (k >= .62) o.scale.setScalar(v.sc * (1 + (k - .62) * 1.5));
@@ -400,9 +460,12 @@ function onEvent(e) {
       if (ET[v.type]?.boss) { // a boss's blow lands with a shockwave, a flash of its colour and the ground shaking
         const p = v.g.position, col = bossCol(v.type), fy = v.g.rotation.y, R = ET[v.type].r * v.sc, heavy = e.a === 'smash' || e.a === 'slam' || e.a === 'spikes';
         const x = p.x + Math.sin(fy) * R * (heavy ? 1.2 : .3), z = p.z + Math.cos(fy) * R * (heavy ? 1.2 : .3);
-        ringFx(x, .12, z, heavy ? 5 : 3.5, col, .45); flash(x, 1.5, z, col, 45, .3);
-        if (heavy) { dustFx(x, z, 2.2); debrisFx(x, .4, z, 8, 'earth__pebble', 0x6a5a4a, .35, 9); scarFx(x, z, 2.2, col, 3); }
-        shake(clamp(.35 - distTo(x, z) * .012, 0, .3));
+        ringFx(x, .12, z, heavy ? 7 : 4.5, col, .5); ringFx(x, .2, z, heavy ? 4 : 2.6, 0xffffff, .3); flash(x, 1.5, z, col, 70, .35);
+        burst(x, 1, z, heavy ? 60 : 30, col, heavy ? 12 : 8, .22, .5, 6); burst(x, 1, z, 16, 0xffffff, 10, .14, .3, 4);
+        for (let i = 0; i < (heavy ? 4 : 2); i++) { const a = rand(0, TAU), L = rand(2, 5); arcFx(V(x, .3, z), V(x + Math.cos(a) * L, .1, z + Math.sin(a) * L), col); } // crackling along the floor
+        if (heavy) { dustFx(x, z, 3); debrisFx(x, .4, z, 12, 'earth__pebble', 0x6a5a4a, .4, 11); scarFx(x, z, 3, col, 4); pillarFx(x, 0, z, 1.6, 7, col, .35); }
+        if (distTo(x, z) < 10) whiteFx = Math.max(whiteFx, heavy ? .25 : .12);
+        shake(clamp(.5 - distTo(x, z) * .015, 0, heavy ? .5 : .3));
       }
       break;
     }
@@ -414,7 +477,7 @@ function onEvent(e) {
     case 'dodge':
       if (e.id === myId) { banner('PERFECT DODGE', '#8ae8ff', 1000); dodgeFx = .6; sfx('dodge'); const m = me(); if (m) m.dcd = 0; }
       break;
-    case 'enrage': { const t = ET[views.e.get(e.id)?.type]; banner((t?.p2 || `${t?.name || 'The Tyrant'} is enraged`).toUpperCase(), '#ff5a3a', 3200); shake(.6); sfx('ring'); break; }
+    case 'enrage': { const v = views.e.get(e.id), t = ET[v?.type]; banner((t?.p2 || `${t?.name || 'The Tyrant'} is enraged`).toUpperCase(), '#' + new THREE.Color(bossCol(v?.type)).getHexString(), 3600); if (v && t?.boss) bossTransform(v); else { shake(.6); sfx('ring'); } break; }
     case 'decree': { banner('KNEEL BEFORE THE TYRANT!', '#ff7a3a', 1600); sfx('ring'); const v = views.e.get(e.id); if (v) bossWind(v, 'decree', e.d); break; }
     case 'bossin': bossIntro(e); break; // a boss's entrance
     case 'bossup': bossArrive(e); break;
@@ -591,11 +654,22 @@ const CASTS = { orb: 0x40ff70, volley: 0x40ff70, hex: 0x40ff90, mend: 0x80ffb0 }
 // bosses on top of the usual rig: heavy footfalls, a smouldering aura, energy pouring into them as they wind up
 function bossAnim(v, e, dt, t, w0, walk, frozen) {
   const tp = ET[e.type], pos = v.g.position, col = bossCol(e.type), h = tp.h * v.sc, r = tp.r * v.sc, f = v.g.rotation.y;
+  v.e = e; if (!v.aura) v.aura = bossAura(v, e.id);
+  v.en ||= e.hp < e.max * .5; // phase two
+  const beat = Math.max(0, Math.sin(t * (v.en ? 5.5 : 2.6))) ** 6; v.pulse = 1 + beat * (v.en ? .7 : .35) + (v.tf > 0 ? v.tf * 1.5 : 0); // a heartbeat of light through it
+  if (v.tf > 0) { v.tf -= dt; pos.x += rand(-.12, .12) * v.tf; pos.z += rand(-.12, .12) * v.tf; } // shaking itself apart into its new form
   if (frozen) return;
-  if (Math.random() < .35) emit(pos.x + rand(-r, r), pos.y + rand(0, h * .6), pos.z + rand(-r, r), rand(-.2, .2), rand(.6, 1.6), rand(-.2, .2), col, rand(.08, .16), rand(.6, 1), -.4); // its power smoulders off it
+  for (let i = 0; i < (v.en ? 2 : 1); i++) if (Math.random() < .5) emit(pos.x + rand(-r, r), pos.y + rand(0, h * .6), pos.z + rand(-r, r), rand(-.2, .2), rand(.6, 1.6), rand(-.2, .2), col, rand(.08, .16), rand(.6, 1), -.4); // its power smoulders off it
+  for (let i = 0; i < 3; i++) { // motes of its power circling it, leaving ribbons
+    const a = t * (v.en ? 2.6 : 1.4) + i * TAU / 3, rr = r * 1.7 + .6, y = pos.y + h * (.35 + .25 * Math.sin(t * 1.7 + i * 2));
+    emit(pos.x + Math.cos(a) * rr, y, pos.z + Math.sin(a) * rr, 0, .15, 0, i ? col : 0xffffff, v.en ? .24 : .17, .45);
+  }
+  if (v.en && Math.random() < dt * 5) { const a = rand(0, TAU), q = V(pos.x + Math.cos(a) * r * 2.2, .1, pos.z + Math.sin(a) * r * 2.2); arcFx(V(pos.x + rand(-r, r) * .5, pos.y + h * rand(.3, .9), pos.z + rand(-r, r) * .5), q, Math.random() < .3 ? 0xffffff : col); emit(q.x, .2, q.z, 0, 2, 0, 0xffffff, .3, .25); } // power arcing off it to the floor
+  if (v.en && Math.random() < .4) emit(pos.x + rand(-r, r) * 1.6, .1, pos.z + rand(-r, r) * 1.6, 0, rand(2, 5), 0, col, rand(.1, .2), .6, -1); // the floor smoking under it
   const step = Math.floor(v.ph / Math.PI); // a footfall every half stride: dust, and the ground shakes when it's near
-  if (step !== v.step && walk > .3) { const d = distTo(pos.x, pos.z), side = step % 2 ? 1 : -1;
-    dustFx(pos.x + Math.cos(f) * r * .5 * side, pos.z - Math.sin(f) * r * .5 * side, .6 + r * .25); if (d < 18) shake(.05 * (1 - d / 18)); }
+  const G = BOSS_GAIT[e.type];
+  if (step !== v.step && walk > .3 && !G?.float && e.vs !== 'sky') { const d = distTo(pos.x, pos.z), side = step % 2 ? 1 : -1, fx = pos.x + Math.cos(f) * r * .5 * side, fz = pos.z - Math.sin(f) * r * .5 * side;
+    dustFx(fx, fz, .6 + r * .25); if (G?.quake) { ringFx(fx, .1, fz, r * 1.2, 0xb8a890, .35); debrisFx(fx, .2, fz, 3, 'earth__pebble', 0x6a5a4a, .2, 4); } if (d < 22) shake((G?.quake ?? .05) * (1 - d / 22)); }
   v.step = step;
   if (w0 > 0) { // energy streams in from all round while it winds up, faster as the blow nears
     const up = HANDS_UP.has(v.ak), mouth = MOUTH.has(v.ak), fx = Math.sin(f), fz = Math.cos(f);
@@ -613,7 +687,7 @@ function animEnemy(v, e, dt, t) {
   v.last = pos.clone(); v.spd += (Math.min(sp, 20) - v.spd) * Math.min(1, dt * 8);
   const frozen = e.ts || (e.cc && ['freeze', 'stasis', 'encase'].includes(e.cc));
   const walk = frozen ? 0 : clamp(v.spd / (tp.spd * 1.1), 0, 1.6);
-  if (!frozen) v.ph += dt * (3 + v.spd * 1.7);
+  if (!frozen) v.ph += dt * (3 + v.spd * 1.7) * (BOSS_GAIT[e.type]?.rate ?? 1);
   v.flinch = Math.max(0, v.flinch - dt * 6); v.strike = Math.max(0, v.strike - dt * 3.2);
   // turning: lean into it
   const yr = v.ly == null ? 0 : Math.atan2(Math.sin(g.rotation.y - v.ly), Math.cos(g.rotation.y - v.ly)) * ID; v.ly = g.rotation.y;
@@ -668,6 +742,51 @@ function animEnemy(v, e, dt, t) {
   set('staff', -wind * (ak === 'hex' || ak === 'volley' ? 1.6 : .8) + str * .5, 0, Math.sin(t * 2) * .1);
   set('eye', 0, Math.sin(t * 1.3 + e.id) * .25, 0);
   if (P.fuse) { P.fuse.o.scale.setScalar(1 + w0 * (1 + Math.sin(t * 40)) * .6); }
+  if (BOSS_GAIT[e.type]) bossGait(v, e, t, walk, wind, BOSS_GAIT[e.type]);
+}
+// each boss moves its own way (on top of the shared rig, fading out while it attacks):
+// rate: stride speed, stride/arm/twist: how far legs, arms and shoulders swing, bob: how hard it drops onto each foot,
+// roll: side-to-side sway, hunch: leaning into the walk, tail/wing/spine: those swinging with it, float: it glides instead
+const BOSS_GAIT = {
+  boss:       { rate: .8,  stride: .35, bob: .14, roll: .05, twist: .14, arm: .25, hunch: .06, quake: .1 },   // an armoured march, the greatsword carried
+  frostgiant: { rate: .62, stride: .3,  bob: .22, roll: .12, twist: .08, arm: .7,  hunch: .2,  quake: .14, dangle: .35 }, // lumbering, arms swinging low
+  pitlord:    { rate: .72, stride: .3,  bob: .18, roll: .08, twist: .18, arm: .5,  hunch: .14, quake: .12, tail: .55, wing: .12 }, // a brute's swagger
+  devourer:   { rate: .7,  stride: .2,  bob: .2,  roll: .14, twist: .22, arm: .6,  hunch: .32, quake: .1,  lurch: 1, dangle: .2 }, // lurching, reaching for you
+  archdemon:  { rate: 1,   stride: .4,  bob: .07, roll: .03, twist: .22, arm: .3,  hunch: -.05, wing: .3 }, // a proud stalk, wings half-spread
+  bonedragon: { rate: .8,  bob: .1, spine: .2, tail: .9, wing: .14, hunch: .06, quake: .08 },               // slinking on four legs, its spine snaking
+  lich:       { float: 1, hover: .22, lean: .22, arm: .25, trail: C_SOUL },
+  frostqueen: { float: 1, hover: .18, lean: .28, arm: .35, trail: 0xe8f8ff },
+  umbra:      { float: 1, hover: .3,  lean: .32, arm: .3,  trail: 0x2a1040, tent: .7 },
+  watcher:    { float: 1, hover: .26, lean: .18, trail: 0x6a2aaa, tent: .5 },
+};
+function bossGait(v, e, t, walk, wind, G) {
+  const P = v.parts, g = v.g, S1 = Math.sin(v.ph), C1 = Math.cos(v.ph), k = walk * (1 - wind * .8), sc = v.sc;
+  const add = (n, x = 0, y = 0, z = 0) => { const p = P[n]; if (p) { p.o.rotation.x += x; p.o.rotation.y += y; p.o.rotation.z += z; } };
+  if (G.float) { // gliding: a slow hover, leaning into where it's going, robes / tentacles streaming back, a trail behind it
+    g.position.y += (Math.sin(t * 1.6 + e.id) * .5 + .5) * G.hover * sc * (e.y > .5 ? 0 : 1);
+    g.rotation.x += G.lean * k; g.rotation.z += Math.sin(t * 1.1 + e.id) * .04;
+    add('body', Math.sin(t * 2 + e.id) * .04, Math.sin(t * .9) * .06);
+    add('armL', -G.arm * .5 * k, 0, G.arm * (.4 + .2 * Math.sin(t * 1.7))); add('armR', -G.arm * .5 * k, 0, -G.arm * (.4 + .2 * Math.sin(t * 1.7 + 1)));
+    add('staff', .2 * k + Math.sin(t * 1.4) * .08);
+    for (let i = 0; i < 6; i++) add('tent' + i, -(G.tent || 0) * k + Math.sin(t * 3 + i * 1.1) * .15 * walk);
+    if (walk > .2 && Math.random() < walk * .8) { const p = g.position, f = g.rotation.y; emit(p.x - Math.sin(f) * .8 * sc + rand(-.4, .4), p.y + rand(.1, .6), p.z - Math.cos(f) * .8 * sc + rand(-.4, .4), 0, rand(.2, .8), 0, G.trail, rand(.15, .3), rand(.6, 1), -.3); }
+    return;
+  }
+  // walking: drop hard onto each foot, sway over it, shoulders twisting against the hips
+  g.position.y += G.bob * sc * k * (Math.abs(S1) - .3);
+  g.rotation.z += S1 * (G.roll || 0) * k + (G.lurch ? Math.sin(v.ph * .5 + 1) * .1 * k : 0);
+  g.rotation.x += (G.hunch || 0) * k + (G.lurch ? Math.abs(Math.sin(v.ph * .5)) * .1 * k : 0);
+  add('body', Math.abs(S1) * .05 * k, S1 * (G.twist || 0) * k + Math.sin(v.ph) * (G.spine || 0) * k);
+  add('head', -Math.abs(C1) * .08 * k - (G.hunch || 0) * .5 * k, -S1 * (G.twist || G.spine || 0) * 1.1 * k);
+  add('legL', S1 * (G.stride || 0) * k); add('legR', -S1 * (G.stride || 0) * k);
+  add('armL', -S1 * (G.arm || 0) * k, 0, (G.dangle || 0) * k); add('armR', S1 * (G.arm || 0) * k, 0, -(G.dangle || 0) * k);
+  add('weapon', S1 * .12 * k);
+  add('tail', Math.sin(v.ph * 2) * .1 * k, Math.sin(v.ph + 1) * (G.tail || 0) * (.4 + k));
+  if (G.spine) for (let i = 0; i < 4; i++) add('leg' + i, Math.sin(v.ph + (i % 2 ? Math.PI : 0) + (i > 1 ? Math.PI / 2 : 0)) * .25 * k); // longer reach on all fours
+  if (P.wingL) { // big wings beat slowly (the shared rig flaps them like an insect's), and properly when it flies
+    const sky = e.vs === 'sky' || e.y > 1.5, a = sky ? Math.sin(t * 5) * .9 : Math.sin(t * 1.8 + e.id) * G.wing + S1 * G.wing * .5 * k;
+    P.wingL.o.rotation.z = P.wingL.r.z + a; P.wingR.o.rotation.z = P.wingR.r.z - a;
+  }
 }
 let linkPool = [];
 function renderEnemies(src, dt, t, a) {
@@ -686,7 +805,7 @@ function renderEnemies(src, dt, t, a) {
       else if (grey) { m.m.emissive.setRGB(.5, .45, .3); m.m.emissiveIntensity = .5; }
       else if (fz || (e.st || []).includes(1)) { m.m.emissive.copy(m.c).lerp(ICE_TINT, .6); m.m.emissiveIntensity = Math.max(m.i, .8); }
       else if (e.a > 0) { m.m.emissive.copy(m.c).lerp(WARN_TINT, e.a * .45); m.m.emissiveIntensity = m.i + e.a * .8; }
-      else { m.m.emissive.copy(m.c); m.m.emissiveIntensity = m.i; }
+      else { m.m.emissive.copy(m.c); m.m.emissiveIntensity = m.i * (v.pulse || 1); if (v.en) m.m.emissive.lerp(_hot.set(bossCol(v.type)), .3); }
     }
     // crowd-control overlays
     const h = tp.h * e.sc, r = tp.r * e.sc;
@@ -957,7 +1076,14 @@ function hud(src, mp) {
   $('wave').textContent = src.mode === 'dungeon' && U ? `Floor ${U.floor}` : src.mode === 'duel' && D ? `Round ${D.round} · ${D.wins[myId]} – ${D.wins[opp]}` : src.phase === 'travel' ? `Cross the bridge to ${AREAS[(src.br.k + 1) % 5].name}` : src.phase === 'rest' ? `Wave ${src.wave + 1} incoming` : src.wave ? `Wave ${src.wave}` : '';
   const boss = src.enemies.find(e => ET[e.type].boss);
   $('boss').classList.toggle('hidden', !boss);
-  if (boss) { $('bossHp').style.width = Math.max(0, boss.hp / boss.max * 100) + '%'; $('boss').firstChild.textContent = (ET[boss.type].name || 'The Obsidian Tyrant').toUpperCase(); }  if (src.mode === 'dungeon' && U) $('mod').textContent = U.wait ? 'Waiting for your partner on the stairs' : U.st.includes(1) ? 'Monsters are hunting you' : U.stairs ? 'The way down is open: take the stairs' : `Explore · ${U.st.filter(s => s === 2).length - 1}/${U.st.length - 1} chambers cleared`;
+  if (boss) {
+    const f = Math.max(0, boss.hp / boss.max), B = $('boss'), now = performance.now(), dt = Math.min(.1, (now - (hud.lt || now)) / 1000); hud.lt = now;
+    if (hud.bossT !== boss.type) { hud.bossT = boss.type; hud.chip = f; B.firstChild.textContent = (ET[boss.type].name || 'The Obsidian Tyrant').toUpperCase(); B.style.setProperty('--bc', '#' + new THREE.Color(bossCol(boss.type)).getHexString()); B.style.textShadow = `0 0 14px var(--bc), 0 0 30px var(--bc)`; }
+    if (f < (hud.bossF ?? f) - .002) { B.classList.remove('hit'); void B.offsetWidth; B.classList.add('hit'); hud.chipW = .5; } // shudders when it's hit
+    hud.bossF = f; hud.chipW = Math.max(0, (hud.chipW || 0) - dt); if (hud.chipW <= 0) hud.chip = Math.max(f, (hud.chip ?? f) - dt * .35);
+    $('bossHp').style.width = f * 100 + '%'; $('bossChip').style.width = Math.max(f, hud.chip) * 100 + '%';
+    B.classList.toggle('p2', f < .5); $('bossSub').textContent = f < .5 ? '— PHASE II —' : '— BOSS —';
+  } else hud.bossT = null;  if (src.mode === 'dungeon' && U) $('mod').textContent = U.wait ? 'Waiting for your partner on the stairs' : U.st.includes(1) ? 'Monsters are hunting you' : U.stairs ? 'The way down is open: take the stairs' : `Explore · ${U.st.filter(s => s === 2).length - 1}/${U.st.length - 1} chambers cleared`;
   $('downMsg').classList.toggle('hidden', !sp.down || src.phase === 'over');
   if (sp.down) $('downMsg').textContent = other && !other.down ? `YOU ARE DOWN · revive ${Math.round(sp.rev * 100)}%` : 'YOU ARE DOWN';
   $('lock').classList.toggle('hidden', locked() || usingVirt());

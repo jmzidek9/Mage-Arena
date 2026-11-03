@@ -393,7 +393,7 @@ function addFx(obj, life, update, parent = scene) { parent.add(obj); fx.push({ o
 function stepFx(dt) {
   for (let i = fx.length - 1; i >= 0; i--) {
     const f = fx[i]; f.t += dt; const k = f.t / f.life;
-    if (k >= 1) { f.obj.removeFromParent(); fx.splice(i, 1); continue; }
+    if (k >= 1 || f.obj.userData.done) { f.obj.removeFromParent(); fx.splice(i, 1); continue; } // done: ended early by its owner
     f.update(f.obj, k, dt);
   }
 }
