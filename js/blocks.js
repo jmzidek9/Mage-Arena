@@ -40,6 +40,8 @@ function guardHit(p, n, foe, from) {
 }
 
 // ===================== on screen =====================
+// my own block is drawn straight from the key (online, the host's word on it arrives a ping late)
+const myGuard = p => !!(keys[BIND.block] || virt.b) && !p.down && !(p.gk > 0) && playing;
 // The block is cast like a spell: the element's own casting circle (outer and inner rings, sigil) spins up in front of the
 // raised hand, with its signature piece (a frost wall, a bone cage, a spirit knight...) inside it. Others see it in front of
 // your wizard; a block that covers every side is a bubble round you.
@@ -78,14 +80,14 @@ function guardMake(el) {
 function guardFrame(src, dt, t) {
   const live = new Set();
   for (const p of Object.values(src?.players || {})) {
-    const on = !!p.gd && !p.down, id = p.id; let v = GV.get(id);
+    const id = p.id, on = (id === myId ? myGuard(p) : !!p.gd) && !p.down; let v = GV.get(id);
     if (!on && !v) continue;
     if (v && v.el !== p.cur) { v.g.removeFromParent(); GV.delete(id); v = null; }
     if (!v) { v = guardMake(p.cur); GV.set(id, v); }
     live.add(id);
-    v.a += ((on ? 1 : 0) - v.a) * Math.min(1, dt * (on ? 14 : 8)); v.hit = Math.max(0, v.hit - dt * 4);
+    v.a += ((on ? 1 : 0) - v.a) * Math.min(1, dt * (on ? 14 : 30)); v.hit = Math.max(0, v.hit - dt * 4); // gone almost the moment you let go
     v.kv += (-90 * v.kp - 11 * v.kv) * dt; v.kp += v.kv * dt; // the recoil: a stiff spring, knocked back and wobbling home
-    if (v.a < .02 && !on) { v.g.removeFromParent(); GV.delete(id); continue; }
+    if (v.a < .1 && !on) { v.g.removeFromParent(); GV.delete(id); continue; }
     const mine = id === myId, k = v.a, hp = p.gm ? clamp(p.gh / p.gm, 0, 1) : 1;
     const kp = v.kp, punch = 1 + Math.max(-.15, -kp * .5) + v.hit * .06; // squashed by the blow, then a bounce back
     if (mine && !v.omni) { if (v.g.parent !== camera) camera.add(v.g); v.g.position.set(-.16 + Math.sin(v.tilt) * kp * .08, -.2 - kp * .05, -1.3 + kp * .3); v.g.rotation.set(kp * .45, -v.tilt * kp * 1.2, Math.sin(v.tilt) * kp * .3); v.g.scale.setScalar(.42 * (.6 + .4 * k) * punch); }
@@ -155,4 +157,4 @@ function guardEv(e) {
 }
 // the first-person hand: the left hand thrown up, palm out, while the block is held
 let guardHand = 0, guardJolt = 0; // jolt: the hand knocked back by a blow on the shield
-function guardPose(mp, dt) { guardHand += ((mp?.gd ? 1 : 0) - guardHand) * Math.min(1, dt * 12); guardJolt = Math.max(0, guardJolt - dt * 5); return guardHand - guardJolt * .45 * guardHand; }
+function guardPose(mp, dt) { const on = mp && myGuard(mp); guardHand += ((on ? 1 : 0) - guardHand) * Math.min(1, dt * (on ? 12 : 24)); guardJolt = Math.max(0, guardJolt - dt * 5); return guardHand - guardJolt * .45 * guardHand; }

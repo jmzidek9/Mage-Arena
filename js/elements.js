@@ -1313,19 +1313,19 @@ chrono: {
 // ================================================================== BLOOD
 blood: {
   name: 'Blood', color: 0xe8102e, glyph: '🩸', adj: 'BLEEDING', react: { name: 'HEMORRHAGE', kind: 'drain' },
-  blurb: 'Power at a price. Spend your own health for brutal damage, and drink it back from your enemies.',
-  passive: 'Bloodlust: heal for 2.5% of damage dealt, and hit up to 50% harder the lower your health. Blood moves cost HP. Bleeding enemies feed you.',
+  blurb: 'Brutal damage that grows the lower your health gets. Make enemies bleed, pile them up and rip them open.',
+  passive: 'Bloodlust: heal for 2.5% of damage dealt, and hit up to 50% harder the lower your health. Bleeding enemies feed you.',
   st: { dot: 6, leech: .1 },
   moves: [
-    { name: 'Blood Bolt', icon: '🩸', cd: .4, cost: () => 1.5, desc: 'Costs 1.5 HP. A fast bolt of blood magic that hits hard.',
+    { name: 'Blood Bolt', icon: '🩸', cd: .4, desc: 'A fast bolt of blood magic that hits hard.',
       cast(p, c) { for (let k = 0; k < c.multi; k++) shoot(p, c, 38, { d: spread(c.d, k, c.multi), r: .3, dmg: 21 * c.dmg, sc: c.mega ? 1.8 : 1 }); },
       look: { m: 'blood__bolt', trail: [0xff2040, .18, .35, 2, 2], light: 5 },
       fx: { det: e => boomFx(e.x, e.y, e.z, 2.5, 0xe8102e, .6), nova: e => boomFx(e.x, .5, e.z, 4.5, 0xe8102e, .8) } },
-    { name: 'Crimson Fan', icon: '🌙', cd: 3.5, cost: () => 4, desc: 'Costs 4 HP. Fling a fan of five blood blades that slice through everything in front of you, 16 damage each, and make enemies bleed. Up close, every blade lands.',
+    { name: 'Crimson Fan', icon: '🌙', cd: 3.5, desc: 'Fling a fan of five blood blades that slice through everything in front of you, 16 damage each, and make enemies bleed. Up close, every blade lands.',
       cast(p, c) { for (let i = 0; i < 5; i++) shoot(p, c, 30, { d: spread(c.d, i, 5, .16), r: .7, life: .5, pierce: 99, dmg: 16 * c.dmg, kb: 1.5 }); },
       look: { m: 'blood__scythe', s: .55, spin: [0, 14, 0], trail: [0xff2040, .22, .3, 2, 2], light: 3 },
       fx: {} },
-    { name: 'Exsanguinate', icon: '💉', cd: 8, cost: () => 6, desc: 'Costs 6 HP. Rip open every bleeding enemy within 20 m: 30 damage plus 12 for every second of bleed left on it, and the bleed is used up. Enemies it kills burst, making everything around them bleed. Enemies within 8 m that were not bleeding take 15 and start bleeding.',
+    { name: 'Exsanguinate', icon: '💉', cd: 8, desc: 'Rip open every bleeding enemy within 20 m: 30 damage plus 12 for every second of bleed left on it, and the bleed is used up. Enemies it kills burst, making everything around them bleed. Enemies within 8 m that were not bleeding take 15 and start bleeding.',
       cast(p, c) {
         const R = 20 * c.st.aoe, rip = [];
         for (const e of enemiesNear(p.x, p.z, R)) {
@@ -1347,7 +1347,7 @@ blood: {
         }
         if (e.at.length) shake(.15);
       } } },
-    { name: 'Crimson Mire', icon: '🩸', cd: 9, cost: () => 5, mode: 'aim', range: 20, aimR: 4.5, desc: 'Costs 5 HP. Splash a pool of blood on the ground for 4 seconds. It drags enemies toward its centre and makes them bleed, 10 damage every half second. Pile them up, then Exsanguinate.',
+    { name: 'Crimson Mire', icon: '🩸', cd: 9, mode: 'aim', range: 20, aimR: 4.5, desc: 'Splash a pool of blood on the ground for 4 seconds. It drags enemies toward its centre and makes them bleed, 10 damage every half second. Pile them up, then Exsanguinate.',
       cast(p, c) { ent(p, c, c.tgt.x, c.tgt.z, { life: 4, r: 4.5 * c.st.aoe }); fxe(c.m.key, 'splash', { x: c.tgt.x, z: c.tgt.z, r: 4.5 * c.st.aoe }); },
       ent: { tick(n, dt) {
         const p = own(n);

@@ -250,19 +250,19 @@ Master of time. Echoing attacks, frozen moments, rewinding your enemies, and sto
 | R | ⏱️ **Time Stop** | ultimate | Stop time for 4 seconds. Enemies freeze, and all the damage you deal piles up and lands 50% stronger when time resumes. |
 
 ## 🩸 Blood
-Power at a price. Spend your own health for brutal damage, and drink it back from your enemies.
+Brutal damage that grows the lower your health gets. Make enemies bleed, pile them up and rip them open.
 
-**Passive.** Bloodlust: heal for 2.5% of damage dealt, and hit up to 50% harder the lower your health. Blood moves cost HP. Bleeding enemies feed you.
+**Passive.** Bloodlust: heal for 2.5% of damage dealt, and hit up to 50% harder the lower your health. Bleeding enemies feed you.
 
 | Key | Move | Cooldown | What it does |
 |---|---|---|---|
-| LMB | 🩸 **Blood Bolt** | 0.4 s | Costs 1.5 HP. A fast bolt of blood magic that hits hard. |
-| RMB | 🌙 **Crimson Fan** | 3.5 s | Costs 4 HP. Fling a fan of five blood blades that slice through everything in front of you, 16 damage each, and make enemies bleed. Up close, every blade lands. |
-| Q | 💉 **Exsanguinate** | 8 s | Costs 6 HP. Rip open every bleeding enemy within 20 m: 30 damage plus 12 for every second of bleed left on it, and the bleed is used up. Enemies it kills burst, making everything around them bleed. Enemies within 8 m that were not bleeding take 15 and start bleeding. |
-| E | 🩸 **Crimson Mire** | 9 s | Costs 5 HP. Aimed. Splash a pool of blood on the ground for 4 seconds. It drags enemies toward its centre and makes them bleed, 10 damage every half second. Pile them up, then Exsanguinate. |
+| LMB | 🩸 **Blood Bolt** | 0.4 s | A fast bolt of blood magic that hits hard. |
+| RMB | 🌙 **Crimson Fan** | 3.5 s | Fling a fan of five blood blades that slice through everything in front of you, 16 damage each, and make enemies bleed. Up close, every blade lands. |
+| Q | 💉 **Exsanguinate** | 8 s | Rip open every bleeding enemy within 20 m: 30 damage plus 12 for every second of bleed left on it, and the bleed is used up. Enemies it kills burst, making everything around them bleed. Enemies within 8 m that were not bleeding take 15 and start bleeding. |
+| E | 🩸 **Crimson Mire** | 9 s | Aimed. Splash a pool of blood on the ground for 4 seconds. It drags enemies toward its centre and makes them bleed, 10 damage every half second. Pile them up, then Exsanguinate. |
 | R | 🌕 **Blood Moon** | ultimate | A blood moon rises above you and drains every enemy nearby for 4 seconds. Anything it drains to death bursts, splashing 30 damage on the enemies around it. |
 
-**Rework (2026-11-03):** healing cut (lifesteal 6% to 2.5%, bleeding enemies feed you 10% of the bleed instead of 50%). Blood Scythe, Blood Tether and Blood Orb became Crimson Fan, Exsanguinate and Crimson Mire: make them bleed, pile them up, rip them open. Blood Moon now rises out of the ground into a pulsing halo over a sea of red light, with blood raining up into it.
+**Rework (2026-11-03):** healing cut (lifesteal 6% to 2.5%, bleeding enemies feed you 10% of the bleed instead of 50%). Blood Scythe, Blood Tether and Blood Orb became Crimson Fan, Exsanguinate and Crimson Mire: make them bleed, pile them up, rip them open. Blood moves no longer cost HP. Blood Moon now rises out of the ground into a pulsing halo over a sea of red light, with blood raining up into it.
 
 ## 👻 Spirit
 The summoner. The restless dead, a shrieking banshee, a spectral wolf and an army of ghost knights fight for you.

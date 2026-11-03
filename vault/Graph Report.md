@@ -1,17 +1,17 @@
 # Graph Report - Test Game  (2026-11-03)
 
 ## Corpus Check
-- 33 files · ~226,423 words
+- 33 files · ~226,443 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 2 file(s) not represented in the graph (top: (none) 2)
 
 ## Summary
-- 985 nodes · 2046 edges · 38 communities (34 shown, 4 thin omitted)
+- 986 nodes · 2049 edges · 36 communities (33 shown, 3 thin omitted)
 - Extraction: 93% EXTRACTED · 7% INFERRED · 0% AMBIGUOUS · INFERRED: 144 edges (avg confidence: 0.87)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `7f562ad0`
+- Built from commit: `3af88e58`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -25,7 +25,6 @@
 - Mesh
 - elements.js
 - Elements.md
-- bake_scale
 - Audio credits
 - build_elements.py
 - areas.js
@@ -36,11 +35,10 @@
 - build_enemies.py
 - boltFx
 - addShader
-- TRS
 - part
 - Mage Arena
 - clamp
-- aim
+- TRS
 - renderLobby
 - Elements
 - rand
@@ -82,11 +80,11 @@
 ## Import Cycles
 - None detected.
 
-## Communities (38 total, 4 thin omitted)
+## Communities (36 total, 3 thin omitted)
 
 ### Community 0 - "sim.js"
 Cohesion: 0.06
-Nodes (96): r2(), addUlt(), aimOf(), alive(), aoe(), applyStatus(), blast(), bomberBlast() (+88 more)
+Nodes (99): r2(), addUlt(), aimOf(), alive(), aoe(), applyStatus(), blast(), bomberBlast() (+91 more)
 
 ### Community 1 - "core.js"
 Cohesion: 0.02
@@ -101,32 +99,32 @@ Cohesion: 0.05
 Nodes (40): BOSS_COL, BOSS_GAIT, buildBar(), CASTS, CC_OV, COMBO_FX, DIFF, ELMETA (+32 more)
 
 ### Community 4 - "lib.py"
-Cohesion: 0.05
-Nodes (38): digit(), finger(), fist(), limb(), open_hand(), palm(), sleeve(), build_crypt() (+30 more)
+Cohesion: 0.07
+Nodes (31): build_crypt(), branch(), gravestone(), build_frost(), rim(), build_hell(), rim(), build_void() (+23 more)
 
 ### Community 5 - "net.js"
 Cohesion: 0.10
 Nodes (36): applySettings(), autoQuality(), bfSnap(), bgTick(), BIND_NAMES, CHEAT_TOGGLES, cheatSpawn(), dropGuest() (+28 more)
 
 ### Community 6 - "Mesh"
-Cohesion: 0.12
-Nodes (9): spell_circle(), part(), bridge(), bridge_gate(), bridge_pier(), bridge_post(), horn_(), area() (+1 more)
+Cohesion: 0.13
+Nodes (7): spell_circle(), bridge(), bridge_gate(), bridge_pier(), bridge_post(), horn_(), Mesh
 
 ### Community 7 - "elements.js"
 Cohesion: 0.05
-Nodes (35): energyMat(), flameMat(), model(), aimBeam(), beamFx(), beamMesh(), _bgeo, blastFx() (+27 more)
+Nodes (34): energyMat(), model(), aimBeam(), beamFx(), beamMesh(), _bgeo, blastFx(), boomAt() (+26 more)
 
 ### Community 8 - "Elements.md"
 Cohesion: 0.07
-Nodes (26): Blender Assets, Finishing pass, Combos (reactions), Named reactions, Reaction kinds (for every other pair), Enemies, Fighting them, Wave budget (+18 more)
+Nodes (23): Blender Assets, Finishing pass, Enemies, Fighting them, Wave budget, Wave modifiers, Cross-platform, Known ceilings (`ponytail:` comments in the code) (+15 more)
 
 ### Community 10 - "Audio credits"
 Cohesion: 0.33
 Nodes (5): Audio credits, Music (`audio/music/`), Sound effects (`audio/sfx/`, file names kept from the packs), pickSample(), SFX
 
 ### Community 11 - "build_elements.py"
-Cohesion: 0.13
-Nodes (15): arcpts(), blob_cloud(), crescent(), crescent_blade(), lens(), M(), mirror_shard(), plated_rock() (+7 more)
+Cohesion: 0.08
+Nodes (22): digit(), finger(), fist(), limb(), open_hand(), palm(), sleeve(), arcpts() (+14 more)
 
 ### Community 12 - "areas.js"
 Cohesion: 0.08
@@ -145,24 +143,20 @@ Cohesion: 0.05
 Nodes (73): arenaMat(), arenaObj(), blockAt(), buildCityView(), buildKit(), cboxGeo(), CBX, CITY (+65 more)
 
 ### Community 16 - "build_foes.py"
-Cohesion: 0.13
-Nodes (32): ba_arm(), bd_body(), biped(), arm(), leg(), claws(), cn_arm(), cn_head() (+24 more)
+Cohesion: 0.11
+Nodes (35): ba_arm(), bake_scale(), bd_body(), biped(), arm(), leg(), claws(), cn_arm() (+27 more)
 
 ### Community 17 - "build_enemies.py"
-Cohesion: 0.22
-Nodes (17): arm(), boss_arm(), claws(), dkbody(), ellipsoid(), horn(), kbody(), leg() (+9 more)
+Cohesion: 0.20
+Nodes (18): arm(), claws(), dkbody(), ellipsoid(), horn(), kbody(), leg(), legq() (+10 more)
 
 ### Community 18 - "boltFx"
 Cohesion: 0.27
 Nodes (12): addFx(), boltFx(), circleFx(), easeOut(), easeOutBack(), glowify(), glowMats(), makeCircle() (+4 more)
 
 ### Community 19 - "addShader"
-Cohesion: 0.40
-Nodes (6): addShader(), beamMat(), discMat(), fireMat(), pillarFx(), waveMat()
-
-### Community 20 - "TRS"
-Cohesion: 0.14
-Nodes (16): ba_body(), bwing(), bz_arm(), cn_leg(), eyeball(), gz_body(), ho_arm(), ig_leg() (+8 more)
+Cohesion: 0.33
+Nodes (7): addShader(), beamMat(), discMat(), fireMat(), flameMat(), pillarFx(), waveMat()
 
 ### Community 21 - "part"
 Cohesion: 0.16
@@ -176,9 +170,9 @@ Nodes (3): Knowledge, Mage Arena, Spell icons
 Cohesion: 0.50
 Nodes (4): clamp(), localInput(), pollPad(), setupTouch()
 
-### Community 24 - "aim"
-Cohesion: 0.13
-Nodes (25): barm(), boss_body(), boss_sword(), brute_body(), cn_body(), ft_body(), golem(), hg_ring() (+17 more)
+### Community 24 - "TRS"
+Cohesion: 0.09
+Nodes (41): barm(), boss_arm(), boss_body(), boss_sword(), brute_body(), ba_body(), bwing(), bz_arm() (+33 more)
 
 ### Community 25 - "renderLobby"
 Cohesion: 0.19
@@ -205,8 +199,8 @@ Cohesion: 0.83
 Nodes (4): animEnemy(), bossGait(), heavyGait(), legLen()
 
 ### Community 31 - "blocks.js"
-Cohesion: 0.22
-Nodes (6): BLOCK, BLOCK_LOOK, guardFrame(), guardMake(), guardParticles(), GV
+Cohesion: 0.23
+Nodes (8): BLOCK, BLOCK_LOOK, guardFrame(), guardMake(), guardParticles(), guardPose(), GV, myGuard()
 
 ### Community 32 - "css"
 Cohesion: 0.67
@@ -221,19 +215,19 @@ Cohesion: 0.67
 Nodes (3): grab(), sp(), Conventions
 
 ## Knowledge Gaps
-- **4 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **3 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `Blender Assets` connect `Elements.md` to `grab`, `build_elements.py`, `Mesh`, `elements.js`?**
-  _High betweenness centrality (0.343) - this node is a cross-community bridge._
+  _High betweenness centrality (0.342) - this node is a cross-community bridge._
 - **Are the 14 inferred relationships involving `build_hell()` (e.g. with `rim()` and `cage()`) actually correct?**
   _`build_hell()` has 14 INFERRED edges - model-reasoned connections that need verification._
 - **Should `sim.js` be split into smaller, more focused modules?**
-  _Cohesion score 0.06067961165048544 - nodes in this community are weakly interconnected._
-- **Why does `Mesh` connect `Mesh` to `Elements.md`, `build_elements.py`, `lib.py`, `part`?**
-  _High betweenness centrality (0.235) - this node is a cross-community bridge._
+  _Cohesion score 0.05801445953094692 - nodes in this community are weakly interconnected._
+- **Why does `Mesh` connect `Mesh` to `lib.py`, `Elements.md`, `build_elements.py`, `build_enemies.py`, `part`?**
+  _High betweenness centrality (0.234) - this node is a cross-community bridge._
 - **Should `core.js` be split into smaller, more focused modules?**
   _Cohesion score 0.023255813953488372 - nodes in this community are weakly interconnected._
 - **Why does `r2()` connect `sim.js` to `core.js`, `elements.js`?**
