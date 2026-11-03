@@ -246,6 +246,7 @@ const FOE_FX = {
   gazeflash(e) { flash(e.x, e.y, e.z, 0xffffff, 140, .5); burst(e.x, e.y, e.z, 80, 0xd8aaff, 14, .3, .6); shake(.3); sfx('laser_big'); },
   unward(e) { pillarFx(e.x, 0, e.z, 3, 14, 0xffffff, .7); ringFx(e.x, .2, e.z, 8, 0xffffff, .6); burst(e.x, 2, e.z, 90, 0xffffff, 12, .3, .7); shake(.5); banner('ITS SHIELD BREAKS: STRIKE NOW!', '#ffe08a', 2000); sfx('ring'); },
   eclipse(e) { flash(e.x, 3, e.z, 0x3a1060, 80, .6); smokeFx(e.x, 1, e.z, 4, 0x0a0614, 2, 10, 1.4); banner('THE LIGHT GOES OUT', '#9a6aff', 1600); sfx('shadow_big'); },
+  decree(e) { for (let i = 1; i <= 4; i++) setTimeout(() => ringFx(e.x, .3, e.z, 6 + i * 5, i % 2 ? 0xff5a20 : 0xffffff, .5), i * 60); flash(e.x, 3, e.z, 0xff5a20, 120, .5); shake(.6); sfx('fire_boom'); },
   takeoff(e) { dustFx(e.x, e.z, 5, 0xd8d0b8); ringFx(e.x, .2, e.z, 9, 0xe8dcc0, .6); shake(.4); sfx('swing'); },
   inhale(e) { ringFx(e.x, .2, e.z, 16, 0x7a3aff, 1.2); sfx('abyss_big'); },
   bind(e) { // a chain of soul light snaps from the binder to its ward
@@ -383,6 +384,7 @@ function onEvent(e) {
       if (e.id === myId) { banner('PERFECT DODGE', '#8ae8ff', 1000); dodgeFx = .6; sfx('dodge'); const m = me(); if (m) m.dcd = 0; }
       break;
     case 'enrage': { const t = ET[views.e.get(e.id)?.type]; banner((t?.p2 || `${t?.name || 'The Tyrant'} is enraged`).toUpperCase(), '#ff5a3a', 3200); shake(.6); sfx('ring'); break; }
+    case 'decree': { banner('KNEEL BEFORE THE TYRANT!', '#ff7a3a', 1600); sfx('ring'); const v = views.e.get(e.id); if (v) bossWind(v, 'decree', e.d); break; }
     case 'gaze': { banner('LOOK AWAY!', '#d88aff', 1600); sfx('abyss_big'); const v = views.e.get(e.id); if (v) bossWind(v, 'gaze', e.d); break; }
     case 'ult': if (e.id !== myId) banner(`PARTNER: ${e.name.toUpperCase()}`, css(EL[e.el].color), 1300); else sfx('ult'); break;
     case 'echo': if (e.id === myId) popNum(camera.position.x, camera.position.y + .3, camera.position.z, 'ECHO', '#ffd36a', 'tag'); break;
@@ -543,6 +545,9 @@ const POSE = {
   spin:   { w: [-.2, 0, 0, 0, 0, 0],        s: [0, 0, 0, 0, 0, 0] },
   inhale: { w: [-.5, 0, -.1, 1.5, 1.5, 0],  s: [-.6, 0, -.1, 2, 2, 0] },
   gaze:   { w: [-.4, 0, 0, 0, 0, 0],        s: [0, 0, 0, 0, 0, 0] },
+  shatterline: { w: [-.4, 0, -.05, 2.9, 2.9, 0], s: [.7, 0, .25, -3.2, -3.2, 0] }, // the greatsword two-handed overhead, then driven into the floor
+  decree: { w: [-.3, 0, -.1, 2.6, 2.6, 0], s: [.6, 0, .3, -2.4, -2.4, 0] },
+  sunder: { w: [0, 1.4, .1, .3, 1.8, 0],    s: [0, -2.6, .05, .3, 1.6, 0] },
 };
 // bosses: the colour of their power, for wind-ups, auras and their bigger attack effects
 const BOSS_COL = { boss: 0xff5a20, umbra: 0x9a4cff, warden: 0x5ad8ff, bonedragon: 0x8aff50, frostgiant: 0x9fe6ff, pitlord: 0xff6a1a, devourer: 0xb04cff };

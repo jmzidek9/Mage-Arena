@@ -358,50 +358,76 @@ part(rt, 'ring', body, (0, 0, 0.6), lambda m: (
 ))
 
 # =========================================================== BOSS (the Obsidian Tyrant)
+# A towering knight-king in plate of knapped volcanic glass, molten fire showing through every seam: a crowned, horned
+# great-helm with one burning slit, a ragged royal cape, an obsidian greatsword with a molten edge, a halo of shards.
 rt = root('boss', 5.6)
+royal = mat('tyrant_cape', (0.3, 0.03, 0.05), rough=0.85)
+royal2 = mat('tyrant_cape_lining', (0.08, 0.02, 0.04), rough=0.9)
+glass = mat('tyrant_glass', (0.05, 0.035, 0.07), rough=0.1, metal=0.5)
 def boss_body(m):
-    m.ico(magma, 1.0, TRS((0, 0, 1.25), (0.15, 0, 0), (1.35, 1.0, 1.25)), sub=2)  # molten core under the plates
-    for _ in range(34):
-        d = Vector((random.uniform(-1, 1), random.uniform(-1, 1), random.uniform(-0.6, 1))).normalized()
-        q = d.to_track_quat('Z', 'Y').to_matrix().to_4x4()
-        s_ = random.uniform(0.45, 0.65)
-        m.ico(obsidian, 1, Matrix.Translation(Vector((0, 0, 1.25)) + Vector((d.x * 1.3, d.y * 0.95, d.z * 1.2))) @ q @ Matrix.Diagonal((s_, s_ * 0.8, s_ * 0.45, 1)), sub=1, noise=0.04)
-    for k in range(7):  # dorsal spikes
-        a = TAU * k / 7
-        horn(m, obsidian, (math.cos(a) * 0.5, 0.55 + math.sin(a) * 0.25, 2.1 + math.sin(a) * 0.1), (math.cos(a) * 0.3, 0.6, 1), 0.9, 0.12, curl=(0, 0.6, 0))
-    m.ico(magma, 0.38, TRS((0, -1.0, 1.4)), sub=2, smooth=True)
-body = part(rt, 'body', rt, (0, 0, 1.9), boss_body)
-head = part(rt, 'head', body, (0, -0.55, 2.3), lambda m: (
-    m.ico(obsidian, 0.55, TRS((0, -0.1, 0.25), scale=(1, 1.1, 0.9)), sub=2, noise=0.04),
-    [ellipsoid(m, magma, (sx * 0.2, -0.62, 0.28), (0.09, 0.04, 0.05), u=10, v=6) for sx in (-1, 1)],
-    ellipsoid(m, magma, (0, -0.6, 0.05), (0.25, 0.05, 0.06)),
-    teeth(m, bone, (0, -0.62, 0.1), 0.42, 7, 0.12),
-    [horn(m, bone, (sx * 0.4, -0.15, 0.45), (sx * 1, 0.3, 0.5), 1.3, 0.15, curl=(sx * 0.2, 0.9, 0.6)) for sx in (-1, 1)],
-))
-part(rt, 'crown', head, (0, 0, 0.65), lambda m: (
-    m.lathe(trim, [(0.42, 0), (0.45, 0.04), (0.42, 0.1), (0.38, 0.06)], n=20, closed=True),
-    [m.lathe(magma, [(0.07, 0), (0, 0.55 if k % 2 == 0 else 0.35)], n=5, M=TRS((*pol(0.42, TAU * k / 10), 0.04), (0.25 * math.sin(TAU * k / 10), -0.25 * math.cos(TAU * k / 10), 0))) for k in range(10)],
-))
+    m.lathe(glass, [(0, -0.2), (0.55, -0.15), (0.7, 0.3), (0.95, 0.9), (1.05, 1.35), (0.8, 1.65), (0.3, 1.8), (0, 1.82)], n=8, M=TRS(scale=(1, 0.72, 1)))
+    m.lathe(magma, [(0.57, 0.02), (0.63, 0.08), (0.57, 0.14)], n=8, M=TRS(scale=(1, 0.73, 1)), closed=True)  # a seam at the belt
+    m.ico(magma, 0.24, TRS((0, -0.7, 1.05), scale=(1, 0.5, 1.4)), sub=2)  # the molten heart, through the split breastplate
+    for sx in (-1, 1):
+        m.ico(glass, 1, Matrix.Translation((sx * 0.4, -0.6, 1.15)) @ Matrix.Rotation(sx * 0.25, 4, 'Z') @ Matrix.Diagonal((0.42, 0.14, 0.52, 1)), sub=1, noise=0.02)
+        m.tube(magma, [(sx * 0.12, -0.72, 0.55), (sx * 0.16, -0.75, 1.0), (sx * 0.1, -0.7, 1.55)], 0.025, n=4)
+    for k in range(6):  # molten seams round the back and sides
+        a = 0.6 + k * (TAU - 1.2) / 5
+        m.tube(magma, [(1.0 * math.cos(a), 0.72 * 1.0 * math.sin(a), 1.3), (0.92 * math.cos(a + 0.05), 0.72 * 0.92 * math.sin(a + 0.05), 0.85), (0.68 * math.cos(a), 0.72 * 0.68 * math.sin(a), 0.3)], 0.022, n=4)
+    for k in range(5):  # tassets of glass hung from the belt
+        x = (k - 2) * 0.28
+        m.ico(glass, 1, Matrix.Translation((x, -0.42 + abs(k - 2) * 0.12, -0.38)) @ Matrix.Diagonal((0.17, 0.08, 0.36, 1)), sub=1)
+    for k in range(5):  # a ridge of knapped spines down the back
+        crystal(m, glass, aim((0, 0.6, 1), ((k - 2) * 0.22, 0.5, 1.45 - abs(k - 2) * 0.15)), 0.1, 0.8 - abs(k - 2) * 0.15)
+    # the cape: hung from the shoulders, falling to the floor in rags
+    m.lathe(royal, [(0.95, 1.6), (1.15, 1.0), (1.2, -0.5), (1.3, -1.6), (1.4, -2.45)], n=14, M=TRS((0, 0.42, 0), scale=(1, 0.32, 1)), jag=0.2, caps=False)
+    m.lathe(royal2, [(0.9, 1.6), (1.1, 1.0), (1.15, -0.5), (1.25, -1.6), (1.35, -2.4)], n=14, M=TRS((0, 0.4, 0), scale=(1, 0.3, 1)), jag=0.2, caps=False)
+    m.lathe(trim, [(0.98, 1.58), (1.02, 1.62), (0.98, 1.66)], n=14, M=TRS((0, 0.42, 0), scale=(1, 0.32, 1)), closed=True)
+body = part(rt, 'body', rt, (0, 0, 2.6), boss_body)
+head = part(rt, 'head', body, (0, -0.08, 1.8), lambda m: (
+    m.lathe(glass, [(0, -0.05), (0.36, 0.0), (0.42, 0.32), (0.37, 0.6), (0.2, 0.74), (0, 0.77)], n=8),
+    m.prism(magma, [(-0.26, 0), (0.26, 0), (0.22, 0.055), (-0.22, 0.055)], 0, 0.03, M=TRS((0, -0.39, 0.36), (math.pi / 2, 0, 0))),  # the one burning slit
+    m.prism(glass, [(-0.06, 0), (0.06, 0), (0.0, -0.32)], -0.02, 0.02, M=TRS((0, -0.4, 0.33), (math.pi / 2, 0, 0))),  # nasal guard
+    [horn(m, glass, (sx * 0.36, -0.05, 0.42), (sx * 1, 0.25, 0.25), 1.35, 0.13, curl=(sx * -0.3, 0.9, 1.5), n=6, seg=8) for sx in (-1, 1)],
+    [crystal(m, glass, aim((sx * 0.8, -0.3, -0.4), (sx * 0.34, -0.25, 0.08)), 0.06, 0.35) for sx in (-1, 1)]))
+part(rt, 'crown', head, (0, 0, 0.6), lambda m: (
+    m.lathe(trim, [(0.36, 0), (0.39, 0.05), (0.36, 0.12), (0.33, 0.06)], n=16, closed=True),
+    [crystal(m, glass, aim((0.25 * math.cos(TAU * k / 9), 0.25 * math.sin(TAU * k / 9), 1), (*pol(0.35, TAU * k / 9), 0.08)), 0.06, 0.75 if k % 2 == 0 else 0.45) for k in range(9)],
+    [m.ico(magma, 0.05, Matrix.Translation((*pol(0.38, TAU * k / 9), 0.08)), sub=1) for k in range(9)]))
 for sx, nm in ((-1, 'armL'), (1, 'armR')):
     def boss_arm(m, sx=sx):
-        m.ico(obsidian, 0.75, TRS((0, 0, 0)), sub=1, noise=0.07)
+        m.ico(glass, 1, TRS((sx * 0.05, 0, 0.12), scale=(0.62, 0.55, 0.45)), sub=1, noise=0.03)  # the pauldron
         for k in range(3):
-            horn(m, magma, (sx * (0.2 + k * 0.25), 0, 0.5), (sx * 0.5, 0, 1), 0.8, 0.12)
-        m.ico(magma, 0.5, TRS((sx * 0.15, -0.05, -0.9), scale=(0.7, 0.7, 1.1)), sub=1)
-        for k in range(7):
-            d = Vector((random.uniform(-1, 1), random.uniform(-1, 1), random.uniform(-1, 1))).normalized()
-            m.ico(obsidian, 0.3, TRS(tuple(Vector((sx * 0.15, -0.05, -0.9)) + d * 0.45), scale=(1, 1, 0.5)), sub=1, noise=0.03)
-        m.ico(obsidian, 0.78, TRS((sx * 0.2, -0.45, -2.0)), sub=1, noise=0.08)  # fist
-        for k in range(4):
-            horn(m, bone, (sx * 0.2 + (k - 1.5) * 0.22, -1.0, -2.0), (0, -1, -0.2), 0.4, 0.09)
-    part(rt, nm, body, (sx * 1.85, -0.1, 2.05), boss_arm)
+            crystal(m, glass, aim((sx * 0.5, 0.15 * (k - 1), 1), (sx * (0.15 + k * 0.17), 0.1 * (k - 1), 0.45)), 0.08, 0.55 - k * 0.1)
+        m.lathe(magma, [(0.6, -0.12), (0.64, -0.08), (0.6, -0.04)], n=8, M=TRS((sx * 0.05, 0, 0), scale=(1, 0.9, 1)), closed=True)
+        m.tube(glass, [(0, 0, 0), (sx * 0.12, -0.1, -0.85)], [0.3, 0.26], n=8)
+        m.ico(magma, 0.2, TRS((sx * 0.12, -0.1, -0.9)), sub=1)  # elbow
+        m.tube(glass, [(sx * 0.12, -0.12, -0.95), (sx * 0.08, -0.38, -1.75)], [0.25, 0.22], n=8)
+        m.ico(glass, 1, TRS((sx * 0.08, -0.42, -1.85), scale=(0.3, 0.34, 0.28)), sub=1)  # gauntlet
+        for k in range(4):  # clawed fingers
+            horn(m, glass, (sx * 0.08 + (k - 1.5) * 0.12, -0.62, -1.9), (0, -1, -0.4), 0.3, 0.06, curl=(0, 0, -1))
+    part(rt, nm, body, (sx * 1.05, -0.02, 1.45), boss_arm)
+def boss_sword(m):
+    m.lathe(leather, [(0.06, 0.35), (0.06, -0.25)], n=6)  # the grip
+    m.ico(magma, 0.1, Matrix.Translation((0, 0, 0.42)), sub=1)  # pommel
+    m.ico(glass, 1, Matrix.Translation((0, 0, -0.32)) @ Matrix.Diagonal((0.55, 0.12, 0.09, 1)), sub=1)  # crossguard
+    for sx in (-1, 1):
+        crystal(m, glass, aim((sx, 0, 0.6), (sx * 0.5, 0, -0.3)), 0.06, 0.35)
+    m.lathe(glass, [(0, 0), (0.3, 0.12), (0.26, 2.9), (0, 3.3)], n=4, M=TRS((0, 0, -0.36), (math.pi, 0, 0), (1, 0.22, 1)))  # the blade, point down
+    m.lathe(magma, [(0, 0.05), (0.33, 0.14), (0.285, 2.85), (0, 3.25)], n=4, M=TRS((0, 0, -0.36), (math.pi, 0, 0), (1, 0.08, 1)))  # its molten edge
+part(rt, 'weapon', [o for o in PARTS['boss'] if o.name.endswith('_armR')][0], (0.08, -0.45, -1.85), boss_sword)
 for sx, nm in ((-1, 'legL'), (1, 'legR')):
-    part(rt, nm, rt, (sx * 0.85, 0, 1.75), lambda m, sx=sx: (
-        m.ico(obsidian, 0.65, TRS((0, 0, -0.55), scale=(1, 1, 1.5)), sub=1, noise=0.05),
-        m.ico(magma, 0.3, TRS((0, -0.35, -0.75)), sub=1),
-        m.ico(obsidian, 0.75, TRS((0, -0.4, -1.45), scale=(1.1, 1.4, 0.55)), sub=1, noise=0.06),
-        [horn(m, bone, ((k - 1) * 0.35, -1.25, -1.6), (0, -1, -0.1), 0.3, 0.08) for k in range(3)],
-    ))
+    part(rt, nm, rt, (sx * 0.5, 0, 2.6), lambda m, sx=sx: (
+        m.tube(glass, [(0, 0, 0), (0, -0.08, -1.2)], [0.36, 0.3], n=8),
+        m.ico(magma, 0.2, TRS((0, -0.15, -1.25)), sub=1),
+        m.ico(glass, 1, TRS((0, -0.3, -1.25), scale=(0.25, 0.18, 0.3)), sub=1),  # poleyn
+        crystal(m, glass, aim((0, -0.6, 0.6), (0, -0.4, -1.2)), 0.07, 0.35),
+        m.tube(glass, [(0, -0.08, -1.3), (0, 0.04, -2.35)], [0.28, 0.24], n=8),
+        m.tube(magma, [(sx * 0.2, -0.2, -1.4), (sx * 0.22, -0.15, -2.2)], 0.02, n=4),
+        m.ico(glass, 1, TRS((0, -0.22, -2.48), scale=(0.33, 0.58, 0.14)), sub=1),  # sabaton
+        [crystal(m, glass, aim((0, -1, 0.1), ((k - 1) * 0.15, -0.75, -2.5)), 0.05, 0.25) for k in range(3)]))
+part(rt, 'ring', body, (0, 0, 1.0), lambda m: [  # a halo of obsidian shards turning round him
+    crystal(m, glass if k % 2 else magma, TRS((*pol(2.3, TAU * k / 10), 0.25 * math.sin(k * 1.7)), (0.4 * math.cos(k), 0.4 * math.sin(k), TAU * k / 10)), 0.12 if k % 2 else 0.07, 0.6 if k % 2 else 0.35) for k in range(10)])
 
 # ===================================================================== DUNGEON FOES (medieval)
 rust = mat('rust_iron', (0.32, 0.17, 0.08), rough=0.75, metal=0.6)

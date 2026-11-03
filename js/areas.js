@@ -711,6 +711,43 @@ const FOE_ATK = {
     },
   },
   // ----- the bosses' own -----
+  shatterline: { // the Tyrant: the greatsword driven into the floor; a line of obsidian spires rips toward you, then every spire bursts
+    start(e, t, al, yaw) {
+      const n = al.n || 1;
+      for (let i = 0; i < n; i++) if (i !== (n - 1) / 2) ev({ k: 'tele', shape: 'line', x: r2(e.x), z: r2(e.z), yaw: r2(yaw + (i - (n - 1) / 2) * .45), len: 22, w: 3, d: r2(al.wind) });
+      return { shape: 'line', x: e.x, z: e.z, yaw, len: 22, w: 3 };
+    },
+    hit(e, a, dmg) {
+      const n = a.al.n || 1, R = ET[e.type].r * e.sc, x0 = e.x, z0 = e.z;
+      for (let j = 0; j < n; j++) {
+        const yaw = a.yaw + (j - (n - 1) / 2) * .45, fx = Math.sin(yaw), fz = Math.cos(yaw), hit = new Set();
+        for (let i = 0; i < 8; i++) later(i * .07, () => {
+          const x = x0 + fx * (R + 1 + i * 2.4), z = z0 + fz * (R + 1 + i * 2.4);
+          ev({ k: 'fx', m: 'foe', f: 'spike', x: r2(x), z: r2(z), i, c: 0x3a1a4a, s: 'obsidian' });
+          for (const p of players()) if (!p.down && !hit.has(p.id) && Math.hypot(p.x - x, p.z - z) < 1.7 && p.y < 1) { hit.add(p.id); foeHit(p, dmg, e); }
+          later(1, () => { // the spire bursts into shards
+            ev({ k: 'fx', m: 'foe', f: 'nova', x: r2(x), z: r2(z), r: 2.2, c: 0xff5a20, s: 'obsidian' });
+            for (const p of players()) if (!p.down && Math.hypot(p.x - x, p.z - z) < 2.4 && p.y < 1.6) foeHit(p, dmg * .6, e);
+          });
+        });
+      }
+    },
+  },
+  decree: { // the Tyrant: "kneel" — the whole island burns except a circle at his feet; come close or be struck down
+    start(e) { ev({ k: 'tele', shape: 'circle', x: r2(e.x), z: r2(e.z), r: 30, d: r2(e.atk.t) }); ev({ k: 'decree', id: e.id, d: r2(e.atk.t) }); return { shape: 'circle', x: e.x, z: e.z, r: 6.5, ally: 1 }; },
+    hit(e, a, dmg, ps) {
+      ev({ k: 'fx', m: 'foe', f: 'decree', x: r2(e.x), z: r2(e.z) });
+      for (const p of ps) if (Math.hypot(p.x - e.x, p.z - e.z) > 6.8 && foeHit(p, dmg, e)) { const dx = p.x - e.x, dz = p.z - e.z, k = Math.hypot(dx, dz) || 1; shove(p, dx / k * 8, dz / k * 8, 6); }
+    },
+  },
+  sunder: { // the Tyrant: the greatsword swung all the way round
+    start: (e, t, al) => ({ shape: 'circle', x: e.x, z: e.z, r: al.r }),
+    hit(e, a, dmg, ps) {
+      const al = a.al;
+      ev({ k: 'fx', m: 'foe', f: 'nova', x: r2(e.x), z: r2(e.z), r: al.r, c: 0xff5a20, s: 'obsidian', b: 1 });
+      for (const p of ps) { const dx = p.x - e.x, dz = p.z - e.z, k = Math.hypot(dx, dz) || 1; if (k < al.r + .3 && p.y < 1.6 && foeHit(p, dmg, e)) shove(p, dx / k * 16, dz / k * 16, 5); }
+    },
+  },
   clones: { // Nyx: shades of her step out of the dark all round you, each marks a lane and tears down it
     start(e, t, al) {
       const n = al.n || 3, a0 = rand(0, TAU);
@@ -802,7 +839,7 @@ const FOE_ATK = {
   geysers: { // Azgaroth: the ground splits open in fountains of lava all over the island, and under you
     start(e, t, al) {
       const s = bsc(), pts = [...livePs().map(p => ({ x: p.x, z: p.z })), ...Array.from({ length: al.n }, () => inIsle())];
-      ev({ k: 'strike', id: e.id, a: 'call' }); e.acd = Math.max(e.acd, 1.2);
+      if (!al.quiet) { ev({ k: 'strike', id: e.id, a: 'call' }); e.acd = Math.max(e.acd, 1.2); }
       pts.forEach((q, i) => {
         const d = 1 + i * .1; ev({ k: 'tele', shape: 'circle', x: r2(q.x), z: r2(q.z), r: 2, d: r2(d) });
         later(d, () => { ev({ k: 'fx', m: 'foe', f: 'spike', x: r2(q.x), z: r2(q.z), i, c: C_FIRE, s: 'fire' }); for (const o of livePs()) if (Math.hypot(o.x - q.x, o.z - q.z) < 2.3 && o.y < 2.5) foeHit(o, al.dmg * s, e); });
@@ -872,7 +909,7 @@ const FOE_ATK = {
     },
   },
 };
-for (const k of ['sweep', 'tailsweep', 'avalanche', 'crescent', 'gust', 'erupt', 'cage', 'siphon', 'stampede', 'dive', 'roll', 'hurl', 'pounce', 'blast', 'lash', 'hook', 'firewall', 'pyre', 'flop', 'zigzag', 'fling', 'beam', 'null']) LOCKED.add(k);
+for (const k of ['shatterline', 'sunder', 'sweep', 'tailsweep', 'avalanche', 'crescent', 'gust', 'erupt', 'cage', 'siphon', 'stampede', 'dive', 'roll', 'hurl', 'pounce', 'blast', 'lash', 'hook', 'firewall', 'pyre', 'flop', 'zigzag', 'fling', 'beam', 'null']) LOCKED.add(k);
 const RIMC = { necromancer: 0x9a6aff, lich: 0x7ae8ff, frostqueen: 0x9fe6ff, archdemon: 0xff6a1a, watcher: 0xb04cff, umbra: 0x9a4cff };
 
 // ===================== the bosses =====================
@@ -918,6 +955,19 @@ Object.assign(ET, {
     ward(e) { ev({ k: 'fx', m: 'foe', f: 'shatter', x: r2(e.x), z: r2(e.z) }); kill(e, null, null); return 0; } },
 });
 
+// ---- 1: the Obsidian Tyrant ----
+Object.assign(ET.boss, {
+  hp: 1700, p2: 'The Tyrant\'s armour cracks: molten fury pours out',
+  spec: [{ atk: 'shatterline', wind: 1.1, dmg: 24 }, { atk: 'decree', wind: 1.7, dmg: 30 }, 'charge', 'meteor'],
+  spec2: [{ atk: 'shatterline', wind: 1, dmg: 26, n: 3 }, { atk: 'sunder', wind: .9, r: 7.5, dmg: 30 }, { atk: 'decree', wind: 1.4, dmg: 34 }, 'meteor', 'charge'],
+  phase2(e) { e.molten = 1; },
+  tick(e, dt) {
+    if (e.ch > 0 && (e.trl = (e.trl ?? 0) - dt) <= 0) { e.trl = .1; addPool(e.x, e.z, 1.5, { life: 4, dps: 12, c: C_FIRE, s: 'fire' }); } // his charge leaves the floor burning
+    if (e.molten && (e.gy = (e.gy ?? 2) - dt) <= 0) { e.gy = 4.5; FOE_ATK.geysers.start(e, null, { n: S.mode === 'arena' ? 3 : 0, dmg: 16, quiet: 1 }); }
+    e.vs = e.molten ? 'molten' : 0;
+    return false;
+  },
+});
 // ---- 1: Nyx, the Umbral Wraith ----
 Object.assign(ET.umbra, {
   p2: 'Nyx drags the island into endless night',
@@ -1071,6 +1121,7 @@ function foeLook(v, e, src, t) {
   if (e.vs === 'shell' && Math.random() < .3) emit(P.x + rand(-1.2, 1.2), P.y + rand(.3, 2.6), P.z + rand(-1.2, 1.2), 0, .2, 0, Math.random() < .5 ? 0xffffff : C_ICE, rand(.08, .16), .4);
   if (e.vs === 'hide' && Math.random() < .15) emit(P.x + rand(-.5, .5), .15, P.z + rand(-.5, .5), 0, .4, 0, 0xffffff, .1, .5, -.2); // only kicked-up snow gives it away
   if (e.vs === 'run') for (let i = 0; i < 2; i++) emit(P.x + rand(-.6, .6), .15, P.z + rand(-.6, .6), rand(-2, 2), rand(1.5, 3.5), rand(-2, 2), 0xf0f6ff, rand(.12, .22), rand(.4, .7), 8);
+  if (e.vs === 'molten') for (let i = 0; i < 3; i++) emit(P.x + rand(-1.4, 1.4), P.y + rand(.5, 5), P.z + rand(-1.4, 1.4), rand(-.5, .5), rand(1.5, 3.5), rand(-.5, .5), flameColor(), rand(.2, .4), .5, -2);
   if (e.vs === 'rage' && Math.random() < .5) emit(P.x + rand(-.5, .5), P.y + rand(.4, 2), P.z + rand(-.5, .5), 0, rand(1, 2.5), 0, flameColor(), rand(.12, .25), .4, -2);
   if (e.sc !== v.sc) v.sc += (e.sc - v.sc) * .1; // a Gorger swelling after a meal
   if (e.type === 'orbiter' && v.parts.ring) v.parts.ring.o.rotation.y = t * 4; // the blades spin fast enough to be a saw
