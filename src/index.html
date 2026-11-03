@@ -161,7 +161,7 @@ input::placeholder{color:#b9add8;opacity:.8}input:focus{box-shadow:0 0 0 2px var
 .slot:not(.cool) .face::after{background:none}
 .slot .ico{position:absolute;inset:0;display:grid;place-items:center;font-size:27px;filter:drop-shadow(0 0 6px var(--el)) drop-shadow(0 2px 2px rgba(0,0,0,.6));transition:filter .15s,transform .15s}
 .slot b{position:absolute;top:-7px;left:50%;transform:translateX(-50%);z-index:4;min-width:16px;padding:1px 6px;border-radius:7px;font-size:9px;letter-spacing:.06em;color:#fff6e0;background:linear-gradient(180deg,#2a1a52,#120a26);border:1px solid color-mix(in srgb,var(--gold) 70%,transparent);box-shadow:0 2px 4px rgba(0,0,0,.6);text-align:center;white-space:nowrap}
-.slot span{font-size:8.5px;letter-spacing:.06em;color:#e8deff;text-shadow:0 1px 2px #000;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:70px;text-align:center}
+.slot span{font-size:8px;letter-spacing:.02em;color:#e8deff;text-shadow:0 1px 2px #000;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:74px;margin:0 -5px;text-align:center}.slot.ult span{max-width:88px}
 .slot .cdv{position:absolute;inset:0;display:grid;place-items:center;font-style:normal;font-size:19px;font-weight:900;color:#fff;text-shadow:0 0 6px #000,0 2px 2px #000;z-index:3}
 .slot.cool .ico{filter:grayscale(.75) brightness(.6);transform:scale(.92)}
 .slot.cool span{opacity:.6}
@@ -251,7 +251,7 @@ input::placeholder{color:#b9add8;opacity:.8}input:focus{box-shadow:0 0 0 2px var
 .tb.sm{width:50px;height:50px;font-size:20px}.tb[data-k="jump"]{right:220px;bottom:34px}.tb[data-k="dash"]{right:236px;bottom:104px}.tb[data-k="swap"]{right:206px;bottom:170px}
 #tset{position:absolute;right:14px;top:14px;width:44px;height:44px;padding:0;border-radius:50%;font-size:20px}
 body.touching #me{top:14px;bottom:auto;left:14px}body.touching #lock{display:none}body.touching #bar{bottom:auto;top:62px;transform:translateX(-50%) scale(.8)}
-@media (max-width:900px){.slot{width:52px}.slot .face{width:46px;height:46px}.slot.ult{width:62px}.slot.ult .face{width:56px;height:56px}.slot .ico{font-size:21px}.slot span{display:none}#slots{gap:7px;padding:9px 10px 6px}#me .bar{width:150px}#meSeal{width:42px;height:42px}#meGlyph{font-size:20px}#mate .bar{width:120px}}
+@media (max-width:900px){#bar{left:calc(50% + 40px)}.slot{width:52px}.slot .face{width:46px;height:46px}.slot.ult{width:62px}.slot.ult .face{width:56px;height:56px}.slot .ico{font-size:21px}.slot span{display:none}#slots{gap:7px;padding:9px 10px 6px}#me .bar{width:150px}#meSeal{width:42px;height:42px}#meGlyph{font-size:20px}#mate .bar{width:120px}}
 </style>
 <!-- pack.py inlines these (and the models and audio) so index.html is one self-contained file that runs in every browser, Safari included -->
 <script src="js/vendor/three.min.js"></script>
