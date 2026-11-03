@@ -72,7 +72,7 @@ function guardMake(el) {
   if (core && L.f) core.scale.multiply(V(...L.f));
   if (core) core.position.y = L.y || 0;
   const mats = []; g.traverse(o => { if (o.material) for (const m of [].concat(o.material)) { m.transparent = true; m.depthWrite = false; m.side = THREE.DoubleSide; mats.push(m); } });
-  return { g, outer, inner, sig, core, mats, L, col, el, omni, a: 0, hit: 0, brk: 0 };
+  return { g, outer, inner, sig, core, mats, L, col, el, omni, a: 0, hit: 0, brk: 0, kp: 0, kv: 0, tilt: 0 };
 }
 // every frame: shields up for whoever is blocking (src: the state being drawn, me: my own player)
 function guardFrame(src, dt, t) {
@@ -84,14 +84,16 @@ function guardFrame(src, dt, t) {
     if (!v) { v = guardMake(p.cur); GV.set(id, v); }
     live.add(id);
     v.a += ((on ? 1 : 0) - v.a) * Math.min(1, dt * (on ? 14 : 8)); v.hit = Math.max(0, v.hit - dt * 4);
+    v.kv += (-90 * v.kp - 11 * v.kv) * dt; v.kp += v.kv * dt; // the recoil: a stiff spring, knocked back and wobbling home
     if (v.a < .02 && !on) { v.g.removeFromParent(); GV.delete(id); continue; }
     const mine = id === myId, k = v.a, hp = p.gm ? clamp(p.gh / p.gm, 0, 1) : 1;
-    if (mine && !v.omni) { if (v.g.parent !== camera) camera.add(v.g); v.g.position.set(-.16, -.2, -1.3); v.g.rotation.set(0, 0, 0); v.g.scale.setScalar(.42 * (.6 + .4 * k)); }
+    const kp = v.kp, punch = 1 + Math.max(-.15, -kp * .5) + v.hit * .06; // squashed by the blow, then a bounce back
+    if (mine && !v.omni) { if (v.g.parent !== camera) camera.add(v.g); v.g.position.set(-.16 + Math.sin(v.tilt) * kp * .08, -.2 - kp * .05, -1.3 + kp * .3); v.g.rotation.set(kp * .45, -v.tilt * kp * 1.2, Math.sin(v.tilt) * kp * .3); v.g.scale.setScalar(.42 * (.6 + .4 * k) * punch); }
     else {
       if (v.g.parent !== scene) scene.add(v.g);
       const f = V(-Math.sin(p.yaw), 0, -Math.cos(p.yaw));
-      if (v.omni) { v.g.position.set(p.x, p.y + 1, p.z); v.g.rotation.set(0, 0, 0); v.g.scale.setScalar(k); }
-      else { v.g.position.set(p.x + f.x * 1, p.y + 1.25, p.z + f.z * 1); v.g.rotation.set(0, p.yaw, 0); v.g.scale.setScalar(.9 * (.6 + .4 * k)); }
+      if (v.omni) { v.g.position.set(p.x, p.y + 1, p.z); v.g.rotation.set(0, 0, 0); v.g.scale.set(k * (1 + kp * .3), k * (1 - kp * .3), k * (1 + kp * .3)); }
+      else { const b = 1 - kp * .35; v.g.position.set(p.x + f.x * b, p.y + 1.25, p.z + f.z * b); v.g.rotation.set(-kp * .45, p.yaw - v.tilt * kp * 1.2, 0); v.g.scale.setScalar(.9 * (.6 + .4 * k) * punch); }
     }
     const L = v.L;
     // spins turn each piece about its own axis (a ring in its own plane; the wrapper's x turn stands flat pieces up after)
@@ -130,9 +132,18 @@ function guardEv(e) {
   const v = GV.get(e.id), col = EL[e.el]?.color ?? 0xffffff, mine = e.id === myId, P = (srcState()?.players || {})[e.id];
   if (e.f === 'up') { if (mine) sfx(e.el + '_big'); else if (P) circleFx('sigil', V(P.x, .08, P.z), 1.6, { life: .5, color: col }); return; }
   if (e.f === 'hit') {
-    if (v) v.hit = 1;
-    if (P) { const f = V(-Math.sin(P.yaw), 0, -Math.cos(P.yaw)); burst(P.x + f.x, P.y + 1.3, P.z + f.z, 24, col, 6, .15, .35); }
-    if (mine) { shake(.12); popNum(camera.position.x, camera.position.y - .2, camera.position.z, `BLOCKED ${e.n}`, '#' + col.toString(16).padStart(6, '0'), 'tag'); }
+    const big = clamp((e.n || 10) / 22, .35, 1.6); // bigger blows knock it back harder
+    if (v && P) {
+      v.hit = 1; v.kv += 6 * big; // knocked back toward you...
+      const rel = Math.atan2(e.x - P.x, e.z - P.z) - Math.atan2(-Math.sin(P.yaw), -Math.cos(P.yaw)); v.tilt = clamp(Math.atan2(Math.sin(rel), Math.cos(rel)), -1.2, 1.2); // ...and twisted away from the side it came from
+      const m = glowMats(col), o = glowify(T.shock.clone(), m); o.rotation.x = Math.PI / 2; o.position.x = Math.sin(v.tilt) * .5; // a ripple running out over its face from where it landed
+      addFx(o, .4, (o, k) => { o.scale.setScalar((v.omni ? .6 : .2) + k * (v.omni ? 3 : 1.6)); setOpacity(m, (1 - k) * .9); }, v.g);
+      const w = v.g.getWorldPosition(V()), fw = mine ? camera.getWorldDirection(V()) : V(-Math.sin(P.yaw), 0, -Math.cos(P.yaw));
+      for (let i = 0; i < 18 * big; i++) emit(w.x + fw.x * .1, w.y, w.z + fw.z * .1, fw.x * rand(2, 7) + rand(-3, 3), rand(-1, 4), fw.z * rand(2, 7) + rand(-3, 3), Math.random() < .4 ? 0xffffff : col, rand(.06, .14), rand(.2, .4), 8); // sparks thrown off it
+      flash(w.x, w.y, w.z, col, 20 * big, .12);
+    }
+    if (P && !mine) { const f = V(-Math.sin(P.yaw), 0, -Math.cos(P.yaw)); burst(P.x + f.x, P.y + 1.3, P.z + f.z, 24, col, 6, .15, .35); }
+    if (mine) { shake(.08 + .12 * big); guardJolt = big; popNum(camera.position.x, camera.position.y - .2, camera.position.z, `BLOCKED ${e.n}`, '#' + col.toString(16).padStart(6, '0'), 'tag'); }
     sfx('block'); return;
   }
   if (e.f === 'break') {
@@ -143,5 +154,5 @@ function guardEv(e) {
   if (e.f === 'ready') { if (mine) { popNum(camera.position.x, camera.position.y - .3, camera.position.z, 'BLOCK READY', '#9fe6ff', 'tag'); sfx('pick'); } return; }
 }
 // the first-person hand: the left hand thrown up, palm out, while the block is held
-let guardHand = 0;
-function guardPose(mp, dt) { guardHand += ((mp?.gd ? 1 : 0) - guardHand) * Math.min(1, dt * 12); return guardHand; }
+let guardHand = 0, guardJolt = 0; // jolt: the hand knocked back by a blow on the shield
+function guardPose(mp, dt) { guardHand += ((mp?.gd ? 1 : 0) - guardHand) * Math.min(1, dt * 12); guardJolt = Math.max(0, guardJolt - dt * 5); return guardHand - guardJolt * .45 * guardHand; }

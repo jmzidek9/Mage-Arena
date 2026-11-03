@@ -924,10 +924,11 @@ function stepEnemies(dt) {
     if (t.tick?.(e, dt, tgt, d, ps)) continue; // the area monsters' own behaviours (areas.js); true: it handled its own turn
     if (e.atk) { // winding up: turn slowly toward the target, then strike
       if (!LOCKED.has(e.atk.k)) e.yaw = lerpAngle(e.yaw, Math.atan2(dx, dz), Math.min(1, dt * 2));
+      if (t.boss) bossCoast(e, dt); // it doesn't stop dead to swing: it rolls to a halt
       if ((e.atk.t -= dt * rate) <= 0) resolveAttack(e);
       continue;
     }
-    e.yaw = Math.atan2(dx, dz);
+    if (!t.boss) e.yaw = Math.atan2(dx, dz); // bosses turn at their own pace (heavyStep / the glide below)
     if (t.boss && e.ch > 0) {
       e.ch -= dt; e.x += e.cdx * 15 * dt; e.z += e.cdz * 15 * dt; collide(e, R, sol);
       for (const p of ps) if (!e.chHit.includes(p.id) && Math.hypot(p.x - e.x, p.z - e.z) < R + .7) { e.chHit.push(p.id); enemyHits(p, 25 * scale, e); }
@@ -942,10 +943,19 @@ function stepEnemies(dt) {
       const g = navTo(e, tgt);
       const sight = S.mode !== 'city' || cityLOS(e, tgt); // Mage City: no shooting through walls; find a line first
       if (rooted) {} else if (g !== tgt && !(sight && d < hi)) { const gx = g.x - e.x, gz = g.z - e.z, gd = Math.hypot(gx, gz) || 1; e.x += gx / gd * spd * dt; e.z += gz / gd * spd * dt; e.yaw = Math.atan2(gx, gz); }
+      else if (t.boss) { // a boss glides: it holds its distance with some slack and circles one way for a while, all of it eased
+        if (d > hi) e.kw = 1; else if (d < lo) e.kw = -1; else if (d > lo + 1.5 && d < hi - 1.5) e.kw = 0;
+        if (!(e.orbT > S.t)) { e.orbT = S.t + rand(5, 9); e.orb = Math.random() < .5 ? -1 : 1; }
+        const kw = e.kw || 0, tx = (dx / d * kw - dz / d * e.orb * .45) * spd, tz = (dz / d * kw + dx / d * e.orb * .45) * spd, k = Math.min(1, dt * 1.5);
+        e.gvx = (e.gvx || 0) + (tx - (e.gvx || 0)) * k; e.gvz = (e.gvz || 0) + (tz - (e.gvz || 0)) * k;
+        e.x += e.gvx * dt; e.z += e.gvz * dt; e.yaw = turnTo(e.yaw, Math.atan2(dx, dz), dt * 2.5);
+      }
       else { e.x += (dx / d * w - dz / d * side) * spd * dt; e.z += (dz / d * w + dx / d * side) * spd * dt; }
       if ((e.acd -= dt * rate) <= 0 && d < t.reach + 8 && sight) startAttack(e, tgt);
     } else {
-      if (d > t.reach * e.sc * .7 && !rooted) { // round walls through the doorways (dungeon), straight at you otherwise
+      const stop = t.reach * e.sc * .7;
+      if (t.boss) heavyStep(e, d > stop && !rooted ? navTo(e, tgt) : null, spd, dt, d - stop, Math.atan2(dx, dz));
+      else if (d > stop && !rooted) { // round walls through the doorways (dungeon), straight at you otherwise
         const g = navTo(e, tgt), gx = g.x - e.x, gz = g.z - e.z, gd = Math.hypot(gx, gz) || 1;
         e.x += gx / gd * spd * dt; e.z += gz / gd * spd * dt; if (g !== tgt) e.yaw = Math.atan2(gx, gz);
       }
@@ -962,6 +972,21 @@ function stepEnemies(dt) {
     }
   }
   S.enemies = S.enemies.filter(e => !e.dead);
+}
+// a boss has weight: it turns gradually, walks the way it's facing (so it swings round before it sets off), slows as it
+// arrives and eases in and out of its stride instead of snapping between standing and full speed
+const turnTo = (a, b, m) => a + clamp(Math.atan2(Math.sin(b - a), Math.cos(b - a)), -m, m);
+function heavyStep(e, g, spd, dt, gap, face) {
+  const want = g ? Math.atan2(g.x - e.x, g.z - e.z) : face;
+  e.yaw = turnTo(e.yaw, want, dt * 2.2);
+  const off = Math.abs(Math.atan2(Math.sin(want - e.yaw), Math.cos(want - e.yaw)));
+  const v = g ? spd * clamp(gap / 2.5 + .25, 0, 1) * Math.max(0, Math.cos(off)) : 0;
+  e.wv = (e.wv || 0) + (v - (e.wv || 0)) * Math.min(1, dt * 3);
+  e.x += Math.sin(e.yaw) * e.wv * dt; e.z += Math.cos(e.yaw) * e.wv * dt;
+}
+function bossCoast(e, dt) {
+  const k = Math.exp(-4 * dt); e.wv = (e.wv || 0) * k; e.gvx = (e.gvx || 0) * k; e.gvz = (e.gvz || 0) * k;
+  e.x += Math.sin(e.yaw) * e.wv * dt + e.gvx * dt; e.z += Math.cos(e.yaw) * e.wv * dt + e.gvz * dt;
 }
 function stepRings(dt) {
   for (const g of S.rings) {

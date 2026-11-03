@@ -666,7 +666,7 @@ function bossAnim(v, e, dt, t, w0, walk, frozen) {
   }
   if (v.en && Math.random() < dt * 5) { const a = rand(0, TAU), q = V(pos.x + Math.cos(a) * r * 2.2, .1, pos.z + Math.sin(a) * r * 2.2); arcFx(V(pos.x + rand(-r, r) * .5, pos.y + h * rand(.3, .9), pos.z + rand(-r, r) * .5), q, Math.random() < .3 ? 0xffffff : col); emit(q.x, .2, q.z, 0, 2, 0, 0xffffff, .3, .25); } // power arcing off it to the floor
   if (v.en && Math.random() < .4) emit(pos.x + rand(-r, r) * 1.6, .1, pos.z + rand(-r, r) * 1.6, 0, rand(2, 5), 0, col, rand(.1, .2), .6, -1); // the floor smoking under it
-  const step = Math.floor(v.ph / Math.PI); // a footfall every half stride: dust, and the ground shakes when it's near
+  const step = Math.floor((v.ph + Math.PI / 2) / Math.PI); // a footfall every half stride, as a foot plants: dust, and the ground shakes when it's near
   const G = BOSS_GAIT[e.type];
   if (step !== v.step && walk > .3 && !G?.float && e.vs !== 'sky') { const d = distTo(pos.x, pos.z), side = step % 2 ? 1 : -1, fx = pos.x + Math.cos(f) * r * .5 * side, fz = pos.z - Math.sin(f) * r * .5 * side;
     dustFx(fx, fz, .6 + r * .25); if (G?.quake) { ringFx(fx, .1, fz, r * 1.2, 0xb8a890, .35); debrisFx(fx, .2, fz, 3, 'earth__pebble', 0x6a5a4a, .2, 4); } if (d < 22) shake((G?.quake ?? .05) * (1 - d / 22)); }
@@ -705,8 +705,9 @@ function animEnemy(v, e, dt, t) {
   const sw = ak === 'swipe' && v.side; // combo swipes alternate claws
   const bp = q(0), tw = q(1) * (sw ? -1 : 1), cr = q(2) + v.squash * .22 - Math.min(.16, Math.abs(vy) * .02) * v.airK;
   // whole body: bob, lean, crouch / stretch, flinch from hits, wobble when stunned, claw up out of the ground on spawn
-  g.rotation.x = bp + shiver * .3 - v.flinch * .22 + (tp.boss ? 0 : walk * .06) + (rising ? .35 : 0) + v.airK * .2;
-  g.rotation.z = (stun ? Math.sin(t * 13) * .14 : 0) - clamp(v.turn * .035, -.18, .18) * Math.min(1, walk + .3) + v.flinch * .12 * fd;
+  const fl = v.flinch * (tp.boss ? .2 : 1);
+  g.rotation.x = bp + shiver * .3 - fl * .22 + (tp.boss ? 0 : walk * .06) + (rising ? .35 : 0) + v.airK * .2;
+  g.rotation.z = (stun ? Math.sin(t * 13) * .14 : 0) - clamp(v.turn * .035, -.18, .18) * Math.min(1, walk + .3) + fl * .12 * fd;
   g.position.y += Math.abs(Math.sin(v.ph)) * .06 * walk * v.sc;
   const swell = tp.boss ? 1 + wind * .08 + str * .05 : 1; // bosses visibly gather themselves up before a blow
   g.scale.set(v.sc * (1 + cr * .5) * swell, v.sc * (1 - cr + breath * (tp.boss ? .03 : .015)) * swell, v.sc * (1 + cr * .5) * swell);
@@ -760,10 +761,11 @@ const BOSS_GAIT = {
   watcher:    { float: 1, hover: .26, lean: .18, trail: 0x6a2aaa, tent: .5 },
 };
 function bossGait(v, e, t, walk, wind, G) {
+  v.dt0 = t - (v.t0 ?? t) || .016; v.t0 = t;
   const P = v.parts, g = v.g, S1 = Math.sin(v.ph), C1 = Math.cos(v.ph), k = walk * (1 - wind * .8), sc = v.sc;
   const add = (n, x = 0, y = 0, z = 0) => { const p = P[n]; if (p) { p.o.rotation.x += x; p.o.rotation.y += y; p.o.rotation.z += z; } };
   if (G.float) { // gliding: a slow hover, leaning into where it's going, robes / tentacles streaming back, a trail behind it
-    g.position.y += (Math.sin(t * 1.6 + e.id) * .5 + .5) * G.hover * sc * (e.y > .5 ? 0 : 1);
+    g.position.y += (Math.sin(t * 1.6 + e.id) * .5 + .5) * G.hover * sc * (e.y > .5 ? 0 : 1) - (v.hov || 0); v.hov = (Math.sin(t * 1.6 + e.id) * .5 + .5) * G.hover * sc * (e.y > .5 ? 0 : 1);
     g.rotation.x += G.lean * k; g.rotation.z += Math.sin(t * 1.1 + e.id) * .04;
     add('body', Math.sin(t * 2 + e.id) * .04, Math.sin(t * .9) * .06);
     add('armL', -G.arm * .5 * k, 0, G.arm * (.4 + .2 * Math.sin(t * 1.7))); add('armR', -G.arm * .5 * k, 0, -G.arm * (.4 + .2 * Math.sin(t * 1.7 + 1)));
@@ -772,14 +774,18 @@ function bossGait(v, e, t, walk, wind, G) {
     if (walk > .2 && Math.random() < walk * .8) { const p = g.position, f = g.rotation.y; emit(p.x - Math.sin(f) * .8 * sc + rand(-.4, .4), p.y + rand(.1, .6), p.z - Math.cos(f) * .8 * sc + rand(-.4, .4), 0, rand(.2, .8), 0, G.trail, rand(.15, .3), rand(.6, 1), -.3); }
     return;
   }
-  // walking: drop hard onto each foot, sway over it, shoulders twisting against the hips
-  g.position.y += G.bob * sc * k * (Math.abs(S1) - .3);
-  g.rotation.z += S1 * (G.roll || 0) * k + (G.lurch ? Math.sin(v.ph * .5 + 1) * .1 * k : 0);
-  g.rotation.x += (G.hunch || 0) * k + (G.lurch ? Math.abs(Math.sin(v.ph * .5)) * .1 * k : 0);
-  add('body', Math.abs(S1) * .05 * k, S1 * (G.twist || 0) * k + Math.sin(v.ph) * (G.spine || 0) * k);
-  add('head', -Math.abs(C1) * .08 * k - (G.hunch || 0) * .5 * k, -S1 * (G.twist || G.spine || 0) * 1.1 * k);
+  // walking: the body sinks as a foot plants (legs at full stretch) and rises as they pass, sways over the planted foot a
+  // beat late, leans forward as it gets going and back as it pulls up; arms and head follow through behind the hips
+  const acc = (v.spd - (v.spd0 ?? v.spd)) / Math.max(1e-3, v.dt0 || .016); v.spd0 = v.spd; v.acc = (v.acc || 0) + (clamp(acc, -6, 6) - (v.acc || 0)) * .1;
+  g.position.y += G.bob * sc * k * .5 * Math.cos(2 * v.ph);
+  g.rotation.z += Math.sin(v.ph - .6) * (G.roll || 0) * k + (G.lurch ? Math.sin(v.ph * .5 + 1) * .08 * k : 0);
+  g.rotation.x += (G.hunch || 0) * k + v.acc * .025 + (G.lurch ? Math.abs(Math.sin(v.ph * .5)) * .08 * k : 0);
+  add('body', -Math.cos(2 * v.ph) * .03 * k, Math.sin(v.ph - .3) * ((G.twist || 0) + (G.spine || 0)) * k);
+  add('head', Math.cos(2 * v.ph - .8) * .05 * k - (G.hunch || 0) * .5 * k, -Math.sin(v.ph - .9) * (G.twist || G.spine || 0) * 1.1 * k); // the head steadies itself against the body
   add('legL', S1 * (G.stride || 0) * k); add('legR', -S1 * (G.stride || 0) * k);
-  add('armL', -S1 * (G.arm || 0) * k, 0, (G.dangle || 0) * k); add('armR', S1 * (G.arm || 0) * k, 0, -(G.dangle || 0) * k);
+  for (const [n, s] of [['legL', 1], ['legR', -1]]) { const p = P[n]; if (p) p.o.position.y = p.p.y + Math.max(0, -s * C1) * .12 * sc * k; } // the swinging foot lifts clear instead of sliding
+  const sw = Math.sin(v.ph - .5); // arms swing a beat behind the legs, their weight following through
+  add('armL', (S1 * .5 - sw * (.5 + (G.arm || 0))) * k, 0, (G.dangle || 0) * k); add('armR', (-S1 * .5 + sw * (.5 + (G.arm || 0))) * k, 0, -(G.dangle || 0) * k);
   add('weapon', S1 * .12 * k);
   add('tail', Math.sin(v.ph * 2) * .1 * k, Math.sin(v.ph + 1) * (G.tail || 0) * (.4 + k));
   if (G.spine) for (let i = 0; i < 4; i++) add('leg' + i, Math.sin(v.ph + (i % 2 ? Math.PI : 0) + (i > 1 ? Math.PI / 2 : 0)) * .25 * k); // longer reach on all fours
