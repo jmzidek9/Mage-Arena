@@ -428,7 +428,9 @@ function stoneMat({ vc = true, map = null, moss = 1, bump = 1, rough = .86 } = {
 const cityG = new THREE.Group(); cityG.visible = false; scene.add(cityG);
 const cityLights = Array.from({ length: 12 }, () => { const l = new THREE.PointLight(0xff9a4a, 0, 18, 2); l.visible = false; scene.add(l); return l; });
 const CHUNK = 32; // cells per district side (48 m)
-const LOD_R = 92; // districts further than this draw as plain blocks
+const SHADOW_ONLY = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false });
+moon.shadow.camera.layers.enable(1);
+const LOD_R = () => HQ ? 60 : 45; // districts further than this draw as plain blocks (auto quality can turn HQ off) (the carved stone is ~300 triangles a block)
 const arenaMat = name => { let m = null; arena.traverse(o => { if (!m && o.isMesh && o.material.name === name) m = o.material; }); return m; };
 const arenaObj = re => arena.children.find(o => re.test(o.name));
 // canvas textures: square paving, cobbles (with a matching bump-like shading baked in)
@@ -490,15 +492,17 @@ function buildCityView() {
   V3.bm = []; V3.blockM = new Array(n);
   for (const [key, d] of dists) {
     const types = [...new Set([...d.blocks.map(i => PT[B[i * 5 + 4]]), ...d.atts.map(i => L.att[i].g)])], cnt = d.blocks.length + d.atts.length;
-    const bm = new THREE.BatchedMesh(cnt, types.reduce((s, t) => s + vcount(K[t]), 0), 0, mat); bm.castShadow = bm.receiveShadow = true; bm.sortObjects = false;
+    const bm = new THREE.BatchedMesh(cnt, types.reduce((s, t) => s + vcount(K[t]), 0), 0, mat); bm.receiveShadow = true; bm.sortObjects = false;
     const gid = Object.fromEntries(types.map(t => [t, bm.addGeometry(K[t])]));
     const im = new THREE.InstancedMesh(far, mat, Math.max(1, d.blocks.length)); im.receiveShadow = true; im.castShadow = false;
+    // shadows come from the plain blocks, carved or not: a copy sharing their matrices that only the shadow camera sees (layer 1)
+    const sh = new THREE.InstancedMesh(far, SHADOW_ONLY, im.count); sh.instanceMatrix = im.instanceMatrix; sh.castShadow = true; sh.layers.set(1);
     d.blocks.forEach((i, j) => {
       const m = V3.blockM[i] = V3.blockMat(i), id = bm.addInstance(gid[PT[B[i * 5 + 4]]]); bm.setMatrixAt(id, m); col.set(B[i * 5 + 3]).offsetHSL(0, 0, (rng() - .5) * .04); bm.setColorAt(id, col);
       im.setMatrixAt(j, m); im.setColorAt(j, col); V3.where[i * 3] = V3.bm.length; V3.where[i * 3 + 1] = id; V3.where[i * 3 + 2] = j;
     });
     d.atts.forEach(i => { const a = L.att[i], id = bm.addInstance(gid[a.g]); bm.setMatrixAt(id, Mx(a.x, a.y, a.z, a.ry)); bm.setColorAt(id, col.set(a.g === 'sill' || a.g === 'lintel' ? STONE.b : 0xffffff)); V3.attAt[i * 2] = V3.bm.length; V3.attAt[i * 2 + 1] = id; });
-    bm.computeBoundingSphere(); im.computeBoundingSphere(); cityG.add(bm, im);
+    bm.computeBoundingSphere(); im.computeBoundingSphere(); sh.boundingSphere = im.boundingSphere; cityG.add(bm, im, sh);
     const c = bm.boundingSphere.center; V3.bm.push({ bm, im, cx: c.x, cz: c.z, rad: bm.boundingSphere.radius, near: true, dirty: false });
   }
   // glowing bits: lantern crystals on walls and posts, fountain water
@@ -635,7 +639,7 @@ function cityFrame(dt, t) {
   dt = Math.min(dt, 1 / 30);
   const cp = camera.position;
   for (const d of V3.bm) { // near districts carved, far ones plain
-    const near = Math.hypot(d.cx - cp.x, d.cz - cp.z) - d.rad < LOD_R;
+    const near = Math.hypot(d.cx - cp.x, d.cz - cp.z) - d.rad < LOD_R();
     if (near !== d.near) { d.near = near; d.bm.visible = near; d.im.visible = !near; }
     if (d.dirty) { d.dirty = false; d.im.instanceMatrix.needsUpdate = true; }
   }
