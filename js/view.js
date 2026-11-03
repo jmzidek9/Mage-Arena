@@ -1105,7 +1105,7 @@ let healT = 0, dodgeFx = 0, hudKey = '';
 const touchBtns = [0, 1, 2, 3, 4].map(i => document.querySelector(`#touch .tb[data-k="${i}"]`));
 function buildBar(kit) {
   document.querySelectorAll('#touch .tb').forEach(b => { const i = +b.dataset.k; if (!isNaN(i)) b.textContent = kit.moves[i]?.icon ?? ''; });
-  $('slots').innerHTML = kit.moves.map((m, i) => `<div class="slot${i === 4 ? ' ult' : ''}" title="${m.name}: ${m.desc.replace(/"/g, '&quot;')}"><div class="ico">${m.icon}</div><i class="cdv"></i><b>${slotKey(i)}</b><span>${m.name}</span></div>`).join('');
+  $('slots').innerHTML = kit.moves.map((m, i) => `<div class="slot${i === 4 ? ' ult' : ''}" title="${m.name}: ${m.desc.replace(/"/g, '&quot;')}"><div class="face"><div class="ico">${m.icon}</div><i class="cdv"></i></div><b>${slotKey(i)}</b><span>${m.name}</span></div>`).join('');
 }
 function hud(src, mp) {
   const sp = src.players[myId];
@@ -1137,7 +1137,8 @@ function hud(src, mp) {
     if (hot > 0) { f = Math.max(f, hot / 2.5); label = hot.toFixed(1); }
     const active = (mp.ch === m.key) || (mp.chg?.m === m.key);
     el.style.setProperty('--cd', clamp(f, 0, 1)); touchBtns[i]?.style.setProperty('--cd', clamp(f, 0, 1));
-    el.classList.toggle('cool', f > 0.001); el.classList.toggle('active', active);
+    const cool = f > 0.001; if (!cool && el.classList.contains('cool') && i < 4) { el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); } // back off cooldown: a flash
+    el.classList.toggle('cool', cool); el.classList.toggle('active', active);
     el.querySelector('.cdv').textContent = label;
   }
   if (sp.ult >= 1 && !hud.ultReady) sfx('ready');
