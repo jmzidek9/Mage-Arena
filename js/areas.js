@@ -1,4 +1,4 @@
-// Arena areas: every 10 waves the arena turns into the next realm, with its own monsters, two bosses (waves 5 and 10
+// Arena areas: every 5 waves the arena moves on to the next realm, with its own monsters, two bosses (one on each area's 5th wave,
 // of the area) and its own sky and light. After the fifth area it starts over, harder. Mage City keeps the Shadow roster.
 // Loaded after sim.js / modes.js (uses ET, startAttack, enemyHits...) and before view.js.
 'use strict';
@@ -245,11 +245,12 @@ const AREAS = [
   { id: 'hell', name: 'The Infernal Legion', zone: 'hell', bosses: ['pitlord', 'archdemon'] },
   { id: 'void', name: 'The Void', zone: 'void', bosses: ['watcher', 'devourer'] },
 ];
-const areaIdx = w => Math.floor(Math.max(0, w - 1) / 10) % AREAS.length;
+const WAVES_PER_ISLE = 5; // waves on each island before the bridge to the next one builds
+const areaIdx = w => Math.floor(Math.max(0, w - 1) / WAVES_PER_ISLE) % AREAS.length;
 const areaNow = () => S.mode === 'arena' ? AREAS[S.isl || 0] : AREAS[0]; // Mage City keeps the Shadow roster
 
 // ===================== the islands and their bridges (both machines) =====================
-// The five areas are islands in a ring (the same layout as blender/build_islands.py). Clearing an area's 10th wave builds
+// The five areas are islands in a ring (the same layout as blender/build_islands.py). Clearing an area's 5th wave builds
 // the bridge to the next one, and the next island with it; the next wave starts once everyone has walked across.
 // State: S.isl the island you fight on, S.ib built islands (bits), S.brs finished bridges (bits), S.br the one being built { k, t }.
 const ISLES = AREAS.map((a, k) => { const th = Math.PI + k * TAU / 5; return { id: a.id, k, x: k ? 64 * Math.sin(th) : 0, z: k ? 64 + 64 * Math.cos(th) : 0, r: ARENA_R }; });
@@ -278,14 +279,14 @@ function islandMap(src = S) {
   }
   MAP.caps = caps;
 }
-// host: the 10th wave of an area is cleared
+// host: the last wave of an area is cleared
 function startTravel() {
   const k = S.isl || 0;
   S.br = { k, t: S.brs & 1 << k ? 1 : 0 }; S.phase = 'travel';
   ev({ k: 'travel', to: (k + 1) % 5 });
 }
 // test cheat (Esc menu): every island and bridge built, the field cleared, everyone on island k with wave w next (default its first)
-function goIsland(k, w = k * 10 + 1) {
+function goIsland(k, w = k * WAVES_PER_ISLE + 1) {
   Object.assign(S, { ib: 31, brs: 31, br: null, isl: k, wave: w - 1, enemies: [], shots: [], ents: [], timers: [], rings: [], hz: [], budget: 0, bossLeft: 0, phase: 'rest', restT: 3 });
   const I = ISLES[k];
   players().forEach((p, i) => Object.assign(p, { x: I.x + (i ? 2 : -2), z: I.z + 6, y: 0, vy: 0, down: false, hp: p.max, mo: null, dashT: 0 }));
@@ -311,7 +312,7 @@ for (const I of ISLES) {
     if (m || br) ARENA_PILLARS.push({ x: I.x + o.position.x, z: I.z + o.position.z, r: m ? +m[1] / 10 : .65 });
   }
 }
-const areaWave = w => (Math.max(1, w) - 1) % 10 + 1; // 1..10 within the area
+const areaWave = w => (Math.max(1, w) - 1) % WAVES_PER_ISLE + 1; // 1..5 within the area
 
 // ===================== player-side effects of the new attacks =====================
 function foeHit(p, dmg, e, al) {

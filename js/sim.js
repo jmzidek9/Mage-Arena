@@ -47,7 +47,7 @@ const ET = {
   shaman:   { hp: 60,   spd: 2.9, r: .55, h: 2.1, dmg: 0,  reach: 9,   cost: 4, from: 7, kb: 1,   poise: 30,  atk: 'mend',   wind: 1.1, cd: 4,   ranged: 1, keep: [12, 18], alt: { atk: 'hex', min: 0, max: 22, wind: 1.2, cd: 5, dmg: 13 } },
   boss:     { hp: 1500, spd: 2.1, r: 2.2, h: 5.6, dmg: 30, reach: 5,   cost: 0, from: 99, kb: .04, poise: 650, atk: 'smash', wind: 1.05, cd: 2.2, boss: 1 },
 };
-const waveBudget = w => 10 + w * 6;
+const waveBudget = w => 16 + w * 7; // more to fight from the very first wave
 // ===================== state =====================
 const S = { phase: 'lobby', mode: 'arena', actor: null, t: 0, wave: 0, isl: 0, ib: 1, brs: 0, br: null, players: {}, enemies: [], shots: [], ents: [], rings: [], timers: [], events: [], nid: 1,
   budget: 0, bossLeft: 0, eliteLeft: 0, spawnT: 0, restT: 0, hitstop: 0, slowmo: 0, tstop: 0, mod: null };
@@ -1009,7 +1009,7 @@ function startWave() {
   S.budget = Math.round(waveBudget(S.wave) * (S.mod === 'swarm' ? 1.6 : 1) * (boss ? .5 : 1) * (S.players.g ? 1 : .6));
   S.bossLeft = boss ? 1 : 0; S.eliteLeft = S.mod === 'elite' ? 1 : 0; S.spawnT = 1.5; S.phase = 'fight';
   const A = areaNow(), lw = areaWave(S.wave);
-  S.bossType = A.bosses[lw === 10 ? 1 : 0];
+  S.bossType = A.bosses[S.mode === 'arena' ? Math.floor((S.wave - 1) / (WAVES_PER_ISLE * AREAS.length)) % 2 : (S.wave / 5 - 1) % 2]; // an island's two bosses take turns, a lap of the ring each
   ev({ k: 'wave', n: S.wave, mod: S.mod, boss, bn: boss ? ET[S.bossType].name : 0, area: S.mode === 'arena' && lw === 1 ? A.id : 0 });
 }
 function stepSpawner(dt) {
@@ -1017,14 +1017,14 @@ function stepSpawner(dt) {
   if (S.phase === 'rest') { if ((S.restT -= dt) <= 0) startWave(); return; }
   if (S.phase !== 'fight') return;
   if ((S.spawnT -= dt) <= 0 && (S.budget > 0 || S.bossLeft)) {
-    S.spawnT = rand(1.3, 2.6) * (S.mod === 'swarm' ? .6 : 1);
+    S.spawnT = rand(1.1, 2.2) * (S.mod === 'swarm' ? .6 : 1);
     const a = rand(0, TAU);
     const city = S.mode === 'city', at = city ? citySpawnSpot() : null; // Mage City: somewhere on the streets, 34-70 m from every player
     const I = isleCenter(); // the island you're fighting on
     if (S.bossLeft) { S.bossLeft = 0; const q = city ? citySpawnSpot(40, 75) : { x: I.x + Math.sin(a) * 15, z: I.z + Math.cos(a) * 15 }; spawnEnemy(S.bossType || 'boss', q.x, q.z); }
     const zone = areaNow().zone, lw = areaWave(S.wave);
     for (let n = 1 + Math.floor(Math.random() * 4); n > 0 && S.budget > 0; n--) {
-      const pool = Object.keys(ET).filter(k => ET[k].cost && ET[k].zone === zone && ET[k].from <= lw + (S.wave > 10 ? 2 : 0) && ET[k].cost <= S.budget); // later areas bring their monsters in a little sooner
+      const pool = Object.keys(ET).filter(k => ET[k].cost && ET[k].zone === zone && ET[k].from <= lw + 1 + (S.wave > WAVES_PER_ISLE ? 2 : 0) && ET[k].cost <= S.budget); // the whole roster within an island's five waves, sooner on later islands
       if (!pool.length) { S.budget = 0; break; }
       const type = weighted(pool, k => 1 / ET[k].cost), b = a + rand(-.4, .4), elite = S.eliteLeft > 0;
       S.budget -= ET[type].cost; if (elite) S.eliteLeft--;
@@ -1042,7 +1042,7 @@ function endWave() {
   S.rings = []; S.hz = []; S.shots = []; S.ents = S.ents.filter(n => n.mv === 'orb'); S.timers = []; S.tstop = 0;
   S.phase = 'rest'; S.restT = 4; // short breather, then the next wave (no upgrade picks)
   ev({ k: 'clear', n: S.wave });
-  if (S.mode === 'arena' && S.wave % 10 === 0) startTravel(); // an area's done: the bridge to the next island builds (areas.js)
+  if (S.mode === 'arena' && S.wave % WAVES_PER_ISLE === 0) startTravel(); // an area's done: the bridge to the next island builds (areas.js)
 }
 function hostStep(dt) {
   dt *= S.cheat?.spd || 1;

@@ -110,7 +110,7 @@ function renderCheats() {
     <div class="row">Game speed ${[.5, 1, 2, 4].map(s => `<button class="ghost${(C.spd || 1) === s ? ' on' : ''}" data-spd="${s}">${s}×</button>`).join('')}</div>
     <div class="row"><button class="ghost" data-a="heal">Full heal + ultimate</button><button class="ghost" data-a="kill">Kill all enemies</button>${arena ? '<button class="ghost" data-a="skip">Skip wave</button>' : ''}</div>
     ${arena ? `<div class="row">Island ${AREAS.map((a, k) => `<button class="ghost${k === (S.isl || 0) ? ' on' : ''}" data-isl="${k}">${a.name.replace(/^The /, '')}</button>`).join('')}</div>
-    <div class="row">Wave <input id="chWave" type="number" min="1" max="200" value="${S.wave + 1}"><button class="ghost" data-a="wave">Go</button><small>Bosses come on waves 5 and 10 of each island (5, 10, 15, 20...)</small></div>` : ''}
+    <div class="row">Wave <input id="chWave" type="number" min="1" max="200" value="${S.wave + 1}"><button class="ghost" data-a="wave">Go</button><small>Each island is 5 waves with a boss on the 5th (5, 10, 15...); its two bosses take turns, a lap each</small></div>` : ''}
     <div class="row">Boss ${bosses.map(k => `<button class="ghost" data-spawn="${k}">${ET[k].name || k}</button>`).join('')}</div>
     <div class="row">Spawn <select id="chFoe">${foes.map(k => `<option value="${k}">${ET[k].boss ? '★ ' + (ET[k].name || k) : k}</option>`).join('')}</select><button class="ghost" data-a="spawn">×1</button><button class="ghost" data-a="spawn5">×5</button></div>`;
   for (const b of $('cheatBody').querySelectorAll('button')) b.onclick = () => {
@@ -323,7 +323,7 @@ function selfTest() {
   t('frost + storm = SHATTER', reactionOf('frost', 'storm').name === 'SHATTER');
   t('storm + fire = OVERLOAD', reactionOf('storm', 'fire').name === 'OVERLOAD');
   t('every element pair reacts', ELIST.every(a => ELIST.every(b => a === b || reactionOf(a, b).name)));
-  t('wave budget 10 + 6w', waveBudget(1) === 16 && waveBudget(10) === 70);
+  t('wave budget 16 + 7w', waveBudget(1) === 23 && waveBudget(10) === 86);
   // dungeon: monsters can path between any two places, the stairwells sit clear of every room and hall, the stairs are in the
   // farthest room, boss rooms come every 5th floor, and each floor's arrival stairwell lands exactly on the floor above's departure one
   let dunOk = true, dunWhy = '', O = { x: 0, z: 0, r: 0 };
