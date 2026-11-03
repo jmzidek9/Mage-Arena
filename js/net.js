@@ -318,6 +318,7 @@ function selfTest() {
   t('aim moves have a range, charge moves a charge time, channels a max', Object.values(MOVE).filter(m => m.el).every(m => (m.mode !== 'aim' || m.range) && (m.mode !== 'charge' || m.charge) && (m.mode !== 'channel' || m.max)));
   t(`all ${ELIST.length * 5} move names are unique per element`, ELIST.every(k => new Set(EL[k].moves.map(m => m.name)).size === 5));
   t('every element has a cast sound for basic attacks and for its other moves', ELIST.every(k => SFX[k] && SFX[k + '_big']));
+  t('every move has its own painted icon (js/icons.js)', Object.values(MOVE).filter(m => m.el).every(m => SPELL_ART[m.el]?.[m.slot]) && Object.keys(SPELL_ART).every(el => EL[el] && SPELL_ART[el].length === EL[el].moves.length));
   t('every model a move asks for exists', Object.values(MOVE).filter(m => m.look).every(m => m.look.m === 'T.shard' || NODE[m.look.m]));
   t('burn + frost = STEAM', reactionOf('fire', 'frost').name === 'STEAM');
   t('frost + storm = SHATTER', reactionOf('frost', 'storm').name === 'SHATTER');
