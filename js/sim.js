@@ -1009,7 +1009,7 @@ function startWave() {
   S.budget = Math.round(waveBudget(S.wave) * (S.mod === 'swarm' ? 1.6 : 1) * (boss ? .5 : 1) * (S.players.g ? 1 : .6));
   S.bossLeft = boss ? 1 : 0; S.eliteLeft = S.mod === 'elite' ? 1 : 0; S.spawnT = 1.5; S.phase = 'fight';
   const A = areaNow(), lw = areaWave(S.wave);
-  S.bossType = A.bosses[S.mode === 'arena' ? Math.floor((S.wave - 1) / (WAVES_PER_ISLE * AREAS.length)) % 2 : (S.wave / 5 - 1) % 2]; // an island's two bosses take turns, a lap of the ring each
+  S.bossType = A.bosses[S.mode === 'arena' ? (Math.random() < .5 ? 0 : 1) : (S.wave / 5 - 1) % 2]; // an island's final boss: either of its two, at random
   ev({ k: 'wave', n: S.wave, mod: S.mod, boss, bn: boss ? ET[S.bossType].name : 0, area: S.mode === 'arena' && lw === 1 ? A.id : 0 });
 }
 function stepSpawner(dt) {

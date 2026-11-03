@@ -110,7 +110,7 @@ function renderCheats() {
     <div class="row">Game speed ${[.5, 1, 2, 4].map(s => `<button class="ghost${(C.spd || 1) === s ? ' on' : ''}" data-spd="${s}">${s}×</button>`).join('')}</div>
     <div class="row"><button class="ghost" data-a="heal">Full heal + ultimate</button><button class="ghost" data-a="kill">Kill all enemies</button>${arena ? '<button class="ghost" data-a="skip">Skip wave</button>' : ''}</div>
     ${arena ? `<div class="row">Island ${AREAS.map((a, k) => `<button class="ghost${k === (S.isl || 0) ? ' on' : ''}" data-isl="${k}">${a.name.replace(/^The /, '')}</button>`).join('')}</div>
-    <div class="row">Wave <input id="chWave" type="number" min="1" max="200" value="${S.wave + 1}"><button class="ghost" data-a="wave">Go</button><small>Each island is 5 waves with a boss on the 5th (5, 10, 15...); its two bosses take turns, a lap each</small></div>` : ''}
+    <div class="row">Wave <input id="chWave" type="number" min="1" max="200" value="${S.wave + 1}"><button class="ghost" data-a="wave">Go</button><small>Each island is 5 waves with a boss on the 5th (5, 10, 15...); either of its two bosses, at random</small></div>` : ''}
     <div class="row">Boss ${bosses.map(k => `<button class="ghost" data-spawn="${k}">${ET[k].name || k}</button>`).join('')}</div>
     <div class="row">Spawn <select id="chFoe">${foes.map(k => `<option value="${k}">${ET[k].boss ? '★ ' + (ET[k].name || k) : k}</option>`).join('')}</select><button class="ghost" data-a="spawn">×1</button><button class="ghost" data-a="spawn5">×5</button></div>`;
   for (const b of $('cheatBody').querySelectorAll('button')) b.onclick = () => {
