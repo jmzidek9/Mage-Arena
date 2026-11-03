@@ -254,7 +254,7 @@ def caster(name, P, robe_h=1.32):
         m.tube(P['robe'], [(0, 0, 0), (0.08, -0.15, -0.2), (0.06, -0.3, -0.25)], [0.08, 0.09, 0.1], n=8),
         ell(m, P['hand'], (0.06, -0.34, -0.26), (0.04, 0.05, 0.04), u=8, v=6)))
     part(rt, 'staff', arm, (0.06, -0.36, -0.26), P['staff'])
-    part(rt, 'ring', body, (0, 0, 0.6), lambda m: (
+    if P.get('ring', True): part(rt, 'ring', body, (0, 0, 0.6), lambda m: (
         m.annulus(P['glow'], 0.55, 0.57, 0, 64),
         [m.polyline(P['glow'], [(0.62 * math.cos(TAU * k / 9) + 0.04 * math.cos(TAU * j / 3 + k), 0.62 * math.sin(TAU * k / 9) + 0.04 * math.sin(TAU * j / 3 + k)) for j in range(3)], 0.012, closed=True) for k in range(9)]))
     return rt, body
@@ -284,50 +284,111 @@ pus = mat('cr_pus', (0.55, 0.9, 0.2), emit=3)
 gold = mat('cr_gold', (0.85, 0.65, 0.25), rough=0.3, metal=1)
 iron = mat('cr_iron', (0.08, 0.08, 0.09), rough=0.45, metal=0.85)
 
-# zombie: a shambling corpse, ribs showing through the rags, jaw hanging loose
-rt, body, head = biped('zombie', dict(skin=rot, belly=rot2, eye=soul, mouth=ink, claw=bone2, tooth=bone2, hunch=0.45, reach=1.15,
-    torso=lambda m: ([m.tube(bone, [(sx * 0.05, -0.27, 0.15 + k * 0.09), (sx * 0.24, -0.2, 0.17 + k * 0.09)], [0.015, 0.01], n=4) for sx in (-1, 1) for k in range(3)],
-                     m.prism(rag, [(-0.3, 0), (0.3, 0), (0.25, -0.5), (0.05, -0.38), (-0.12, -0.55), (-0.28, -0.42)], -0.01, 0.01, M=TRS((0, -0.3, 0.1), (math.pi / 2 + 0.2, 0, 0))),
-                     ell(m, rag, (0, 0.05, 0.05), (0.36, 0.3, 0.14))),
-    crown_fn=lambda m: [m.tube(rag, [(sx * 0.12, 0, 0.32), (sx * 0.2, 0.1, 0.1)], 0.02, n=4) for sx in (-1, 1)]))
-# bonehound: a hound of bare bone with soul fire in its ribs
-def bh_back(m):
-    m.ico(soul, 0.12, Matrix.Translation((0, -0.1, 0)), sub=1)
-    for k in range(6):
-        y = -0.4 + k * 0.15
+dirt = mat('cr_dirt', (0.13, 0.09, 0.06), rough=1.0)
+glass = mat('cr_glass', (0.4, 1.0, 0.35), emit=5)
+brass = mat('cr_brass', (0.55, 0.42, 0.2), rough=0.4, metal=0.9)
+leather_c = mat('cr_leather', (0.2, 0.13, 0.08), rough=0.8)
+plague = mat('cr_plague', (0.09, 0.08, 0.06), rough=0.9)
+
+# grave crawler: a corpse half out of its grave, dragging itself on long arms, legs trailing, the dirt still on it
+rt = root('crawler')
+def cw_body(m):
+    m.lathe(rot, [(0, -0.38), (0.2, -0.3), (0.27, -0.05), (0.28, 0.2), (0.2, 0.36), (0, 0.42)], n=14, M=TRS(rot=(1.35, 0, 0), scale=(1.1, 0.85, 1)), smooth=True)
+    for k in range(7):  # a bare spine down the back
+        ell(m, bone, (0, 0.28 - k * 0.1, 0.22 - k * 0.005), (0.045, 0.04, 0.035), u=8, v=6)
+    for k in range(4):  # ribs through the torn back
         for sx in (-1, 1):
-            m.tube(bone, [(0, y, 0.17), (sx * 0.18, y, 0.05), (sx * 0.12, y, -0.15)], [0.02, 0.018, 0.012], n=4)
-    for k in range(5):
-        horn(m, bone2, (0, -0.35 + k * 0.17, 0.17), (0, 0.4, 1), 0.14, 0.03, curl=(0, 0.6, 0))
-rt, body, head = beast('bonehound', dict(hide=bone, eye=soul, tooth=bone2, mouth=soul2, back=bh_back,
-    head_fn=lambda m: [horn(m, bone2, (sx * 0.08, -0.05, 0.1), (sx * 0.4, 0.6, 0.5), 0.22, 0.03, curl=(0, 0.5, 0)) for sx in (-1, 1)]))
-# banshee: a weeping ghost in tatters, hair streaming, mouth open in a scream
-def bn_body(m):
-    m.lathe(ghost, [(0, -0.9), (0.4, -0.6), (0.34, -0.1), (0.28, 0.25), (0.18, 0.45), (0, 0.5)], n=16, smooth=True, jag=0.15)
-    ell(m, ghost, (0, -0.05, 0.7), (0.17, 0.17, 0.2), u=14, v=10)
+            m.tube(bone, [(sx * 0.03, 0.05 - k * 0.1, 0.22), (sx * 0.22, 0.05 - k * 0.1, 0.15), (sx * 0.27, 0.05 - k * 0.1, -0.02)], [0.016, 0.014, 0.01], n=4)
+    for k in range(6):  # grave dirt clinging on
+        ell(m, dirt, (random.uniform(-0.2, 0.2), random.uniform(-0.2, 0.35), random.uniform(0.05, 0.2)), (0.09, 0.08, 0.05), noise=0.02)
+    m.prism(rag, [(-0.28, 0), (0.28, 0), (0.22, -0.4), (0.04, -0.3), (-0.1, -0.45), (-0.26, -0.32)], -0.01, 0.01, M=TRS((0, 0.3, -0.05), (0.2, 0, 0)))
+body = part(rt, 'body', rt, (0, 0, 0.42), cw_body)
+head = part(rt, 'head', body, (0, -0.42, 0.12), lambda m: (
+    ell(m, rot, (0, -0.06, 0.1), (0.17, 0.19, 0.16), u=14, v=10), ell(m, bone2, (0, -0.2, 0.12), (0.12, 0.05, 0.06)),
+    [ell(m, ink, (sx * 0.065, -0.2, 0.14), (0.04, 0.02, 0.035), u=8, v=6) for sx in (-1, 1)],
+    [ell(m, soul, (sx * 0.065, -0.215, 0.14), (0.016, 0.01, 0.016), u=6, v=4) for sx in (-1, 1)],
+    [m.tube(rag, [(x, 0, 0.25), (x * 1.5, 0.15, 0.1), (x * 1.3, 0.25, -0.1)], [0.02, 0.015, 0.004], n=4) for x in (-0.08, -0.02, 0.05, 0.1)]))
+part(rt, 'jaw', head, (0, -0.12, 0.02), lambda m: (
+    ell(m, bone2, (0, -0.1, -0.04), (0.11, 0.1, 0.045)), teeth(m, bone, (0, -0.17, -0.0), 0.12, 5, 0.05, down=False)))
+for sx, nm in ((-1, 'armL'), (1, 'armR')):
+    def cw_arm(m, sx=sx):
+        el = Vector((sx * 0.38, -0.32, 0.22)); wr = Vector((sx * 0.32, -0.78, -0.36))
+        m.tube(rot, [(0, 0, 0), tuple(el), tuple(wr)], [0.08, 0.065, 0.05], n=8)
+        ell(m, bone, tuple(el), (0.07, 0.07, 0.07))
+        ell(m, rot2, tuple(wr + Vector((0, -0.05, -0.03))), (0.08, 0.1, 0.04))
+        claws(m, bone2, wr + Vector((0, -0.12, -0.04)), (0, -0.8, -0.7), n=4, L=0.2, r=0.022)
+        ell(m, dirt, tuple(wr + Vector((0, -0.02, -0.06))), (0.1, 0.12, 0.03), noise=0.02)
+    part(rt, nm, body, (sx * 0.22, -0.28, 0.08), cw_arm)
+for sx, nm in ((-1, 'legL'), (1, 'legR')):
+    def cw_leg(m, sx=sx):  # dragged behind it: one still fleshed, one bare bone
+        mt = rot2 if sx < 0 else bone
+        m.tube(mt, [(0, 0, 0), (sx * 0.08, 0.38, -0.28), (sx * 0.1, 0.78, -0.36)], [0.085, 0.06, 0.045] if sx < 0 else [0.05, 0.04, 0.03], n=7)
+        ell(m, bone2, (sx * 0.08, 0.38, -0.28), (0.06, 0.06, 0.06))
+        ell(m, mt, (sx * 0.1, 0.86, -0.38), (0.06, 0.12, 0.04))
+    part(rt, nm, body, (sx * 0.15, 0.32, -0.06), cw_leg)
+
+# bone archer: a skeleton in a rotten hood, a quiver on its back and a great bow of black wood and bone
+rt = root('bonearcher')
+def ba_body(m):
+    m.tube(bone, [(0, 0.05, -0.35), (0, 0.08, 0.0), (0, 0.04, 0.35), (0, 0.0, 0.62)], [0.04, 0.04, 0.035, 0.035], n=6)
+    for k in range(6):  # ribcage
+        z = 0.12 + k * 0.08
+        for sx in (-1, 1):
+            m.tube(bone, [(sx * 0.02, 0.08, z), (sx * 0.2, 0.02, z - 0.02), (sx * 0.19, -0.14, z - 0.05), (sx * 0.04, -0.17, z - 0.07)], [0.018, 0.017, 0.014, 0.01], n=4)
+    m.tube(bone, [(0, -0.17, 0.55), (0, -0.17, 0.12)], 0.022, n=4)  # breastbone
+    m.lathe(bone2, [(0, -0.42), (0.18, -0.4), (0.21, -0.32), (0.14, -0.26), (0, -0.27)], n=12, M=TRS(scale=(1, 0.7, 1)))  # pelvis
     for sx in (-1, 1):
-        ell(m, ink, (sx * 0.06, -0.16, 0.74), (0.035, 0.02, 0.045), u=8, v=6)
-        ell(m, wail, (sx * 0.06, -0.17, 0.74), (0.015, 0.01, 0.02), u=6, v=4)
-        m.tube(ghost, [(sx * 0.25, -0.05, 0.35), (sx * 0.5, -0.25, 0.1), (sx * 0.55, -0.45, -0.1)], [0.05, 0.04, 0.02], n=6)
-    ell(m, ink, (0, -0.16, 0.6), (0.05, 0.02, 0.07), u=8, v=6)  # the scream
-    for k in range(10):  # long hair
-        a = TAU * k / 10
-        m.tube(robe_n, [(math.cos(a) * 0.12, math.sin(a) * 0.1 + 0.05, 0.82), (math.cos(a) * 0.2, math.sin(a) * 0.15 + 0.25, 0.55), (math.cos(a) * 0.18, math.sin(a) * 0.1 + 0.4, 0.2)], [0.025, 0.02, 0.005], n=4)
-rt, body = floater('banshee', dict(body=bn_body, tent=ghost, tr=0.08, tlen=0.13, tents=6, tdrop=2.6, tspread=1.2,
-    ring=lambda m: (m.annulus(wail, 0.6, 0.62, 0, 48), runes(m, wail, 0.7, 0.12, 8, 0.012, 0, random.Random(1)))), z=1.05)
-# bloater: a swollen corpse fit to burst, boils glowing
-def bl_face(m):
-    for k in range(9):
-        a, z = random.uniform(0, TAU), random.uniform(0.1, 0.6)
-        m.sphere(pus, random.uniform(0.04, 0.08), TRS((0.42 * math.cos(a) * 0.95, 0.42 * math.sin(a) * 0.95, z)), u=8, v=6)
-    for k in range(4):  # stitches
-        m.tube(ink, [(-0.12, -0.41, 0.12 + k * 0.08), (0.12, -0.41, 0.12 + k * 0.08)], 0.008, n=4)
-    m.tube(ink, [(0, -0.42, 0.08), (0, -0.4, 0.42)], 0.01, n=4)
-    eyes(m, soul, (0, -0.37, 0.6), 0.1, (0.05, 0.03, 0.04))
-    ell(m, ink, (0, -0.39, 0.48), (0.1, 0.03, 0.04))
-rt, body = keg('bloater', dict(body=rot, limb=rot2, face=bl_face,
-    fuse=lambda m: (m.sphere(pus, 0.12, TRS((0, 0, 0.05)), u=10, v=8), m.sphere(pus, 0.07, TRS((0.1, 0.05, -0.02)), u=8, v=6))))
-bake_scale(rt, 1.15)
+        m.tube(bone, [(0, 0.03, 0.6), (sx * 0.26, 0.03, 0.6)], 0.022, n=4)  # collarbones
+    m.lathe(robe_n, [(0, 0.78), (0.24, 0.72), (0.32, 0.55), (0.3, 0.2), (0.26, -0.1), (0.3, -0.45), (0, -0.4)], n=14, M=TRS((0, 0.12, 0), scale=(1, 0.45, 1)), jag=0.12)  # a ragged cloak behind
+    m.lathe(leather_c, [(0.06, -0.3), (0.07, 0.25), (0.05, 0.3)], n=10, M=TRS((0.12, 0.22, 0.35), (0.35, 0, -0.35)))  # quiver
+    for k in range(5):  # soul-fletched arrows
+        x = 0.12 + (k - 2) * 0.025
+        m.tube(iron, [(x, 0.28, 0.55), (x + 0.06, 0.48, 0.8)], 0.008, n=3)
+        m.prism(soul2, [(0, 0), (0.03, -0.05), (0, -0.09), (-0.03, -0.05)], -0.003, 0.003, M=TRS((x + 0.06, 0.48, 0.84), (0.4, 0, 0)))
+body = part(rt, 'body', rt, (0, 0, 1.0), ba_body)
+head = part(rt, 'head', body, (0, -0.02, 0.66), lambda m: (
+    ell(m, bone, (0, -0.04, 0.14), (0.13, 0.15, 0.15), u=16, v=10), ell(m, bone, (0, -0.15, 0.08), (0.09, 0.05, 0.06)),
+    [ell(m, ink, (sx * 0.05, -0.15, 0.15), (0.035, 0.02, 0.035), u=8, v=6) for sx in (-1, 1)],
+    [ell(m, soul, (sx * 0.05, -0.165, 0.15), (0.014, 0.008, 0.014), u=6, v=4) for sx in (-1, 1)],
+    m.lathe(robe_n, [(0, -0.02), (0.18, 0.02), (0.21, 0.18), (0.17, 0.32), (0.06, 0.4), (0, 0.42)], n=16, M=TRS((0, 0.05, 0)), smooth=True, jag=0.05)))
+part(rt, 'jaw', head, (0, -0.08, 0.06), lambda m: (ell(m, bone2, (0, -0.07, -0.03), (0.08, 0.07, 0.03)), teeth(m, bone, (0, -0.12, 0.0), 0.08, 5, 0.03, down=False)))
+def ba_arm(m, sx):
+    m.tube(bone, [(0, 0, 0), (sx * 0.06, -0.08, -0.28), (sx * 0.04, -0.2, -0.52)], [0.025, 0.02, 0.018], n=5)
+    ell(m, bone2, (sx * 0.06, -0.08, -0.28), (0.03, 0.03, 0.03), u=8, v=6)
+    for k in range(4):
+        m.tube(bone, [(sx * 0.04, -0.2, -0.52), (sx * 0.04 + (k - 1.5) * 0.015, -0.27, -0.58)], 0.007, n=3)
+def ba_bow(m):  # held in the left hand, standing upright in front of it
+    m.tube(ink, [(-0.04, -0.25, -1.2), (-0.04, -0.36, -0.85), (-0.04, -0.33, -0.55), (-0.04, -0.36, -0.25), (-0.04, -0.25, 0.1)], [0.012, 0.022, 0.03, 0.022, 0.012], n=6)
+    for z in (-1.05, -0.2):
+        m.tube(bone, [(-0.04, -0.31, z), (-0.04, -0.35, z + 0.18)], 0.03, n=5)
+    m.tube(glass, [(-0.04, -0.25, -1.2), (-0.04, -0.2, -0.55), (-0.04, -0.25, 0.1)], 0.004, n=3)  # a string of soul light
+part(rt, 'armL', body, (-0.26, 0.03, 0.6), lambda m: (ba_arm(m, -1), ba_bow(m)))
+part(rt, 'armR', body, (0.26, 0.03, 0.6), lambda m: ba_arm(m, 1))
+for sx, nm in ((-1, 'legL'), (1, 'legR')):
+    part(rt, nm, rt, (sx * 0.12, 0.02, 0.62), lambda m, sx=sx: (
+        m.tube(bone, [(0, 0, 0), (0, -0.03, -0.3), (0, 0.03, -0.58)], [0.03, 0.025, 0.02], n=5),
+        ell(m, bone2, (0, -0.04, -0.3), (0.035, 0.035, 0.035), u=8, v=6),
+        ell(m, bone, (0, -0.05, -0.61), (0.04, 0.1, 0.025), u=8, v=6)))
+
+# plague bearer: a hunched, beak-masked thing under a broad hat, heaving a bloated hump, swinging a smoking censer
+def pb_torso(m):
+    m.ico(rot, 1, TRS((0, 0.22, 1.0), scale=(0.34, 0.3, 0.32)), sub=2, noise=0.04)  # the hump
+    for k in range(8):
+        a, z = random.uniform(0.3, 2.8), random.uniform(0.8, 1.25)
+        m.sphere(pus, random.uniform(0.04, 0.07), TRS((0.32 * math.cos(a), 0.22 + 0.28 * math.sin(a), z)), u=8, v=6)
+    m.lathe(leather_c, [(0.34, 0.62), (0.36, 0.66), (0.34, 0.7)], n=16, closed=True)  # belt
+    for sx in (-1, 1):  # vials hung off the belt
+        m.lathe(glass, [(0, 0), (0.035, 0.02), (0.04, 0.09), (0.015, 0.12), (0, 0.13)], n=8, M=TRS((sx * 0.32, -0.12, 0.48)))
+rt, body = caster('plaguebearer', dict(robe=plague, trim=leather_c, hand=rot, glow=pus, ring=False, torso=pb_torso,
+    head=lambda m: (ell(m, rot2, (0, 0, 0.14), (0.16, 0.17, 0.17), u=14, v=10),
+                    m.lathe(bone2, [(0.09, 0), (0.07, -0.15), (0.035, -0.32), (0, -0.4)], n=10, M=aim((0, 1, 0.35), (0, -0.12, 0.1)), smooth=True),  # the beak
+                    [m.sphere(glass, 0.04, TRS((sx * 0.07, -0.15, 0.18), scale=(1, 0.5, 1)), u=10, v=6) for sx in (-1, 1)],
+                    m.lathe(plague, [(0, 0.26), (0.42, 0.24), (0.44, 0.27), (0.2, 0.3), (0.17, 0.48), (0, 0.5)], n=20, M=TRS((0, 0.02, 0)), smooth=True)),  # broad hat
+    staff=lambda m: (m.tube(iron, [(0, 0, 0), (0.02, -0.02, -0.25), (0, 0, -0.5)], 0.01, n=4),  # a chain, the censer hanging on it
+                     m.lathe(brass, [(0, -0.48), (0.09, -0.52), (0.12, -0.62), (0.1, -0.72), (0, -0.75)], n=12, smooth=True),
+                     [m.tube(brass, [(0.11 * math.cos(a), 0.11 * math.sin(a), -0.6), (0.12 * math.cos(a), 0.12 * math.sin(a), -0.7)], 0.008, n=3) for a in [k * 1.05 for k in range(6)]],
+                     m.sphere(pus, 0.07, TRS((0, 0, -0.63)), u=10, v=8))), robe_h=1.3)
+
 # colossus: a giant built of bones, a skull for a head, soul fire for a heart
 def co_body(m):
     m.ico(soul, 0.35, TRS((0, -0.1, 0.85)), sub=2)
@@ -747,7 +808,7 @@ for name, parts in PARTS.items():
 bpy.ops.wm.save_as_mainfile(filepath=os.path.join(HERE, 'foes.blend'))
 export('foes.glb', ROOTS)
 pv = Previewer(res=420)
-GROUPS = {'crypt': ['zombie', 'bonehound', 'banshee', 'bloater', 'colossus', 'necromancer', 'lich', 'bonedragon'],
+GROUPS = {'crypt': ['crawler', 'bonearcher', 'plaguebearer', 'banshee', 'colossus', 'necromancer', 'lich', 'bonedragon'],
           'frost': ['snowfiend', 'icewolf', 'icesprite', 'frostmite', 'yeti', 'glacier', 'frostgiant', 'frostqueen'],
           'hell': ['hellhound', 'cinderimp', 'magmaling', 'infernal', 'hellknight', 'pyrepriest', 'pitlord', 'archdemon'],
           'void': ['voidling', 'gazer', 'riftmite', 'voidspawn', 'horror', 'mindflayer', 'watcher', 'devourer'], 'shadow': ['umbra', 'stalker']}

@@ -190,6 +190,21 @@ const FOE_FX = {
     addFx(o, .55, (o, k) => { const u = k < .4 ? k / .4 : 1 - (k - .4) / .6; aimBeam(o, a, a.clone().lerp(b, u), .18); fade(o, 1 - k * .5); });
     sfx('abyss_big');
   },
+  // ----- the island monsters' own moves (areas.js) -----
+  burrow(e) { dustFx(e.x, e.z, 1.2, 0x5a4a34); debrisFx(e.x, .3, e.z, 5, 'earth__pebble', 0x4a3a28, .25, 5); sfx('earth'); },
+  erupt(e) { // bursting up out of the grave dirt
+    dustFx(e.x, e.z, e.r, 0x5a4a34); debrisFx(e.x, .4, e.z, 10, 'earth__pebble', 0x4a3a28, .35, 10); ringFx(e.x, .1, e.z, e.r * 1.2, 0xb8a080, .4);
+    for (let i = 0; i < 24; i++) emit(e.x + rand(-.6, .6), .2, e.z + rand(-.6, .6), rand(-2, 2), rand(4, 8), rand(-2, 2), 0x5a4a34, rand(.12, .22), rand(.5, .8), 14);
+    shake(clamp(.3 - distTo(e.x, e.z) * .02, 0, .25)); sfx('earth_big');
+  },
+  collapse(e) { debrisFx(e.x, 1.2, e.z, 14, 'earth__pebble', 0xe8dcc0, .35, 7); dustFx(e.x, e.z, 1.6, 0xd8d0b8); burst(e.x, 1, e.z, 30, 0x35ff8a, 4, .2, .6, -1); sfx('bone_big'); },
+  reform(e) { // the bones fly back together with a crack of soul fire
+    pillarFx(e.x, 0, e.z, 1.2, 5, 0x35ff8a, .5); ringFx(e.x, .12, e.z, 4, 0xe8dcc0, .45); burst(e.x, 1.4, e.z, 40, 0x35ff8a, 6, .25, .6, -1, 3); shake(.15); sfx('bone_big');
+  },
+  bind(e) { // a chain of soul light snaps from the binder to its ward
+    const a = V(e.x2, 1.6, e.z2), b = V(e.x, 1.2, e.z); beamFx(a, b, C_SOUL, .15, .5);
+    circleFx('sigil', V(e.x, .08, e.z), 1.6, { life: .8, color: C_SOUL }); burst(e.x, 1.2, e.z, 24, C_SOUL, 4, .2, .5, -1); sfx('soul_big');
+  },
 };
 const STYLE_SND = { bile: 'venom_big', wail: 'soul_big', soul: 'soul_big', bone: 'bone_big', snow: 'frost', ice: 'frost_big', frost: 'frost_big', boulder: 'earth_big', fire: 'fire_boom', breath: 'fire_big', meteor: 'fire_boom', void: 'abyss_big', tentacle: 'abyss_big', shadow: 'shadow_big' };
 // a boss winds up: its spell circle opens under it and a ball of power swells where the blow will come from
@@ -376,7 +391,7 @@ const ETPL = {};
 for (const k in ET) ETPL[k] = [...enemiesG.children, ...foesG.children].find(c => c.name.replace(/\d+$/, '') === k) || null; // foes.glb: the Arena islands' monsters
 const FALLBACK = { stalker: 'grunt', bomber: 'runner', knight: 'grunt', shaman: 'shooter', skeleton: 'grunt', rat: 'runner', archer: 'shooter', ghoul: 'splitter', dknight: 'knight', warden: 'boss' };
 // Arena area monsters without a rig of their own yet borrow the closest one, tinted their area's colour
-Object.assign(FALLBACK, { zombie: 'grunt', bonehound: 'runner', banshee: 'shaman', bloater: 'bomber', colossus: 'brute', necromancer: 'shaman', lich: 'shaman', bonedragon: 'boss',
+Object.assign(FALLBACK, { crawler: 'grunt', bonearcher: 'grunt', plaguebearer: 'shaman', banshee: 'shaman', colossus: 'brute', necromancer: 'shaman', lich: 'shaman', bonedragon: 'boss',
   snowfiend: 'grunt', icewolf: 'runner', icesprite: 'shooter', frostmite: 'bomber', yeti: 'brute', glacier: 'knight', frostgiant: 'boss', frostqueen: 'shaman',
   hellhound: 'runner', cinderimp: 'grunt', magmaling: 'bomber', infernal: 'brute', hellknight: 'knight', pyrepriest: 'shaman', pitlord: 'boss', archdemon: 'boss',
   voidling: 'runner', gazer: 'shooter', riftmite: 'bomber', voidspawn: 'splitter', horror: 'brute', mindflayer: 'shaman', watcher: 'shooter', devourer: 'boss', umbra: 'boss' });
@@ -438,6 +453,15 @@ const POSE = {
   pull:   { w: [.15, 0, .1, 1.9, 1.9, 0],   s: [-.4, 0, -.06, -.9, -.9, 0] }, // reach out, yank back
   lob:    { w: [-.35, .45, 0, .4, 2.9, 0],  s: [.45, -.65, 0, 0, -2.1, 0] },
   roar:   { w: [0, 0, 0, 0, 0, 0],          s: [-.55, 0, -.12, 2.3, 2.3, 0] }, // the boss's charge: head back, arms wide
+  // the island monsters' own moves
+  erupt:  { w: [.4, 0, .3, -.5, -.5, 0],    s: [-.5, 0, -.2, 3, 3, 0] },      // coiled under the dirt, then bursting up arms high
+  snipe:  { w: [-.05, -.7, 0, 1.5, 1.2, 0], s: [0, -.6, 0, 1.5, .3, 0] },     // bow arm out, string hand drawn back to the cheek, released
+  hop:    { w: [0, 0, 0, 0, 0, 0],          s: [-.4, 0, -.15, 1.2, 1.2, .6] },
+  censer: { w: [-.1, 1.4, .05, .3, 1.6, 0], s: [.2, -2.4, .1, .3, 1.2, 0] },  // the whole body winds round, then swings it about
+  scream: { w: [-.45, 0, -.05, 1.6, 1.6, 0], s: [.45, 0, .1, 2.2, 2.2, 0] },  // head thrown back, then the wail flung forward
+  cage:   { w: [-.35, 0, -.06, 2.8, 2.8, 0], s: [.6, 0, .2, -3, -3, 0] },
+  bind:   { w: [-.2, 0, 0, 2, .6, 0],       s: [.2, 0, 0, 2.6, .2, 0] },
+  siphon: { w: [-.25, 0, .06, 1.7, 1.7, 0], s: [.3, 0, .05, 1.4, 1.4, 0] },
 };
 // bosses: the colour of their power, for wind-ups, auras and their bigger attack effects
 const BOSS_COL = { boss: 0xff5a20, umbra: 0x9a4cff, warden: 0x5ad8ff, bonedragon: 0x8aff50, frostgiant: 0x9fe6ff, pitlord: 0xff6a1a, devourer: 0xb04cff };
@@ -552,6 +576,7 @@ function renderEnemies(src, dt, t, a) {
     for (const k in v.ov) { const o = v.ov[k]; o.position.x = v.g.position.x; o.position.z = v.g.position.z; if (k === 'freeze' || k === 'encase' || k === 'root') o.position.y = v.g.position.y; if (k === 'bubble') o.position.y = v.g.position.y + h * .5; if (k === 'stasis' || k === 'fear' || k === 'charm') { o.position.y = v.g.position.y + h + .7 + (k === 'charm' ? Math.sin(t * 3 + e.id) * .15 : 0); o.lookAt(camera.position); } if (k === 'lift') o.position.y = .1; o.rotation.y += dt * (k === 'lift' ? 2 : 0);
       if (k === 'poly') { o.position.y = v.g.position.y + Math.abs(Math.sin(t * 5 + e.id)) * .12; o.rotation.y = v.g.rotation.y; } } // a sheep hops about
     v.g.visible = e.cc !== 'poly';
+    foeLook(v, e, src, t); // burrowed, ghostly, a heap of bones, soul-bound (areas.js)
     if (e.cc === 'charm' && Math.random() < .3) emit(v.g.position.x + rand(-r, r), v.g.position.y + h * rand(.3, 1), v.g.position.z + rand(-r, r), 0, .6, 0, shimmer(t + e.id).getHex(), .12, .5, -.3);
     const px = v.g.position.x, pz = v.g.position.z, py = v.g.position.y;
     if (e.cc === 'stun' && Math.random() < .5) { const ang = t * 6 + rand(0, .5); emit(px + Math.cos(ang) * r * .8, py + h + .3, pz + Math.sin(ang) * r * .8, 0, 0, 0, 0xffe36a, .12, .25); }

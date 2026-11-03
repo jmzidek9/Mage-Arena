@@ -8,23 +8,51 @@
 const C_POI = 0x8aff50, C_SOUL = 0x7ae8ff, C_ICE = 0x9fe6ff, C_FIRE = 0xff6a1a, C_VOID = 0xb04cff;
 Object.assign(ET, {
   // ---------- 2: the Undead Crypt ----------
-  zombie:     { hp: 55,  spd: 2.7, r: .5,  h: 1.8, dmg: 12, reach: 1.9, cost: 1, from: 1, kb: .9,  poise: 35,  atk: 'swipe', wind: .55, cd: 1.4, zone: 'crypt',
-    alt: { atk: 'lob', min: 4, max: 14, wind: .9, cd: 7, dmg: 8, r: 1.9, c: C_POI, s: 'bile', pool: { life: 4, dps: 8 } } },
-  bonehound:  { hp: 26,  spd: 7.2, r: .45, h: 1.0, dmg: 8,  reach: 3.2, cost: 1, from: 2, kb: 1.4, poise: 15,  atk: 'lunge', wind: .36, cd: 1.5, zone: 'crypt',
-    alt: { atk: 'lunge', min: 0, max: 3.5, wind: .36, cd: 5, dmg: 7, chain: 2 } },
-  banshee:    { hp: 36,  spd: 3.2, r: .5,  h: 2.1, dmg: 9,  reach: 26,  cost: 3, from: 3, kb: 1,   poise: 22,  atk: 'orb',   wind: .7,  cd: 2.2, ranged: 1, keep: [8, 14], oc: C_SOUL, zone: 'crypt',
-    alt: { atk: 'cone', min: 0, max: 10, wind: .8, cd: 6, dmg: 10, r: 10, ang: 50, c: C_SOUL, s: 'wail', chill: 1.5 } },
-  bloater:    { hp: 40,  spd: 3.6, r: .6,  h: 1.4, dmg: 22, reach: 2.4, cost: 2, from: 3, kb: 1.1, poise: 10,  atk: 'fuse',  wind: .95, cd: 9, zone: 'crypt', pool: { r: 3.2, life: 5, dps: 9, c: C_POI, s: 'bile' } },
-  colossus:   { hp: 210, spd: 2.1, r: 1.1, h: 2.8, dmg: 24, reach: 3.4, cost: 5, from: 5, kb: .25, poise: 140, atk: 'smash', wind: .95, cd: 2.1, zone: 'crypt',
-    alt: { atk: 'spikes', min: 4, max: 15, wind: 1.1, cd: 8, dmg: 20, c: 0xe8dcc0, s: 'bone' } },
-  necromancer:{ hp: 62,  spd: 2.8, r: .55, h: 2.1, dmg: 0,  reach: 9,   cost: 4, from: 6, kb: 1,   poise: 30,  atk: 'summon', wind: 1.2, cd: 7, ranged: 1, keep: [12, 18], zone: 'crypt', n: 2, type: 'zombie', cap: 6,
-    alt: { atk: 'hex', min: 0, max: 22, wind: 1.2, cd: 5, dmg: 13 } },
+  // Grave Crawler: when you're far off it sinks into the soil, tunnels under you and bursts up beneath your feet
+  crawler:    { hp: 45,  spd: 3,   r: .5,  h: 1.0, dmg: 11, reach: 1.9, cost: 1, from: 1, kb: 1,   poise: 30,  atk: 'swipe', wind: .5,  cd: 1.4, zone: 'crypt', name: 'Grave Crawler',
+    erupt: { atk: 'erupt', wind: .75, dmg: 16, r: 2.2 },
+    tick(e, dt, tgt, d) {
+      if (e.atk) return false;
+      if (!e.under) { if ((e.bcd = (e.bcd ?? 2) - dt) <= 0 && d > 6) { Object.assign(e, { under: 1, gone: 1, vs: 'under', ut: 0 }); ev({ k: 'fx', m: 'foe', f: 'burrow', x: r2(e.x), z: r2(e.z) }); } return false; }
+      e.ut += dt; e.x += (tgt.x - e.x) / d * 8.5 * dt; e.z += (tgt.z - e.z) / d * 8.5 * dt; e.yaw = Math.atan2(tgt.x - e.x, tgt.z - e.z);
+      if (d < 1.6 || e.ut > 4) startAttack(e, tgt, ET.crawler.erupt);
+      return true;
+    } },
+  // Bone Archer: keeps its distance, draws and tracks you, then the aim locks (a thin line) and the arrow crosses the whole field; hops back if you close in
+  bonearcher: { hp: 30,  spd: 3.4, r: .45, h: 1.9, dmg: 20, reach: 30,  cost: 2, from: 2, kb: 1.1, poise: 18,  atk: 'snipe', wind: 1.5, cd: 3.2, ranged: 1, keep: [14, 22], zone: 'crypt', name: 'Bone Archer',
+    alt: { atk: 'hop', min: 0, max: 6, cd: 5 } },
+  // Plague Bearer: swings a reeking censer all round itself, leaves a trail of rot wherever it walks and bursts into a cloud when it dies
+  plaguebearer: { hp: 85, spd: 2.5, r: .6, h: 2.0, dmg: 14, reach: 3,   cost: 2, from: 3, kb: .7,  poise: 50,  atk: 'censer', wind: .75, cd: 2.2, zone: 'crypt', name: 'Plague Bearer', cen: 3.4,
+    tick(e) { if (Math.hypot(e.x - (e.px ?? 1e9), e.z - (e.pz ?? 1e9)) > 1.6) { e.px = e.x; e.pz = e.z; addPool(e.x, e.z, 1.3, { life: 6, dps: 7, c: C_POI, s: 'bile' }); } return false; },
+    die(e) { if (!e.fall) addPool(e.x, e.z, 3.6, { life: 7, dps: 10, c: C_POI, s: 'bile' }); } },
+  // Wailing Spirit: half in the other world, nothing touches it, except for a moment after it screams (and the scream throws you back)
+  banshee:    { hp: 42,  spd: 3.6, r: .5,  h: 2.1, dmg: 12, reach: 7,   cost: 3, from: 4, kb: .9,  poise: 24,  atk: 'scream', wind: .85, cd: 2.6, zone: 'crypt', name: 'Wailing Spirit',
+    tick(e) { e.vs = e.solid > S.t ? 0 : 'ghost'; return false; },
+    ward: (e, n) => e.solid > S.t ? n : 0 },
+  // Bone Golem: smash it down and it falls apart into a pile of bones, then pulls itself back together unless you finish the pile off
+  colossus:   { hp: 220, spd: 2.1, r: 1.1, h: 2.8, dmg: 24, reach: 3.4, cost: 5, from: 5, kb: .25, poise: 140, atk: 'smash', wind: .95, cd: 2.1, zone: 'crypt', name: 'Bone Golem',
+    alt: { atk: 'cage', min: 4, max: 16, wind: 1, cd: 7, dmg: 14, r: 2.4, c: 0xe8dcc0, s: 'bone' },
+    tick(e, dt, tgt, d, ps) {
+      if (!e.pile) return false;
+      if (S.t < e.pile) return true;
+      Object.assign(e, { pile: 0, vs: 0, hp: Math.min(e.max, e.hp + e.max * .25) });
+      ev({ k: 'fx', m: 'foe', f: 'reform', x: r2(e.x), z: r2(e.z) });
+      for (const p of ps) { const dx = p.x - e.x, dz = p.z - e.z, k = Math.hypot(dx, dz) || 1; if (k < 4 && foeHit(p, 12, e)) shove(p, dx / k * 10, dz / k * 10, 4); }
+      return false;
+    },
+    ward: (e, n) => e.pile ? n * 1.5 : n,
+    die(e) { if (e.rev || e.fall) return; Object.assign(e, { rev: 1, pile: S.t + 4, hp: e.max * .3, atk: null, vs: 'pile' }); ev({ k: 'fx', m: 'foe', f: 'collapse', x: r2(e.x), z: r2(e.z) }); return false; } },
+  // Soulbinder: chains the souls of up to two monsters to its own, and while it lives nothing can hurt them; drains you down a beam
+  necromancer:{ hp: 60,  spd: 2.8, r: .55, h: 2.1, dmg: 0,  reach: 12,  cost: 4, from: 6, kb: 1,   poise: 30,  atk: 'bind', wind: 1, cd: 4, ranged: 1, keep: [12, 18], zone: 'crypt', name: 'Soulbinder',
+    alt: { atk: 'siphon', min: 0, max: 20, wind: 1, cd: 6, dmg: 12, len: 20, w: 1.4, c: C_SOUL, s: 'soul' },
+    tick(e) { for (const o of S.enemies) if (o.bnd === e.id && (o.dead || Math.hypot(o.x - e.x, o.z - e.z) > 22)) o.bnd = 0; return false; },
+    die(e) { for (const o of S.enemies) if (o.bnd === e.id) o.bnd = 0; } },
   lich:       { hp: 1500, spd: 2.4, r: .9, h: 3.6, dmg: 14, reach: 26, cost: 0, from: 99, kb: .04, poise: 650, atk: 'volley', wind: .9, cd: 2.4, boss: 1, ranged: 1, keep: [8, 14], oc: C_SOUL, zone: 'crypt',
-    name: 'The Lich King', minions: ['zombie', 'bonehound'],
-    spec: [{ atk: 'rain', n: 4, r: 2.4, dmg: 18, c: 0xe8dcc0, s: 'bone' }, { atk: 'summon', wind: 1.2, n: 4, type: 'zombie', cap: 10 },
+    name: 'The Lich King', minions: ['crawler', 'bonearcher'],
+    spec: [{ atk: 'rain', n: 4, r: 2.4, dmg: 18, c: 0xe8dcc0, s: 'bone' }, { atk: 'summon', wind: 1.2, n: 4, type: 'crawler', cap: 10 },
       { atk: 'nova', wind: 1.1, r: 7, dmg: 22, c: C_SOUL, s: 'soul', chill: 2 }, { atk: 'ray', wind: 1, len: 24, w: 1.6, dmg: 24, c: C_SOUL, s: 'soul' }] },
   bonedragon: { hp: 1900, spd: 2.3, r: 2.2, h: 4.4, dmg: 30, reach: 5, cost: 0, from: 99, kb: .04, poise: 700, atk: 'smash', wind: 1.05, cd: 2.2, boss: 1, zone: 'crypt',
-    name: 'The Bone Dragon', minions: ['bonehound', 'zombie'],
+    name: 'The Bone Dragon', minions: ['crawler', 'plaguebearer'],
     spec: [{ atk: 'cone', wind: 1.1, r: 15, ang: 55, dmg: 26, c: C_POI, s: 'breath', pool: { life: 4, dps: 10 } }, 'charge',
       { atk: 'rain', n: 3, r: 2.8, dmg: 22, c: 0xe8dcc0, s: 'bone' }, 'ring'] },
 
@@ -311,8 +339,107 @@ const FOE_ATK = {
       if (al.then) { const sp = ET[e.type].spec.find(s => s.atk === al.then); const p = near(e, ps); if (sp && p) later(.55, () => { if (!e.dead && !e.atk && !e.cc) startAttack(e, p, sp); }); }
     },
   },
+  // ----- the Crypt's own -----
+  erupt: { // a burrower bursts up out of the ground under you and throws you into the air
+    start(e, t, al) { Object.assign(e.atk, { lx: t.x, lz: t.z }); return { shape: 'circle', x: t.x, z: t.z, r: al.r }; },
+    hit(e, a, dmg, ps) {
+      const al = a.al; Object.assign(e, { x: a.lx, z: a.lz, under: 0, gone: 0, vs: 0, bcd: 6 });
+      ev({ k: 'fx', m: 'foe', f: 'erupt', x: r2(a.lx), z: r2(a.lz), r: al.r });
+      for (const p of ps) if (Math.hypot(p.x - a.lx, p.z - a.lz) < al.r + .3 && p.y < 1.2 && foeHit(p, dmg, e, al)) shove(p, 0, 0, 9);
+    },
+  },
+  snipe: { // no mark while it draws and follows you; the aim locks 0.45 s before the arrow (a thin line), then it crosses the field
+    start(e) {
+      const a = e.atk;
+      later(Math.max(0, a.t - .45), () => {
+        if (e.atk !== a || e.dead) return;
+        const p = near(e, players().filter(q => !q.down)); if (p) a.yaw = e.yaw = Math.atan2(p.x - e.x, p.z - e.z);
+        a.lock = 1; ev({ k: 'tele', shape: 'line', x: r2(e.x), z: r2(e.z), yaw: r2(a.yaw), len: 34, w: .9, d: .45 });
+      });
+      return null;
+    },
+    hit(e, a, dmg, ps) {
+      if (!a.lock) a.yaw = e.yaw;
+      ev({ k: 'fx', m: 'foe', f: 'ray', x: r2(e.x), y: r2(e.y + 1.5 * e.sc), z: r2(e.z), yaw: r2(a.yaw), len: 34, w: .3, c: 0xe8dcc0 });
+      for (const p of ps) if (inLine(p, e.x, e.z, a.yaw, 34, .9) && p.y < 2.5) foeHit(p, dmg, e, a.al);
+    },
+  },
+  hop: { // springs back out of reach
+    start(e, t) {
+      const dx = e.x - t.x, dz = e.z - t.z, d = Math.hypot(dx, dz) || 1, q = confine({ x: e.x + dx / d * 7, z: e.z + dz / d * 7 }, 1.5);
+      e.leap = { x0: e.x, z0: e.z, x1: q.x, z1: q.z, t: 0, dmg: 0, r: -1 }; ev({ k: 'strike', id: e.id, a: 'hop' });
+      return 'done';
+    },
+  },
+  censer: { // the censer swung round on its chain: everything close is hit
+    start: (e, t, al) => ({ shape: 'circle', x: e.x, z: e.z, r: ET[e.type].cen }),
+    hit(e, a, dmg, ps) {
+      const r = ET[e.type].cen;
+      ev({ k: 'fx', m: 'foe', f: 'nova', x: r2(e.x), z: r2(e.z), r, c: C_POI, s: 'bile' });
+      for (const p of ps) if (Math.hypot(p.x - e.x, p.z - e.z) < r + .3 && p.y < 1.6) foeHit(p, dmg, e);
+    },
+  },
+  scream: { // a wail that blasts you backwards; the spirit is solid (hittable) for a moment after
+    start: (e, t, al, yaw) => ({ shape: 'cone', x: e.x, z: e.z, yaw, r: 8, ang: 75 }),
+    hit(e, a, dmg, ps) {
+      e.solid = S.t + 2.5;
+      ev({ k: 'fx', m: 'foe', f: 'cone', x: r2(e.x), y: r2(e.y + 1.6 * e.sc), z: r2(e.z), yaw: r2(a.yaw), r: 8, ang: 75, c: C_SOUL, s: 'wail' });
+      for (const p of ps) if (inCone(p, e.x, e.z, a.yaw, 8.4, 80) && p.y < 3 && foeHit(p, dmg, e)) shove(p, Math.sin(a.yaw) * 15, Math.cos(a.yaw) * 15, 3);
+    },
+  },
+  cage: { // a ring of bone bursts up round you and holds you (you're slowed hard)
+    start(e, t, al) { Object.assign(e.atk, { lx: t.x, lz: t.z }); return { shape: 'circle', x: t.x, z: t.z, r: al.r }; },
+    hit(e, a, dmg, ps) {
+      const al = a.al;
+      for (let i = 0; i < 9; i++) ev({ k: 'fx', m: 'foe', f: 'spike', x: r2(a.lx + Math.sin(TAU * i / 9) * al.r), z: r2(a.lz + Math.cos(TAU * i / 9) * al.r), i: 3, c: al.c, s: al.s });
+      for (const p of ps) if (Math.hypot(p.x - a.lx, p.z - a.lz) < al.r + .3 && p.y < 1.4 && foeHit(p, dmg, e, al)) p.bf.chill = Math.max(p.bf.chill || 0, 2);
+    },
+  },
+  bind: { // chains up to two nearby monsters' souls to itself: they can't be hurt until it dies
+    start(e) {
+      const have = S.enemies.filter(o => o.bnd === e.id).length;
+      const pool = enemiesNear(e.x, e.z, 14).filter(o => o !== e && !o.bnd && !ET[o.type].boss && o.type !== 'necromancer').sort((a, b) => b.max - a.max);
+      if (have >= 2 || !pool.length) { e.atk = null; e.acd = 1.5; return 'done'; }
+      e.atk.bt = pool[0].id;
+      return { shape: 'circle', x: pool[0].x, z: pool[0].z, r: ET[pool[0].type].r * pool[0].sc + 1, ally: 1 };
+    },
+    hit(e, a) {
+      const o = S.enemies.find(q => q.id === a.bt && !q.dead); if (!o || o.bnd) return;
+      o.bnd = e.id; ev({ k: 'fx', m: 'foe', f: 'bind', x: r2(o.x), z: r2(o.z), x2: r2(e.x), z2: r2(e.z) });
+    },
+  },
+  siphon: { // a beam down a marked lane that drinks from you to mend itself and its bound
+    start: (e, t, al, yaw) => ({ shape: 'line', x: e.x, z: e.z, yaw, len: al.len, w: al.w }),
+    hit(e, a, dmg, ps) {
+      const al = a.al;
+      ev({ k: 'fx', m: 'foe', f: 'ray', x: r2(e.x), y: r2(e.y + 1.6 * e.sc), z: r2(e.z), yaw: r2(a.yaw), len: al.len, w: al.w, c: al.c });
+      let got = 0;
+      for (const p of ps) if (inLine(p, e.x, e.z, a.yaw, al.len, al.w) && p.y < 2.5 && foeHit(p, dmg, e, al)) got++;
+      if (got) for (const o of S.enemies) if (o === e || o.bnd === e.id) { o.hp = Math.min(o.max, o.hp + o.max * .2); ev({ k: 'fx', m: 'foe', f: 'mend', x: r2(o.x), z: r2(o.z) }); }
+    },
+  },
 };
+for (const k of ['erupt', 'cage', 'siphon']) LOCKED.add(k);
 const RIMC = { necromancer: 0x9a6aff, lich: 0x7ae8ff, frostqueen: 0x9fe6ff, archdemon: 0xff6a1a, watcher: 0xb04cff, umbra: 0x9a4cff };
+
+// ===================== how the island monsters' states look (view side) =====================
+// vs: 'under' (burrowed: only churned-up dirt shows), 'ghost' (half-there), 'pile' (a heap of bones); bd: the id of the Soulbinder holding it
+function foeLook(v, e, src, t) {
+  const a = e.vs === 'ghost' ? .3 : 1;
+  if (a !== (v.alpha ?? 1)) { v.alpha = a; for (const m of v.mats) { m.o0 ??= m.m.opacity; m.m.transparent = a < 1 || m.o0 < 1; m.m.opacity = m.o0 * a; m.m.depthWrite = a >= 1; m.m.needsUpdate = true; } }
+  const P = v.g.position;
+  if (e.vs === 'under') {
+    v.g.visible = false;
+    if (Math.random() < .7) emit(P.x + rand(-.5, .5), .1, P.z + rand(-.5, .5), rand(-1, 1), rand(1, 3), rand(-1, 1), Math.random() < .5 ? 0x5a4a34 : 0x3a2e20, rand(.1, .2), rand(.3, .6), 9);
+  }
+  if (e.vs === 'ghost' && Math.random() < .25) emit(P.x + rand(-.4, .4), P.y + rand(.5, 2), P.z + rand(-.4, .4), 0, .6, 0, C_SOUL, rand(.08, .14), .6, -.5);
+  if (e.vs === 'pile') { v.g.scale.y *= .22; v.g.scale.x *= 1.3; v.g.scale.z *= 1.3; v.g.rotation.x = 0; if (Math.random() < .3) emit(P.x + rand(-1, 1), .3, P.z + rand(-1, 1), 0, rand(.5, 1.5), 0, 0x35ff8a, .12, .5, -1); }
+  if (e.bd) { // a stream of soul light from the binder
+    const b = src.enemies.find(o => o.id === e.bd);
+    if (b) for (let i = 0; i < 2; i++) { const k = Math.random(); emit(b.x + (e.x - b.x) * k, 1.6 + (1.2 - 1.6) * k + Math.sin(k * Math.PI) * .6, b.z + (e.z - b.z) * k, 0, 0, 0, C_SOUL, rand(.08, .15), .25); }
+    if (Math.random() < .2) emit(P.x + rand(-.5, .5), P.y + rand(.3, 1.8), P.z + rand(-.5, .5), 0, .5, 0, C_SOUL, .14, .5, -.4);
+  }
+}
 
 // ===================== the islands and bridges on screen =====================
 // An island being built flies together out of the clouds: the rock underneath first, then the floor wedges (nearest the

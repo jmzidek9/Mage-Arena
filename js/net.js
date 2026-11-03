@@ -13,7 +13,7 @@ const snap = () => ({
     hp: Math.round(p.hp), max: p.max, down: p.down, rev: r2(p.rev), up: p.up, ult: r2(p.ult), bf: bfSnap(p.bf), ch: p.ch, chT: r2(p.chT), combo: p.combo, stats: p.stats,
     r: [Math.round(p.bd.heat || 0), p.bd.souls || 0, p.bd.arc || 0, p.bd.swords || 0, 0, (p.bd.runeN || 0) % 3, p.bd.foc && S.t - p.bd.foc.t < 1.5 ? p.bd.foc.n : 0] }])), // element resources: heat, souls, arcane charges, swords, (unused), rune count, laser focus
   enemies: S.enemies.filter(e => !e.pid).map(e => ({ id: e.id, type: e.type, x: r2(e.x), y: r2(e.y), z: r2(e.z), yaw: r2(e.yaw), hp: Math.round(e.hp), max: Math.round(e.max), sc: e.sc, elite: e.elite,
-    st: Object.keys(e.st).map(k => ELIST.indexOf(k)), cc: e.cc?.type || 0, a: e.atk ? r2(1 - e.atk.t / e.atk.max) : 0, ak: e.atk?.k || 0, sh: Math.round(e.sh), lk: e.link?.g || 0, ts: S.tstop > 0 ? 1 : 0 })),
+    st: Object.keys(e.st).map(k => ELIST.indexOf(k)), cc: e.cc?.type || 0, a: e.atk ? r2(1 - e.atk.t / e.atk.max) : 0, ak: e.atk?.k || 0, sh: Math.round(e.sh), lk: e.link?.g || 0, ts: S.tstop > 0 ? 1 : 0, vs: e.vs || 0, bd: e.bnd || 0 })),
   shots: S.shots.slice(-160).map(s => ({ id: s.id, mv: s.mv, el: s.el, foe: s.foe ? 1 : 0, ...(s.c ? { c: s.c } : {}), x: r2(s.x), y: r2(s.y), z: r2(s.z), vx: r2(s.vx), vy: r2(s.vy), vz: r2(s.vz), sc: r2(s.sc || 1) })),
   ents: S.ents.slice(-120).map(n => ({ id: n.id, mv: n.mv, el: n.el, kind: n.kind, own: n.own, x: r2(n.x), y: r2(n.y || 0), z: r2(n.z), r: r2(n.r), yaw: r2(n.yaw || 0), t: r2(n.t), l: r2(Math.max(0, n.life / n.max)), s: n.s, v: n.v ? 1 : 0, ...(n.fx0 != null ? { fx0: r2(n.fx0), fz0: r2(n.fz0) } : {}) })),
 });
@@ -292,6 +292,23 @@ function testMove(m, frames = 180, budget = 1500) {
   Object.assign(S, { phase: 'lobby', players: {}, enemies: [], shots: [], ents: [], rings: [], timers: [], events: [], tstop: 0 });
   return out;
 }
+// one island monster fights a wizard for 8 s (hit hard every second so its death tricks run too)
+function testFoe(type, frames = 480) {
+  const out = { type }, ch = S.cheat;
+  try {
+    Object.assign(S, { phase: 'fight', mode: 'arena', isl: 0, t: 0, wave: 15, enemies: [], shots: [], ents: [], rings: [], timers: [], events: [], hz: [], hitstop: 0, slowmo: 0, tstop: 0, budget: 0, bossLeft: 0, cheat: { inv: 1 } });
+    const p = newPlayer('h', 'fire'); p.z = 6; S.players = { h: p };
+    const e = spawnEnemy(type, 0, -10); e.rise = 0; e.y = 0; spawnEnemy('grunt', 3, -8).rise = 0;
+    for (let f = 0; f < frames; f++) {
+      if (f === 200) { p.x = 0; p.z = -9; } // walk right up to it
+      if (f % 60 === 59 && !e.dead) damage(e, e.max * .3, 'fire', p);
+      stepTimers(1 / 60); stepShots(1 / 60); stepEnts(1 / 60); stepEnemies(1 / 60); stepHazards(1 / 60); stepPlayers(1 / 60);
+    }
+    JSON.stringify(snap());
+  } catch (err) { out.err = err.message; console.error(type, err); }
+  Object.assign(S, { phase: 'lobby', mode: 'arena', players: {}, enemies: [], shots: [], ents: [], rings: [], timers: [], events: [], hz: [], tstop: 0, cheat: ch });
+  return out;
+}
 function selfTest() {
   const res = [], t = (name, ok) => res.push(`${ok ? 'PASS' : 'FAIL'} ${name}`);
   t(`${ELIST.length} elements with 5 moves each`, ELIST.length === 30 && ELIST.every(k => EL[k].moves.length === 5));
@@ -346,6 +363,10 @@ function selfTest() {
   const errs = [];
   for (const m of Object.values(MOVE)) if (m.el) { const r = testMove(m); if (r.err) errs.push(`${m.key} ${m.name}: ${r.err}`); }
   t(`all ${ELIST.length * 5} moves run without errors${errs.length ? ' (' + errs.join('; ') + ')' : ''}`, !errs.length);
+  const isle = Object.keys(ET).filter(k => ET[k].zone && ET[k].zone !== 'dungeon'), ferr = isle.map(testFoe).filter(r => r.err).map(r => `${r.type}: ${r.err}`);
+  t(`all ${isle.length} island monsters fight without errors${ferr.length ? ' (' + ferr.join('; ') + ')' : ''}`, !ferr.length);
+  const kit = k => [ET[k].atk, ET[k].alt?.atk].join('+'), regs = isle.filter(k => ET[k].cost), dup = regs.filter(k => regs.some(o => o !== k && ET[o].zone !== ET[k].zone && kit(o) === kit(k)));
+  t(`no two islands' monsters fight the same way${dup.length ? ' (' + dup.join(', ') + ')' : ''}`, !dup.length);
   console.log(res.join('\n'));
   return res;
 }

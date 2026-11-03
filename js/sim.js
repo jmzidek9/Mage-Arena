@@ -194,7 +194,7 @@ function groundAt(p, max = 20) {
 }
 const center = e => V(e.x, e.y + ET[e.type].h * e.sc * .55, e.z);
 // S.actor: the player whose move is running right now; their own duel stand-in is invisible to their moves
-const alive = e => !e.dead && e.rise <= 0 && !e.fall && !(e.pid && e.pid === S.actor);
+const alive = e => !e.dead && e.rise <= 0 && !e.fall && !e.gone && !(e.pid && e.pid === S.actor); // gone: burrowed underground (areas.js)
 const touches = (e, x, y, z, pad) => { const t = ET[e.type], r = t.r * e.sc + pad; return (x - e.x) ** 2 + (z - e.z) ** 2 < r * r && y > e.y - pad && y < e.y + t.h * e.sc + pad; };
 function enemiesNear(x, z, r, skip) {
   return S.enemies.filter(e => alive(e) && !(skip && skip.includes(e.id)) && Math.hypot(e.x - x, e.z - z) < r + ET[e.type].r * e.sc);
@@ -339,6 +339,8 @@ function damage(e, amount, el, p, o = {}) {
   if (e.cc?.type === 'stasis' && !o.raw) { e.stored += amount; return 0; }
   if (S.tstop > 0 && !o.raw) { e.tsd = (e.tsd || 0) + amount; e.tsBy = p?.id; return 0; }
   amount *= (1 + (e.m?.vuln || 0)) * (e.cc?.type === 'freeze' ? 1.4 : 1) * (e.cc?.type === 'bubble' ? 1.3 : 1) * (e.fvU > S.t ? 1 + e.fv : 1) * (el === 'soul' && e.hol > S.t ? 1.25 : 1); // fv: extra damage taken (Binding Circle, Snare, Levitate, marks); hol: Soul Rend's Hollowed
+  const W = ET[e.type].ward; // area monsters that shrug hits off: phased spirits, soul-bound allies, bone piles (areas.js)
+  if (e.bnd || W) { amount = e.bnd ? 0 : W(e, amount, p, o); if (amount <= 0) { ev({ k: 'block', x: r2(e.x), y: r2(e.y + ET[e.type].h * e.sc * .6), z: r2(e.z) }); return 0; } }
   if (e.sh > 0) { const a = Math.min(e.sh, amount); e.sh -= a; amount -= a; }
   amount = Math.round(amount);
   if (amount <= 0) return 0;
@@ -392,7 +394,9 @@ function blast(x, z, r, dmg, c, o = {}) {
 }
 function kill(e, el, p) {
   if (e.dead) return;
-  e.dead = true; const t = ET[e.type];
+  const t = ET[e.type];
+  if (t.die?.(e, p) === false) return; // some area monsters cheat death (areas.js)
+  e.dead = true;
   ev({ k: 'die', id: e.id, type: e.type, x: r2(e.x), y: r2(e.y), z: r2(e.z), el, sc: e.sc, boss: !!t.boss, elite: e.elite });
   if (t.boss || e.elite) S.hitstop = .12;
   if (t.split && e.sc > .7) for (const s of [-1, 1]) { const m = spawnEnemy('splitter', e.x + s * .6, e.z, false, e.sc * .6); m.rise = 0; m.y = 0; m.kx = s * 6; }
@@ -895,6 +899,7 @@ function stepEnemies(dt) {
       for (let k = 0; k < 4; k++) { const a = TAU * k / 4, q = confine({ x: e.x + Math.sin(a) * 5, z: e.z + Math.cos(a) * 5 }, 1); spawnEnemy(t.minions?.[k % 2] ?? (k % 2 ? 'runner' : 'grunt'), q.x, q.z); }
     }
     const dx = tgt.x - e.x, dz = tgt.z - e.z, d = Math.hypot(dx, dz) || 1;
+    if (t.tick?.(e, dt, tgt, d, ps)) continue; // the area monsters' own behaviours (areas.js); true: it handled its own turn
     if (e.atk) { // winding up: turn slowly toward the target, then strike
       if (!LOCKED.has(e.atk.k)) e.yaw = lerpAngle(e.yaw, Math.atan2(dx, dz), Math.min(1, dt * 2));
       if ((e.atk.t -= dt * rate) <= 0) resolveAttack(e);
