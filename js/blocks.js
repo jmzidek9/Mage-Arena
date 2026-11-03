@@ -90,7 +90,7 @@ function guardFrame(src, dt, t) {
     if (v.a < .1 && !on) { v.g.removeFromParent(); GV.delete(id); continue; }
     const mine = id === myId, k = v.a, hp = p.gm ? clamp(p.gh / p.gm, 0, 1) : 1;
     const kp = v.kp, punch = 1 + Math.max(-.15, -kp * .5) + v.hit * .06; // squashed by the blow, then a bounce back
-    if (mine && !v.omni) { if (v.g.parent !== camera) camera.add(v.g); v.g.position.set(.16 + Math.sin(v.tilt) * kp * .08, -.2 - kp * .05, -1.3 + kp * .3); v.g.rotation.set(kp * .45, -v.tilt * kp * 1.2, Math.sin(v.tilt) * kp * .3); v.g.scale.setScalar(.42 * (.6 + .4 * k) * punch); }
+    if (mine && !v.omni) { if (v.g.parent !== camera) camera.add(v.g); v.g.position.set(.34 + Math.sin(v.tilt) * kp * .08, -.16 - kp * .05, -1.3 + kp * .3); v.g.rotation.set(kp * .45, -v.tilt * kp * 1.2, Math.sin(v.tilt) * kp * .3); v.g.scale.setScalar(.42 * (.6 + .4 * k) * punch); }
     else {
       if (v.g.parent !== scene) scene.add(v.g);
       const f = V(-Math.sin(p.yaw), 0, -Math.cos(p.yaw));

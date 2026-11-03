@@ -478,7 +478,7 @@ function frame(now, manual = false) {
     const amp = moving ? .012 : .004, tremble = (chargeK * .004 + chan * .003) * Math.sin(t * 60);
     vm.position.set(Math.cos(vmBob * .5) * amp + tremble, Math.sin(vmBob) * amp - (mp.vy || 0) * .003, 0);
     handL.position.set(hL0.x + k * .05 + chan * .04, hL0.y + k * .06 + chan * .05, hL0.z - k * .16 - chan * .12 + chargeK * .06); handL.rotation.x = hLr.x + k * .5 + chan * .4; // casts
-    handB.position.set(-hL0.x - gd * .14, hL0.y + gd * .1, hL0.z - gd * .18); handB.rotation.x = hLr.x + gd * .9; handB.rotation.z = -hLr.z + gd * .5; // only blocks
+    handB.position.set(-hL0.x - gd * .03, hL0.y + gd * .1, hL0.z - gd * .12); handB.rotation.x = hLr.x + gd * .8; handB.rotation.z = -hLr.z + gd * .15; // only blocks: raised straight up on its own side
     if (rigMats.staff_gem) rigMats.staff_gem.emissiveIntensity = 3 + Math.sin(t * 4) + k * 6 + chargeK * 8 + chan * 4;
     if (rigMats.hand_rune) rigMats.hand_rune.emissiveIntensity = 4 + chargeK * 10 + chan * 6 + gd * 8;
     hud(src, mp);
