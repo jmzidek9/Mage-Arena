@@ -1104,8 +1104,8 @@ function renderWorld(src, dt, t) {
 let healT = 0, dodgeFx = 0, hudKey = '';
 const touchBtns = [0, 1, 2, 3, 4].map(i => document.querySelector(`#touch .tb[data-k="${i}"]`));
 function buildBar(kit) {
-  document.querySelectorAll('#touch .tb').forEach(b => { const i = +b.dataset.k; if (!isNaN(i)) b.textContent = kit.moves[i]?.icon ?? ''; });
-  $('slots').innerHTML = kit.moves.map((m, i) => `<div class="slot${i === 4 ? ' ult' : ''}" title="${m.name}: ${m.desc.replace(/"/g, '&quot;')}"><div class="face"><div class="ico">${m.icon}</div><i class="cdv"></i></div><b>${slotKey(i)}</b><span>${m.name}</span></div>`).join('');
+  document.querySelectorAll('#touch .tb').forEach(b => { const i = +b.dataset.k; if (!isNaN(i)) b.innerHTML = kit.moves[i] ? moveIcon(kit.moves[i]) : ''; });
+  $('slots').innerHTML = kit.moves.map((m, i) => `<div class="slot${i === 4 ? ' ult' : ''}" title="${m.name}: ${m.desc.replace(/"/g, '&quot;')}"><div class="face"><div class="ico">${moveIcon(m)}</div><i class="cdv"></i></div><b>${slotKey(i)}</b><span>${m.name}</span></div>`).join('');
 }
 function hud(src, mp) {
   const sp = src.players[myId];
@@ -1446,6 +1446,6 @@ function renderDetail() {
     <div class="tags"><span>${t1}</span><span>${t2}</span><span class="dif d${dif}">${'●'.repeat(dif)}${'○'.repeat(3 - dif)} ${DIFF[dif]}</span>${unlocked(k) ? `<span class="mast" title="Mastery: ${mx}${nxt ? ' / ' + nxt : ''} XP">${'★'.repeat(st)}${'☆'.repeat(5 - st)}</span>` : `<span class="lk">🔒 ${PROG.keys ? 'Click to unlock' : 'Locked: level up to unlock'}</span>`}</div>
     <div class="passive"><em>Passive</em> ${e.passive}</div>
     <div class="passive"><em>Block (${keyName(BIND.block)}, hold)</em> <b>${BLOCK[k]?.name}</b>: ${BLOCK_DESC}</div>
-    <div class="moves">${e.moves.map((m, i) => `<div class="mv"><kbd>${slotKey(i)}</kbd><span class="mi">${m.icon}</span><div><b>${m.name}</b>${m.mode === 'charge' ? ' <i>hold to charge</i>' : m.mode === 'channel' ? ' <i>hold</i>' : m.mode === 'aim' ? ' <i>hold to aim</i>' : ''}<small>${m.desc}</small></div></div>`).join('')}</div>`;
+    <div class="moves">${e.moves.map((m, i) => `<div class="mv"><kbd>${slotKey(i)}</kbd><span class="mi">${moveIcon(m)}</span><div><b>${m.name}</b>${m.mode === 'charge' ? ' <i>hold to charge</i>' : m.mode === 'channel' ? ' <i>hold</i>' : m.mode === 'aim' ? ' <i>hold to aim</i>' : ''}<small>${m.desc}</small></div></div>`).join('')}</div>`;
 }
 
