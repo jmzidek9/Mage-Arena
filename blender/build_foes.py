@@ -494,26 +494,105 @@ leather = mat('fr_leather', (0.2, 0.13, 0.08), rough=0.8)
 gown = mat('fr_gown', (0.55, 0.72, 0.9), rough=0.35, metal=0.2)
 pale = mat('fr_pale', (0.82, 0.88, 0.95), rough=0.4)
 
-# snowfiend: a shaggy white imp with icicle horns
-rt, body, head = biped('snowfiend', dict(skin=fur, belly=fur2, eye=iceg, mouth=iceg, claw=ice, tooth=ice, arm=fur, hunch=0.35,
-    torso=lambda m: spikes_on(m, ice, (0, 0.1, 0.45), (0.3, 0.28, 0.3), 6, 0.3, 0.05, seed=4),
-    crown_fn=lambda m: [crystal(m, ice, aim((sx * 0.5, 0.3, 1), (sx * 0.12, -0.05, 0.3)), 0.05, 0.4) for sx in (-1, 1)]))
-# icewolf: a pale wolf with a crest of ice shards
-rt, body, head = beast('icewolf', dict(hide=fur, leg=fur2, eye=iceg, tooth=ice, mouth=iceg,
-    back=lambda m: [crystal(m, ice, aim((0, 0.5, 1), (0, -0.35 + k * 0.15, 0.16)), 0.05, 0.28 - abs(k - 2.5) * 0.03) for k in range(6)],
-    head_fn=lambda m: [ell(m, fur, (sx * 0.08, 0.02, 0.15), (0.03, 0.04, 0.09)) for sx in (-1, 1)],
-    tail_fn=lambda m: crystal(m, ice, aim((0, 1, -0.2), (0, 0.72, -0.08)), 0.03, 0.2)))
-bake_scale(rt, 1.1)
-# icesprite: a hovering knot of ice crystals with a glowing heart
-rt, body = floater('icesprite', dict(
-    body=lambda m: (m.ico(iceg, 0.16, sub=2), [crystal(m, ice, aim(d, (0, 0, 0)), 0.09, 0.6) for d in ((0, 0, 1), (0, 0, -1), (1, 0, .3), (-1, 0, .3), (0, 1, .3), (0, -1, .3), (.7, .7, -.5), (-.7, -.7, -.5))]),
-    ring=lambda m: [crystal(m, ice, TRS((*pol(0.62, TAU * k / 6), 0), (math.pi / 2, 0, TAU * k / 6)), 0.05, 0.25) for k in range(6)],
-    tent=ice, tr=0.04, tlen=0.1, tents=4, tip=iceg))
-# frostmite: a living snowball, coal eyes, a crystal fuse
-rt, body = keg('frostmite', dict(body=snowm, limb=fur2, noise=0.02,
-    face=lambda m: (eyes(m, coal, (0, -0.39, 0.42), 0.1, (0.05, 0.03, 0.05)), [m.sphere(coal, 0.025, TRS((x, -0.41, 0.27 + abs(x) * 0.3)), u=6, v=4) for x in (-0.12, -0.06, 0, 0.06, 0.12)],
-                    spikes_on(m, ice, (0, 0, 0.32), (0.42, 0.42, 0.42), 7, 0.3, 0.05, up=0.2, seed=7)),
-    fuse=lambda m: (crystal(m, iceg, TRS(), 0.07, 0.3), crystal(m, ice, TRS(rot=(0.4, 0, 0)), 0.05, 0.22))))
+wool = mat('fr_wool', (0.8, 0.78, 0.74), rough=1.0)
+hornf = mat('fr_horn', (0.34, 0.3, 0.26), rough=0.45)
+feather = mat('fr_feather', (0.38, 0.48, 0.62), rough=0.8)
+feather2 = mat('fr_feather_b', (0.8, 0.84, 0.9), rough=0.8)
+beakm = mat('fr_beak', (0.75, 0.6, 0.3), rough=0.4)
+
+# rime stalker: a great white sabre-toothed cat, striped grey, frost on its whiskers, a long heavy tail
+def sc_back(m):
+    for k in range(7):  # grey stripes over the back
+        y = -0.42 + k * 0.14
+        m.tube(fur2, [(-0.21, y, 0.06), (-0.1, y + 0.03, 0.2), (0.1, y + 0.03, 0.2), (0.21, y, 0.06)], 0.018, n=4)
+    ell(m, fur, (0, -0.35, 0.05), (0.24, 0.22, 0.2), noise=0.02)  # heavy shoulders
+def sc_head(m):
+    for sx in (-1, 1):
+        horn(m, pale, (sx * 0.055, -0.33, -0.05), (0, -0.25, -1), 0.26, 0.028, curl=(0, 0.5, 0))  # sabre fangs
+        ell(m, fur, (sx * 0.09, -0.02, 0.15), (0.045, 0.03, 0.06))  # ears
+        for k in range(3):  # frosted whiskers
+            m.tube(ice, [(sx * 0.07, -0.36, 0.0), (sx * 0.28, -0.4 + k * 0.03, 0.03 - k * 0.04)], 0.004, n=3)
+    ell(m, fur2, (0, -0.2, 0.12), (0.09, 0.15, 0.04))  # brow stripe
+rt, body, head = beast('snowcat', dict(hide=fur, leg=fur, eye=iceg, tooth=pale, mouth=coal, back=sc_back, head_fn=sc_head,
+    tail_fn=lambda m: (m.tube(fur, [(0, 0.72, -0.08), (0.12, 0.95, -0.25), (0.3, 1.12, -0.18), (0.4, 1.25, 0.0)], [0.055, 0.05, 0.04, 0.025], n=7),
+                       [m.tube(fur2, [(0.12 * k / 2, 0.8 + k * 0.12, -0.15), (0.12 * k / 2 + 0.01, 0.82 + k * 0.12, -0.1)], 0.05, n=6) for k in range(3)])))
+bake_scale(rt, 1.25)
+
+# avalanche ram: a shaggy mountain ram, wool hung with icicles, horns curled like boulders
+def rm_back(m):
+    m.ico(wool, 1, TRS((0, 0, 0.04), scale=(0.34, 0.62, 0.3)), sub=2, noise=0.07)
+    for k in range(9):  # icicles hanging from the wool
+        x, y = random.uniform(-0.25, 0.25), random.uniform(-0.45, 0.45)
+        crystal(m, ice, aim((0, 0, -1), (x, y, -0.2)), 0.025, random.uniform(0.1, 0.2))
+    spikes_on(m, wool, (0, 0, 0.1), (0.3, 0.5, 0.28), 14, 0.12, 0.06, up=0.4, seed=21)
+def rm_head(m):
+    for sx in (-1, 1):
+        horn(m, hornf, (sx * 0.09, -0.04, 0.1), (sx * 1, 0.5, 0.5), 0.85, 0.08, curl=(0, -1.6, -2.4), n=8, seg=9)
+        ell(m, wool, (sx * 0.12, 0.0, 0.08), (0.06, 0.04, 0.03))
+    ell(m, wool, (0, 0.02, 0.15), (0.14, 0.12, 0.08), noise=0.02)  # woolly crown between the horns
+    ell(m, hornf, (0, -0.05, 0.13), (0.11, 0.09, 0.05))  # the battering brow
+rt, body, head = beast('ram', dict(hide=fur2, leg=fur2, eye=iceg, tooth=pale, mouth=coal, back=rm_back, head_fn=rm_head,
+    tail_fn=lambda m: ell(m, wool, (0, 0.2, 0.05), (0.08, 0.12, 0.08))))
+bake_scale(rt, 1.5)
+
+# cryomancer: a tall ice-witch in layered blue robes, a frozen veil and a staff of living ice
+rt, body = caster('cryomancer', dict(robe=gown, trim=silver, hand=pale, glow=iceg,
+    torso=lambda m: [crystal(m, ice, aim((sx * 0.6, 0.2, 1), (sx * 0.3, 0.02, 1.18)), 0.05, 0.3) for sx in (-1, 1) for _ in range(2)],
+    head=lambda m: (m.lathe(gown, [(0, -0.05), (0.2, 0.0), (0.24, 0.2), (0.2, 0.38), (0.08, 0.5), (0, 0.55)], n=16, M=TRS((0, 0.04, 0)), smooth=True),
+                    ell(m, ink, (0, -0.12, 0.18), (0.15, 0.08, 0.15)), ell(m, pale, (0, -0.15, 0.17), (0.11, 0.05, 0.13), u=14, v=10),
+                    [ell(m, iceg, (sx * 0.045, -0.2, 0.2), (0.022, 0.01, 0.012), u=8, v=6) for sx in (-1, 1)],
+                    [m.tube(ice, [(x, -0.2, 0.1), (x * 1.1, -0.22, -0.12)], [0.012, 0.003], n=4) for x in (-0.06, -0.02, 0.02, 0.06)],  # a veil of icicles
+                    [crystal(m, ice, aim((math.cos(a) * 0.4, math.sin(a) * 0.3, 1), (math.cos(a) * 0.15, math.sin(a) * 0.12, 0.42)), 0.04, 0.25 if k % 2 else 0.4) for k, a in enumerate([1.9 + k * 0.4 for k in range(6)])]),
+    staff=staff(silver, lambda m: (crystal(m, ice, TRS((0.03, 0, 0.8)), 0.08, 0.5), m.ico(iceg, 0.08, Matrix.Translation((0.03, 0, 0.95)), sub=2),
+                                   [crystal(m, ice, aim((math.cos(a), math.sin(a), 0.6), (0.03, 0, 0.85)), 0.03, 0.22) for a in (0, 2.1, 4.2)]))))
+
+# frost totem: a pillar of carved ice with a cold heart, a ring of shards turning round it
+rt = root('frosttotem')
+def ft_body(m):
+    for k in range(4):  # stacked carved blocks, each a little twisted
+        m.lathe(ice, [(0, 0), (0.3 - k * 0.04, 0), (0.32 - k * 0.04, 0.2), (0.28 - k * 0.04, 0.4), (0, 0.4)], n=6, M=TRS((0, 0, k * 0.42), (0, 0, k * 0.5)))
+        runes(m, iceg, 0.33 - k * 0.04, 0.06, 6, 0.008, k * 0.42 + 0.2, random.Random(40 + k))
+    m.ico(iceg, 0.16, Matrix.Translation((0, 0, 1.9)), sub=2)
+    for a in (0, 2.1, 4.2):
+        crystal(m, ice, aim((math.cos(a), math.sin(a), 1.2), (0, 0, 1.75)), 0.05, 0.4)
+    for k in range(6):
+        crystal(m, snowm, aim((math.cos(k), math.sin(k), 0.3), (0.25 * math.cos(k), 0.25 * math.sin(k), 0.05)), 0.07, 0.3)
+body = part(rt, 'body', rt, (0, 0, 0), ft_body)
+part(rt, 'ring', body, (0, 0, 1.3), lambda m: [crystal(m, ice, TRS((*pol(0.7, TAU * k / 5), 0), (math.pi / 2, 0, TAU * k / 5)), 0.05, 0.3) for k in range(5)])
+
+# rime golem: a hulk of packed ice and snow, a blue fire inside, armoured in a shell of clear crystal
+def ig_body(m):
+    m.ico(snowm, 1, TRS((0, 0, 0.75), (0.2, 0, 0), (0.8, 0.6, 0.72)), sub=2, noise=0.07)
+    m.ico(iceg, 0.3, TRS((0, -0.35, 0.85)), sub=2)
+    for k in range(14):  # crystal armour plates
+        a, z = random.uniform(0, TAU), random.uniform(0.3, 1.3)
+        crystal(m, ice, aim((math.cos(a), math.sin(a) * 0.8, 0.4), (0.7 * math.cos(a), 0.55 * math.sin(a), z)), random.uniform(0.12, 0.2), random.uniform(0.3, 0.6))
+    spikes_on(m, ice, (0, 0.1, 1.3), (0.7, 0.5, 0.3), 8, 0.5, 0.1, seed=17)
+def ig_head(m):
+    m.ico(ice, 0.3, TRS((0, -0.05, 0.12), scale=(1, 0.9, 0.8)), sub=1)
+    eyes(m, iceg, (0, -0.3, 0.14), 0.1, (0.05, 0.03, 0.03))
+    for sx in (-1, 1):
+        crystal(m, ice, aim((sx * 0.5, 0.2, 1), (sx * 0.15, 0, 0.25)), 0.06, 0.45)
+def ig_arm(m, sx):
+    m.tube(snowm, [(0, 0, 0), (sx * 0.15, -0.05, -0.55), (sx * 0.18, -0.2, -1.1)], [0.2, 0.17, 0.15], n=8)
+    m.ico(ice, 0.3, TRS((sx * 0.2, -0.25, -1.3), scale=(1, 1.1, 0.9)), sub=1)  # a fist of solid ice
+    for k in range(4):
+        crystal(m, ice, aim((sx * 0.6, (k - 1.5) * 0.3, 0.3), (sx * 0.25, -0.05 + (k - 1.5) * 0.08, -0.4 - k * 0.15)), 0.06, 0.3)
+    ell(m, ice, (0, 0, 0), (0.28, 0.26, 0.26))
+def ig_leg(m, sx):
+    m.tube(snowm, [(0, 0, 0), (0, -0.05, -0.45), (0, 0.02, -0.85)], [0.2, 0.17, 0.15], n=8)
+    m.ico(ice, 0.24, TRS((0, -0.1, -0.85), scale=(1, 1.3, 0.4)), sub=1)
+rt, body, head = golem('icegolem', dict(body=ig_body, head=ig_head, arm=ig_arm, leg=ig_leg))
+
+# storm harpy: a hag with great blue-grey wings for arms' cloak, a hooked beak and talons, feathers rimed with frost
+rt, body, head = biped('harpy', dict(skin=pale, belly=feather2, arm=feather, leg=beakm, shoulder=feather, eye=iceg, mouth=coal, claw=coal, tooth=pale, hunch=0.25, reach=0.9, wings=feather,
+    torso=lambda m: (spikes_on(m, feather, (0, 0.1, 0.45), (0.32, 0.3, 0.3), 12, 0.3, 0.05, seed=9), spikes_on(m, feather2, (0, -0.1, 0.25), (0.3, 0.25, 0.2), 8, 0.2, 0.04, up=-0.2, seed=10)),
+    crown_fn=lambda m: (m.lathe(beakm, [(0.06, 0), (0.05, -0.1), (0.02, -0.2), (0, -0.24)], n=8, M=aim((0, 1, 0.5), (0, -0.2, 0.15)), smooth=True),
+                        [m.tube(feather, [(x, 0.05, 0.3), (x * 1.6, 0.25, 0.4), (x * 1.8, 0.45, 0.3)], [0.03, 0.02, 0.004], n=4) for x in (-0.1, -0.04, 0.04, 0.1)])))
+for ob in PARTS['harpy']:  # the wings are its pride: twice the span of the usual pair
+    if ob.name.endswith(('_wingL', '_wingR')):
+        ob.data.transform(Matrix.Scale(2.2, 4))
+
 # yeti: a towering white beast with curling horns and a blue face
 def ye_body(m):
     m.ico(fur, 1, TRS((0, 0, 0.75), (0.2, 0, 0), (0.85, 0.65, 0.75)), sub=2, noise=0.08)
@@ -535,16 +614,6 @@ def ye_leg(m, sx):
     m.tube(fur, [(0, 0, 0), (0, -0.05, -0.5), (0, 0, -0.8)], [0.3, 0.26, 0.24], n=9)
     ell(m, blue, (0, -0.15, -0.85), (0.2, 0.3, 0.08))
 rt, body, head = golem('yeti', dict(body=ye_body, head=ye_head, arm=ye_arm, leg=ye_leg))
-# glacier knight: armour of ice, a crystal shield, a blade of frozen light
-rt, body = knight('glacier', dict(plate=ice, trim=silver, cloth=gown,
-    pauldron=lambda m, sx: [crystal(m, ice, aim((sx * 0.5, 0, 1), (sx * (0.32 + k * 0.07), 0, 0.68)), 0.05, 0.3 - k * 0.06) for k in range(3)],
-    helm=lambda m: (m.lathe(ice, [(0, -0.02), (0.16, 0.0), (0.17, 0.22), (0.14, 0.32), (0, 0.36)], n=16), m.prism(iceg, [(-0.11, 0), (0.11, 0), (0.11, 0.022), (-0.11, 0.022)], 0, 0.02, M=TRS((0, -0.16, 0.18), (math.pi / 2, 0, 0))),
-                    [crystal(m, ice, aim((sx * 0.3, 0.2, 1), (sx * 0.08, 0, 0.3)), 0.04, 0.35) for sx in (-1, 0, 1)]),
-    shield=lambda m: (m.prism(ice, [(-0.34, 0.5), (0.34, 0.5), (0.34, -0.3), (0, -0.62), (-0.34, -0.3)], -0.05, 0.05, M=TRS(rot=(math.pi / 2, 0, 0))),
-                      m.prism(silver, [(-0.36, 0.52), (0.36, 0.52), (0.36, 0.46), (-0.36, 0.46)], -0.06, 0.06, M=TRS(rot=(math.pi / 2, 0, 0))),
-                      [m.stroke(iceg, pol(0.0, 0), pol(0.28, TAU * k / 6), 0.03, -0.06, M=TRS(rot=(math.pi / 2, 0, 0))) for k in range(6)]),
-    weapon=lambda m: (m.lathe(leather, [(0.028, -0.16), (0.028, 0.12)], n=6), m.prism(silver, [(-0.18, -0.02), (0.18, -0.02), (0.18, 0.02), (-0.18, 0.02)], 0.12, 0.16),
-                      m.lathe(ice, [(0, 0.14), (0.07, 0.16), (0.06, 1.15), (0, 1.35)], n=4, M=TRS(scale=(1, 0.25, 1))), m.lathe(iceg, [(0, 0.2), (0.014, 0.22), (0.012, 1.05), (0, 1.18)], n=4, M=TRS((0, -0.016, 0), scale=(1, 0.5, 1))))))
 # Hrimgar the Frost Giant: a bearded giant in furs and a horned helm, dragging an ice-bound club
 rt, body, head = biped('frostgiant', dict(skin=blue, belly=fur, arm=blue, leg=fur2, shoulder=fur, eye=iceg, mouth=coal, claw=pale, tooth=pale, hunch=0.2, reach=1.1,
     torso=lambda m: (ell(m, fur, (0, 0.05, 0.6), (0.42, 0.36, 0.2), noise=0.02), m.lathe(leather, [(0.37, 0.05), (0.38, 0.1), (0.37, 0.15)], n=16, closed=True),
@@ -809,7 +878,7 @@ bpy.ops.wm.save_as_mainfile(filepath=os.path.join(HERE, 'foes.blend'))
 export('foes.glb', ROOTS)
 pv = Previewer(res=420)
 GROUPS = {'crypt': ['crawler', 'bonearcher', 'plaguebearer', 'banshee', 'colossus', 'necromancer', 'lich', 'bonedragon'],
-          'frost': ['snowfiend', 'icewolf', 'icesprite', 'frostmite', 'yeti', 'glacier', 'frostgiant', 'frostqueen'],
+          'frost': ['snowcat', 'ram', 'cryomancer', 'frosttotem', 'icegolem', 'harpy', 'yeti', 'frostgiant', 'frostqueen'],
           'hell': ['hellhound', 'cinderimp', 'magmaling', 'infernal', 'hellknight', 'pyrepriest', 'pitlord', 'archdemon'],
           'void': ['voidling', 'gazer', 'riftmite', 'voidspawn', 'horror', 'mindflayer', 'watcher', 'devourer'], 'shadow': ['umbra', 'stalker']}
 pv.scene.render.resolution_x, pv.scene.render.resolution_y = 1400, 420

@@ -57,25 +57,77 @@ Object.assign(ET, {
       { atk: 'rain', n: 3, r: 2.8, dmg: 22, c: 0xe8dcc0, s: 'bone' }, 'ring'] },
 
   // ---------- 3: the Frost Giants' Peaks ----------
-  snowfiend:  { hp: 50,  spd: 3.7, r: .5,  h: 1.8, dmg: 11, reach: 1.9, cost: 1, from: 1, kb: 1,   poise: 30,  atk: 'swipe', wind: .5,  cd: 1.3, zone: 'frost',
-    alt: { atk: 'lob', min: 4, max: 14, wind: .8, cd: 6, dmg: 10, r: 1.8, c: C_ICE, s: 'snow', chill: 1.5 } },
-  icewolf:    { hp: 28,  spd: 7.4, r: .45, h: 1.0, dmg: 8,  reach: 3.2, cost: 1, from: 2, kb: 1.4, poise: 15,  atk: 'lunge', wind: .38, cd: 1.5, zone: 'frost',
-    alt: { atk: 'cone', min: 0, max: 5.5, wind: .55, cd: 6, dmg: 9, r: 5.5, ang: 45, c: C_ICE, s: 'frost', chill: 2 } },
-  icesprite:  { hp: 30,  spd: 3.2, r: .45, h: 2.2, dmg: 9,  reach: 26,  cost: 3, from: 3, kb: 1,   poise: 22,  atk: 'orb',   wind: .65, cd: 2.2, ranged: 1, keep: [10, 16], oc: C_ICE, zone: 'frost',
-    alt: { atk: 'rain', min: 0, max: 24, cd: 8, n: 3, r: 1.7, dmg: 11, c: C_ICE, s: 'ice', chill: 1.5 } },
-  frostmite:  { hp: 24,  spd: 6.4, r: .5,  h: 1.2, dmg: 20, reach: 2.4, cost: 2, from: 3, kb: 1.2, poise: 10,  atk: 'fuse',  wind: .95, cd: 9, zone: 'frost', pool: { r: 3.4, life: 5, dps: 4, c: C_ICE, s: 'ice', chill: 1 } },
-  yeti:       { hp: 220, spd: 2.4, r: 1.1, h: 2.8, dmg: 24, reach: 3.4, cost: 5, from: 5, kb: .25, poise: 140, atk: 'smash', wind: .95, cd: 2.1, zone: 'frost',
-    alt: { atk: 'lob', min: 5, max: 18, wind: 1.1, cd: 7, dmg: 22, r: 3, c: 0xd8f0ff, s: 'boulder' } },
-  glacier:    { hp: 130, spd: 3.2, r: .65, h: 2.2, dmg: 17, reach: 3.6, cost: 4, from: 6, kb: .4,  poise: 85,  atk: 'thrust', wind: .6, cd: 1.7, shield: 1, zone: 'frost',
-    alt: { atk: 'nova', min: 0, max: 4.5, wind: .8, cd: 7, dmg: 14, r: 4.5, c: C_ICE, s: 'ice', chill: 2 } },
+  // Rime Stalker: a snow cat you can barely see until it's on you; a pounce out of hiding hits twice as hard, and hitting it gives it away
+  snowcat:    { hp: 38,  spd: 5.2, r: .5,  h: 1.2, dmg: 11, reach: 2.2, cost: 1, from: 1, kb: 1.2, poise: 20,  atk: 'swipe', wind: .45, cd: 1.3, zone: 'frost', name: 'Rime Stalker',
+    alt: { atk: 'pounce', min: 3, max: 10, wind: .35, cd: 6, dmg: 14 },
+    tick(e, dt, tgt, d) { e.vs = e.seen > S.t || d < 3 ? 0 : 'hide'; return false; },
+    ward(e, n) { e.seen = S.t + 3; return n; } },
+  // Avalanche Ram: paws the snow, then charges flat out down a marked lane; sidestep it into a pillar and it stuns itself (or off the edge, and it's gone)
+  ram:        { hp: 95,  spd: 3.2, r: .7,  h: 1.6, dmg: 14, reach: 2.6, cost: 2, from: 2, kb: .5,  poise: 60,  atk: 'thrust', wind: .55, cd: 1.6, zone: 'frost', name: 'Avalanche Ram',
+    alt: { atk: 'stampede', min: 6, max: 22, wind: 1.1, cd: 6, dmg: 22, len: 24 },
+    tick(e, dt, tgt, d, ps) {
+      const R = e.run; if (!R) return false;
+      const st = Math.min(R.left, 19 * dt), x0 = e.x, z0 = e.z; R.left -= st;
+      e.x += Math.sin(R.yaw) * st; e.z += Math.cos(R.yaw) * st; e.yaw = R.yaw; collide(e, ET.ram.r * e.sc);
+      for (const p of ps) if (!R.hit.includes(p.id) && Math.hypot(p.x - e.x, p.z - e.z) < 1.7 && p.y < 1.4) { R.hit.push(p.id); if (foeHit(p, R.dmg, e)) shove(p, Math.sin(R.yaw) * 16, Math.cos(R.yaw) * 16, 6); }
+      if (Math.hypot(e.x - x0, e.z - z0) < st * .4) { e.run = null; cc(e, 'stun', 2.2, null); ev({ k: 'fx', m: 'foe', f: 'crash', x: r2(e.x), z: r2(e.z) }); } // ran into something
+      else if (R.left <= 0) e.run = null;
+      e.vs = e.run ? 'run' : 0;
+      return true;
+    } },
+  // Cryomancer: plants Frost Totems round you that pulse out freezing cold until you break them; lances you with ice
+  cryomancer: { hp: 55,  spd: 2.8, r: .55, h: 2.2, dmg: 0,  reach: 14,  cost: 3, from: 3, kb: 1,   poise: 30,  atk: 'totem', wind: 1.1, cd: 6, ranged: 1, keep: [12, 18], zone: 'frost', name: 'Cryomancer',
+    alt: { atk: 'ray', min: 0, max: 22, wind: 1, cd: 5, dmg: 13, len: 22, w: 1.3, c: C_ICE, s: 'ice', chill: 2 } },
+  frosttotem: { hp: 70,  spd: 0,   r: .5,  h: 2.1, dmg: 7,  reach: 0,   cost: 0, from: 99, kb: 0,  poise: 999, atk: 'nova', wind: .6, cd: 3, zone: 'frost', name: 'Frost Totem',
+    pulse: { atk: 'nova', wind: .7, r: 6, dmg: 7, c: C_ICE, s: 'ice', chill: 1.6 },
+    tick(e, dt, tgt) {
+      if (e.atk) return false;
+      if ((e.life = (e.life ?? 20) - dt) <= 0) { kill(e, null, null); return true; }
+      if ((e.pt = (e.pt ?? 1.2) - dt) <= 0) { e.pt = 3; startAttack(e, tgt, ET.frosttotem.pulse); }
+      return true;
+    } },
+  // Rime Golem: wrapped in a shell of ice that soaks up every hit; break it and the shell bursts outward, and the bare golem fights faster until it regrows
+  icegolem:   { hp: 200, spd: 2.2, r: 1.1, h: 2.8, dmg: 24, reach: 3.4, cost: 5, from: 5, kb: .25, poise: 140, atk: 'smash', wind: .95, cd: 2.1, zone: 'frost', name: 'Rime Golem',
+    alt: { atk: 'hurl', min: 5, max: 18, wind: 1.1, cd: 7, dmg: 20, r: 2.6, c: 0xd8f0ff, s: 'boulder', chill: 1.5 },
+    tick(e, dt) {
+      e.shell ??= e.max * .6;
+      if (e.shell <= 0 && (e.regrow -= dt) <= 0) { e.shell = e.max * .6; ev({ k: 'fx', m: 'foe', f: 'reshell', x: r2(e.x), z: r2(e.z) }); }
+      if (e.shell <= 0) e.rage = S.t + .2;
+      e.vs = e.shell > 0 ? 'shell' : 0;
+      return false;
+    },
+    ward(e, n) {
+      if (!(e.shell > 0)) return n;
+      const a = Math.min(e.shell, n); e.shell -= a;
+      if (e.shell <= 0) {
+        e.regrow = 12; ev({ k: 'fx', m: 'foe', f: 'nova', x: r2(e.x), z: r2(e.z), r: 5, c: C_ICE, s: 'ice' });
+        for (const q of players()) if (!q.down && Math.hypot(q.x - e.x, q.z - e.z) < 5.3) foeHit(q, 18, e, { chill: 2 });
+      }
+      return n - a;
+    } },
+  // Storm Harpy: circles above you out of reach of anything but aimed spells, then dives down a marked lane; its wings blow you back
+  harpy:      { hp: 40,  spd: 5,   r: .5,  h: 1.9, dmg: 15, reach: 16,  cost: 3, from: 4, kb: 1,   poise: 20,  atk: 'dive', wind: .7, cd: 3.4, ranged: 1, keep: [7, 11], fly: 1, zone: 'frost', name: 'Storm Harpy',
+    alt: { atk: 'gust', min: 0, max: 9, wind: .6, cd: 6, dmg: 5 },
+    tick(e, dt, tgt, d, ps) {
+      const D = e.dv, q = confine({ x: e.x, z: e.z }, 1); e.x = q.x; e.z = q.z; e.vy = 0;
+      if (!D) { e.y += (2.8 - e.y) * Math.min(1, dt * 3); return false; }
+      D.t += dt; const u = Math.min(1, D.t / .75), st = 22 * dt;
+      e.x += Math.sin(D.yaw) * st; e.z += Math.cos(D.yaw) * st; e.yaw = D.yaw; e.y = .5 + 2.3 * Math.abs(1 - 2 * u);
+      for (const p of ps) if (!D.hit.includes(p.id) && Math.hypot(p.x - e.x, p.z - e.z) < 1.6 && Math.abs(p.y + 1 - e.y) < 2) { D.hit.push(p.id); foeHit(p, D.dmg, e); }
+      if (u >= 1) e.dv = null;
+      return true;
+    } },
+  // Yeti: pounds the ground with both fists, and heaves a great snowball down a lane that grows as it rolls
+  yeti:       { hp: 240, spd: 2.4, r: 1.1, h: 2.8, dmg: 22, reach: 3,   cost: 4, from: 6, kb: .25, poise: 140, atk: 'slam',  wind: .9, cd: 2.2, zone: 'frost', name: 'Yeti',
+    alt: { atk: 'roll', min: 5, max: 22, wind: 1.1, cd: 7, dmg: 24, len: 24, chill: 1.5 } },
   frostgiant: { hp: 1700, spd: 2.1, r: 2.2, h: 5.4, dmg: 30, reach: 5, cost: 0, from: 99, kb: .04, poise: 700, atk: 'smash', wind: 1.05, cd: 2.2, boss: 1, zone: 'frost',
-    name: 'Hrimgar the Frost Giant', minions: ['snowfiend', 'icewolf'],
+    name: 'Hrimgar the Frost Giant', minions: ['snowcat', 'ram'],
     spec: [{ atk: 'lob', wind: 1.2, r: 3.6, dmg: 26, c: 0xd8f0ff, s: 'boulder', pool: { life: 4, dps: 3, chill: 1 } }, { atk: 'spikes', wind: 1.1, dmg: 22, c: C_ICE, s: 'ice' },
       { atk: 'nova', wind: 1.2, r: 9, dmg: 22, c: C_ICE, s: 'ice', chill: 2.5 }, 'ring'] },
   frostqueen: { hp: 1800, spd: 2.6, r: 1, h: 3.8, dmg: 13, reach: 26, cost: 0, from: 99, kb: .04, poise: 650, atk: 'volley', wind: .85, cd: 2.2, boss: 1, ranged: 1, keep: [9, 15], oc: C_ICE, zone: 'frost',
-    name: 'Skadi, the Frost Queen', minions: ['icewolf', 'icesprite'],
+    name: 'Skadi, the Frost Queen', minions: ['snowcat', 'harpy'],
     spec: [{ atk: 'rain', n: 5, r: 2, dmg: 16, c: C_ICE, s: 'ice', chill: 1.5 }, { atk: 'cone', wind: 1.2, r: 17, ang: 70, dmg: 18, c: C_ICE, s: 'frost', chill: 3 },
-      { atk: 'summon', wind: 1, n: 3, type: 'icewolf', cap: 8 }, { atk: 'ray', wind: 1, len: 26, w: 1.8, dmg: 24, c: C_ICE, s: 'ice', chill: 2 }] },
+      { atk: 'summon', wind: 1, n: 3, type: 'snowcat', cap: 8 }, { atk: 'ray', wind: 1, len: 26, w: 1.8, dmg: 24, c: C_ICE, s: 'ice', chill: 2 }] },
 
   // ---------- 4: the Infernal Legion ----------
   hellhound:  { hp: 28,  spd: 7.4, r: .45, h: 1.0, dmg: 9,  reach: 3.2, cost: 1, from: 1, kb: 1.4, poise: 15,  atk: 'lunge', wind: .36, cd: 1.5, zone: 'hell',
@@ -418,14 +470,58 @@ const FOE_ATK = {
       if (got) for (const o of S.enemies) if (o === e || o.bnd === e.id) { o.hp = Math.min(o.max, o.hp + o.max * .2); ev({ k: 'fx', m: 'foe', f: 'mend', x: r2(o.x), z: r2(o.z) }); }
     },
   },
+  // ----- the Frost Peaks' own -----
+  pounce: { // a leap onto you; twice as hard out of hiding
+    start(e, t) { Object.assign(e.atk, { lx: t.x, lz: t.z, hid: e.vs === 'hide' }); e.seen = S.t + 4; return { shape: 'circle', x: t.x, z: t.z, r: 1.8 }; },
+    hit(e, a, dmg) { e.leap = { x0: e.x, z0: e.z, x1: a.lx, z1: a.lz, t: 0, dmg: dmg * (a.hid ? 2 : 1), r: 1.8 }; },
+  },
+  stampede: { // head down, a charge down the whole lane (it runs on in stepping, see the ram's tick)
+    start: (e, t, al, yaw) => ({ shape: 'line', x: e.x, z: e.z, yaw, len: al.len, w: 2.4 }),
+    hit(e, a, dmg) { e.run = { yaw: a.yaw, left: a.al.len, hit: [], dmg }; ev({ k: 'fx', m: 'foe', f: 'charge', x: r2(e.x), z: r2(e.z) }); },
+  },
+  totem: { // raises a Frost Totem near you (three at most at once)
+    start(e, t) {
+      if (S.enemies.filter(o => o.type === 'frosttotem' && !o.dead).length >= 3) { e.atk = null; e.acd = 2; return 'done'; }
+      const dx = e.x - t.x, dz = e.z - t.z, d = Math.hypot(dx, dz) || 1, q = confine({ x: t.x + dx / d * 4 + rand(-2, 2), z: t.z + dz / d * 4 + rand(-2, 2) }, 1.5);
+      Object.assign(e.atk, { lx: q.x, lz: q.z });
+      return { shape: 'circle', x: q.x, z: q.z, r: 1.2, ally: 1 };
+    },
+    hit(e, a) { spawnEnemy('frosttotem', a.lx, a.lz); ev({ k: 'fx', m: 'foe', f: 'summon', x: r2(a.lx), z: r2(a.lz), c: C_ICE }); },
+  },
+  hurl: { // tears a slab off itself and throws it
+    start: (...a) => FOE_ATK.lob.start(...a),
+    hit: (...a) => FOE_ATK.lob.hit(...a),
+  },
+  dive: { // folds its wings and swoops down the marked lane
+    start(e, t, al, yaw) { const len = Math.min(18, Math.hypot(t.x - e.x, t.z - e.z) + 5); e.atk.len = len; return { shape: 'line', x: e.x, z: e.z, yaw, len, w: 1.8 }; },
+    hit(e, a, dmg) { e.dv = { yaw: a.yaw, t: 0, hit: [], dmg }; ev({ k: 'fx', m: 'foe', f: 'swoop', x: r2(e.x), y: r2(e.y), z: r2(e.z) }); },
+  },
+  gust: { // one great beat of its wings: everything in front is blown away
+    start: (e, t, al, yaw) => ({ shape: 'cone', x: e.x, z: e.z, yaw, r: 9, ang: 70 }),
+    hit(e, a, dmg, ps) {
+      ev({ k: 'fx', m: 'foe', f: 'cone', x: r2(e.x), y: r2(e.y + 1), z: r2(e.z), yaw: r2(a.yaw), r: 9, ang: 70, c: 0xe8f4ff, s: 'frost' });
+      for (const p of ps) if (inCone(p, e.x, e.z, a.yaw, 9.4, 76) && p.y < 4 && foeHit(p, dmg, e, { chill: 1 })) shove(p, Math.sin(a.yaw) * 20, Math.cos(a.yaw) * 20, 4);
+    },
+  },
+  roll: { // a snowball shoved down a lane, bigger the further it goes
+    start: (e, t, al, yaw) => ({ shape: 'line', x: e.x, z: e.z, yaw, len: al.len, w: 2.8 }),
+    hit(e, a, dmg) {
+      const al = a.al, fx = Math.sin(a.yaw), fz = Math.cos(a.yaw), x0 = e.x + fx * 1.5, z0 = e.z + fz * 1.5, hit = new Set();
+      ev({ k: 'fx', m: 'foe', f: 'roll', x: r2(x0), z: r2(z0), yaw: r2(a.yaw), len: al.len, d: 1.2 });
+      for (let i = 1; i <= 12; i++) later(i * .1, () => {
+        const k = i / 12 * al.len, x = x0 + fx * k, z = z0 + fz * k;
+        for (const p of players()) if (!p.down && !hit.has(p.id) && Math.hypot(p.x - x, p.z - z) < 1.2 + i * .07 && p.y < 1.6) { hit.add(p.id); if (foeHit(p, dmg, e, al)) shove(p, fx * 13, fz * 13, 5); }
+      });
+    },
+  },
 };
-for (const k of ['erupt', 'cage', 'siphon']) LOCKED.add(k);
+for (const k of ['erupt', 'cage', 'siphon', 'stampede', 'dive', 'roll', 'hurl', 'pounce']) LOCKED.add(k);
 const RIMC = { necromancer: 0x9a6aff, lich: 0x7ae8ff, frostqueen: 0x9fe6ff, archdemon: 0xff6a1a, watcher: 0xb04cff, umbra: 0x9a4cff };
 
 // ===================== how the island monsters' states look (view side) =====================
 // vs: 'under' (burrowed: only churned-up dirt shows), 'ghost' (half-there), 'pile' (a heap of bones); bd: the id of the Soulbinder holding it
 function foeLook(v, e, src, t) {
-  const a = e.vs === 'ghost' ? .3 : 1;
+  const a = e.vs === 'ghost' ? .3 : e.vs === 'hide' ? .06 : 1;
   if (a !== (v.alpha ?? 1)) { v.alpha = a; for (const m of v.mats) { m.o0 ??= m.m.opacity; m.m.transparent = a < 1 || m.o0 < 1; m.m.opacity = m.o0 * a; m.m.depthWrite = a >= 1; m.m.needsUpdate = true; } }
   const P = v.g.position;
   if (e.vs === 'under') {
@@ -434,6 +530,9 @@ function foeLook(v, e, src, t) {
   }
   if (e.vs === 'ghost' && Math.random() < .25) emit(P.x + rand(-.4, .4), P.y + rand(.5, 2), P.z + rand(-.4, .4), 0, .6, 0, C_SOUL, rand(.08, .14), .6, -.5);
   if (e.vs === 'pile') { v.g.scale.y *= .22; v.g.scale.x *= 1.3; v.g.scale.z *= 1.3; v.g.rotation.x = 0; if (Math.random() < .3) emit(P.x + rand(-1, 1), .3, P.z + rand(-1, 1), 0, rand(.5, 1.5), 0, 0x35ff8a, .12, .5, -1); }
+  if (e.vs === 'shell' && Math.random() < .3) emit(P.x + rand(-1.2, 1.2), P.y + rand(.3, 2.6), P.z + rand(-1.2, 1.2), 0, .2, 0, Math.random() < .5 ? 0xffffff : C_ICE, rand(.08, .16), .4);
+  if (e.vs === 'hide' && Math.random() < .15) emit(P.x + rand(-.5, .5), .15, P.z + rand(-.5, .5), 0, .4, 0, 0xffffff, .1, .5, -.2); // only kicked-up snow gives it away
+  if (e.vs === 'run') for (let i = 0; i < 2; i++) emit(P.x + rand(-.6, .6), .15, P.z + rand(-.6, .6), rand(-2, 2), rand(1.5, 3.5), rand(-2, 2), 0xf0f6ff, rand(.12, .22), rand(.4, .7), 8);
   if (e.bd) { // a stream of soul light from the binder
     const b = src.enemies.find(o => o.id === e.bd);
     if (b) for (let i = 0; i < 2; i++) { const k = Math.random(); emit(b.x + (e.x - b.x) * k, 1.6 + (1.2 - 1.6) * k + Math.sin(k * Math.PI) * .6, b.z + (e.z - b.z) * k, 0, 0, 0, C_SOUL, rand(.08, .15), .25); }

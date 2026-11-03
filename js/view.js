@@ -201,6 +201,19 @@ const FOE_FX = {
   reform(e) { // the bones fly back together with a crack of soul fire
     pillarFx(e.x, 0, e.z, 1.2, 5, 0x35ff8a, .5); ringFx(e.x, .12, e.z, 4, 0xe8dcc0, .45); burst(e.x, 1.4, e.z, 40, 0x35ff8a, 6, .25, .6, -1, 3); shake(.15); sfx('bone_big');
   },
+  crash(e) { debrisFx(e.x, 1, e.z, 10, 'earth__pebble', 0xd8e8f0, .3, 8); burst(e.x, 1, e.z, 40, 0xffffff, 8, .2, .5, 6); shake(clamp(.35 - distTo(e.x, e.z) * .02, 0, .3)); sfx('smash'); },
+  charge(e) { dustFx(e.x, e.z, 1.4, 0xf0f6ff); sfx('bash'); },
+  reshell(e) { pillarFx(e.x, 0, e.z, 1.4, 4, C_ICE, .5); burst(e.x, 1.4, e.z, 40, 0xffffff, 5, .2, .6, 2); sfx('frost_big'); },
+  swoop(e) { burst(e.x, e.y + 1, e.z, 20, 0xe8f4ff, 6, .15, .4); sfx('swing'); },
+  roll(e) { // the snowball rolls down its lane, growing, throwing up snow, then bursts at the end
+    const fx = Math.sin(e.yaw), fz = Math.cos(e.yaw), o = tintModel(model('earth__boulder', 0, { shadow: true }), 0xf4f8ff);
+    addFx(o, e.d, (o, k, dt) => {
+      const s = .7 + k * .8, d = k * e.len; o.scale.setScalar(s); o.position.set(e.x + fx * d, s * .55, e.z + fz * d); o.rotation.x += 9 * dt;
+      for (let i = 0; i < 2; i++) emit(o.position.x + rand(-s, s) * .5, .1, o.position.z + rand(-s, s) * .5, rand(-2, 2), rand(1, 3), rand(-2, 2), 0xffffff, rand(.1, .2), .5, 8);
+      if (k > .97 && !o.done) { o.done = 1; boomFx(o.position.x, .5, o.position.z, 2.2, 0xe8f4ff, .6); debrisFx(o.position.x, .6, o.position.z, 8, 'earth__pebble', 0xf0f6ff, .3, 8); }
+    });
+    sfx('earth_big');
+  },
   bind(e) { // a chain of soul light snaps from the binder to its ward
     const a = V(e.x2, 1.6, e.z2), b = V(e.x, 1.2, e.z); beamFx(a, b, C_SOUL, .15, .5);
     circleFx('sigil', V(e.x, .08, e.z), 1.6, { life: .8, color: C_SOUL }); burst(e.x, 1.2, e.z, 24, C_SOUL, 4, .2, .5, -1); sfx('soul_big');
@@ -391,7 +404,7 @@ const ETPL = {};
 for (const k in ET) ETPL[k] = [...enemiesG.children, ...foesG.children].find(c => c.name.replace(/\d+$/, '') === k) || null; // foes.glb: the Arena islands' monsters
 const FALLBACK = { stalker: 'grunt', bomber: 'runner', knight: 'grunt', shaman: 'shooter', skeleton: 'grunt', rat: 'runner', archer: 'shooter', ghoul: 'splitter', dknight: 'knight', warden: 'boss' };
 // Arena area monsters without a rig of their own yet borrow the closest one, tinted their area's colour
-Object.assign(FALLBACK, { crawler: 'grunt', bonearcher: 'grunt', plaguebearer: 'shaman', banshee: 'shaman', colossus: 'brute', necromancer: 'shaman', lich: 'shaman', bonedragon: 'boss',
+Object.assign(FALLBACK, { snowcat: 'runner', ram: 'runner', cryomancer: 'shaman', frosttotem: 'shaman', icegolem: 'brute', harpy: 'grunt', crawler: 'grunt', bonearcher: 'grunt', plaguebearer: 'shaman', banshee: 'shaman', colossus: 'brute', necromancer: 'shaman', lich: 'shaman', bonedragon: 'boss',
   snowfiend: 'grunt', icewolf: 'runner', icesprite: 'shooter', frostmite: 'bomber', yeti: 'brute', glacier: 'knight', frostgiant: 'boss', frostqueen: 'shaman',
   hellhound: 'runner', cinderimp: 'grunt', magmaling: 'bomber', infernal: 'brute', hellknight: 'knight', pyrepriest: 'shaman', pitlord: 'boss', archdemon: 'boss',
   voidling: 'runner', gazer: 'shooter', riftmite: 'bomber', voidspawn: 'splitter', horror: 'brute', mindflayer: 'shaman', watcher: 'shooter', devourer: 'boss', umbra: 'boss' });
@@ -462,6 +475,13 @@ const POSE = {
   cage:   { w: [-.35, 0, -.06, 2.8, 2.8, 0], s: [.6, 0, .2, -3, -3, 0] },
   bind:   { w: [-.2, 0, 0, 2, .6, 0],       s: [.2, 0, 0, 2.6, .2, 0] },
   siphon: { w: [-.25, 0, .06, 1.7, 1.7, 0], s: [.3, 0, .05, 1.4, 1.4, 0] },
+  pounce: { w: [.35, 0, .38, -1, -1, 0],    s: [-.2, 0, -.15, 2.2, 2.2, 0] },  // belly to the snow, then airborne claws first
+  stampede: { w: [.45, 0, .2, 0, 0, 1.1],   s: [.5, 0, .1, 0, 0, 0] },        // head down, pawing the ground
+  totem:  { w: [-.2, 0, 0, 2.4, 1, 0],      s: [.4, 0, .15, -1, -1.4, 0] },     // the staff driven into the ground
+  hurl:   { w: [-.4, .3, -.04, 2.8, 2.8, 0], s: [.5, -.3, .1, -.8, -.8, 0] },
+  dive:   { w: [-.3, 0, -.1, 2, 2, 0],      s: [.7, 0, 0, -.6, -.6, 0] },
+  gust:   { w: [-.2, 0, 0, 2.6, 2.6, 0],    s: [.3, 0, 0, -1.2, -1.2, 0] },
+  roll:   { w: [-.3, 0, .15, 1.6, 1.6, 0],  s: [.55, 0, .1, 1.4, 1.4, 0] },     // both hands shove the snowball off
 };
 // bosses: the colour of their power, for wind-ups, auras and their bigger attack effects
 const BOSS_COL = { boss: 0xff5a20, umbra: 0x9a4cff, warden: 0x5ad8ff, bonedragon: 0x8aff50, frostgiant: 0x9fe6ff, pitlord: 0xff6a1a, devourer: 0xb04cff };

@@ -842,7 +842,7 @@ function stepEnemies(dt) {
     }
     // vertical: held aloft by bubble / levitate, otherwise gravity (launches, slams)
     if (ctype === 'bubble' || ctype === 'lift') { e.y += ((ctype === 'lift' ? 3.2 : 2.2) - e.y) * Math.min(1, dt * 4); e.vy = 0; }
-    else if (e.y > 0 || e.vy > 0) {
+    else if (!t.fly && (e.y > 0 || e.vy > 0)) {
       e.vy -= 26 * dt; e.y += e.vy * dt;
       if (e.y <= 0) {
         const v = -e.vy; e.y = 0; e.vy = 0;
@@ -857,7 +857,7 @@ function stepEnemies(dt) {
     }
     // knockback; a hard enough hit near the edge knocks them off the island
     e.x += e.kx * dt; e.z += e.kz * dt; const kd = Math.exp(-5 * dt); e.kx *= kd; e.kz *= kd;
-    if (!MAP.rects && offMap(e.x, e.z, .3) && !t.boss) { e.fall = true; e.vy = 0; continue; }
+    if (!MAP.rects && offMap(e.x, e.z, .3) && !t.boss && !t.fly) { e.fall = true; e.vy = 0; continue; }
     // ponytail: O(n^2) separation, fine below ~150 enemies; use a grid if waves get huge
     for (const o of S.enemies) {
       if (o === e || o.dead || o.rise > 0) continue;
@@ -865,7 +865,7 @@ function stepEnemies(dt) {
       if (d < m && d > 0) { const push = (m - d) * .5; e.x += dx / d * push; e.z += dz / d * push; }
     }
     if (Math.hypot(e.kx, e.kz) < 5) collide(e, R, sol);
-    if (hard || e.y > .3) continue;
+    if (hard || (e.y > .3 && !t.fly)) continue;
     // field effects (slow fields, heat waves) are written onto e.fs by entity ticks each frame
     const fieldSlow = e.fs || 0; e.fs = 0;
     const slow = Math.min(.85, Math.max(e.m.slow, fieldSlow)), rate = (1 - slow) * haste * (e.rage > S.t ? 1.4 : 1); // rage: a Pyre Priest's war-chant
