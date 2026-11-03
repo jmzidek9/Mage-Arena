@@ -496,6 +496,8 @@ SPELL_ART.god = [
   k => k.halo(32, 40, 30) + k.ring(32, 52, 26, 7, 2.2) + k.burst(32, 50, 14, 12, .3) + k.bolt([[36, 0], [26, 18], [36, 22], [28, 40], [32, 50]], 4.4) + k.twinkle(10, 14, 3) + k.twinkle(54, 10, 3),
   // Divine Beam: a vast beam of light that kills everything in its path
   k => k.glow(32, 32, 26, .5) + `<path d="M2 18H64V46H2z" fill="${k.u('fd')}"/>` + k.beam(4, 32, 62, 32, 16) + k.burst(6, 32, 10, 12, .35) + k.twinkle(40, 10, 2.6) + k.twinkle(50, 54, 2.6),
+  // Heaven's Wrath: a nova of holy fire, everything near the caster dies
+  k => k.halo(32, 34, 31) + Array.from({ length: 10 }, (_, i) => `<g transform="rotate(${i * 36} 32 34)">${k.flame(32, 22, 8, 16, 0, .9)}</g>`).join('') + k.ring(32, 34, 24, 24, 2, .8) + k.ring(32, 34, 14, 14, 2.4) + `<circle cx="32" cy="34" r="12" fill="#2a1e08" opacity=".55"/>` + k.figure(32, 34, .9, '#fff6d0', '#c8a040') + k.twinkle(8, 8, 2.6) + k.twinkle(56, 8, 2.6),
   // Chain of Judgement: lightning leaping to every enemy at once
   k => k.orb(10, 32, 6) + [[34, 10], [52, 22], [56, 42], [36, 54], [24, 40]].map(([x, y]) => k.bolt([[10, 32], [(10 + x) / 2 + 4, (32 + y) / 2 - 4], [x, y]], 1.4) + k.foe(x, y + 2, .45)).join(''),
   // Armageddon: the sky falls and everything dies
