@@ -303,13 +303,13 @@ SPELL_ART.chrono = [
 SPELL_ART.blood = [
   // Blood Bolt: a fast bolt of blood magic
   k => k.streak(2, 62, 30, 34, 12, .5) + k.drop(40, 24, 1.1, 45) + k.sparks([[14, 40, 1.4], [24, 54, 1.1], [10, 52, .9]], k.M),
-  // Blood Scythe: a huge crescent of blood cutting through everything
-  k => k.glow(32, 32, 24, .45) + `<path d="M8 40C10 18 30 6 52 10 40 12 24 22 22 44 18 42 12 42 8 40z" fill="${k.u('v')}"/><path d="M10 38C14 20 30 10 48 11" fill="none" stroke="${k.W}" stroke-width="1.4" opacity=".7"/>` + `<path d="M14 42c0 5-1 8 0 10M20 44c1 4 0 7 1 9" stroke="${k.M}" stroke-width="2.4" stroke-linecap="round"/>` + `<path d="M30 52l24-14M36 58l20-12" stroke="${k.L}" stroke-width="1.6" stroke-linecap="round" opacity=".6"/>`,
-  // Blood Tether: a blood hook latched into a monster, dragging it in
-  k => k.figure(10, 46, .8) + `<path d="M14 40Q30 30 42 34" fill="none" stroke="${k.D}" stroke-width="4" stroke-dasharray="4 2"/><path d="M14 40Q30 30 42 34" fill="none" stroke="${k.M}" stroke-width="2" stroke-dasharray="4 2"/>` + k.foe(50, 38, 1) + `<path d="M42 34C46 30 50 28 52 30S52 36 48 36" fill="none" stroke="url(#${k.id}mt)" stroke-width="3" stroke-linecap="round"/>` + k.drop(48, 50, .35) + k.drop(54, 54, .3),
-  // Blood Orb: blood ripped out of monsters into a swelling orb
-  k => [[8, 52], [56, 52], [32, 60]].map(([x, y]) => k.foe(x, y, .5) + k.streak(x, y - 4, 32 + (x - 32) * .3, 28 + (y - 28) * .3, 4, .7)).join('') + k.orb(32, 26, 11) + k.drop(16, 34, .3, -50) + k.drop(48, 34, .3, 50),
-  // Blood Moon: a blood moon rising, draining everything below it
+  // Crimson Fan: five blood blades fanning out
+  k => k.glow(10, 54, 12, .5) + [-62, -38, -14, 10, 34].map(r => `<g transform="translate(10 54) rotate(${r})"><path d="M0 -10C10 -22 12 -38 4 -50 18 -40 20 -22 6 -8z" fill="${k.u('v')}"/><path d="M2 -14C9 -24 11 -36 6 -46" fill="none" stroke="${k.W}" stroke-width="1" opacity=".7"/></g>`).join('') + k.drop(56, 14, .3, 30) + k.drop(48, 6, .25, 20),
+  // Exsanguinate: a bleeding monster ripped open, its blood erupting out
+  k => k.halo(32, 40, 26) + k.foe(32, 46, 1.2) + k.burst(32, 34, 10, 7, .4) + [[-50, 18, 14], [-20, 26, 6], [20, 38, 6], [50, 46, 14]].map(([r, x, y]) => k.streak(32, 34, x, y, 5, .8) + k.drop(x, y, .4, r)).join('') + k.sparks([[14, 30, 1.4], [50, 30, 1.4], [32, 6, 1.6]], k.L),
+  // Crimson Mire: a pool of blood dragging monsters into its swirl
+  k => `<ellipse cx="32" cy="44" rx="28" ry="12" fill="${k.u('dk')}"/><ellipse cx="32" cy="44" rx="26" ry="10.5" fill="${k.u('fd')}"/>` + k.ring(32, 44, 18, 7, 1.6, .8) + k.ring(32, 44, 9, 3.5, 1.4, .9) + k.foe(10, 32, .55) + k.foe(54, 32, .55) + `<path d="M16 38q6 4 10 4M48 38q-6 4-10 4" stroke="${k.L}" stroke-width="1.6" fill="none" stroke-linecap="round"/>` + k.drop(26, 22, .35) + k.drop(38, 18, .3, 15) + k.drop(32, 28, .25),
+  // Blood Moon: a blood moon rising in its halo, draining everything below it
   k => k.halo(32, 22, 30) + k.orb(32, 22, 16, false) + `<circle cx="26" cy="18" r="3" fill="${k.D}" opacity=".5"/><circle cx="38" cy="26" r="4" fill="${k.D}" opacity=".45"/><circle cx="34" cy="14" r="2" fill="${k.D}" opacity=".5"/>` + k.foe(12, 56, .55) + k.foe(52, 56, .55) + k.foe(32, 60, .45) + [[14, 44, -20], [50, 44, 20], [22, 50, -10], [42, 50, 10], [32, 46, 0]].map(([x, y, r]) => k.drop(x, y, .28, r)).join(''),
 ];
 // ---- Spirit ----

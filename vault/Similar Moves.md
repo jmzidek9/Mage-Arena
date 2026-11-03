@@ -5,7 +5,7 @@ Every group below is moves that worked or looked alike **before the rework**. Al
 ## Very similar (near-duplicates)
 
 1. **Two dragons circling the target.** Bone *Bone Dragon* and Ink *Ink Dragon*. Both ultimates circle the target for a few seconds and rain damage below.
-2. **Hook that grabs the first enemy.** Blood *Blood Tether* and Soul *Soul Rend*. Both throw a hook into the first enemy and give you something back.
+2. **Hook that grabs the first enemy.** Blood *Blood Tether* and Soul *Soul Rend*. Both throw a hook into the first enemy and give you something back. (Blood Tether was replaced by Exsanguinate on 2026-11-03.)
 3. **Lob a glob that leaves a puddle.** Venom *Venom Spit* and Magma *Magma Glob*. Same basic attack, different colour (poison pool vs lava pool).
 4. **Wide melee sweep in front of you.** Plasma *Thermal Lance*, Soul *Reap* and Ink *Brush Stroke*. All three sweep a 6.5 to 7.5 m arc, hit everything and shove it.
 5. **Charge a piercing line shot.** Frost *Glacial Lance* and Steel *Railgun*. Hold, release, pierce a line, with a bonus at full charge. Laser *Ricochet Beam* is close too.

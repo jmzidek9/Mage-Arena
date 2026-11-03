@@ -252,15 +252,17 @@ Master of time. Echoing attacks, frozen moments, rewinding your enemies, and sto
 ## 🩸 Blood
 Power at a price. Spend your own health for brutal damage, and drink it back from your enemies.
 
-**Passive.** Bloodlust: heal for 6% of damage dealt, and hit up to 50% harder the lower your health. Blood moves cost HP. Bleeding enemies feed you.
+**Passive.** Bloodlust: heal for 2.5% of damage dealt, and hit up to 50% harder the lower your health. Blood moves cost HP. Bleeding enemies feed you.
 
 | Key | Move | Cooldown | What it does |
 |---|---|---|---|
 | LMB | 🩸 **Blood Bolt** | 0.4 s | Costs 1.5 HP. A fast bolt of blood magic that hits hard. |
-| RMB | 🌙 **Blood Scythe** | 4 s | Costs 5 HP. Hurl a huge crescent of blood that cuts through everything and makes enemies bleed. |
-| Q | 🪝 **Blood Tether** | 7 s | Costs 4 HP. Hurl a blood hook that latches onto the first enemy, drags it to you and bleeds it for 3 seconds. |
-| E | 🩸 **Blood Orb** | 6 s | Costs 4 HP. Rip blood out of every enemy in front of you (12 m, 8 damage each) into an orb over your hand, then hurl it. It bursts for 85, plus 8 and a bigger blast for every enemy you drained. |
+| RMB | 🌙 **Crimson Fan** | 3.5 s | Costs 4 HP. Fling a fan of five blood blades that slice through everything in front of you, 16 damage each, and make enemies bleed. Up close, every blade lands. |
+| Q | 💉 **Exsanguinate** | 8 s | Costs 6 HP. Rip open every bleeding enemy within 20 m: 30 damage plus 12 for every second of bleed left on it, and the bleed is used up. Enemies it kills burst, making everything around them bleed. Enemies within 8 m that were not bleeding take 15 and start bleeding. |
+| E | 🩸 **Crimson Mire** | 9 s | Costs 5 HP. Aimed. Splash a pool of blood on the ground for 4 seconds. It drags enemies toward its centre and makes them bleed, 10 damage every half second. Pile them up, then Exsanguinate. |
 | R | 🌕 **Blood Moon** | ultimate | A blood moon rises above you and drains every enemy nearby for 4 seconds. Anything it drains to death bursts, splashing 30 damage on the enemies around it. |
+
+**Rework (2026-11-03):** healing cut (lifesteal 6% to 2.5%, bleeding enemies feed you 10% of the bleed instead of 50%). Blood Scythe, Blood Tether and Blood Orb became Crimson Fan, Exsanguinate and Crimson Mire: make them bleed, pile them up, rip them open. Blood Moon now rises out of the ground into a pulsing halo over a sea of red light, with blood raining up into it.
 
 ## 👻 Spirit
 The summoner. The restless dead, a shrieking banshee, a spectral wolf and an army of ghost knights fight for you.

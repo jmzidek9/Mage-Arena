@@ -94,7 +94,7 @@ function stats(p) {
     speed: 7.5 * (1 + .03 * tl('swift')) * (1 + .12 * n('fleet')) * (el === 'wind' ? 1.15 : 1),
     aoe: (1 + .25 * n('wide')) * (el === 'explosion' ? 1.2 : 1),
     dur: 1 + .5 * n('linger'), multi: 1 + n('twin'), chain: 2 + n('twin'), pierce: n('pierce'), bounce: n('ricochet'),
-    steal: .04 * n('siphon') + (el === 'blood' ? .06 : 0),
+    steal: .04 * n('siphon') + (el === 'blood' ? .025 : 0),
     combo: 1 + .4 * n('combo'), dashCd: 1.2 * .6 ** n('blink'), detonate: n('detonate'), storm: n('storm'), bond: n('bond'),
     over: n('over') > 0, nova: n('nova'), ultMul: (1 + .35 * n('surge')) * (1 + .08 * tl('focus')), echo: n('echo') * .25,
     dr: (el === 'earth' ? .85 : 1),

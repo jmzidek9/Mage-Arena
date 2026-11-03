@@ -1314,65 +1314,85 @@ chrono: {
 blood: {
   name: 'Blood', color: 0xe8102e, glyph: '🩸', adj: 'BLEEDING', react: { name: 'HEMORRHAGE', kind: 'drain' },
   blurb: 'Power at a price. Spend your own health for brutal damage, and drink it back from your enemies.',
-  passive: 'Bloodlust: heal for 6% of damage dealt, and hit up to 50% harder the lower your health. Blood moves cost HP. Bleeding enemies feed you.',
-  st: { dot: 6, leech: .5 },
+  passive: 'Bloodlust: heal for 2.5% of damage dealt, and hit up to 50% harder the lower your health. Blood moves cost HP. Bleeding enemies feed you.',
+  st: { dot: 6, leech: .1 },
   moves: [
     { name: 'Blood Bolt', icon: '🩸', cd: .4, cost: () => 1.5, desc: 'Costs 1.5 HP. A fast bolt of blood magic that hits hard.',
       cast(p, c) { for (let k = 0; k < c.multi; k++) shoot(p, c, 38, { d: spread(c.d, k, c.multi), r: .3, dmg: 21 * c.dmg, sc: c.mega ? 1.8 : 1 }); },
       look: { m: 'blood__bolt', trail: [0xff2040, .18, .35, 2, 2], light: 5 },
       fx: { det: e => boomFx(e.x, e.y, e.z, 2.5, 0xe8102e, .6), nova: e => boomFx(e.x, .5, e.z, 4.5, 0xe8102e, .8) } },
-    { name: 'Blood Scythe', icon: '🌙', cd: 4, cost: () => 5, desc: 'Costs 5 HP. Hurl a huge crescent of blood that cuts through everything and makes enemies bleed.',
-      cast(p, c) { shoot(p, c, 22, { r: 1.4, life: .7, pierce: 99, dmg: 26 * c.dmg, kb: 4 }); },
-      look: { m: 'blood__scythe', trail: [0xff2040, .3, .3, 2, 3], light: 6 },
+    { name: 'Crimson Fan', icon: '🌙', cd: 3.5, cost: () => 4, desc: 'Costs 4 HP. Fling a fan of five blood blades that slice through everything in front of you, 16 damage each, and make enemies bleed. Up close, every blade lands.',
+      cast(p, c) { for (let i = 0; i < 5; i++) shoot(p, c, 30, { d: spread(c.d, i, 5, .16), r: .7, life: .5, pierce: 99, dmg: 16 * c.dmg, kb: 1.5 }); },
+      look: { m: 'blood__scythe', s: .55, spin: [0, 14, 0], trail: [0xff2040, .22, .3, 2, 2], light: 3 },
       fx: {} },
-    { name: 'Blood Tether', icon: '🪝', cd: 7, cost: () => 4, desc: 'Costs 4 HP. Hurl a blood hook that latches onto the first enemy, drags it to you and bleeds it for 3 seconds.',
-      cast(p, c) { shoot(p, c, 34, { r: .6, life: .7, dmg: 12 * c.dmg }); },
-      shot: { hit(s, e) {
-        const c = ctxS(s); hitEnemy(e, 'blood', s.dmg, c.p, 0, 0, 0);
-        if (c.p) { if (!ET[e.type].boss) cc(e, 'stun', .6, c.p); ent(c.p, c, c.p.x, c.p.z, { follow: 1, life: 3, s: e.id }); }
-        fxe(s.mv, 'cut', { x: e.x, y: e.y + 1, z: e.z });
-        return 'end';
-      } },
-      look: { m: 'blood__bolt', s: 1.3, trail: [0xff2040, .2, .35, 2, 2], light: 5 },
-      ent: { tick(n, dt) {
-        const p = own(n), e = S.enemies.find(x => x.id === n.s && alive(x));
-        if (!p || p.down || !e || Math.hypot(e.x - p.x, e.z - p.z) > 18) { n.life = 0; return; }
-        if (!ET[e.type].boss && Math.hypot(e.x - p.x, e.z - p.z) > 2.5) pull(e, p.x, p.z, 40 * dt);
-        if (pulse(n, dt, .5)) damage(e, 8 * n.mul, 'blood', p, { dot: true });
-      } },
-      view: { make() { const g = new THREE.Group(), b = beamMesh(0xff1030, .06, false); scene.add(b); g.userData.mats = []; g.userData.beam = b; sfx('blood_big'); return g; },
-        upd(o, n, dt, t) { const b = o.userData.beam, v = views.e.get(n.s); b.visible = !!v; if (v) { const a = handPos(n.own), to = v.g.position.clone().add(V(0, 1, 0)); aimBeam(b, a, to, .05 + .02 * Math.sin(t * 25)); if (Math.random() < .4) emit(to.x, to.y, to.z, (a.x - to.x) * 1.5, (a.y - to.y) * 1.5, (a.z - to.z) * 1.5, 0xff2040, .12, .5, 0, 0); } },
-        drop(o) { o.userData.beam.removeFromParent(); o.removeFromParent(); } },
-      fx: { cut(e) { burst(e.x, e.y, e.z, 24, 0xe8102e, 6, .25, .5, 8); sfx('blood'); } } },
-    { name: 'Blood Orb', icon: '🩸', cd: 6, cost: () => 4, desc: 'Costs 4 HP. Rip blood out of every enemy in front of you (12 m, 8 damage each) into an orb over your hand, then hurl it. It bursts for 85, plus 8 and a bigger blast for every enemy you drained.',
+    { name: 'Exsanguinate', icon: '💉', cd: 8, cost: () => 6, desc: 'Costs 6 HP. Rip open every bleeding enemy within 20 m: 30 damage plus 12 for every second of bleed left on it, and the bleed is used up. Enemies it kills burst, making everything around them bleed. Enemies within 8 m that were not bleeding take 15 and start bleeding.',
       cast(p, c) {
-        const es = coneHits(p, 12, 90), n = Math.min(8, es.length);
-        for (const e of es) hitEnemy(e, 'blood', 8 * c.dmg, p, p.x - e.x, p.z - e.z, 1, { src: p });
-        fxe(c.m.key, 'gather', { id: p.id, from: es.slice(0, 8).map(e => { const q = center(e); return [r2(q.x), r2(q.y), r2(q.z)]; }) });
-        later(.45, () => { if (p.down) return; const a = castAim(p); shoot(p, { ...c, o: a.o, d: a.d }, 30, { r: .4 + .06 * n, life: 1.5, dmg: (85 + 8 * n) * c.dmg, sc: 1 + .25 * n, n }); });
+        const R = 20 * c.st.aoe, rip = [];
+        for (const e of enemiesNear(p.x, p.z, R)) {
+          const left = e.st.blood || 0, q = center(e);
+          if (left > 0) {
+            delete e.st.blood; delete e.stk.blood; rip.push([r2(q.x), r2(q.y), r2(q.z), 1]);
+            damage(e, (30 + 12 * left) * c.dmg, 'blood', p);
+            if (e.dead) for (const o of enemiesNear(e.x, e.z, 4 * c.st.aoe)) applyStatus(o, 'blood', p);
+          } else if (Math.hypot(e.x - p.x, e.z - p.z) < 8) { rip.push([r2(q.x), r2(q.y), r2(q.z), 0]); hitEnemy(e, 'blood', 15 * c.dmg, p, 0, 0, 0, { noCombo: true }); }
+        }
+        fxe(c.m.key, 'rip', { id: p.id, at: rip.slice(0, 16) });
       },
-      shot: { hit: () => 'end', end(s) { boomAt(ctxS(s), s.x, Math.max(s.y, .3), s.z, 2.5 + .4 * s.n, s.dmg, { kb: 5 }, 'pop'); } },
-      look: { m: 'blood__bolt', s: 1.6, trail: [0xff2040, .25, .4, 2, 3], light: 6 },
-      fx: { gather(e) { const h = handPos(e.id); for (const [x, y, z] of e.from) { const a = V(x, y, z); beamFx(a, h, 0xe8102e, .05, .4); for (let i = 0; i < 6; i++) emit(x, y, z, (h.x - x) * 2.2, (h.y - y) * 2.2, (h.z - z) * 2.2, 0xff2040, .14, .45, 0, 0); }
-          modelFx('blood__bolt', 0xe8102e, h.clone(), .45, (o, k) => { o.position.copy(handPos(e.id)).add(V(0, .3, 0)); o.scale.setScalar(.4 + k * (.5 + .15 * e.from.length)); o.rotation.y += .2; });
-          sfx('blood_big'); },
-        pop(e) { boomFx(e.x, e.y, e.z, e.r, 0xe8102e, .9); burst(e.x, e.y, e.z, 40, 0x8a0018, 8, .2, .5, 10); sfx('blood_big'); } } },
+      fx: { rip(e) {
+        const h = handPos(e.id); ringFx(h.x, .1, h.z, 6, 0xe8102e, .5); sfx('blood_big');
+        for (const [x, y, z, big] of e.at) {
+          const a = V(x, y, z); beamFx(a, h, 0xe8102e, big ? .08 : .04, .35);
+          burst(x, y, z, big ? 34 : 12, 0xe8102e, big ? 9 : 5, .28, .6, 12, 4);
+          if (big) { pillarFx(x, 0, z, .5, 3, 0xff1030, .5); burst(x, y, z, 14, 0x5a0010, 6, .4, .8, 14, 3); flash(x, y, z, 0xff2040, 25, .25); }
+        }
+        if (e.at.length) shake(.15);
+      } } },
+    { name: 'Crimson Mire', icon: '🩸', cd: 9, cost: () => 5, mode: 'aim', range: 20, aimR: 4.5, desc: 'Costs 5 HP. Splash a pool of blood on the ground for 4 seconds. It drags enemies toward its centre and makes them bleed, 10 damage every half second. Pile them up, then Exsanguinate.',
+      cast(p, c) { ent(p, c, c.tgt.x, c.tgt.z, { life: 4, r: 4.5 * c.st.aoe }); fxe(c.m.key, 'splash', { x: c.tgt.x, z: c.tgt.z, r: 4.5 * c.st.aoe }); },
+      ent: { tick(n, dt) {
+        const p = own(n);
+        for (const e of enemiesNear(n.x, n.z, n.r)) if (Math.hypot(e.x - n.x, e.z - n.z) > .8) pull(e, n.x, n.z, 22 * dt);
+        if (pulse(n, dt, .5)) for (const e of enemiesNear(n.x, n.z, n.r)) hitEnemy(e, 'blood', 10 * n.mul, p, 0, 0, 0, { aoe: true, noCombo: true });
+      } },
+      view: { make(n) {
+          const g = new THREE.Group(), d = T.disc.clone(), m = discMat(0x8a0018); d.material = m; d.scale.setScalar(n.r * 1.05); d.position.y = .05; g.add(d);
+          const c = zoneCircle('blood', n.r, .8); g.add(c); Object.assign(g.userData, { mats: [], m, circle: c }); return g; },
+        upd(o, n, dt, t) {
+          const u = o.userData; u.m.uniforms.uA.value = Math.min(1, n.t * 4, n.l * 3) * (1.1 + .25 * Math.sin(t * 4)); spinCircle(u.circle, dt, -1.2);
+          if (Math.random() < .6) { const a = rand(0, TAU), d = Math.sqrt(Math.random()) * n.r; emit(n.x + Math.cos(a) * d, .1, n.z + Math.sin(a) * d, 0, rand(1, 2.5), 0, Math.random() < .5 ? 0xe8102e : 0x5a0010, rand(.12, .25), .6, 4); } // bubbling
+          if (Math.random() < .25) { const a = rand(0, TAU), d = n.r * rand(.7, 1); emit(n.x + Math.cos(a) * d, .2, n.z + Math.sin(a) * d, -Math.cos(a) * 3, .3, -Math.sin(a) * 3, 0xff2040, .15, .8, 0, .5); } // swirling in
+        },
+        drop: dropFade(.4) },
+      fx: { splash(e) { boomFx(e.x, .3, e.z, e.r, 0xe8102e, .7); for (let i = 0; i < 30; i++) emit(e.x, .4, e.z, rand(-5, 5), rand(4, 9), rand(-5, 5), Math.random() < .5 ? 0xe8102e : 0x8a0018, rand(.15, .3), 1, 16, .5); sfx('blood_big'); } } },
     { name: 'Blood Moon', icon: '🌕', desc: 'ULTIMATE. A blood moon rises above you and drains every enemy nearby for 4 seconds. Anything it drains to death bursts, splashing 30 damage on the enemies around it.',
       cast(p, c) { ent(p, c, p.x, p.z, { follow: 1, life: 4, r: 16, s: [] }); },
       ent: { tick(n, dt) {
         if (!pulse(n, dt, .25)) return;
         const es = enemiesNear(n.x, n.z, n.r).slice(0, 12), p = own(n);
-        for (const e of es) { damage(e, 7 * n.mul, 'blood', p, { dot: true }); if (e.dead) { aoe(e.x, e.z, 3.5, 30 * n.mul, 'blood', p, e.id, 6); fxe('blood.3', 'pop', { x: e.x, y: e.y + 1, z: e.z, r: 3.5 }); } }
+        for (const e of es) { damage(e, 7 * n.mul, 'blood', p, { dot: true }); if (e.dead) { aoe(e.x, e.z, 3.5, 30 * n.mul, 'blood', p, e.id, 6); fxe('blood.4', 'pop', { x: e.x, y: e.y + 1, z: e.z, r: 3.5 }); } }
         n.s = es.slice(0, 10).map(e => e.id);
       } },
-      view: { make() { const g = new THREE.Group(), m = model('blood__moon', 0xe8102e); m.scale.setScalar(1.4); g.add(m); g.userData.mats = m.userData.mats.slice(); g.userData.moon = m; g.userData.tethers = []; sfx('ult'); return g; },
+      // the moon rises off the ground to hang 9 m up in a pulsing halo, a red sea of light under it, blood raining up into it
+      view: { make(n) {
+          const g = new THREE.Group(), m = model('blood__moon', 0xe8102e), h = model('blood__moon', 0xff4060);
+          m.scale.setScalar(2.4); h.scale.setScalar(3.6); g.add(m, h);
+          const d = T.disc.clone(), dm = discMat(0xb00020); d.material = dm; d.scale.setScalar(n.r); d.position.y = .05; g.add(d);
+          const c = zoneCircle('blood', n.r, .7); g.add(c);
+          Object.assign(g.userData, { mats: m.userData.mats.slice(), moon: m, halo: h, dm, circle: c, tethers: [] });
+          sfx('ult'); sfx('blood_big'); shake(.35); return g; },
         upd(o, n, dt, t) {
-          const u = o.userData, a = Math.min(1, n.t * 2, n.l * 5); u.moon.position.y = 6 + Math.sin(t) * .2; u.moon.rotation.y += dt; fade(u.moon, a);
+          const u = o.userData, a = Math.min(1, n.t * 2, n.l * 4), y = 1 + 8 * easeOut(Math.min(1, n.t * 1.4)) + Math.sin(t * 1.2) * .25;
+          u.moon.position.y = u.halo.position.y = y; u.moon.rotation.y += dt * .6; u.halo.rotation.y -= dt * .3; fade(u.moon, a); fade(u.halo, a * (.22 + .08 * Math.sin(t * 5)));
+          u.dm.uniforms.uA.value = a * (.5 + .15 * Math.sin(t * 3)); spinCircle(u.circle, dt, .6); setOpacity(u.circle.userData.mats, a * .7);
+          const top = V(o.position.x, y, o.position.z);
+          if (Math.random() < .7) flash(top.x, y, top.z, 0xff1030, 18 * a, .15);
+          for (let i = 0; i < 3; i++) { const ang = rand(0, TAU), d = rand(1, n.r); emit(top.x + Math.cos(ang) * d, .2, top.z + Math.sin(ang) * d, -Math.cos(ang) * d * .25, rand(2, 4), -Math.sin(ang) * d * .25, Math.random() < .6 ? 0xe8102e : 0x5a0010, rand(.1, .2), 1.2, -1, 0); } // blood rains up into it
           const ids = Array.isArray(n.s) ? n.s : [];
-          while (u.tethers.length < ids.length) { const b = beamMesh(0xff1030, .05, false); scene.add(b); u.tethers.push(b); }
-          u.tethers.forEach((b, i) => { const v = views.e.get(ids[i]); b.visible = !!v && i < ids.length; if (v) { const from = V(n.x, 6 + o.position.y * 0, n.z), to = v.g.position.clone().add(V(0, 1, 0)); aimBeam(b, to, from, .035 + .015 * Math.sin(t * 20 + i)); fade(b, a * .7); if (Math.random() < .3) emit(to.x, to.y, to.z, (from.x - to.x) * 1.5, (from.y - to.y) * 1.5, (from.z - to.z) * 1.5, 0xff2040, .15, .6, 0, 0); } });
+          while (u.tethers.length < ids.length) { const b = beamMesh(0xff1030, .07, true); scene.add(b); u.tethers.push(b); }
+          u.tethers.forEach((b, i) => { const v = views.e.get(ids[i]); b.visible = !!v && i < ids.length; if (v) { const to = v.g.position.clone().add(V(0, 1, 0)); aimBeam(b, to, top, .06 + .03 * Math.sin(t * 20 + i)); fade(b, a * .8); if (Math.random() < .5) emit(to.x, to.y, to.z, (top.x - to.x) * 1.2, (top.y - to.y) * 1.2, (top.z - to.z) * 1.2, 0xff2040, .18, .8, 0, 0); } });
         },
-        drop(o) { o.userData.tethers.forEach(b => b.removeFromParent()); dropFade()(o); } } },
+        drop(o) { o.userData.tethers.forEach(b => b.removeFromParent()); dropFade()(o); } },
+      fx: { pop(e) { boomFx(e.x, e.y, e.z, e.r, 0xe8102e, .8); burst(e.x, e.y, e.z, 30, 0x5a0010, 8, .3, .6, 12); sfx('blood_big'); } } },
   ],
 },
 // ================================================================== SPIRIT
