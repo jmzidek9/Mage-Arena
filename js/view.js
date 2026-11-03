@@ -214,6 +214,10 @@ const FOE_FX = {
     });
     sfx('earth_big');
   },
+  flit(e) { for (const [x, z] of [[e.x, e.z], [e.x2, e.z2]]) { smokeFx(x, .8, z, .5, 0x2e2428, .6, 3, .5); burst(x, .8, z, 16, 0xff8a3a, 5, .15, .35, -1); } sfx('foe_blink'); },
+  whirl(e) { ringFx(e.x, .6, e.z, 2.8, 0xff8a3a, .3); for (let i = 0; i < 12; i++) { const a = rand(0, TAU); emit(e.x + Math.cos(a) * 2.4, rand(.6, 1.6), e.z + Math.sin(a) * 2.4, -Math.sin(a) * 8, 0, Math.cos(a) * 8, flameColor(), rand(.12, .2), .3); } sfx('swing'); },
+  muzzle(e) { fireBoom(e.x, e.y, e.z, 1, .35); smokeFx(e.x, e.y + .4, e.z, .6, 0x2e2428, .8, 4, .8); shake(clamp(.15 - distTo(e.x, e.z) * .006, 0, .12)); sfx('fire_boom'); },
+  devour(e) { for (let i = 0; i < 30; i++) emit(e.x + rand(-.5, .5), .4, e.z + rand(-.5, .5), rand(-2, 2), rand(1, 4), rand(-2, 2), Math.random() < .5 ? 0x8a1010 : 0xff6a1a, rand(.1, .2), .6, 9); sfx('venom_big'); },
   bind(e) { // a chain of soul light snaps from the binder to its ward
     const a = V(e.x2, 1.6, e.z2), b = V(e.x, 1.2, e.z); beamFx(a, b, C_SOUL, .15, .5);
     circleFx('sigil', V(e.x, .08, e.z), 1.6, { life: .8, color: C_SOUL }); burst(e.x, 1.2, e.z, 24, C_SOUL, 4, .2, .5, -1); sfx('soul_big');
@@ -404,9 +408,9 @@ const ETPL = {};
 for (const k in ET) ETPL[k] = [...enemiesG.children, ...foesG.children].find(c => c.name.replace(/\d+$/, '') === k) || null; // foes.glb: the Arena islands' monsters
 const FALLBACK = { stalker: 'grunt', bomber: 'runner', knight: 'grunt', shaman: 'shooter', skeleton: 'grunt', rat: 'runner', archer: 'shooter', ghoul: 'splitter', dknight: 'knight', warden: 'boss' };
 // Arena area monsters without a rig of their own yet borrow the closest one, tinted their area's colour
-Object.assign(FALLBACK, { snowcat: 'runner', ram: 'runner', cryomancer: 'shaman', frosttotem: 'shaman', icegolem: 'brute', harpy: 'grunt', crawler: 'grunt', bonearcher: 'grunt', plaguebearer: 'shaman', banshee: 'shaman', colossus: 'brute', necromancer: 'shaman', lich: 'shaman', bonedragon: 'boss',
+Object.assign(FALLBACK, { berserker: 'grunt', cannoneer: 'brute', tormentor: 'grunt', gorger: 'bomber', snowcat: 'runner', ram: 'runner', cryomancer: 'shaman', frosttotem: 'shaman', icegolem: 'brute', harpy: 'grunt', crawler: 'grunt', bonearcher: 'grunt', plaguebearer: 'shaman', banshee: 'shaman', colossus: 'brute', necromancer: 'shaman', lich: 'shaman', bonedragon: 'boss',
   snowfiend: 'grunt', icewolf: 'runner', icesprite: 'shooter', frostmite: 'bomber', yeti: 'brute', glacier: 'knight', frostgiant: 'boss', frostqueen: 'shaman',
-  hellhound: 'runner', cinderimp: 'grunt', magmaling: 'bomber', infernal: 'brute', hellknight: 'knight', pyrepriest: 'shaman', pitlord: 'boss', archdemon: 'boss',
+  cinderimp: 'grunt', pyrepriest: 'shaman', pitlord: 'boss', archdemon: 'boss',
   voidling: 'runner', gazer: 'shooter', riftmite: 'bomber', voidspawn: 'splitter', horror: 'brute', mindflayer: 'shaman', watcher: 'shooter', devourer: 'boss', umbra: 'boss' });
 const PART_RE =/_(body|head|jaw|armL|armR|legL|legR|leg\d|tail|wingL|wingR|ring|tent\d|shield|weapon|eye|fuse|staff|crown)$/;
 const RIM = { stalker: 0x9a4cff, boss: 0xff5a20, bomber: 0xffa020, knight: 0xa0c0ff, shaman: 0x40ff90, skeleton: 0xbfd4ff, rat: 0xffb060, archer: 0xbfd4ff, ghoul: 0x7aff6a, dknight: 0xff4a4a, warden: 0x5ad8ff };
@@ -482,6 +486,15 @@ const POSE = {
   dive:   { w: [-.3, 0, -.1, 2, 2, 0],      s: [.7, 0, 0, -.6, -.6, 0] },
   gust:   { w: [-.2, 0, 0, 2.6, 2.6, 0],    s: [.3, 0, 0, -1.2, -1.2, 0] },
   roll:   { w: [-.3, 0, .15, 1.6, 1.6, 0],  s: [.55, 0, .1, 1.4, 1.4, 0] },     // both hands shove the snowball off
+  spit:   { w: [-.4, 0, -.05, .3, .3, 0],   s: [.45, 0, .1, -.3, -.3, 0] },
+  whirl:  { w: [.2, 1.2, .15, 1.6, 1.6, 0], s: [0, 0, 0, 1.6, 1.6, 0] },        // axes out wide
+  barrage: { w: [.25, 0, .25, .3, .3, .4],  s: [-.4, 0, .1, .3, .3, 0] },       // braced low, then the recoil
+  blast:  { w: [.25, 0, .25, .3, .3, .4],   s: [-.5, 0, .15, .6, .6, 0] },
+  lash:   { w: [-.3, .7, 0, .3, 3, 0],      s: [.5, -.9, .05, 0, -1.6, 0] },    // chain arm thrown back over the shoulder, then cracked forward
+  hook:   { w: [-.2, .6, 0, .2, 2.6, 0],    s: [.3, -.5, 0, 0, -.4, 0] },
+  firewall: { w: [-.2, 0, 0, 2.4, 2.4, 0],  s: [.6, 0, .2, -1.5, -1.5, 0] },
+  pyre:   { w: [-.3, 0, -.05, 2.8, 2.8, 0], s: [.3, 0, .05, 3, 3, 0] },
+  flop:   { w: [.35, 0, .3, 1.5, 1.5, 0],   s: [-.2, 0, -.2, 2, 2, 0] },
 };
 // bosses: the colour of their power, for wind-ups, auras and their bigger attack effects
 const BOSS_COL = { boss: 0xff5a20, umbra: 0x9a4cff, warden: 0x5ad8ff, bonedragon: 0x8aff50, frostgiant: 0x9fe6ff, pitlord: 0xff6a1a, devourer: 0xb04cff };

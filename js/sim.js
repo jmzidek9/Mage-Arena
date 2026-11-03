@@ -399,6 +399,7 @@ function kill(e, el, p) {
   e.dead = true;
   ev({ k: 'die', id: e.id, type: e.type, x: r2(e.x), y: r2(e.y), z: r2(e.z), el, sc: e.sc, boss: !!t.boss, elite: e.elite });
   if (t.boss || e.elite) S.hitstop = .12;
+  if (S.mode === 'arena' && !t.boss && !e.fall) { (S.corpses ||= []).push({ x: e.x, z: e.z, t: S.t }); if (S.corpses.length > 24) S.corpses.shift(); } // a Gorger's meals (areas.js)
   if (t.split && e.sc > .7) for (const s of [-1, 1]) { const m = spawnEnemy('splitter', e.x + s * .6, e.z, false, e.sc * .6); m.rise = 0; m.y = 0; m.kx = s * 6; }
   if (e.type === 'bomber' && !e.blown) { e.blown = 1; bomberBlast(e, p, true); }
   if (p) {

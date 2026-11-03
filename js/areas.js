@@ -130,24 +130,59 @@ Object.assign(ET, {
       { atk: 'summon', wind: 1, n: 3, type: 'snowcat', cap: 8 }, { atk: 'ray', wind: 1, len: 26, w: 1.8, dmg: 24, c: C_ICE, s: 'ice', chill: 2 }] },
 
   // ---------- 4: the Infernal Legion ----------
-  hellhound:  { hp: 28,  spd: 7.4, r: .45, h: 1.0, dmg: 9,  reach: 3.2, cost: 1, from: 1, kb: 1.4, poise: 15,  atk: 'lunge', wind: .36, cd: 1.5, zone: 'hell',
-    alt: { atk: 'cone', min: 0, max: 6, wind: .55, cd: 6, dmg: 9, r: 6, ang: 40, c: C_FIRE, s: 'breath', pool: { life: 3, dps: 8 } } },
-  cinderimp:  { hp: 32,  spd: 3.4, r: .45, h: 1.6, dmg: 9,  reach: 26,  cost: 3, from: 2, kb: 1,   poise: 22,  atk: 'orb',   wind: .65, cd: 2.1, ranged: 1, keep: [9, 15], oc: C_FIRE, zone: 'hell',
-    alt: { atk: 'lob', min: 0, max: 20, wind: .85, cd: 7, dmg: 12, r: 2.2, c: C_FIRE, s: 'fire', pool: { life: 4, dps: 9 } } },
-  magmaling:  { hp: 26,  spd: 6.2, r: .5,  h: 1.2, dmg: 24, reach: 2.4, cost: 2, from: 3, kb: 1.2, poise: 10,  atk: 'fuse',  wind: .95, cd: 9, zone: 'hell', pool: { r: 3.2, life: 5, dps: 10, c: C_FIRE, s: 'fire' } },
-  infernal:   { hp: 210, spd: 2.3, r: 1.1, h: 2.8, dmg: 25, reach: 3.4, cost: 5, from: 5, kb: .25, poise: 140, atk: 'smash', wind: .95, cd: 2.1, zone: 'hell',
-    alt: { atk: 'spikes', min: 4, max: 15, wind: 1.1, cd: 8, dmg: 20, c: C_FIRE, s: 'fire' } },
-  hellknight: { hp: 130, spd: 3.3, r: .65, h: 2.2, dmg: 18, reach: 3.6, cost: 4, from: 5, kb: .4,  poise: 85,  atk: 'thrust', wind: .6, cd: 1.7, shield: 1, zone: 'hell',
-    alt: { atk: 'bash', min: 4, max: 9, wind: .7, cd: 7, dmg: 16 } },
-  pyrepriest: { hp: 60,  spd: 2.9, r: .55, h: 2.1, dmg: 0,  reach: 9,   cost: 4, from: 6, kb: 1,   poise: 30,  atk: 'buff',  wind: 1.1, cd: 6, ranged: 1, keep: [12, 18], zone: 'hell', r9: 10,
-    alt: { atk: 'hex', min: 0, max: 22, wind: 1.1, cd: 5, dmg: 14 } },
+  // Cinder Imps: they come in threes, never stand still (a puff of cinders and they're somewhere else round you) and spit fire up close
+  cinderimp:  { hp: 20,  spd: 4.2, r: .4,  h: 1.5, dmg: 7,  reach: 5,   cost: 1, from: 1, kb: 1.4, poise: 12,  atk: 'spit',  wind: .45, cd: 1.6, zone: 'hell', name: 'Cinder Imp',
+    tick(e, dt, tgt, d) {
+      if (!e.pack) { e.pack = 1; for (const s of [-1, 1]) { const q = confine({ x: e.x + s * 1.5, z: e.z + rand(-1, 1) }, 1); spawnEnemy('cinderimp', q.x, q.z).pack = 1; } }
+      if (e.atk || d > 14 || (e.flit = (e.flit ?? rand(1, 2)) - dt) > 0) return false;
+      e.flit = rand(1.4, 2.2);
+      const a = Math.atan2(e.x - tgt.x, e.z - tgt.z) + rand(-1.4, 1.4), r = Math.min(8, Math.max(3, d + rand(-2, 1))), q = confine({ x: tgt.x + Math.sin(a) * r, z: tgt.z + Math.cos(a) * r }, 1);
+      ev({ k: 'fx', m: 'foe', f: 'flit', x: r2(e.x), z: r2(e.z), x2: r2(q.x), z2: r2(q.z) });
+      e.x = q.x; e.z = q.z;
+      return false;
+    } },
+  // Hellfire Berserker: two axes and no fear; past half health it goes into a frenzy, and it spins into a whirlwind of blades that chases you
+  berserker:  { hp: 110, spd: 3.6, r: .6,  h: 2.1, dmg: 13, reach: 2.4, cost: 2, from: 2, kb: .6,  poise: 60,  atk: 'swipe', wind: .5,  cd: 1.2, zone: 'hell', name: 'Hellfire Berserker',
+    alt: { atk: 'whirl', min: 0, max: 9, wind: .6, cd: 7, dmg: 8 },
+    tick(e, dt, tgt, d, ps) {
+      if (e.hp < e.max * .5) { e.rage = S.t + .2; e.vs = 'rage'; }
+      const W = e.spin; if (!W) return false;
+      W.t -= dt; e.yaw += dt * 14;
+      e.x += (tgt.x - e.x) / d * 4.6 * dt; e.z += (tgt.z - e.z) / d * 4.6 * dt; collide(e, .6);
+      if ((W.k -= dt) <= 0) { W.k = .35; ev({ k: 'fx', m: 'foe', f: 'whirl', x: r2(e.x), z: r2(e.z) }); for (const p of ps) if (Math.hypot(p.x - e.x, p.z - e.z) < 2.8 && p.y < 1.5) foeHit(p, W.dmg, e); }
+      if (W.t <= 0) e.spin = null;
+      return true;
+    } },
+  // Brimstone Cannoneer: braces its mortar and walks three shells onto you one after another (each leaves the ground burning); blasts you back if you get close
+  cannoneer:  { hp: 70,  spd: 2.4, r: .8,  h: 2.2, dmg: 16, reach: 26,  cost: 3, from: 3, kb: .5,  poise: 60,  atk: 'barrage', wind: 1.2, cd: 5, ranged: 1, keep: [15, 24], zone: 'hell', name: 'Brimstone Cannoneer',
+    alt: { atk: 'blast', min: 0, max: 5, wind: .6, cd: 5, dmg: 12 } },
+  // Chain Tormentor: lashes you with its chain from out of arm's reach, and throws a hook that drags you in for another lash
+  tormentor:  { hp: 75,  spd: 3.4, r: .55, h: 2.4, dmg: 14, reach: 6,   cost: 3, from: 4, kb: .8,  poise: 40,  atk: 'lash',  wind: .55, cd: 1.6, zone: 'hell', name: 'Chain Tormentor',
+    alt: { atk: 'hook', min: 7, max: 18, wind: .8, cd: 6, dmg: 8, len: 18, w: 1.3, c: 0xd06a30 } },
+  // Pyre Priest: raises walls of fire across the ground to cut you off, and calls a pillar of flame down on where you stand
+  pyrepriest: { hp: 60,  spd: 2.9, r: .55, h: 2.1, dmg: 10, reach: 16,  cost: 4, from: 5, kb: 1,   poise: 30,  atk: 'firewall', wind: 1.1, cd: 6, ranged: 1, keep: [12, 18], zone: 'hell', name: 'Pyre Priest',
+    alt: { atk: 'pyre', min: 0, max: 22, wind: 1.3, cd: 5, dmg: 20 } },
+  // Gorger: eats the fallen (yours and its own kind) to heal and grow bigger; belly-flops onto you
+  gorger:     { hp: 240, spd: 2.2, r: 1.1, h: 2.4, dmg: 22, reach: 5,   cost: 5, from: 6, kb: .2,  poise: 150, atk: 'flop',  wind: .9,  cd: 3, zone: 'hell', name: 'Gorger',
+    tick(e, dt) {
+      if (e.atk || e.leap) return false;
+      const c = (S.corpses || []).filter(c => S.t - c.t < 12 && Math.hypot(c.x - e.x, c.z - e.z) < 14).sort((a, b) => Math.hypot(a.x - e.x, a.z - e.z) - Math.hypot(b.x - e.x, b.z - e.z))[0];
+      if (!c) return false;
+      const dx = c.x - e.x, dz = c.z - e.z, k = Math.hypot(dx, dz) || 1;
+      if (k > 1.6) { e.x += dx / k * 3 * dt; e.z += dz / k * 3 * dt; e.yaw = Math.atan2(dx, dz); return true; }
+      S.corpses.splice(S.corpses.indexOf(c), 1);
+      if (e.sc < 1.8) { e.sc += .12; e.max *= 1.12; }
+      e.hp = Math.min(e.max, e.hp + e.max * .3);
+      ev({ k: 'fx', m: 'foe', f: 'devour', x: r2(c.x), z: r2(c.z) });
+      return true;
+    } },
   pitlord:    { hp: 1800, spd: 2.1, r: 2.2, h: 5.4, dmg: 31, reach: 5, cost: 0, from: 99, kb: .04, poise: 700, atk: 'smash', wind: 1.05, cd: 2.2, boss: 1, zone: 'hell',
-    name: 'Azgaroth the Pit Lord', minions: ['hellhound', 'cinderimp'],
+    name: 'Azgaroth the Pit Lord', minions: ['cinderimp', 'berserker'],
     spec: [{ atk: 'cone', wind: 1.1, r: 15, ang: 55, dmg: 26, c: C_FIRE, s: 'breath', pool: { life: 4, dps: 12 } }, 'meteor', 'ring', 'charge'] },
   archdemon:  { hp: 1900, spd: 2.5, r: 1.4, h: 4.4, dmg: 28, reach: 4, cost: 0, from: 99, kb: .04, poise: 700, atk: 'swipe', wind: .8, cd: 1.8, boss: 1, zone: 'hell',
-    name: 'Belphegor the Archdemon', minions: ['hellhound', 'magmaling'],
+    name: 'Belphegor the Archdemon', minions: ['cinderimp', 'tormentor'],
     alt: { atk: 'blink', min: 7, max: 22, wind: .7, cd: 7, dmg: 26 },
-    spec: [{ atk: 'ray', wind: 1, len: 26, w: 2, dmg: 26, c: C_FIRE, s: 'fire', pool: { life: 3, dps: 10 } }, { atk: 'summon', wind: 1, n: 3, type: 'hellhound', cap: 8 },
+    spec: [{ atk: 'ray', wind: 1, len: 26, w: 2, dmg: 26, c: C_FIRE, s: 'fire', pool: { life: 3, dps: 10 } }, { atk: 'summon', wind: 1, n: 3, type: 'cinderimp', cap: 9 },
       { atk: 'nova', wind: 1.1, r: 8, dmg: 24, c: C_FIRE, s: 'fire', pool: { life: 3, dps: 10 } }, { atk: 'rain', n: 4, r: 2.4, dmg: 20, c: C_FIRE, s: 'meteor' }] },
 
   // ---------- 5: the Void ----------
@@ -514,8 +549,96 @@ const FOE_ATK = {
       });
     },
   },
+  // ----- the Infernal Legion's own -----
+  spit: { // a short gout of fire
+    start: (e, t, al, yaw) => ({ shape: 'cone', x: e.x, z: e.z, yaw, r: 5, ang: 40 }),
+    hit(e, a, dmg, ps) {
+      ev({ k: 'fx', m: 'foe', f: 'cone', x: r2(e.x), y: r2(e.y + 1.1 * e.sc), z: r2(e.z), yaw: r2(a.yaw), r: 5, ang: 40, c: C_FIRE, s: 'breath' });
+      for (const p of ps) if (inCone(p, e.x, e.z, a.yaw, 5.4, 46) && p.y < 2) foeHit(p, dmg, e);
+    },
+  },
+  whirl: { // spins up into a whirlwind of axes (it chases you in the berserker's tick)
+    start: (e) => ({ shape: 'circle', x: e.x, z: e.z, r: 2.8 }),
+    hit(e, a, dmg) { e.spin = { t: 2.2, k: 0, dmg }; },
+  },
+  barrage: { // three mortar shells walked onto you, each marked as it's fired
+    start: () => null,
+    hit(e, a, dmg, ps) {
+      const p = near(e, ps); if (!p) return;
+      for (let i = 0; i < 3; i++) {
+        const q = i ? confine({ x: p.x + rand(-3.5, 3.5), z: p.z + rand(-3.5, 3.5) }, 1) : { x: p.x, z: p.z };
+        later(i * .35, () => {
+          ev({ k: 'tele', shape: 'circle', x: r2(q.x), z: r2(q.z), r: 2.4, d: .9 });
+          ev({ k: 'fx', m: 'foe', f: 'lob', x: r2(e.x), y: r2(e.y + 2.2 * e.sc), z: r2(e.z), x2: r2(q.x), z2: r2(q.z), d: .9, c: C_FIRE, s: 'fire' });
+          ev({ k: 'fx', m: 'foe', f: 'muzzle', x: r2(e.x), y: r2(e.y + 2.2 * e.sc), z: r2(e.z) });
+        });
+        later(i * .35 + .9, () => {
+          ev({ k: 'fx', m: 'foe', f: 'splash', x: r2(q.x), z: r2(q.z), r: 2.4, c: C_FIRE, s: 'fire' });
+          for (const o of players()) if (!o.down && Math.hypot(o.x - q.x, o.z - q.z) < 2.7 && o.y < 1.6) foeHit(o, dmg, e);
+          addPool(q.x, q.z, 1.8, { life: 4, dps: 8, c: C_FIRE, s: 'fire' });
+        });
+      }
+    },
+  },
+  blast: { // point-blank: the mortar fired flat, blowing you away and itself back
+    start: (e, t, al, yaw) => ({ shape: 'cone', x: e.x, z: e.z, yaw, r: 6, ang: 90 }),
+    hit(e, a, dmg, ps) {
+      const fx = Math.sin(a.yaw), fz = Math.cos(a.yaw);
+      ev({ k: 'fx', m: 'foe', f: 'cone', x: r2(e.x), y: r2(e.y + 1.5 * e.sc), z: r2(e.z), yaw: r2(a.yaw), r: 6, ang: 90, c: C_FIRE, s: 'fire' });
+      for (const p of ps) if (inCone(p, e.x, e.z, a.yaw, 6.4, 96) && p.y < 2 && foeHit(p, dmg, e)) shove(p, fx * 18, fz * 18, 5);
+      e.kx -= fx * 9; e.kz -= fz * 9;
+    },
+  },
+  lash: { // the chain cracked down a narrow lane, well out of arm's reach
+    start: (e, t, al, yaw) => ({ shape: 'line', x: e.x, z: e.z, yaw, len: 6.6, w: 1.1 }),
+    hit(e, a, dmg, ps) {
+      ev({ k: 'fx', m: 'foe', f: 'pull', x: r2(e.x), y: r2(e.y + 1.6 * e.sc), z: r2(e.z), yaw: r2(a.yaw), len: 6.6, c: 0xd06a30 });
+      for (const p of ps) if (inLine(p, e.x, e.z, a.yaw, 6.6, 1.1) && p.y < 2) foeHit(p, dmg, e);
+    },
+  },
+  hook: { // a hook thrown down a lane that drags you in, then straight into a lash
+    start: (e, t, al, yaw) => ({ shape: 'line', x: e.x, z: e.z, yaw, len: al.len, w: al.w }),
+    hit(e, a, dmg, ps) {
+      const al = a.al;
+      ev({ k: 'fx', m: 'foe', f: 'pull', x: r2(e.x), y: r2(e.y + 1.6 * e.sc), z: r2(e.z), yaw: r2(a.yaw), len: al.len, c: al.c });
+      let got = false;
+      for (const p of ps) if (inLine(p, e.x, e.z, a.yaw, al.len, al.w) && p.y < 2.5 && foeHit(p, dmg, e, al)) {
+        got = true; const dx = e.x - p.x, dz = e.z - p.z, d = Math.hypot(dx, dz) || 1, k = Math.min(18, (d - 3) * 3.4);
+        if (k > 0) shove(p, dx / d * k, dz / d * k, 3);
+      }
+      if (got) later(.5, () => { const p = near(e, players().filter(q => !q.down)); if (p && !e.dead && !e.atk && !e.cc) startAttack(e, p); });
+    },
+  },
+  firewall: { // a wall of fire laid across the ground just behind you, burning for six seconds
+    start(e, t) {
+      const dx = t.x - e.x, dz = t.z - e.z, d = Math.hypot(dx, dz) || 1, cx = t.x + dx / d * 2.5, cz = t.z + dz / d * 2.5, px = dz / d, pz = -dx / d;
+      Object.assign(e.atk, { wx: cx - px * 6, wz: cz - pz * 6, wy: Math.atan2(px, pz) });
+      return { shape: 'line', x: e.atk.wx, z: e.atk.wz, yaw: e.atk.wy, len: 12, w: 1.6 };
+    },
+    hit(e, a, dmg, ps) {
+      const fx = Math.sin(a.wy), fz = Math.cos(a.wy);
+      for (let i = 0; i <= 8; i++) { const x = a.wx + fx * i * 1.5, z = a.wz + fz * i * 1.5; later(i * .04, () => { ev({ k: 'fx', m: 'foe', f: 'spike', x: r2(x), z: r2(z), i, c: C_FIRE, s: 'fire' }); addPool(x, z, 1.1, { life: 6, dps: 12, c: C_FIRE, s: 'fire' }); }); }
+      for (const p of ps) if (inLine(p, a.wx, a.wz, a.wy, 12, 1.6) && p.y < 1.5) foeHit(p, dmg, e);
+    },
+  },
+  pyre: { // a pillar of fire called down on the spot you stood
+    start(e, t) { Object.assign(e.atk, { lx: t.x, lz: t.z }); return { shape: 'circle', x: t.x, z: t.z, r: 2.2 }; },
+    hit(e, a, dmg, ps) {
+      ev({ k: 'fx', m: 'foe', f: 'nova', x: r2(a.lx), z: r2(a.lz), r: 2.2, c: C_FIRE, s: 'fire' }); ev({ k: 'fx', m: 'foe', f: 'spike', x: r2(a.lx), z: r2(a.lz), i: 0, c: C_FIRE, s: 'fire' });
+      for (const p of ps) if (Math.hypot(p.x - a.lx, p.z - a.lz) < 2.5 && p.y < 3) foeHit(p, dmg, e);
+      addPool(a.lx, a.lz, 1.6, { life: 3, dps: 10, c: C_FIRE, s: 'fire' });
+    },
+  },
+  flop: { // heaves itself up and lands belly-first on you
+    start(e, t) {
+      const dx = t.x - e.x, dz = t.z - e.z, d = Math.hypot(dx, dz) || 1, k = Math.min(d, 5);
+      Object.assign(e.atk, { lx: e.x + dx / d * k, lz: e.z + dz / d * k });
+      return { shape: 'circle', x: e.atk.lx, z: e.atk.lz, r: 3 * e.sc ** .5 };
+    },
+    hit(e, a, dmg) { e.leap = { x0: e.x, z0: e.z, x1: a.lx, z1: a.lz, t: 0, dmg, r: 3 * e.sc ** .5 }; },
+  },
 };
-for (const k of ['erupt', 'cage', 'siphon', 'stampede', 'dive', 'roll', 'hurl', 'pounce']) LOCKED.add(k);
+for (const k of ['erupt', 'cage', 'siphon', 'stampede', 'dive', 'roll', 'hurl', 'pounce', 'blast', 'lash', 'hook', 'firewall', 'pyre', 'flop']) LOCKED.add(k);
 const RIMC = { necromancer: 0x9a6aff, lich: 0x7ae8ff, frostqueen: 0x9fe6ff, archdemon: 0xff6a1a, watcher: 0xb04cff, umbra: 0x9a4cff };
 
 // ===================== how the island monsters' states look (view side) =====================
@@ -533,6 +656,8 @@ function foeLook(v, e, src, t) {
   if (e.vs === 'shell' && Math.random() < .3) emit(P.x + rand(-1.2, 1.2), P.y + rand(.3, 2.6), P.z + rand(-1.2, 1.2), 0, .2, 0, Math.random() < .5 ? 0xffffff : C_ICE, rand(.08, .16), .4);
   if (e.vs === 'hide' && Math.random() < .15) emit(P.x + rand(-.5, .5), .15, P.z + rand(-.5, .5), 0, .4, 0, 0xffffff, .1, .5, -.2); // only kicked-up snow gives it away
   if (e.vs === 'run') for (let i = 0; i < 2; i++) emit(P.x + rand(-.6, .6), .15, P.z + rand(-.6, .6), rand(-2, 2), rand(1.5, 3.5), rand(-2, 2), 0xf0f6ff, rand(.12, .22), rand(.4, .7), 8);
+  if (e.vs === 'rage' && Math.random() < .5) emit(P.x + rand(-.5, .5), P.y + rand(.4, 2), P.z + rand(-.5, .5), 0, rand(1, 2.5), 0, flameColor(), rand(.12, .25), .4, -2);
+  if (e.sc !== v.sc) v.sc += (e.sc - v.sc) * .1; // a Gorger swelling after a meal
   if (e.bd) { // a stream of soul light from the binder
     const b = src.enemies.find(o => o.id === e.bd);
     if (b) for (let i = 0; i < 2; i++) { const k = Math.random(); emit(b.x + (e.x - b.x) * k, 1.6 + (1.2 - 1.6) * k + Math.sin(k * Math.PI) * .6, b.z + (e.z - b.z) * k, 0, 0, 0, C_SOUL, rand(.08, .15), .25); }

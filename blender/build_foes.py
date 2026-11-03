@@ -649,62 +649,104 @@ brass = mat('he_brass', (0.55, 0.3, 0.12), rough=0.3, metal=0.95)
 redrobe = mat('he_robe', (0.28, 0.04, 0.03), rough=0.85)
 membrane = mat('he_wing', (0.25, 0.05, 0.04), rough=0.6)
 
-# hellhound: black hide split with lava, a mane of fire
-rt, body, head = beast('hellhound', dict(hide=char, eye=ember, tooth=horn_m, mouth=lava,
-    back=lambda m: ([crystal(m, ember if k % 2 else lava, aim((0, 0.6, 1), (0, -0.45 + k * 0.1, 0.16)), 0.05, 0.35 - k * 0.025) for k in range(8)],
-                    [m.tube(lava, [(sx * 0.2, -0.3 + k * 0.2, 0), (sx * 0.22, -0.2 + k * 0.2, -0.08)], 0.015, n=4) for sx in (-1, 1) for k in range(4)]),
-    head_fn=lambda m: [horn(m, horn_m, (sx * 0.08, -0.05, 0.1), (sx * 0.3, 0.6, 0.6), 0.2, 0.03, curl=(0, 0.8, 0)) for sx in (-1, 1)],
-    tail_fn=lambda m: crystal(m, ember, aim((0, 1, 0.3), (0, 0.72, -0.08)), 0.05, 0.3)))
-bake_scale(rt, 1.05)
 # cinder imp: a little red devil with bat wings, horns and a spade tail
 rt, body, head = biped('cinderimp', dict(skin=hide, belly=hide2, eye=ember, mouth=lava, claw=horn_m, tooth=horn_m, hunch=0.3, tail=True, wings=membrane,
     crown_fn=lambda m: [horn(m, horn_m, (sx * 0.13, -0.08, 0.28), (sx * 0.5, 0.3, 0.8), 0.32, 0.05, curl=(sx * 0.2, 0.8, -0.3)) for sx in (-1, 1)]))
 bake_scale(rt, 0.88)
-# magmaling: a waddling lump of molten rock with a flame for a fuse
-rt, body = keg('magmaling', dict(body=obsid, limb=char, noise=0.05,
-    face=lambda m: ([m.tube(lava, [(0.42 * math.cos(a), 0.42 * math.sin(a), 0.1), (0.4 * math.cos(a + .3), 0.4 * math.sin(a + .3), 0.35), (0.35 * math.cos(a), 0.35 * math.sin(a), 0.62)], 0.025, n=4) for a in [k * 1.1 for k in range(6)]],
-                    eyes(m, ember, (0, -0.39, 0.42), 0.1, (0.05, 0.03, 0.045)), ell(m, lava, (0, -0.39, 0.25), (0.12, 0.03, 0.05))),
-    fuse=lambda m: (m.lathe(lava, [(0, 0), (0.12, 0.08), (0.08, 0.25), (0, 0.42)], n=7, twist=0.5), m.ico(ember, 0.08, Matrix.Translation((0, 0, 0.05)), sub=1))))
-# infernal: a golem of cooling magma, molten heart showing through its plates
-def in_body(m):
-    m.ico(lava, 0.85, TRS((0, 0, 0.75), (0.2, 0, 0), (0.8, 0.6, 0.7)), sub=2)
-    for _ in range(18):
-        d = Vector((random.uniform(-1, 1), random.uniform(-1, 1), random.uniform(-0.5, 1))).normalized()
-        q = d.to_track_quat('Z', 'Y').to_matrix().to_4x4()
-        s_ = random.uniform(0.35, 0.5)
-        m.ico(obsid, 1, Matrix.Translation(Vector((0, 0, 0.75)) + Vector((d.x * 0.85, d.y * 0.62, d.z * 0.72))) @ q @ Matrix.Diagonal((s_, s_ * 0.8, s_ * 0.4, 1)), sub=1, noise=0.03)
-    spikes_on(m, obsid, (0, 0.2, 1.2), (0.6, 0.4, 0.3), 6, 0.45, 0.08, seed=33)
-def in_head(m):
-    m.ico(obsid, 0.32, TRS((0, -0.05, 0.12)), sub=1, noise=0.04)
-    eyes(m, ember, (0, -0.33, 0.14), 0.11, (0.05, 0.03, 0.035))
-    ell(m, lava, (0, -0.32, 0.0), (0.12, 0.03, 0.04))
-    for sx in (-1, 1):
-        horn(m, obsid, (sx * 0.2, -0.05, 0.25), (sx * 0.6, 0.3, 0.7), 0.5, 0.07, curl=(0, 0.8, -0.5))
-def in_arm(m, sx):
-    m.ico(obsid, 0.4, TRS((0, 0, 0)), sub=1, noise=0.06)
-    m.ico(lava, 0.26, TRS((sx * 0.12, -0.05, -0.55), scale=(1, 1, 1.5)), sub=1)
+chainm = mat('he_chain', (0.18, 0.16, 0.15), rough=0.35, metal=0.9)
+rust = mat('he_rust', (0.35, 0.16, 0.07), rough=0.7, metal=0.4)
+
+# hellfire berserker: a broad-shouldered demon split with burning cracks, a great axe in each fist, chains of the pit still on its wrists
+def bz_arm(m, sx):
+    wr = Vector((sx * 0.1, -0.32, -0.72 * 1.1))
+    m.lathe(leather, [(0.025, 0.1), (0.025, -0.65)], n=6, M=TRS(tuple(wr)))  # the haft
+    m.prism(blackst, [(0, -0.42), (sx * 0.05, -0.38), (sx * 0.32, -0.3), (sx * 0.36, -0.55), (sx * 0.3, -0.72), (sx * 0.05, -0.62), (0, -0.62)], -0.02, 0.02, M=TRS(tuple(wr), (math.pi / 2, 0, 0)))
+    m.prism(lava, [(sx * 0.33, -0.32), (sx * 0.37, -0.55), (sx * 0.31, -0.7), (sx * 0.29, -0.68), (sx * 0.34, -0.55), (sx * 0.3, -0.34)], -0.025, 0.025, M=TRS(tuple(wr), (math.pi / 2, 0, 0)))
+    m.lathe(chainm, [(0.08, -0.62), (0.09, -0.58), (0.08, -0.54)], n=10, closed=True)  # a shackle
+    m.tube(chainm, [tuple(wr + Vector((0, 0, 0.15))), tuple(wr + Vector((sx * 0.1, 0.1, -0.1))), tuple(wr + Vector((sx * 0.05, 0.15, -0.4)))], 0.015, n=4)
+rt, body, head = biped('berserker', dict(skin=hide, belly=hide2, arm=hide, leg=hide2, shoulder=obsid, eye=ember, mouth=lava, claw=horn_m, tooth=horn_m, hunch=0.15, reach=1.1, arm_fn=bz_arm,
+    torso=lambda m: ([m.tube(lava, [(sx * 0.08, -0.33, 0.12), (sx * 0.22, -0.3, 0.32), (sx * 0.12, -0.27, 0.55)], 0.016, n=4) for sx in (-1, 1)],
+                     [ell(m, obsid, (sx * 0.4, 0, 0.62), (0.22, 0.22, 0.18), noise=0.03) for sx in (-1, 1)],
+                     [horn(m, obsid, (sx * 0.42, 0.05, 0.72), (sx * 0.3, 0.2, 1), 0.25, 0.05) for sx in (-1, 1) for _ in (0,)],
+                     m.lathe(leather, [(0.33, 0.0), (0.34, 0.06), (0.33, 0.12)], n=16, closed=True)),
+    crown_fn=lambda m: ([horn(m, horn_m, (sx * 0.14, -0.06, 0.26), (sx * 0.9, -0.4, 0.4), 0.5, 0.06, curl=(sx * -0.4, 0.6, 1.0)) for sx in (-1, 1)],
+                        [m.tube(lava, [(x, -0.08, 0.32), (x * 1.4, 0.15, 0.4), (x, 0.35, 0.3)], [0.03, 0.02, 0.005], n=4) for x in (-0.05, 0, 0.05)])))
+bake_scale(rt, 1.15)
+
+# brimstone cannoneer: a squat demon in black iron plates, a smoking brass mortar strapped over its shoulder, shells on a bandolier
+def cn_body(m):
+    m.ico(hide2, 1, TRS((0, 0, 0.7), (0.15, 0, 0), (0.75, 0.6, 0.65)), sub=2, noise=0.04)
+    for k in range(10):  # iron plates
+        a, z = random.uniform(2.4, 7.0), random.uniform(0.3, 1.2)
+        q = Vector((math.cos(a), math.sin(a), 0.2)).normalized()
+        m.ico(blackst, 1, Matrix.Translation((0.68 * math.cos(a), 0.55 * math.sin(a), z)) @ q.to_track_quat('Z', 'Y').to_matrix().to_4x4() @ Matrix.Diagonal((0.28, 0.22, 0.06, 1)), sub=1)
+    m.tube(leather, [(-0.6, -0.45, 1.25), (0, -0.62, 0.75), (0.6, -0.45, 0.25)], 0.06, n=6)  # bandolier
     for k in range(5):
-        d = Vector((random.uniform(-1, 1), random.uniform(-1, 1), random.uniform(-1, 1))).normalized()
-        m.ico(obsid, 0.2, TRS(tuple(Vector((sx * 0.12, -0.05, -0.55)) + d * 0.25), scale=(1, 1, 0.5)), sub=1)
-    m.ico(obsid, 0.42, TRS((sx * 0.15, -0.15, -1.15), scale=(1, 1.05, 0.9)), sub=1, noise=0.07)
-    for k in range(3):
-        crystal(m, lava, aim((sx * 0.5, -0.3, -1), (sx * 0.15 + (k - 1) * 0.12, -0.35, -1.25)), 0.05, 0.22)
-def in_leg(m, sx):
-    m.ico(obsid, 0.32, TRS((0, 0, -0.3), scale=(1, 1, 1.4)), sub=1, noise=0.04)
-    m.ico(lava, 0.18, TRS((0, -0.2, -0.45)), sub=1)
-    m.ico(obsid, 0.36, TRS((0, -0.08, -0.78), scale=(1.1, 1.3, 0.6)), sub=1, noise=0.05)
-rt, body, head = golem('infernal', dict(body=in_body, head=in_head, arm=in_arm, leg=in_leg))
-# hell knight: spiked black plate, a burning sword, a shield with a demon's face
-rt, body = knight('hellknight', dict(plate=blackst, trim=brass, cloth=redrobe,
-    pauldron=lambda m, sx: [horn(m, blackst, (sx * (0.32 + k * 0.06), 0.02, 0.7), (sx * 0.3, 0, 1), 0.2 - k * 0.04, 0.035) for k in range(3)],
-    helm=lambda m: (m.lathe(blackst, [(0, -0.02), (0.16, 0.0), (0.17, 0.22), (0.15, 0.32), (0, 0.36)], n=16), m.prism(ember, [(-0.11, 0), (0.11, 0), (0.11, 0.022), (-0.11, 0.022)], 0, 0.02, M=TRS((0, -0.16, 0.18), (math.pi / 2, 0, 0))),
-                    [horn(m, horn_m, (sx * 0.14, -0.02, 0.24), (sx * 0.8, 0, 0.6), 0.35, 0.05, curl=(sx * -0.2, 0, 0.9)) for sx in (-1, 1)]),
-    shield=lambda m: (m.prism(blackst, [(-0.34, 0.55), (0.34, 0.55), (0.34, -0.45), (0, -0.62), (-0.34, -0.45)], -0.045, 0.045, M=TRS(rot=(math.pi / 2, 0, 0))),
-                      m.prism(brass, [(-0.36, 0.57), (0.36, 0.57), (0.36, 0.5), (-0.36, 0.5)], -0.055, 0.055, M=TRS(rot=(math.pi / 2, 0, 0))),
-                      ell(m, horn_m, (0, -0.07, 0.05), (0.14, 0.05, 0.16), u=12, v=8), [ell(m, ember, (sx * 0.05, -0.12, 0.08), (0.025, 0.01, 0.015), u=6, v=4) for sx in (-1, 1)],
-                      [horn(m, horn_m, (sx * 0.09, -0.08, 0.15), (sx * 0.5, -0.3, 1), 0.2, 0.03, curl=(sx * 0.3, 0, -0.5)) for sx in (-1, 1)]),
-    weapon=lambda m: (m.lathe(leather, [(0.028, -0.16), (0.028, 0.12)], n=6), m.prism(brass, [(-0.18, -0.02), (0.18, -0.02), (0.18, 0.02), (-0.18, 0.02)], 0.12, 0.16),
-                      m.lathe(blackst, [(0, 0.14), (0.075, 0.16), (0.065, 1.15), (0, 1.35)], n=4, M=TRS(scale=(1, 0.25, 1))), m.lathe(lava, [(0, 0.2), (0.016, 0.22), (0.013, 1.05), (0, 1.18)], n=4, M=TRS((0, -0.017, 0), scale=(1, 0.5, 1))))))
+        u = k / 4
+        m.lathe(brass, [(0, 0), (0.06, 0.02), (0.06, 0.14), (0, 0.22)], n=10, M=TRS((-0.5 + u, -0.6 + 0.12 * abs(u - 0.5), 1.15 - u * 0.9), (math.pi / 2, 0, 0)))
+    # the mortar over the right shoulder, muzzle forward and up
+    m.lathe(brass, [(0.0, -0.6), (0.24, -0.6), (0.28, -0.4), (0.22, 0.2), (0.27, 0.55), (0.3, 0.62), (0.2, 0.62), (0.18, 0.3), (0, 0.3)], n=18, M=aim((0, -1, 0.6), (0.55, 0.15, 1.5)), smooth=True)
+    m.lathe(lava, [(0, 0.5), (0.18, 0.52), (0.17, 0.6), (0, 0.58)], n=14, M=aim((0, -1, 0.6), (0.55, 0.15, 1.5)))  # the glowing bore
+    m.lathe(blackst, [(0.29, -0.1), (0.31, 0.0), (0.29, 0.1)], n=18, M=aim((0, -1, 0.6), (0.55, 0.15, 1.5)), closed=True)
+def cn_head(m):
+    m.ico(hide, 0.28, TRS((0, -0.05, 0.1)), sub=2)
+    m.lathe(blackst, [(0, -0.05), (0.26, 0.0), (0.3, 0.18), (0.24, 0.32), (0, 0.36)], n=14, M=TRS((0, 0.02, 0.02)))  # a pot helm
+    m.prism(ember, [(-0.14, 0), (0.14, 0), (0.14, 0.03), (-0.14, 0.03)], 0, 0.02, M=TRS((0, -0.28, 0.16), (math.pi / 2, 0, 0)))
+    for sx in (-1, 1):
+        horn(m, horn_m, (sx * 0.24, 0, 0.2), (sx * 1, 0.2, 0.3), 0.3, 0.05, curl=(0, 0, 1))
+def cn_arm(m, sx):
+    m.ico(blackst, 0.32, TRS((0, 0, 0)), sub=1)
+    m.tube(hide2, [(0, 0, 0), (sx * 0.12, -0.05, -0.5), (sx * 0.15, -0.15, -0.95)], [0.18, 0.15, 0.14], n=8)
+    ell(m, blackst, (sx * 0.15, -0.2, -1.05), (0.2, 0.22, 0.18))
+    claws(m, horn_m, Vector((sx * 0.15, -0.35, -1.12)), (0, -0.6, -1), n=3, L=0.2, r=0.035)
+def cn_leg(m, sx):
+    m.tube(hide2, [(0, 0, 0), (0, -0.05, -0.45), (0, 0, -0.8)], [0.22, 0.2, 0.18], n=8)
+    m.ico(blackst, 0.26, TRS((0, -0.1, -0.82), scale=(1, 1.3, 0.45)), sub=1)
+rt, body, head = golem('cannoneer', dict(body=cn_body, head=cn_head, arm=cn_arm, leg=cn_leg))
+bake_scale(rt, 0.8)
+
+# chain tormentor: a gaunt, long-armed jailer of the pit in a caged iron mask, wrapped in chains, swinging a meat-hook
+def tm_torso(m):
+    for k in range(5):  # chains wound round and round
+        z = 0.1 + k * 0.12
+        m.tube(chainm, [(0.3 * math.cos(a), 0.24 * math.sin(a), z + 0.06 * math.sin(a * 2 + k)) for a in [j * TAU / 12 for j in range(13)]], 0.018, n=5)
+    for sx in (-1, 1):
+        m.tube(chainm, [(sx * 0.2, -0.15, 0.6), (sx * 0.3, -0.3, 0.1), (sx * 0.2, -0.25, -0.35)], 0.016, n=4)  # hanging loops
+    spikes_on(m, blackst, (0, 0.15, 0.5), (0.25, 0.2, 0.25), 6, 0.25, 0.03, seed=61)
+def tm_mask(m):
+    m.lathe(blackst, [(0, -0.02), (0.24, 0.02), (0.26, 0.2), (0.22, 0.36), (0, 0.4)], n=12, M=TRS((0, -0.02, 0)))
+    for k in range(7):  # the cage bars over the face
+        x = (k - 3) * 0.05
+        m.tube(rust, [(x, -0.25, 0.32), (x, -0.27, 0.15), (x * 0.8, -0.22, -0.02)], 0.012, n=4)
+    m.tube(rust, [(-0.18, -0.24, 0.15), (0.18, -0.24, 0.15)], 0.014, n=4)
+    for sx in (-1, 1):
+        ell(m, ember, (sx * 0.06, -0.2, 0.18), (0.03, 0.01, 0.02), u=6, v=4)
+    for a in (2.2, 2.7, 3.2, 3.7, 4.2):
+        horn(m, rust, (0.22 * math.cos(a + 1.57), 0.2 * math.sin(a + 1.57) + 0.05, 0.32), (math.cos(a + 1.57), math.sin(a + 1.57), 1.2), 0.18, 0.025)
+rt, body, head = biped('tormentor', dict(skin=char, belly=hide2, arm=char, leg=char, shoulder=blackst, eye=ember, mouth=lava, claw=rust, tooth=rust, hunch=0.4, reach=1.4,
+    torso=tm_torso, crown_fn=tm_mask))
+part(rt, 'weapon', [o for o in PARTS['tormentor'] if o.name.endswith('_armR')][0], (0.1, -0.32, -0.72 * 1.4), lambda m: (
+    m.tube(chainm, [(0, 0, 0), (0, -0.03, -0.3), (0, 0, -0.6)], 0.015, n=4),
+    m.tube(rust, [(0, 0, -0.6), (0, 0, -0.8), (0, -0.12, -0.95), (0, -0.25, -0.88), (0, -0.25, -0.75)], [0.03, 0.03, 0.028, 0.022, 0.008], n=6)))  # the hook
+bake_scale(rt, 1.25)
+
+# gorger: a vast swollen demon that is mostly mouth, belly glowing where it's split with what it has eaten
+def gg_face(m):
+    ell(m, char, (0, -0.36, 0.3), (0.3, 0.08, 0.2))  # the maw
+    teeth(m, horn_m, (0, -0.4, 0.48), 0.5, 9, 0.09)
+    teeth(m, horn_m, (0, -0.4, 0.13), 0.45, 8, 0.08, down=False)
+    ell(m, lava, (0, -0.34, 0.3), (0.16, 0.04, 0.08))
+    eyes(m, ember, (0, -0.33, 0.66), 0.08, (0.035, 0.02, 0.03), n=3)
+    for k in range(5):  # split seams of fire round the belly
+        a = 3.4 + k * 0.6
+        m.tube(lava, [(0.42 * math.cos(a), 0.42 * math.sin(a), 0.05), (0.43 * math.cos(a + 0.2), 0.43 * math.sin(a + 0.2), 0.3)], 0.02, n=4)
+    for sx in (-1, 1):
+        horn(m, horn_m, (sx * 0.18, -0.15, 0.68), (sx * 0.6, -0.3, 0.8), 0.3, 0.05, curl=(sx * 0.2, 0.4, -0.6))
+    spikes_on(m, obsid, (0, 0.15, 0.55), (0.35, 0.3, 0.25), 7, 0.2, 0.04, seed=71)
+rt, body = keg('gorger', dict(body=hide, limb=hide2, noise=0.03, face=gg_face,
+    fuse=lambda m: (m.lathe(lava, [(0, 0), (0.1, 0.06), (0.06, 0.2), (0, 0.32)], n=7, twist=0.5), m.ico(ember, 0.06, Matrix.Translation((0, 0, 0.04)), sub=1))))
+bake_scale(rt, 2.0)
+
 # pyre priest: red robes, a horned hood, a staff bearing a burning brazier
 rt, body = caster('pyrepriest', dict(robe=redrobe, trim=brass, hand=hide, glow=ember,
     head=lambda m: (m.lathe(redrobe, [(0, -0.05), (0.2, 0.0), (0.24, 0.18), (0.2, 0.36), (0.1, 0.46), (0, 0.5)], n=16, M=TRS((0, 0.04, 0)), smooth=True),
@@ -879,7 +921,7 @@ export('foes.glb', ROOTS)
 pv = Previewer(res=420)
 GROUPS = {'crypt': ['crawler', 'bonearcher', 'plaguebearer', 'banshee', 'colossus', 'necromancer', 'lich', 'bonedragon'],
           'frost': ['snowcat', 'ram', 'cryomancer', 'frosttotem', 'icegolem', 'harpy', 'yeti', 'frostgiant', 'frostqueen'],
-          'hell': ['hellhound', 'cinderimp', 'magmaling', 'infernal', 'hellknight', 'pyrepriest', 'pitlord', 'archdemon'],
+          'hell': ['cinderimp', 'berserker', 'cannoneer', 'tormentor', 'pyrepriest', 'gorger', 'pitlord', 'archdemon'],
           'void': ['voidling', 'gazer', 'riftmite', 'voidspawn', 'horror', 'mindflayer', 'watcher', 'devourer'], 'shadow': ['umbra', 'stalker']}
 pv.scene.render.resolution_x, pv.scene.render.resolution_y = 1400, 420
 for g, names in GROUPS.items():
