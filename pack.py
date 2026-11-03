@@ -27,7 +27,7 @@ swap('<script src="assets/models.js"></script>',
 aud = lambda d: ','.join(f'"{n if d == "music" else n[:-4]}":"{base64.b64encode(open(os.path.join(HERE, "audio", d, n), "rb").read()).decode()}"'
                          for n in sorted(os.listdir(os.path.join(HERE, 'audio', d))))
 swap('<script src="audio/audio.js"></script>', '<script>window.MAGE_AUDIO = {sfx: {' + aud('sfx') + '}, music: {' + aud('music') + '}};</script>')
-SCRIPTS = ('core.js', 'elements.js', 'sim.js', 'modes.js', 'dungeon.js', 'city.js', 'areas.js', 'view.js', 'net.js')  # same order as the boot list in src/index.html
+SCRIPTS = ('core.js', 'elements.js', 'sim.js', 'modes.js', 'dungeon.js', 'city.js', 'areas.js', 'blocks.js', 'view.js', 'net.js')  # same order as the boot list in src/index.html
 game = ''.join(f'<script type="text/x-mage" data-src="js/{f}">{read("js/" + f)}</script>\n' for f in SCRIPTS)
 boot = '<script>\n// Boot:'
 swap(boot, game + boot)

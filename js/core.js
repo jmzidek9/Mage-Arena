@@ -725,7 +725,7 @@ addEventListener('pointerdown', wake); addEventListener('keydown', wake);
 const keys = {};
 const inp = { yaw: 0, pitch: 0, jumpN: 0, dashN: 0, swapN: 0, p: false, s: false };
 // rebindable keys (Settings > Controls); alt is a keyboard stand-in for RMB
-const BIND_DEF = { fwd: 'KeyW', back: 'KeyS', left: 'KeyA', right: 'KeyD', jump: 'Space', dash: 'ShiftLeft', swap: 'Tab', alt: 'KeyF', q: 'KeyQ', e: 'KeyE', r: 'KeyR' };
+const BIND_DEF = { fwd: 'KeyW', back: 'KeyS', left: 'KeyA', right: 'KeyD', jump: 'Space', dash: 'ShiftLeft', swap: 'Tab', alt: 'KeyF', q: 'KeyQ', e: 'KeyE', r: 'KeyR', block: 'KeyC' };
 const BIND = { ...BIND_DEF };
 let invertY = false;
 const keyName = c => c.replace(/^Key|^Digit/, '').replace(/Left$|Right$/, '').replace('Arrow', '') || c;
@@ -757,7 +757,7 @@ const lockMouse = () => { if (usingVirt()) return; try { renderer.domElement.req
 const unlockMouse = () => { try { document.exitPointerLock?.(); } catch {} };
 renderer.domElement.addEventListener('click', () => { if (playing) lockMouse(); });
 // k = held state of the 5 move slots: LMB, RMB, Q, E, R. mx / mz = analog strafe / forward (-1..1)
-const localInput = () => ({ yaw: inp.yaw, pitch: inp.pitch, jumpN: inp.jumpN, dashN: inp.dashN, swapN: inp.swapN, jump: !!keys[BIND.jump] || virt.jump,
+const localInput = () => ({ yaw: inp.yaw, pitch: inp.pitch, jumpN: inp.jumpN, dashN: inp.dashN, swapN: inp.swapN, jump: !!keys[BIND.jump] || virt.jump, b: !!keys[BIND.block] || !!virt.b, // b: holding block
   mx: clamp((keys[BIND.right] ? 1 : 0) - (keys[BIND.left] ? 1 : 0) + virt.mx, -1, 1), mz: clamp((keys[BIND.fwd] ? 1 : 0) - (keys[BIND.back] ? 1 : 0) + virt.mz, -1, 1),
   k: [inp.p || virt.k[0], inp.s || !!keys[BIND.alt] || virt.k[1], !!keys[BIND.q] || virt.k[2], !!keys[BIND.e] || virt.k[3], !!keys[BIND.r] || virt.k[4]] });
 

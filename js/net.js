@@ -10,7 +10,7 @@ const snap = () => ({
   phase: S.phase, mode: S.mode, wave: S.wave, mod: S.mod, ts: S.tstop > 0 ? 1 : 0, isl: S.isl, ib: S.ib, brs: S.brs, br: S.br && { k: S.br.k, t: r2(S.br.t) },
   duel: S.duel, dun: S.dun && { floor: S.dun.floor, seed: S.dun.seed, o: S.dun.o, st: S.dun.st, stairs: S.dun.stairs, wait: S.dun.wait },
   players: Object.fromEntries(Object.values(S.players).map(p => [p.id, { id: p.id, ai: p.ai ? 1 : 0, kick: p.kick, spawn: p.spawn, tp: p.tp, el: p.el, el2: p.el2, cur: p.cur, x: r2(p.x), y: r2(p.y), z: r2(p.z), yaw: r2(p.yaw), pitch: r2(p.pitch),
-    hp: Math.round(p.hp), max: p.max, down: p.down, rev: r2(p.rev), up: p.up, ult: r2(p.ult), bf: bfSnap(p.bf), ch: p.ch, chT: r2(p.chT), combo: p.combo, stats: p.stats,
+    hp: Math.round(p.hp), max: p.max, down: p.down, gd: p.guard ? 1 : 0, gh: Math.round(p.gh ?? 0), gm: p.gm || 0, gk: r2(p.gk || 0), rev: r2(p.rev), up: p.up, ult: r2(p.ult), bf: bfSnap(p.bf), ch: p.ch, chT: r2(p.chT), combo: p.combo, stats: p.stats,
     r: [Math.round(p.bd.heat || 0), p.bd.souls || 0, p.bd.arc || 0, p.bd.swords || 0, 0, (p.bd.runeN || 0) % 3, p.bd.foc && S.t - p.bd.foc.t < 1.5 ? p.bd.foc.n : 0] }])), // element resources: heat, souls, arcane charges, swords, (unused), rune count, laser focus
   enemies: S.enemies.filter(e => !e.pid).map(e => ({ id: e.id, type: e.type, x: r2(e.x), y: r2(e.y), z: r2(e.z), yaw: r2(e.yaw), hp: Math.round(e.hp), max: Math.round(e.max), sc: e.sc, elite: e.elite,
     st: Object.keys(e.st).map(k => ELIST.indexOf(k)), cc: e.cc?.type || 0, a: e.atk ? r2(1 - e.atk.t / e.atk.max) : 0, ak: e.atk?.k || 0, sh: Math.round(e.sh), lk: e.link?.g || 0, ts: S.tstop > 0 ? 1 : 0, vs: e.vs || 0, bd: e.bnd || e.gl || 0 })),
@@ -58,7 +58,7 @@ function applySettings(o) {
   $('sSensV').textContent = o.sens.toFixed(2); $('sVolV').textContent = Math.round(o.vol * 100) + '%'; $('sMusV').textContent = Math.round(o.mus * 100) + '%'; $('sFovV').textContent = o.fov; $('sBrightV').textContent = Math.round(o.bright * 100) + '%'; $('sScaleV').textContent = Math.round(o.scale * 100) + '%';
 }
 // Settings > Controls: click a key, press the new one (Esc cancels). Stored as settings.keys
-const BIND_NAMES = { fwd: 'Forward', back: 'Back', left: 'Left', right: 'Right', jump: 'Jump', dash: 'Dash', swap: 'Swap element', alt: 'Right click (key)', q: 'Skill 1', e: 'Skill 2', r: 'Ultimate' };
+const BIND_NAMES = { fwd: 'Forward', back: 'Back', left: 'Left', right: 'Right', jump: 'Jump', dash: 'Dash', swap: 'Swap element', alt: 'Right click (key)', q: 'Skill 1', e: 'Skill 2', r: 'Ultimate', block: 'Block (hold)' };
 let rebinding = null;
 function renderBinds() {
   $('binds').innerHTML = Object.entries(BIND_NAMES).map(([k, n]) => `<div>${n}<button class="ghost${rebinding === k ? ' wait' : ''}" data-k="${k}">${rebinding === k ? 'press…' : keyName(BIND[k])}</button></div>`).join('');
@@ -252,7 +252,7 @@ function onGuestData(m) {
     const restart = lastPhase === 'over' && R.phase !== 'over';
     if (!G || restart) G = Object.assign(newPlayer('g', mine.el, mine.el2), { x: mine.x, y: mine.y, z: mine.z, tpN: mine.tp?.n, tal: R.mode === 'duel' ? {} : PROG.tal }); // talents too, so predicted movement matches the host
     if (G.cur !== mine.cur && !(G.swapAt > performance.now() - 600)) G.cur = mine.cur;
-    Object.assign(G, { kick: mine.kick, spawn: mine.spawn, tp: mine.tp, el: mine.el, el2: mine.el2, hp: mine.hp, max: mine.max, down: mine.down, rev: mine.rev, up: mine.up, ult: mine.ult, combo: mine.combo, stats: mine.stats });
+    Object.assign(G, { kick: mine.kick, spawn: mine.spawn, tp: mine.tp, el: mine.el, el2: mine.el2, hp: mine.hp, max: mine.max, gh: mine.gh, gm: mine.gm, gk: mine.gk, down: mine.down, rev: mine.rev, up: mine.up, ult: mine.ult, combo: mine.combo, stats: mine.stats });
     for (const k in mine.bf) G.bf[k] = mine.bf[k];
     if (mine.down) { G.x = mine.x; G.z = mine.z; }
     if (!playing || restart) { myEl = mine.el; showGame(); }
@@ -374,6 +374,31 @@ function selfTest() {
     const r = testFoe(k, 300, first); if (r.err) berr.push(`${r.type}: ${r.err}`);
   }
   t(`every boss special plays out without errors${berr.length ? ' (' + berr.join('; ') + ')' : ''}`, !berr.length);
+  // blocks: every element's stops a blow from the front, a shot, and not one from behind (unless it covers every side),
+  // runs its own trick, wears down, breaks, and comes back
+  const gerr = [], ch = S.cheat;
+  for (const el of [...ELIST, 'god']) {
+    try {
+      Object.assign(S, { phase: 'fight', mode: 'arena', t: 0, wave: 3, enemies: [], shots: [], ents: [], timers: [], events: [], hz: [], cheat: null });
+      const p = newPlayer('h', el); Object.assign(p, { x: 0, z: 0, yaw: Math.PI }); S.players = { h: p }; // at the centre, facing +z
+      const B = BLOCK[el], hold = { k: [], b: true, swapN: p.swapN }, e = spawnEnemy('grunt', 0, 3); e.rise = 0; e.y = 0;
+      if (!B?.name || !B.desc || !(B.hp > 0)) throw new Error('no block defined');
+      stepCast(p, hold, 1 / 60); if (!p.guard) throw new Error('block did not go up');
+      const hp0 = p.hp; enemyHits(p, 10, e); enemyHits(p, 10, null, { x: 0, z: 5, vx: 0, vz: -15 });
+      if (p.hp < hp0) throw new Error('a hit from the front got through');
+      const behind = spawnEnemy('grunt', 0, -3); behind.rise = 0; p.bf.inv = 0; enemyHits(p, 10, behind);
+      if (!B.omni && p.hp >= hp0) throw new Error('a hit from behind was blocked');
+      for (let i = 0; i < 400 && !(p.gk > 0); i++) { S.t += .1; p.bf.inv = 0; enemyHits(p, 7, e); p.hp = p.max; for (let f = 0; f < 3; f++) stepCast(p, hold, 1 / 60); }
+      if (!(p.gk > 0) && el !== 'god') throw new Error('it never broke');
+      for (let f = 0; f < 60 * 6; f++) { stepCast(p, { ...hold, b: false }, 1 / 60); stepTimers(1 / 60); }
+      if (p.gk > 0 || p.gh < p.gm) throw new Error('it did not come back');
+      stepCast(p, hold, 1 / 60); stepCast(p, { ...hold, b: false }, 1 / 60); // up and let go (Magma, Cosmic)
+      JSON.stringify(snap());
+    } catch (err) { gerr.push(`${el}: ${err.message}`); }
+  }
+  Object.assign(S, { phase: 'lobby', players: {}, enemies: [], shots: [], ents: [], timers: [], events: [], hz: [], cheat: ch });
+  t(`all ${ELIST.length + 1} element blocks block, wear down, break and recover${gerr.length ? ' (' + gerr.join('; ') + ')' : ''}`, !gerr.length);
+  t('every element block has its own name', new Set([...ELIST, 'god'].map(k => BLOCK[k]?.name)).size === ELIST.length + 1);
   const kit = k => [ET[k].atk, ET[k].alt?.atk].join('+'), regs = isle.filter(k => ET[k].cost), dup = regs.filter(k => regs.some(o => o !== k && ET[o].zone !== ET[k].zone && kit(o) === kit(k)));
   t(`no two islands' monsters fight the same way${dup.length ? ' (' + dup.join(', ') + ')' : ''}`, !dup.length);
   console.log(res.join('\n'));
@@ -433,15 +458,15 @@ function frame(now, manual = false) {
     fovKick += (0 - fovKick) * Math.min(1, dt * 8); camera.fov = baseFov + fovKick * 10; camera.updateProjectionMatrix();
     vm.visible = !mp.down;
     vmKick = Math.max(0, vmKick - dt * 5);
-    const k = vmKick * vmKick, chargeK = renderAim(mp, dt), chan = mp.ch ? 1 : 0;
+    const k = vmKick * vmKick, chargeK = renderAim(mp, dt), chan = mp.ch ? 1 : 0, gd = guardPose(mp, dt); // gd: the block held up (blocks.js)
     const moving = (keys.KeyW || keys.KeyA || keys.KeyS || keys.KeyD) && mp.gr;
     vmBob += dt * (moving ? 9 : 2);
     const amp = moving ? .012 : .004, tremble = (chargeK * .004 + chan * .003) * Math.sin(t * 60);
     vm.position.set(Math.cos(vmBob * .5) * amp + tremble, Math.sin(vmBob) * amp - (mp.vy || 0) * .003, 0);
-    handL.position.set(hL0.x + k * .05 + chan * .04, hL0.y + k * .06 + chan * .05, hL0.z - k * .16 - chan * .12 + chargeK * .06); handL.rotation.x = hLr.x + k * .5 + chan * .4;
+    handL.position.set(hL0.x + k * .05 + chan * .04 + gd * .14, hL0.y + k * .06 + chan * .05 + gd * .1, hL0.z - k * .16 - chan * .12 + chargeK * .06 - gd * .18); handL.rotation.x = hLr.x + k * .5 + chan * .4 + gd * .9; handL.rotation.z = hLr.z - gd * .5;
     handR.position.z = hR0.z + k * .03;
     if (rigMats.staff_gem) rigMats.staff_gem.emissiveIntensity = 3 + Math.sin(t * 4) + k * 6 + chargeK * 8 + chan * 4;
-    if (rigMats.hand_rune) rigMats.hand_rune.emissiveIntensity = 4 + chargeK * 10 + chan * 6;
+    if (rigMats.hand_rune) rigMats.hand_rune.emissiveIntensity = 4 + chargeK * 10 + chan * 6 + gd * 8;
     hud(src, mp);
   } else {
     camera.position.set(Math.sin(t * .06) * 30, 10, Math.cos(t * .06) * 30); camera.lookAt(0, 1, 0); vm.visible = false;

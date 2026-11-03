@@ -88,7 +88,7 @@ function stats(p) {
   return {
     cdMul: (1 - .04 * tl('haste')) * .85 ** n('swift') * (el === 'chrono' ? .82 : 1),
     skillCd: .8 ** n('quick'),
-    dmgMul: (1 + .04 * tl('power')) * (1 + .2 * n('potency')) * comboB * lowHp * elementPower(p, el),
+    dmgMul: (1 + .04 * tl('power')) * (1 + .2 * n('potency')) * comboB * lowHp * elementPower(p, el) * (p.bf.emp > 0 ? 1.3 : 1), // emp: a Runic Ward's charge
     speed: 7.5 * (1 + .03 * tl('swift')) * (1 + .12 * n('fleet')) * (el === 'wind' ? 1.15 : 1),
     aoe: (1 + .25 * n('wide')) * (el === 'explosion' ? 1.2 : 1),
     dur: 1 + .5 * n('linger'), multi: 1 + n('twin'), chain: 2 + n('twin'), pierce: n('pierce'), bounce: n('ricochet'),
@@ -344,7 +344,7 @@ function damage(e, amount, el, p, o = {}) {
   if (e.sh > 0) { const a = Math.min(e.sh, amount); e.sh -= a; amount -= a; }
   amount = Math.round(amount);
   if (amount <= 0) return 0;
-  if (e.pid) { const q = S.players[e.pid]; if (!q || q.down || !hurt(q, amount, null)) return 0; e.hp = q.hp; if (p) addUlt(p, amount / 160); } // duel: the hit lands on the wizard
+  if (e.pid) { const q = S.players[e.pid]; if (!q || q.down || (p && guardHit(q, amount, S.enemies.find(o => o.pid === p.id), p)) || !hurt(q, amount, null)) return 0; e.hp = q.hp; if (p) addUlt(p, amount / 160); } // duel: the hit lands on the wizard
   else e.hp -= amount;
   const t = ET[e.type];
   ev({ k: 'dmg', id: e.id, x: r2(e.x), y: r2(e.y + t.h * e.sc + .2), z: r2(e.z), n: amount, el, c: o.crit ? 1 : 0, d: o.dot ? 1 : 0, b: o.blocked ? 1 : 0 });
@@ -423,13 +423,15 @@ function hurt(p, n, src = null) {
   return true;
 }
 // an enemy attack landing on a player: dashing through it at the last moment is a perfect dodge
-function enemyHits(p, dmg, e) {
+function enemyHits(p, dmg, e, from = null) { // from: the shot, when it was one
   if (p.down) return;
   if (p.dashT > 0 || p.bf.inv > 0) {
     if (S.t - p.dashAt < .4 && !(p.pdCd > S.t)) { p.pdCd = S.t + 1; S.slowmo = .55; addUlt(p, .12); p.stats.dodges++; ev({ k: 'dodge', id: p.id }); }
     return false;
   }
   if (e?.st?.illusion > 0 && Math.random() < 1 / 3) { ev({ k: 'miss', x: r2(p.x), y: r2(p.y + 1.6), z: r2(p.z), id: p.id }); return false; } // Misdirection: it struck a phantom
+  if (guardHit(p, dmg, e, from)) return false; // blocked (blocks.js)
+  const m = mate(p); if (m?.guard && m.cur === 'spirit') dmg *= .5; // a partner's Ancestral Ward
   return hurt(p, dmg * (1 - (e?.m?.weak || 0)), e);
 }
 
@@ -516,7 +518,7 @@ function stepFoeShot(s, dt) {
     if (n.solid && n.solid.some(c => Math.hypot(s.x - c.x, s.z - c.z) < c.r + .2) && s.y < (n.h ?? 3)) { s.dead = true; ev({ k: 'block', x: r2(s.x), y: r2(s.y), z: r2(s.z) }); return; }
   }
   s.life -= dt; s.x += s.vx * dt * k; s.y += s.vy * dt * k; s.z += s.vz * dt * k;
-  for (const p of players()) if (!p.down && Math.hypot(p.x - s.x, p.z - s.z) < .6 && s.y > p.y && s.y < p.y + 1.9) { enemyHits(p, s.dmg, null); s.dead = true; return; }
+  for (const p of players()) if (!p.down && Math.hypot(p.x - s.x, p.z - s.z) < .6 && s.y > p.y && s.y < p.y + 1.9) { enemyHits(p, s.dmg, null, s); s.dead = true; return; }
   if (s.y < 0 || s.life <= 0) s.dead = true;
 }
 
@@ -562,6 +564,7 @@ function stepMove(p, i, dt) {
   p.dcd -= dt;
   for (const k in p.bf) if (p.bf[k] > 0) p.bf[k] -= dt;
   if (p.bf.chill > 0) { vx *= .55; vz *= .55; } // chilled by frost attacks
+  if (i.b && !(p.gk > 0) && !p.down) { const mv = (BLOCK[p.cur] || BLOCK.fire).move ?? .55; vx *= mv; vz *= mv; } // walking behind a raised block
   if (p.bf.frozen > 0) { vx = 0; vz = 0; } // locked in a Frost Queen's ice tomb
   if (p.bf.stun > 0 || p.bf.root > 0) { vx = vz = 0; i = { ...i, dashN: p.dashN, jumpN: p.jumpN }; } // held in place (duel crowd control)
   const kk = p.kick || [0, 0, 0], ks = p.kickSeen || kk; // knockback handed over by the host as running totals, so none is lost or doubled
@@ -638,11 +641,13 @@ function stepCast(p, i, dt, host = true) {
   for (const el in p.cds) { const a = p.cds[el]; for (let s = 0; s < 5; s++) a[s] -= dt; }
   const kit = kitOf(p), held = p.bf.stun > 0 ? [] : i.k || [];
   // while down, drop Tab presses on both machines so host and guest never disagree about the active element after a revive
-  if (p.down || S.phase === 'over' || (host && S.phase === 'lobby')) { p.ch = null; p.chg = null; p.prevK = []; p.swapN = i.swapN; return; }
+  if (p.down || S.phase === 'over' || (host && S.phase === 'lobby')) { p.ch = null; p.chg = null; p.prevK = []; p.swapN = i.swapN; p.guard = false; return; }
   if (i.swapN !== p.swapN) {
     p.swapN = i.swapN;
     if (p.el2 && !p.ch && !p.chg) { p.cur = p.cur === p.el2 ? p.el : p.el2; if (host) ev({ k: 'swap', id: p.id, el: p.cur }); if (p.id === myId) { tintRig(p.cur); sfx('swap'); } }
   }
+  guardStep(p, i, dt, host); // blocking (blocks.js): while the block is up, no spells
+  if (p.guard) { if (p.ch && host) MOVE[p.ch].end?.(p, ctxOf(p, MOVE[p.ch])); p.ch = null; p.chg = null; p.prevK = (i.k || []).slice(); return; }
   if (p.ch) { // channel: runs while held, up to m.max seconds
     const m = MOVE[p.ch];
     p.chT += dt;
@@ -873,7 +878,7 @@ function stepEnemies(dt) {
     const fieldSlow = e.fs || 0; e.fs = 0;
     const slow = Math.min(.85, Math.max(e.m.slow, fieldSlow)), rate = (1 - slow) * haste * (e.rage > S.t ? 1.4 : 1); // rage: a Pyre Priest's war-chant
     let tgt = null, bd = 1e9;
-    for (const p of ps) { const d = Math.hypot(p.x - e.x, p.z - e.z); if (d < bd) { bd = d; tgt = p; } }
+    for (const p of ps) { if (p.bf.veil > 0) continue; const d = Math.hypot(p.x - e.x, p.z - e.z); if (d < bd) { bd = d; tgt = p; } } // a Shadow Veil hides you
     for (const n of lures) { const d = Math.hypot(n.x - e.x, n.z - e.z); if (d < n.r && d * .5 < bd) { bd = d * .5; tgt = { x: n.x, y: 0, z: n.z, lure: 1 }; } } // Illusion decoys draw them in
     const spd = t.spd * rate;
     if (ctype === 'charm') { // turned against their own: hunt the nearest other monster and hit it

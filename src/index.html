@@ -199,7 +199,8 @@ input::placeholder{color:#b9add8;opacity:.8}input:focus{box-shadow:0 0 0 2px var
 #swapGrid.big{grid-template-columns:repeat(auto-fill,minmax(70px,1fr));max-height:300px;overflow-y:auto}#swapGrid.big .elc{display:flex;flex-direction:column;align-items:center;gap:2px}#swapGrid.big .elc .n{font-size:10px;opacity:.85}
 #cheatBody .row{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;align-items:center}#cheatBody button{padding:6px 10px;font-size:12px}#cheatBody button.on{border-color:var(--gold);color:#fff6d8;background:rgba(255,200,90,.15)}
 #cheatBody input,#cheatBody select{background:#1a1428;color:#eee;border:1px solid #4a3a6a;border-radius:6px;padding:5px;font-size:12px}#cheatBody input{width:60px}#cheatBody small{opacity:.6;width:100%}
-#me .bar,#me #dash{width:230px}
+#me .bar,#me #dash,#me #guard{width:230px}
+#guard{height:4px;margin-top:3px;background:rgba(0,0,0,.6);border-radius:3px;overflow:hidden}#guard>i{display:block;height:100%;background:linear-gradient(90deg,var(--gc,#c8a0ff),#fff);box-shadow:0 0 8px var(--gc,#c8a0ff);transition:width .1s}#guard.broken>i{background:#ff5a5a;box-shadow:0 0 8px #ff5a5a}
 /* ---- touch controls (shown after the first touch) ---- */
 #touch{position:fixed;inset:0;z-index:3;touch-action:none}
 #stick{position:absolute;left:110px;top:calc(100% - 150px);width:120px;height:120px;margin:-60px;border-radius:50%;border:2px solid rgba(255,255,255,.28);background:rgba(255,255,255,.06);opacity:.55;pointer-events:none}
@@ -231,7 +232,7 @@ body.touching #me{top:14px;bottom:auto;left:14px}body.touching #lock{display:non
   <div id="banner"></div>
   <div id="combo"></div>
   <div id="comboCt" class="hidden"></div>
-  <div id="me" class="hudbox"><div id="meName" class="who"></div><div class="bar"><i id="meHp"></i></div><div id="dash"><i id="dashBar"></i></div></div>
+  <div id="me" class="hudbox"><div id="meName" class="who"></div><div class="bar"><i id="meHp"></i></div><div id="dash"><i id="dashBar"></i></div><div id="guard"><i id="guardBar"></i></div></div>
   <div id="bar"><div id="buffs"></div><div id="res" class="hidden"></div><div id="elName"></div><div id="slots"></div></div>
   <div id="mate" class="hudbox hidden"><div id="mateName" class="who"></div><div class="bar"><i id="mateHp"></i></div><i id="mateUlt"></i></div>
   <div id="downMsg" class="hidden"></div>
@@ -329,7 +330,7 @@ body.touching #me{top:14px;bottom:auto;left:14px}body.touching #lock{display:non
       : Promise.resolve(window.fflateGunzip(u8).buffer); // Safari before 16.4
     const loader = new GLTFLoader(), names = ['arena', 'duel', 'fp_rig', 'spells', 'enemies', 'wizard', 'elements', 'islands', 'foes'];
     window.GLB = Object.fromEntries(await Promise.all(names.map(async n => [n, (await loader.parseAsync(await gunzip(bytes(window.MAGE_ASSETS_GZ[n])), '')).scene])));
-    for (const src of ['core.js', 'elements.js', 'sim.js', 'modes.js', 'dungeon.js', 'city.js', 'areas.js', 'view.js', 'net.js']) {
+    for (const src of ['core.js', 'elements.js', 'sim.js', 'modes.js', 'dungeon.js', 'city.js', 'areas.js', 'blocks.js', 'view.js', 'net.js']) {
       const code = document.querySelector(`script[data-src="js/${src}"]`);
       if (!code) throw new Error(`this file is incomplete (${src} missing). Download index.html again`);
       const s = document.createElement('script'); s.text = code.textContent; document.body.appendChild(s);
