@@ -382,7 +382,7 @@ function selfTest() {
       Object.assign(S, { phase: 'fight', mode: 'arena', t: 0, wave: 3, enemies: [], shots: [], ents: [], timers: [], events: [], hz: [], cheat: null });
       const p = newPlayer('h', el); Object.assign(p, { x: 0, z: 0, yaw: Math.PI }); S.players = { h: p }; // at the centre, facing +z
       const B = BLOCK[el], hold = { k: [], b: true, swapN: p.swapN }, e = spawnEnemy('grunt', 0, 3); e.rise = 0; e.y = 0;
-      if (!B?.name || !B.desc || !(B.hp > 0)) throw new Error('no block defined');
+      if (!B?.name) throw new Error('no block defined');
       stepCast(p, hold, 1 / 60); if (!p.guard) throw new Error('block did not go up');
       const hp0 = p.hp, ehp = e.hp; enemyHits(p, 10, e); enemyHits(p, 10, null, { x: 0, z: 5, vx: 0, vz: -15 });
       if (p.hp < hp0) throw new Error('a hit from the front got through');
@@ -391,16 +391,27 @@ function selfTest() {
       if (p.hp < hp0) throw new Error('a hit from behind got through');
       p.hp = p.max; hurt(p, 8, null); if (p.hp < p.max && !(p.gk > 0)) throw new Error('the ground burning under you got through');
       for (let i = 0; i < 400 && !(p.gk > 0); i++) { S.t += .1; p.bf.inv = 0; enemyHits(p, 7, e); p.hp = p.max; for (let f = 0; f < 3; f++) stepCast(p, hold, 1 / 60); }
-      if (!(p.gk > 0) && el !== 'god') throw new Error('it never broke');
+      if (!(p.gk > 0)) throw new Error('it never broke');
       for (let f = 0; f < 60 * 6; f++) { stepCast(p, { ...hold, b: false }, 1 / 60); stepTimers(1 / 60); }
       if (p.gk > 0 || p.gh < p.gm) throw new Error('it did not come back');
-      stepCast(p, hold, 1 / 60); stepCast(p, { ...hold, b: false }, 1 / 60); // up and let go (Magma, Cosmic)
       JSON.stringify(snap());
     } catch (err) { gerr.push(`${el}: ${err.message}`); }
   }
   Object.assign(S, { phase: 'lobby', players: {}, enemies: [], shots: [], ents: [], timers: [], events: [], hz: [], cheat: ch });
   t(`all ${ELIST.length + 1} element blocks block, wear down, break and recover${gerr.length ? ' (' + gerr.join('; ') + ')' : ''}`, !gerr.length);
   t('every element block has its own name', new Set([...ELIST, 'god'].map(k => BLOCK[k]?.name)).size === ELIST.length + 1);
+  // every island monster's attack warning is its own, sized to the attack (not a swipe the size of its whole reach)
+  const terr = [];
+  for (const k of isle.filter(k => ET[k].cost)) for (const al of [null, ET[k].alt].filter((x, i) => !i || x)) {
+    Object.assign(S, { phase: 'fight', mode: 'arena', t: 0, wave: 3, enemies: [], shots: [], ents: [], timers: [], events: [], hz: [] });
+    const p = newPlayer('h', 'fire'); Object.assign(p, { x: 0, z: 0 }); S.players = { h: p };
+    const e = spawnEnemy(k, 0, -6); e.rise = 0; startAttack(e, p, al);
+    const kind = al?.atk || ET[k].atk, tl = S.events.filter(v => v.k === 'tele' && v.id === e.id).pop();
+    if (tl && tl.shape === 'cone' && kind !== 'swipe' && FOE_ATK[kind] && !['cone', 'scream', 'spit', 'gust', 'blast', 'chomp'].includes(kind)) terr.push(`${k} ${kind}`);
+    if (tl && (tl.r > 26 || tl.len > 34)) terr.push(`${k} ${kind} too big`);
+  }
+  Object.assign(S, { phase: 'lobby', players: {}, enemies: [], events: [], timers: [] });
+  t(`every island monster's attack warning fits its attack${terr.length ? ' (' + terr.join(', ') + ')' : ''}`, !terr.length);
   const kit = k => [ET[k].atk, ET[k].alt?.atk].join('+'), regs = isle.filter(k => ET[k].cost), dup = regs.filter(k => regs.some(o => o !== k && ET[o].zone !== ET[k].zone && kit(o) === kit(k)));
   t(`no two islands' monsters fight the same way${dup.length ? ' (' + dup.join(', ') + ')' : ''}`, !dup.length);
   console.log(res.join('\n'));

@@ -410,7 +410,6 @@ function onEvent(e) {
     case 'miss': if (e.id === myId) popNum(camera.position.x, camera.position.y + .2, camera.position.z, 'MISSED: A PHANTOM', '#f0a6ff', 'tag'); else popNum(e.x, e.y, e.z, 'MISS', '#f0a6ff', 'tag'); burst(e.x, e.y - .5, e.z, 20, 0xffc8ff, 4, .2, .4); sfx('illusion'); break;
     case 'block': burst(e.x, e.y, e.z, 12, 0xffe0a0, 6, .12, .25, 6); flash(e.x, e.y, e.z, 0xffe0a0, 8, .1); sfx('block'); break;
     case 'guard': guardEv(e); break; // a player's block (blocks.js)
-    case 'gfx': GFX[e.f]?.(e); break;
     case 'land': dustFx(e.x, e.z, e.s * 2); shake(clamp(.25 - distTo(e.x, e.z) * .01, 0, .2)); sfx('smash'); break;
     case 'dodge':
       if (e.id === myId) { banner('PERFECT DODGE', '#8ae8ff', 1000); dodgeFx = .6; sfx('dodge'); const m = me(); if (m) m.dcd = 0; }
@@ -919,7 +918,7 @@ function hud(src, mp) {
   }
   $('meHp').style.width = sp.hp / sp.max * 100 + '%';
   $('meName').textContent = `${Math.ceil(sp.hp)} / ${sp.max}`;
-  $('guardBar').style.width = (sp.gk > 0 ? (1 - sp.gk / ((BLOCK[cur] || BLOCK.fire).down ?? 4)) : sp.gm ? (sp.gh ?? sp.gm) / sp.gm : 1) * 100 + '%'; $('guard').classList.toggle('broken', sp.gk > 0); $('guard').style.setProperty('--gc', css(kit.color));
+  $('guardBar').style.width = (sp.gk > 0 ? (1 - sp.gk / BLOCK_DOWN) : sp.gm ? (sp.gh ?? sp.gm) / sp.gm : 1) * 100 + '%'; $('guard').classList.toggle('broken', sp.gk > 0); $('guard').style.setProperty('--gc', css(kit.color));
   $('dashBar').style.width = (1 - clamp(mp.dcd / stats(mp).dashCd, 0, 1)) * 100 + '%';
   const slots = $('slots').children, cds = mp.cds?.[cur] || [];
   for (let i = 0; i < 5; i++) {
@@ -1231,7 +1230,7 @@ function renderDetail() {
   $('detailBody').innerHTML = `<div class="dh"><div><b>${e.glyph} ${e.name}</b><small>${e.blurb}</small></div></div>
     <div class="tags"><span>${t1}</span><span>${t2}</span><span class="dif d${dif}">${'●'.repeat(dif)}${'○'.repeat(3 - dif)} ${DIFF[dif]}</span>${unlocked(k) ? `<span class="mast" title="Mastery: ${mx}${nxt ? ' / ' + nxt : ''} XP">${'★'.repeat(st)}${'☆'.repeat(5 - st)}</span>` : `<span class="lk">🔒 ${PROG.keys ? 'Click to unlock' : 'Locked: level up to unlock'}</span>`}</div>
     <div class="passive"><em>Passive</em> ${e.passive}</div>
-    <div class="passive"><em>Block (${keyName(BIND.block)}, hold)</em> <b>${BLOCK[k]?.name}</b>: ${BLOCK[k]?.desc}</div>
+    <div class="passive"><em>Block (${keyName(BIND.block)}, hold)</em> <b>${BLOCK[k]?.name}</b>: ${BLOCK_DESC}</div>
     <div class="moves">${e.moves.map((m, i) => `<div class="mv"><kbd>${slotKey(i)}</kbd><span class="mi">${m.icon}</span><div><b>${m.name}</b>${m.mode === 'charge' ? ' <i>hold to charge</i>' : m.mode === 'channel' ? ' <i>hold</i>' : m.mode === 'aim' ? ' <i>hold to aim</i>' : ''}<small>${m.desc}</small></div></div>`).join('')}</div>`;
 }
 
