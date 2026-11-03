@@ -757,7 +757,7 @@ const BOSS_GAIT = {
   bonedragon: { rate: .8,  bob: .1, spine: .2, tail: .9, wing: .14, hunch: .06, quake: .08 },               // slinking on four legs, its spine snaking
   lich:       { float: 1, hover: .22, lean: .22, arm: .25, trail: C_SOUL },
   frostqueen: { float: 1, hover: .18, lean: .28, arm: .35, trail: 0xe8f8ff },
-  umbra:      { float: 1, hover: .3,  lean: .32, arm: .3,  trail: 0x2a1040, tent: .7 },
+  umbra:      { float: 1, lift: 1.3, hover: .45, lean: .32, arm: .3,  trail: 0x2a1040, tent: .9 }, // Nyx floats well clear of the floor
   watcher:    { float: 1, hover: .26, lean: .18, trail: 0x6a2aaa, tent: .5 },
 };
 function bossGait(v, e, t, walk, wind, G) {
@@ -765,7 +765,9 @@ function bossGait(v, e, t, walk, wind, G) {
   const P = v.parts, g = v.g, S1 = Math.sin(v.ph), C1 = Math.cos(v.ph), k = walk * (1 - wind * .8), sc = v.sc;
   const add = (n, x = 0, y = 0, z = 0) => { const p = P[n]; if (p) { p.o.rotation.x += x; p.o.rotation.y += y; p.o.rotation.z += z; } };
   if (G.float) { // gliding: a slow hover, leaning into where it's going, robes / tentacles streaming back, a trail behind it
-    g.position.y += (Math.sin(t * 1.6 + e.id) * .5 + .5) * G.hover * sc * (e.y > .5 ? 0 : 1) - (v.hov || 0); v.hov = (Math.sin(t * 1.6 + e.id) * .5 + .5) * G.hover * sc * (e.y > .5 ? 0 : 1);
+    const hov = ((G.lift || 0) + (Math.sin(t * 1.6 + e.id) * .5 + .5) * G.hover) * sc * (e.y > .5 ? 0 : 1);
+    g.position.y += hov - Math.abs(S1) * .06 * walk * sc; v.hov = hov; // (taken back off before the next frame's lerp, renderEnemies) // held up off the floor (and none of the walk's bob)
+    add('armL', S1 * .5 * walk); add('armR', -S1 * .5 * walk); // nor its arm swing: it drifts, it doesn't stride
     g.rotation.x += G.lean * k; g.rotation.z += Math.sin(t * 1.1 + e.id) * .04;
     add('body', Math.sin(t * 2 + e.id) * .04, Math.sin(t * .9) * .06);
     add('armL', -G.arm * .5 * k, 0, G.arm * (.4 + .2 * Math.sin(t * 1.7))); add('armR', -G.arm * .5 * k, 0, -G.arm * (.4 + .2 * Math.sin(t * 1.7 + 1)));
@@ -799,6 +801,7 @@ function renderEnemies(src, dt, t, a) {
   const links = {};
   sync(views.e, src.enemies, makeEnemy, (v, e, fresh) => {
     const tg = V(e.x, e.y, e.z), tp = ET[e.type];
+    if (v.hov) v.g.position.y -= v.hov; // a floating boss's hover is an offset on top, not part of where it is
     if (fresh) v.g.position.copy(tg); else v.g.position.lerp(tg, a);
     v.g.rotation.y = lerpAngle(v.g.rotation.y, e.yaw, fresh ? 1 : Math.min(1, a * 1.5));
     if (e.type === 'shooter' || e.type === 'shaman') v.g.position.y += Math.sin(t * 2 + e.id) * .15;
