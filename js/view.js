@@ -780,8 +780,8 @@ function bossGait(v, e, t, walk, wind, G) {
   // beat late, leans forward as it gets going and back as it pulls up; arms and head follow through behind the hips
   const acc = (v.spd - (v.spd0 ?? v.spd)) / Math.max(1e-3, v.dt0 || .016); v.spd0 = v.spd; v.acc = (v.acc || 0) + (clamp(acc, -6, 6) - (v.acc || 0)) * .1;
   g.position.y += G.bob * sc * k * .5 * Math.cos(2 * v.ph);
-  g.rotation.z += Math.sin(v.ph - .6) * (G.roll || 0) * k + (G.lurch ? Math.sin(v.ph * .5 + 1) * .08 * k : 0);
-  g.rotation.x += (G.hunch || 0) * k + v.acc * .025 + (G.lurch ? Math.abs(Math.sin(v.ph * .5)) * .08 * k : 0);
+  g.rotation.z += Math.sin(v.ph - .6) * (G.roll || 0) * .6 * k + (G.lurch ? Math.sin(v.ph * .5 + 1) * .08 * k : 0);
+  g.rotation.x += (G.hunch || 0) * .6 * k + clamp(v.acc * .012, -.05, .05) + (G.lurch ? Math.abs(Math.sin(v.ph * .5)) * .08 * k : 0);
   add('body', -Math.cos(2 * v.ph) * .03 * k, Math.sin(v.ph - .3) * ((G.twist || 0) + (G.spine || 0)) * k);
   add('head', Math.cos(2 * v.ph - .8) * .05 * k - (G.hunch || 0) * .5 * k, -Math.sin(v.ph - .9) * (G.twist || G.spine || 0) * 1.1 * k); // the head steadies itself against the body
   add('legL', S1 * (G.stride || 0) * k); add('legR', -S1 * (G.stride || 0) * k);
