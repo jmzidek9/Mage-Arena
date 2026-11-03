@@ -48,6 +48,8 @@ const ET = {
   boss:     { hp: 1500, spd: 2.1, r: 2.2, h: 5.6, dmg: 30, reach: 5,   cost: 0, from: 99, kb: .04, poise: 650, atk: 'smash', wind: 1.05, cd: 2.2, boss: 1 },
 };
 const waveBudget = w => 16 + w * 7; // more to fight from the very first wave
+const BOSS_RISE = 3.4; // seconds a boss's entrance takes
+const BOSS_SKY = new Set(['bonedragon', 'watcher', 'umbra', 'archdemon']); // these come down out of the sky; the rest rise from the ground
 // ===================== state =====================
 const S = { phase: 'lobby', mode: 'arena', actor: null, t: 0, wave: 0, isl: 0, ib: 1, brs: 0, br: null, players: {}, enemies: [], shots: [], ents: [], rings: [], timers: [], events: [], nid: 1,
   budget: 0, bossLeft: 0, eliteLeft: 0, spawnT: 0, restT: 0, hitstop: 0, slowmo: 0, tstop: 0, mod: null };
@@ -414,6 +416,7 @@ function kill(e, el, p) {
 function hurt(p, n, src = null) {
   if (S.cheat?.inv) return false;
   if (p.down || p.dashT > 0 || p.bf.phoenix > 0 || p.bf.inv > 0 || S.phase !== 'fight') return false;
+  if (guardHit(p, n, src?.type ? src : null, null)) return false; // a block takes everything, the burning ground too (blocks.js)
   n *= stats(p).dr;
   if (src && p.cur === 'magma' && !src.dead) applyStatus(src, 'magma', p);
   if (n <= 0) return true;
@@ -430,6 +433,7 @@ function enemyHits(p, dmg, e, from = null) { // from: the shot, when it was one
     return false;
   }
   if (e?.st?.illusion > 0 && Math.random() < 1 / 3) { ev({ k: 'miss', x: r2(p.x), y: r2(p.y + 1.6), z: r2(p.z), id: p.id }); return false; } // Misdirection: it struck a phantom
+  if (e?.sick > S.t) dmg *= .6; // sickened by a Toxic Membrane
   if (guardHit(p, dmg, e, from)) return false; // blocked (blocks.js)
   const m = mate(p); if (m?.guard && m.cur === 'spirit') dmg *= .5; // a partner's Ancestral Ward
   return hurt(p, dmg * (1 - (e?.m?.weak || 0)), e);
@@ -690,6 +694,7 @@ function spawnEnemy(type, x, z, elite = false, sc = 1) {
     acd: rand(.6, 1.6), acd2: rand(2, 5), sp: 4, yaw: Math.atan2(-x, -z), sc: sc * (elite ? 1.35 : 1), elite, fall: false, ch: 0, cdx: 0, cdz: 0, chHit: [],
     cc: null, atk: null, poise: t.poise * (1 + .1 * S.wave), sh: 0, link: null, wander: rand(0, TAU), enraged: false };
   S.enemies.push(e); ev({ k: 'spawn', x: r2(x), z: r2(z), s: r2(t.r * e.sc) });
+  if (t.boss) { e.rise = BOSS_RISE; ev({ k: 'bossin', id: e.id, type, x: r2(x), z: r2(z), d: BOSS_RISE }); } // a boss makes an entrance (untouchable until it's up)
   return e;
 }
 function bomberBlast(e, p, early) {
@@ -818,7 +823,18 @@ function stepEnemies(dt) {
     if (e.dead) continue;
     const t = ET[e.type], R = t.r * e.sc;
     if (e.fall) { e.vy += 25 * dt; e.y -= e.vy * dt; e.x += e.kx * dt; e.z += e.kz * dt; if (e.y < -14) kill(e, null, null); continue; }
-    if (e.rise > 0) { e.rise -= dt; e.y = -2.6 * Math.max(0, e.rise / .8); continue; }
+    if (e.rise > 0) {
+      e.rise -= dt;
+      if (!t.boss) { e.y = -2.6 * Math.max(0, e.rise / .8); continue; }
+      // a boss: its circle opens for a moment, then it rises out of the ground (or comes down out of the sky) and roars
+      const u = clamp((1 - e.rise / BOSS_RISE - .3) / .62, 0, 1), k = 1 - (1 - u) ** 3;
+      e.y = BOSS_SKY.has(e.type) ? 16 * (1 - k) : -(t.h * e.sc + .6) * (1 - k);
+      if (e.rise <= 0) {
+        e.y = 0; ev({ k: 'bossup', id: e.id, type: e.type, x: r2(e.x), z: r2(e.z) });
+        for (const p of players()) { const dx = p.x - e.x, dz = p.z - e.z, d = Math.hypot(dx, dz) || 1; if (d < 9 && !p.down) shove(p, dx / d * 10, dz / d * 10, 4); } // the roar throws you back (no damage)
+      }
+      continue;
+    }
     for (const k in e.st) { e.st[k] -= dt; if (e.st[k] <= 0) { delete e.st[k]; delete e.stk[k]; } }
     if (e.link) { e.link.t -= dt; if (e.link.t <= 0) e.link = null; }
     e.m = statusMods(e);

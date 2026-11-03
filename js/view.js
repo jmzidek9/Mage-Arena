@@ -269,6 +269,35 @@ function bossWind(v, a, d) {
   });
   flash(v.g.position.x, 2, v.g.position.z, col, 25, d);
 }
+// a boss arrives: its summoning circle spreads over the floor, the ground cracks and shakes harder and harder, power
+// streams in from all round, then it rises out of the ground (or comes down out of a vortex in the sky)
+function bossIntro(e) {
+  const tp = ET[e.type], col = bossCol(e.type), R = tp.r * (tp.boss ? 1 : 1) * 1.6, sky = BOSS_SKY.has(e.type), d = e.d, near = distTo(e.x, e.z) < 40;
+  const c1 = circleFx('sigil', V(e.x, .07, e.z), R * 2.4 + 3, { life: d + .8, color: col }), c2 = circleFx('sigil', V(e.x, .09, e.z), R * 1.4 + 1.5, { life: d + .8, color: 0xffffff });
+  let rum = 0, crack = 0;
+  addFx(new THREE.Group(), d + .3, (o, k, dt) => {
+    const s = Math.min(1, k * 2.2); c1.scale.setScalar(.2 + .8 * s); c2.scale.setScalar(.2 + .8 * Math.min(1, k * 1.6)); spinCircle(c1, dt, 1 + k * 4); spinCircle(c2, dt, -(2 + k * 6));
+    for (let i = 0; i < 2 + k * 10; i++) { // power pouring in from all round
+      const a = rand(0, TAU), r = rand(8, 16), y = sky ? rand(6, 18) : rand(.2, 4);
+      emit(e.x + Math.cos(a) * r, y, e.z + Math.sin(a) * r, -Math.cos(a) * r * 1.4, (sky ? 14 : 1.5) - y * .6, -Math.sin(a) * r * 1.4, Math.random() < .25 ? 0xffffff : col, rand(.1, .24), .6);
+    }
+    if (sky) { if (Math.random() < .25) ringFx(e.x, 15, e.z, rand(3, 7) * (1 + k), col, .5); emit(e.x + rand(-2, 2), 16, e.z + rand(-2, 2), 0, -rand(4, 9), 0, col, rand(.15, .3), 1); }
+    else if (Math.random() < .35 + k * .5) emit(e.x + rand(-R, R), .1, e.z + rand(-R, R), rand(-1, 1), rand(2, 6), rand(-1, 1), 0x8a7a68, rand(.1, .2), .7, 9, 1); // grit jumping off the floor
+    if (near && (rum -= dt) <= 0) { rum = .12; shake(.04 + k * .22); }
+    if (!sky && k > .25 && (crack -= dt) <= 0) { crack = .35; const a = rand(0, TAU), r = rand(1, R * 2); scarFx(e.x + Math.cos(a) * r, e.z + Math.sin(a) * r, rand(.6, 1.4), col, 2.5); debrisFx(e.x + Math.cos(a) * r, .3, e.z + Math.sin(a) * r, 3, 'earth__pebble', 0x6a5a4a, .3, 6); }
+  });
+  setTimeout(() => { pillarFx(e.x, 0, e.z, R * .8, sky ? 30 : 16, col, d * .7); flash(e.x, 3, e.z, col, 90, .5); sfx(sky ? 'abyss_big' : 'earth_big'); }, d * 300);
+  sfx('ring'); if (near) banner('SOMETHING IS COMING...', '#' + new THREE.Color(col).getHexString(), 1500);
+}
+// ...and it's up: a roar, shockwaves rolling out, the floor blasted, its name across the screen
+function bossArrive(e) {
+  const v = views.e.get(e.id), col = bossCol(e.type), name = (ET[e.type]?.name || 'The Obsidian Tyrant').toUpperCase();
+  if (v) { v.strike = 1; v.ak = 'roar'; }
+  for (let i = 0; i < 3; i++) setTimeout(() => { ringFx(e.x, .3 + i * .6, e.z, 6 + i * 5, i % 2 ? 0xffffff : col, .5); }, i * 110);
+  boomFx(e.x, 1, e.z, 4, col, .8); dustFx(e.x, e.z, 6); debrisFx(e.x, .6, e.z, 14, 'earth__pebble', 0x5a4a3a, .45, 12); scarFx(e.x, e.z, 5, col, 4);
+  flash(e.x, 4, e.z, col, 160, .6); shake(clamp(1 - distTo(e.x, e.z) / 50, .2, .9)); sfx('ring'); sfx('smash');
+  banner(name, '#' + new THREE.Color(col).getHexString(), 2800);
+}
 // a boss dies: it reels, sinks to its knees with light splitting out of it, then bursts apart (about 2.4 s)
 function bossDeath(v) {
   const g = v.g, col = bossCol(v.type), p0 = g.position.clone(), rx = g.rotation.x, tp = ET[v.type], h = tp.h * v.sc, R = tp.r * v.sc, white = new THREE.Color(1, 1, 1);
@@ -388,6 +417,8 @@ function onEvent(e) {
       break;
     case 'enrage': { const t = ET[views.e.get(e.id)?.type]; banner((t?.p2 || `${t?.name || 'The Tyrant'} is enraged`).toUpperCase(), '#ff5a3a', 3200); shake(.6); sfx('ring'); break; }
     case 'decree': { banner('KNEEL BEFORE THE TYRANT!', '#ff7a3a', 1600); sfx('ring'); const v = views.e.get(e.id); if (v) bossWind(v, 'decree', e.d); break; }
+    case 'bossin': bossIntro(e); break; // a boss's entrance
+    case 'bossup': bossArrive(e); break;
     case 'gaze': { banner('LOOK AWAY!', '#d88aff', 1600); sfx('abyss_big'); const v = views.e.get(e.id); if (v) bossWind(v, 'gaze', e.d); break; }
     case 'ult': if (e.id !== myId) banner(`PARTNER: ${e.name.toUpperCase()}`, css(EL[e.el].color), 1300); else sfx('ult'); break;
     case 'echo': if (e.id === myId) popNum(camera.position.x, camera.position.y + .3, camera.position.z, 'ECHO', '#ffd36a', 'tag'); break;

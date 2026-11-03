@@ -374,7 +374,7 @@ function selfTest() {
     const r = testFoe(k, 300, first); if (r.err) berr.push(`${r.type}: ${r.err}`);
   }
   t(`every boss special plays out without errors${berr.length ? ' (' + berr.join('; ') + ')' : ''}`, !berr.length);
-  // blocks: every element's stops a blow from the front, a shot, and not one from behind (unless it covers every side),
+  // blocks: every element's stops a blow from the front, a shot, a blow from behind and burning ground, hurts nothing,
   // runs its own trick, wears down, breaks, and comes back
   const gerr = [], ch = S.cheat;
   for (const el of [...ELIST, 'god']) {
@@ -384,10 +384,12 @@ function selfTest() {
       const B = BLOCK[el], hold = { k: [], b: true, swapN: p.swapN }, e = spawnEnemy('grunt', 0, 3); e.rise = 0; e.y = 0;
       if (!B?.name || !B.desc || !(B.hp > 0)) throw new Error('no block defined');
       stepCast(p, hold, 1 / 60); if (!p.guard) throw new Error('block did not go up');
-      const hp0 = p.hp; enemyHits(p, 10, e); enemyHits(p, 10, null, { x: 0, z: 5, vx: 0, vz: -15 });
+      const hp0 = p.hp, ehp = e.hp; enemyHits(p, 10, e); enemyHits(p, 10, null, { x: 0, z: 5, vx: 0, vz: -15 });
       if (p.hp < hp0) throw new Error('a hit from the front got through');
+      if (e.hp < ehp) throw new Error('the block hurt the monster');
       const behind = spawnEnemy('grunt', 0, -3); behind.rise = 0; p.bf.inv = 0; enemyHits(p, 10, behind);
-      if (!B.omni && p.hp >= hp0) throw new Error('a hit from behind was blocked');
+      if (p.hp < hp0) throw new Error('a hit from behind got through');
+      p.hp = p.max; hurt(p, 8, null); if (p.hp < p.max && !(p.gk > 0)) throw new Error('the ground burning under you got through');
       for (let i = 0; i < 400 && !(p.gk > 0); i++) { S.t += .1; p.bf.inv = 0; enemyHits(p, 7, e); p.hp = p.max; for (let f = 0; f < 3; f++) stepCast(p, hold, 1 / 60); }
       if (!(p.gk > 0) && el !== 'god') throw new Error('it never broke');
       for (let f = 0; f < 60 * 6; f++) { stepCast(p, { ...hold, b: false }, 1 / 60); stepTimers(1 / 60); }

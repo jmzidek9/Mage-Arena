@@ -1,50 +1,46 @@
-// Blocking (hold C): every element raises a shield of its own, cast like a spell from the raised hand. It soaks up hits
-// from the front (some from every side) until its health runs out, then it shatters and takes a few seconds to come back;
-// let go and it mends. Each one also does something only it does when it takes a hit (or while held, or on letting go).
+// Blocking (hold C): every element raises a shield of its own, cast like a spell from the raised hand. While it holds
+// nothing gets through to you, from any side: monsters, shots, or the ground burning under you. It soaks it all until its
+// health runs out, then shatters and takes a few seconds to come back (let go and it mends). A block never deals damage:
+// each one does something of its own instead (freezes, blinds, heals, slows time, shields your partner...).
 // Loaded after areas.js (uses the sim's helpers), before view.js.
 'use strict';
 
-const BLOCK_ARC = Math.cos(75 * Math.PI / 180); // covers the front 150 degrees
-// name, desc, hp: how much it soaks; omni: every side; move: walking speed while held (default .55); cost: shield
-// spent per point blocked; shots: the same for projectiles; down: seconds broken (default 4)
-// hit(p, n, foe, from): a hit was blocked (foe: the monster or duel opponent, when there is one; from: the shot, if it was one)
-// tick(p, dt): while held; rel(p): on letting go; brk(p): when it shatters. Host only.
+// name, desc, hp: how much it soaks; omni: drawn as a bubble round you (it covers every side either way);
+// move: walking speed while held (default .55); cost: shield spent per point blocked; shots: the same for projectiles;
+// down: seconds broken (default 4). hit(p, n, foe, from): a hit was blocked (foe: the monster or duel opponent, if any;
+// from: the shot, if it was one); tick(p, dt): while held; rel(p): on letting go; brk(p): when it shatters. Host only.
 const gfx = (p, f, o = {}) => ev({ k: 'gfx', id: p.id, el: p.cur, f, x: r2(p.x), z: r2(p.z), ...o });
 const near2 = (p, foe, r) => foe && !foe.dead && Math.hypot(foe.x - p.x, foe.z - p.z) < r;
 const away = (p, o, k) => { const dx = o.x - p.x, dz = o.z - p.z, d = Math.hypot(dx, dz) || 1; o.kx += dx / d * k * ET[o.type].kb; o.kz += dz / d * k * ET[o.type].kb; };
+const closest = (p, r) => enemiesNear(p.x, p.z, r).sort((a, b) => Math.hypot(a.x - p.x, a.z - p.z) - Math.hypot(b.x - p.x, b.z - p.z));
 const BLOCK = {
-  fire:     { name: 'Flame Wall', hp: 60, desc: 'A curtain of fire. Whatever strikes it is set burning twice over.',
-    hit(p, n, foe) { if (foe) { applyStatus(foe, 'fire', p); applyStatus(foe, 'fire', p); hitEnemy(foe, 'fire', 6, p, 0, 0, 0, { noStatus: true }); } } },
+  fire:     { name: 'Flame Wall', hp: 60, desc: 'A curtain of fire. Monsters that strike it flee from the flames.',
+    hit(p, n, foe) { if (near2(p, foe, 8)) cc(foe, 'fear', 1.4, p); } },
   frost:    { name: 'Ice Mirror', hp: 70, desc: 'A pane of clear ice. Monsters that strike it up close are frozen solid.',
     hit(p, n, foe) { if (near2(p, foe, 6)) cc(foe, 'freeze', 1.2, p); } },
-  storm:    { name: 'Static Field', hp: 55, desc: 'A crackling field. Every blocked hit throws lightning at up to three monsters nearby.',
-    hit(p) { const t = enemiesNear(p.x, p.z, 9).slice(0, 3); for (const e of t) hitEnemy(e, 'storm', 14 * stats(p).dmgMul, p, 0, 0, 1); gfx(p, 'zap', { t: t.map(e => [r2(e.x), r2(e.y + 1), r2(e.z)]) }); } },
-  water:    { name: 'Tidal Bubble', hp: 50, omni: 1, desc: 'A bubble of water all round you: blocks from every side, and gives back some of what it soaks as health.',
+  storm:    { name: 'Static Field', hp: 55, desc: 'A crackling field. Every blocked hit arcs out and stuns up to three monsters nearby.',
+    hit(p) { const t = closest(p, 9).slice(0, 3); for (const e of t) cc(e, 'stun', .7, p); gfx(p, 'zap', { t: t.map(e => [r2(e.x), r2(e.y + 1), r2(e.z)]) }); } },
+  water:    { name: 'Tidal Bubble', hp: 50, omni: 1, desc: 'A bubble of water all round you that gives back some of what it soaks as health.',
     hit(p, n) { heal(p, n * .15); } },
-  earth:    { name: 'Stone Bulwark', hp: 130, move: 0, desc: 'A slab of rock torn up in front of you: the toughest block of all, but you can\'t move while you hold it.' },
+  earth:    { name: 'Stone Bulwark', hp: 130, move: 0, desc: "A slab of rock torn up around you: the toughest block of all, but you can't move while you hold it." },
   wind:     { name: 'Gale Barrier', hp: 55, shots: .3, desc: 'A wall of wind. Shots barely wear it down, and anything that strikes it is blown away.',
     hit(p, n, foe) { if (near2(p, foe, 7)) away(p, foe, 14); } },
-  nature:   { name: 'Bark Shield', hp: 70, desc: 'A shield of living wood. It heals you while you hold it, and its thorns cut whatever strikes it.',
-    tick(p, dt) { heal(p, 3 * dt); }, hit(p, n, foe) { if (near2(p, foe, 4)) hitEnemy(foe, 'nature', 8, p, 0, 0, 0); } },
-  shadow:   { name: 'Shadow Veil', hp: 45, desc: 'A cloak of darkness. Block a hit and you vanish from the monsters\' sight for a moment.',
+  nature:   { name: 'Bark Shield', hp: 70, desc: 'A shield of living wood. It heals you while you hold it, and roots whatever strikes it to the spot.',
+    tick(p, dt) { heal(p, 3 * dt); }, hit(p, n, foe) { if (near2(p, foe, 6)) cc(foe, 'root', 1.8, p); } },
+  shadow:   { name: 'Shadow Veil', hp: 45, desc: "A cloak of darkness. Block a hit and you vanish from the monsters' sight for a moment.",
     hit(p) { p.bf.veil = 1.8; gfx(p, 'veil'); } },
   light:    { name: 'Aegis of Light', hp: 65, desc: 'A shield of sunlight. Every blocked hit flashes, blinding the monsters in front of you.',
     hit(p) { const f = flatAim(p); for (const e of enemiesNear(p.x, p.z, 8)) { const dx = e.x - p.x, dz = e.z - p.z, d = Math.hypot(dx, dz) || 1; if ((dx * f.x + dz * f.z) / d > .3) cc(e, 'blind', 1.6, p); } gfx(p, 'flash'); } },
-  venom:    { name: 'Toxic Membrane', hp: 55, desc: 'A membrane of poison. Whatever strikes it is poisoned to the bone.',
-    hit(p, n, foe) { if (foe) for (let i = 0; i < 3; i++) applyStatus(foe, 'venom', p); } },
+  venom:    { name: 'Toxic Membrane', hp: 55, desc: 'A membrane of poison. Whatever strikes it is sickened, and hits 40% softer for 4 seconds.',
+    hit(p, n, foe) { if (foe) foe.sick = S.t + 4; } },
   steel:    { name: 'Tower Shield', hp: 110, desc: 'A great steel shield. Raise it just as a blow lands (a parry) and the attacker is stunned and the hit costs nothing.',
     hit(p, n, foe) { if (S.t - p.gT < .3) { p.gh += n; if (foe) cc(foe, 'stun', 1.8, p); gfx(p, 'parry'); } } },
-  magma:    { name: 'Molten Bulwark', hp: 80, desc: 'A wall of glowing rock. It stores the heat of every blow, and lets it all out in an eruption when you let go.',
-    hit(p, n) { p.gs = Math.min(90, (p.gs || 0) + n); },
-    rel(p) { if (p.gs > 5) { blast(p.x, p.z, 4.5, p.gs * 1.2 * stats(p).dmgMul, { p, el: 'magma' }, { kb: 8 }); gfx(p, 'erupt'); } p.gs = 0; } },
-  crystal:  { name: 'Prism Wall', hp: 60, desc: 'A faceted crystal. Shots that hit it are bounced straight back, harder, at whatever lies behind them.',
-    hit(p, n, foe, from) {
-      if (!from || from.vx == null) return;
-      const d = V(-from.vx, 0, -from.vz).normalize(), h = rayHits(V(p.x, 1.2, p.z), d, 30, .8)[0];
-      if (h) hitEnemy(h.e, 'crystal', n * 1.6, p, d.x, d.z, 3); gfx(p, 'reflect', { yaw: r2(Math.atan2(d.x, d.z)) });
-    } },
+  magma:    { name: 'Molten Bulwark', hp: 80, cost: .6, desc: 'A wall of glowing rock that wears down slowly. Let go and a wave of heat throws every monster near you back.',
+    rel(p) { for (const e of enemiesNear(p.x, p.z, 5)) away(p, e, 14); gfx(p, 'erupt'); } },
+  crystal:  { name: 'Prism Wall', hp: 60, desc: 'A faceted crystal. Monsters that strike it are sealed in crystal for a moment.',
+    hit(p, n, foe) { if (near2(p, foe, 8)) cc(foe, 'encase', 1.3, p); } },
   sonic:    { name: 'Sound Barrier', hp: 55, desc: 'Rings of sound. Every blocked hit booms out, throwing back every monster around you.',
-    hit(p) { for (const e of enemiesNear(p.x, p.z, 6)) { away(p, e, 10); hitEnemy(e, 'sonic', 6, p, 0, 0, 0); } gfx(p, 'boom'); } },
+    hit(p) { for (const e of enemiesNear(p.x, p.z, 6)) away(p, e, 10); gfx(p, 'boom'); } },
   gravity:  { name: 'Event Horizon', hp: 60, desc: 'A sphere of crushing gravity. Monsters that strike it are lifted helpless into the air.',
     hit(p, n, foe) { if (near2(p, foe, 8)) cc(foe, 'lift', 1.4, p); } },
   chrono:   { name: 'Time Bubble', hp: 55, desc: 'A bubble of slowed time. While you hold it, every monster near you moves and winds up at a crawl.',
@@ -52,38 +48,34 @@ const BLOCK = {
   blood:    { name: 'Crimson Ward', hp: 60, desc: 'A ward of your own blood. It drinks the blows it blocks, healing you for a good part of each.',
     hit(p, n) { heal(p, n * .4); } },
   spirit:   { name: 'Ancestral Ward', hp: 70, desc: 'A spirit knight stands guard. While you hold it, your partner takes half damage too.' },
-  cosmic:   { name: 'Starfield', hp: 55, desc: 'A field of stars. Each blocked hit catches a star; let go and they all fly at the nearest monsters.',
+  cosmic:   { name: 'Starfield', hp: 55, desc: 'A field of stars. Each blocked hit catches a star; let go and each one freezes a monster in time.',
     hit(p) { p.gs = Math.min(6, (p.gs || 0) + 1); },
     rel(p) {
-      const t = enemiesNear(p.x, p.z, 22).sort((a, b) => Math.hypot(a.x - p.x, a.z - p.z) - Math.hypot(b.x - p.x, b.z - p.z));
-      for (let i = 0; i < (p.gs || 0) && t.length; i++) { const e = t[i % t.length]; hitEnemy(e, 'cosmic', 22 * stats(p).dmgMul, p, 0, 0, 2); gfx(p, 'star', { tx: r2(e.x), ty: r2(e.y + 1), tz: r2(e.z) }); }
+      const t = closest(p, 22);
+      for (let i = 0; i < (p.gs || 0) && i < t.length; i++) { cc(t[i], 'stasis', 1.6, p); gfx(p, 'star', { tx: r2(t[i].x), ty: r2(t[i].y + 1), tz: r2(t[i].z) }); }
       p.gs = 0;
     } },
-  explosion: { name: 'Reactive Plating', hp: 70, cost: 1.3, desc: 'Plates that blow up when struck: every blocked hit explodes on the attacker (but wears the plating faster).',
-    hit(p, n, foe) { if (foe && !foe.dead) { blast(foe.x, foe.z, 2.5, 18 * stats(p).dmgMul, { p, el: 'explosion' }, { kb: 7 }); gfx(p, 'pop', { tx: r2(foe.x), tz: r2(foe.z) }); } } },
+  explosion: { name: 'Reactive Plating', hp: 70, cost: 1.3, desc: 'Plates that burst when struck, blasting the attacker away and dazing it (but wearing the plating faster).',
+    hit(p, n, foe) { if (near2(p, foe, 8)) { away(p, foe, 18); cc(foe, 'stun', .8, p); gfx(p, 'pop', { tx: r2(foe.x), tz: r2(foe.z) }); } } },
   illusion: { name: 'Mirror Step', hp: 40, desc: 'A mirror of you. Block a hit and you step back out of it, leaving the blow to strike a phantom.',
     hit(p) { const f = flatAim(p), q = confine({ x: p.x - f.x * 5, z: p.z - f.z * 5 }, 1); gfx(p, 'step', { x2: r2(q.x), z2: r2(q.z) }); p.tp = { n: (p.tp?.n || 0) + 1, x: q.x, z: q.z }; p.bf.inv = Math.max(p.bf.inv || 0, .8); } },
-  bone:     { name: 'Ossuary Wall', hp: 90, down: 2.5, desc: 'A wall of bones. When it finally breaks, it bursts in a storm of bone shards, and it is back sooner than most.',
-    brk(p) { blast(p.x, p.z, 5, 30 * stats(p).dmgMul, { p, el: 'bone' }, { kb: 6 }); } },
-  rune:     { name: 'Runic Ward', hp: 60, desc: 'A circle of runes. Every third hit it blocks empowers you: 30% more damage for 5 seconds.',
+  bone:     { name: 'Ossuary Wall', hp: 90, down: 2.5, desc: 'A wall of bones. When it breaks, its bones snap shut round every monster near you, and it is back sooner than most.',
+    brk(p) { for (const e of enemiesNear(p.x, p.z, 5)) cc(e, 'root', 2.2, p); gfx(p, 'erupt'); } },
+  rune:     { name: 'Runic Ward', hp: 60, desc: 'A circle of runes. Every third hit it blocks empowers your spells: 30% more damage for 5 seconds.',
     hit(p) { if ((p.gs = (p.gs || 0) + 1) >= 3) { p.gs = 0; p.bf.emp = 5; gfx(p, 'empower'); } } },
   plasma:   { name: 'Plasma Screen', hp: 55, desc: 'A screen of plasma that feeds on the hits it takes: each one cuts all your cooldowns.',
     hit(p) { const c = p.cds[p.cur]; if (c) for (let s = 0; s < 4; s++) c[s] -= .6; } },
-  soul:     { name: 'Soul Ward', hp: 55, desc: 'A ward of souls. Every blocked hit tears a soul from the attacker for you, and sends it fleeing in fear.',
-    hit(p, n, foe) { p.bd.souls = Math.min(15, (p.bd.souls || 0) + 1); if (near2(p, foe, 8)) cc(foe, 'fear', 1.2, p); } },
+  soul:     { name: 'Soul Ward', hp: 55, desc: 'A ward of souls. Every blocked hit tears a soul from the attacker for you.',
+    hit(p) { p.bd.souls = Math.min(15, (p.bd.souls || 0) + 1); } },
   abyss:    { name: 'Abyssal Maw', hp: 60, shots: -.15, desc: 'A mouth into the abyss. It swallows shots whole (each one mends it), but blows still wear it down.' },
-  laser:    { name: 'Photon Barrier', hp: 55, desc: 'A lattice of light. Every blocked hit fires a beam straight back down the line it came from.',
-    hit(p, n, foe, from) {
-      const src = from || foe; if (!src) return; const d = V(src.x - p.x, 0, src.z - p.z).normalize();
-      for (const h of rayHits(V(p.x, 1.2, p.z), d, 22, .7)) hitEnemy(h.e, 'laser', 20 * stats(p).dmgMul, p, d.x, d.z, 1);
-      gfx(p, 'beam', { yaw: r2(Math.atan2(d.x, d.z)) });
-    } },
-  arcane:   { name: 'Arcane Shell', hp: 50, omni: 1, desc: 'A shell of pure magic round you, every side covered. The hits it soaks charge your ultimate.',
+  laser:    { name: 'Photon Barrier', hp: 55, desc: 'A lattice of light. Whatever strikes it is marked, and takes 30% more from your spells for 5 seconds.',
+    hit(p, n, foe) { if (foe && !foe.dead) { foe.fv = .3; foe.fvU = S.t + 5; gfx(p, 'beam', { yaw: r2(Math.atan2(foe.x - p.x, foe.z - p.z)) }); } } },
+  arcane:   { name: 'Arcane Shell', hp: 50, omni: 1, desc: 'A shell of pure magic round you. The hits it soaks charge your ultimate.',
     hit(p, n) { addUlt(p, n / 400); } },
-  blades:   { name: 'Blade Whirl', hp: 60, desc: 'Swords spinning in front of you. Anything that comes close while you hold it is cut to pieces.',
-    tick(p, dt) { if ((p.gs = (p.gs || 0) - dt) <= 0) { p.gs = .25; for (const e of enemiesNear(p.x, p.z, 2.8)) hitEnemy(e, 'blades', 6 * stats(p).dmgMul, p, e.x - p.x, e.z - p.z, 1); } } },
-  ink:      { name: 'Ink Canvas', hp: 55, desc: 'A canvas of ink. Blows that strike it spatter the attacker, smearing and slowing it.',
-    hit(p, n, foe) { if (foe) for (let i = 0; i < 2; i++) applyStatus(foe, 'ink', p); } },
+  blades:   { name: 'Blade Whirl', hp: 60, shots: 0, desc: 'Swords spinning in front of you: they turn shots aside at no cost, and fend off anything that comes close.',
+    tick(p, dt) { if ((p.gs = (p.gs || 0) - dt) <= 0) { p.gs = .3; for (const e of enemiesNear(p.x, p.z, 2.6)) away(p, e, 5); } } },
+  ink:      { name: 'Ink Canvas', hp: 55, desc: 'A canvas of ink. Blows that strike it wrap the attacker in a bubble of ink, floating helpless.',
+    hit(p, n, foe) { if (near2(p, foe, 8)) cc(foe, 'bubble', 1.4, p); } },
   god:      { name: 'Divine Aegis', hp: 400, omni: 1, move: 1, desc: 'Nothing gets through.' },
 };
 
@@ -103,15 +95,10 @@ function guardStep(p, i, dt, host) {
   else if ((p.gi = (p.gi || 0) + dt) > .6) p.gh = Math.min(p.gm, p.gh + p.gm * .25 * dt);
   p.gh = Math.min(p.gh, p.gm);
 }
-// a hit on p (host): if the block is up and facing it, the block takes it. foe: who struck, from: the shot or the duel attacker
+// a hit on p (host): if the block is up, the block takes it. foe: who struck, from: the shot or the duel attacker
 function guardHit(p, n, foe, from) {
   if (!p.guard || !(p.gh > 0) || n <= 0) return false;
-  const B = BLOCK[p.cur] || BLOCK.fire, src = from || foe;
-  if (!B.omni) {
-    if (!src) return false; // rings, falling rocks: nothing in front of you to put the shield to
-    const f = flatAim(p), dx = src.x - p.x, dz = src.z - p.z, d = Math.hypot(dx, dz) || 1;
-    if (d > .8 && (f.x * dx + f.z * dz) / d < BLOCK_ARC) return false; // from behind or the side
-  }
+  const B = BLOCK[p.cur] || BLOCK.fire, src = from || foe; // any side, any source: while it holds, nothing gets through
   const shot = from?.vx != null;
   p.gh -= n * (shot && B.shots != null ? B.shots : B.cost ?? 1);
   p.stats.blocked = (p.stats.blocked || 0) + Math.round(n);
