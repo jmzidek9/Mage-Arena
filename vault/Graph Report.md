@@ -1,17 +1,17 @@
 # Graph Report - Test Game  (2026-11-02)
 
 ## Corpus Check
-- 32 files · ~208,715 words
+- 32 files · ~210,410 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 2 file(s) not represented in the graph (top: (none) 2)
 
 ## Summary
-- 960 nodes · 1993 edges · 40 communities (35 shown, 5 thin omitted)
+- 965 nodes · 2017 edges · 40 communities (34 shown, 6 thin omitted)
 - Extraction: 93% EXTRACTED · 7% INFERRED · 0% AMBIGUOUS · INFERRED: 143 edges (avg confidence: 0.87)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `f89e59d2`
+- Built from commit: `7aa55af0`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -25,7 +25,7 @@
 - Mesh
 - elements.js
 - Elements.md
-- Similar moves (reviewed 2026-10-27)
+- bake_scale
 - Audio credits
 - build_elements.py
 - areas.js
@@ -37,25 +37,25 @@
 - boltFx
 - addShader
 - TRS
-- root
+- part
 - Mage Arena
 - clamp
 - aim
 - renderLobby
 - Elements
-- Mage Arena
+- Similar moves (reviewed 2026-10-27)
 - onEvent
 - gainXP
-- Enemies
+- Mage Arena
 - blocks.js
 - css
 - MUSIC
-- Netcode
+- Enemies
 - initAudio
 - keyName
 - lockMouse
 - grab
-- rand
+- Netcode
 
 ## God Nodes (most connected - your core abstractions)
 1. `TRS()` - 69 edges
@@ -72,23 +72,23 @@
 ## Surprising Connections (you probably didn't know these)
 - `Finishing pass` --references--> `bake_ao()`  [INFERRED]
   vault/Blender Assets.md → blender/lib.py
-- `Blender Assets` --references--> `sigil()`  [INFERRED]
-  vault/Blender Assets.md → blender/build_elements.py
 - `Blender Assets` --references--> `Mesh`  [INFERRED]
   vault/Blender Assets.md → blender/lib.py
 - `Layout` --references--> `cityLayout()`  [INFERRED]
   vault/Mage City.md → js/city.js
-- `Flow` --references--> `onEvent()`  [INFERRED]
-  vault/Netcode.md → js/view.js
+- `In-game look` --references--> `energyMat()`  [INFERRED]
+  vault/Blender Assets.md → js/core.js
+- `In-game look` --references--> `model()`  [INFERRED]
+  vault/Blender Assets.md → js/core.js
 
 ## Import Cycles
 - None detected.
 
-## Communities (40 total, 5 thin omitted)
+## Communities (40 total, 6 thin omitted)
 
 ### Community 0 - "sim.js"
 Cohesion: 0.06
-Nodes (95): r2(), addUlt(), aimOf(), alive(), aoe(), applyStatus(), blast(), bomberBlast() (+87 more)
+Nodes (96): r2(), addUlt(), aimOf(), alive(), aoe(), applyStatus(), blast(), bomberBlast() (+88 more)
 
 ### Community 1 - "core.js"
 Cohesion: 0.02
@@ -100,7 +100,7 @@ Nodes (55): add(), anchor(), ARRIVE, block(), BUCKET, buildDungeonView(), buildF
 
 ### Community 3 - "view.js"
 Cohesion: 0.05
-Nodes (36): BOSS_COL, buildBar(), CASTS, CC_OV, COMBO_FX, DIFF, ELMETA, ETPL (+28 more)
+Nodes (38): BOSS_COL, BOSS_GAIT, buildBar(), CASTS, CC_OV, COMBO_FX, DIFF, ELMETA (+30 more)
 
 ### Community 4 - "lib.py"
 Cohesion: 0.07
@@ -112,23 +112,19 @@ Nodes (36): applySettings(), autoQuality(), bfSnap(), bgTick(), BIND_NAMES, CHEA
 
 ### Community 6 - "Mesh"
 Cohesion: 0.12
-Nodes (10): spell_circle(), part(), part(), bridge(), bridge_gate(), bridge_pier(), bridge_post(), horn_() (+2 more)
+Nodes (9): spell_circle(), part(), bridge(), bridge_gate(), bridge_pier(), bridge_post(), horn_(), area() (+1 more)
 
 ### Community 7 - "elements.js"
-Cohesion: 0.05
-Nodes (36): energyMat(), model(), aimBeam(), beamFx(), beamMesh(), _bgeo, blastFx(), boomAt() (+28 more)
-
-### Community 9 - "Similar moves (reviewed 2026-10-27)"
-Cohesion: 0.25
-Nodes (6): Alike within one element, Similar moves (reviewed 2026-10-27), Similar (same role, different twist), Very similar (near-duplicates), Done (2026-10-27), To-do (noted 2026-10-26)
+Cohesion: 0.06
+Nodes (32): aimBeam(), beamFx(), beamMesh(), _bgeo, blastFx(), boomAt(), boomFx(), chainBolt() (+24 more)
 
 ### Community 10 - "Audio credits"
 Cohesion: 0.33
 Nodes (5): Audio credits, Music (`audio/music/`), Sound effects (`audio/sfx/`, file names kept from the packs), pickSample(), SFX
 
 ### Community 11 - "build_elements.py"
-Cohesion: 0.08
-Nodes (22): digit(), finger(), fist(), limb(), open_hand(), palm(), sleeve(), arcpts() (+14 more)
+Cohesion: 0.06
+Nodes (24): digit(), finger(), fist(), limb(), open_hand(), palm(), sleeve(), arcpts() (+16 more)
 
 ### Community 12 - "areas.js"
 Cohesion: 0.08
@@ -147,28 +143,28 @@ Cohesion: 0.05
 Nodes (73): arenaMat(), arenaObj(), blockAt(), buildCityView(), buildKit(), cboxGeo(), CBX, CITY (+65 more)
 
 ### Community 16 - "build_foes.py"
-Cohesion: 0.10
-Nodes (36): ba_arm(), bake_scale(), bd_body(), beast(), legq(), biped(), arm(), leg() (+28 more)
+Cohesion: 0.13
+Nodes (32): ba_arm(), bd_body(), biped(), arm(), leg(), claws(), cn_arm(), cn_head() (+24 more)
 
 ### Community 17 - "build_enemies.py"
 Cohesion: 0.22
 Nodes (17): arm(), boss_arm(), claws(), dkbody(), ellipsoid(), horn(), kbody(), leg() (+9 more)
 
 ### Community 18 - "boltFx"
-Cohesion: 0.27
-Nodes (12): addFx(), boltFx(), circleFx(), easeOut(), easeOutBack(), glowify(), glowMats(), makeCircle() (+4 more)
+Cohesion: 0.18
+Nodes (18): addFx(), animateArena(), boltFx(), burst(), circleFx(), easeOut(), easeOutBack(), emit() (+10 more)
 
 ### Community 19 - "addShader"
-Cohesion: 0.33
-Nodes (7): addShader(), beamMat(), discMat(), fireMat(), flameMat(), pillarFx(), waveMat()
+Cohesion: 0.25
+Nodes (9): addShader(), beamMat(), discMat(), energyMat(), fireMat(), flameMat(), model(), pillarFx() (+1 more)
 
 ### Community 20 - "TRS"
 Cohesion: 0.14
 Nodes (16): ba_body(), bwing(), bz_arm(), cn_leg(), eyeball(), gz_body(), ho_arm(), ig_leg() (+8 more)
 
-### Community 21 - "root"
-Cohesion: 0.17
-Nodes (8): caster(), sbody(), floater(), tent(), keg(), knight(), kbody(), root()
+### Community 21 - "part"
+Cohesion: 0.16
+Nodes (11): beast(), legq(), caster(), sbody(), floater(), tent(), keg(), knight() (+3 more)
 
 ### Community 23 - "clamp"
 Cohesion: 0.50
@@ -186,25 +182,25 @@ Nodes (12): bestFor(), PICKABLE(), pickMode(), pvShow(), renderDetail(), renderL
 Cohesion: 0.06
 Nodes (36): 🐙 Abyss, 🔮 Arcane, Balance, 🗡️ Blades, 🩸 Blood, 💀 Bone, ⏳ Chrono, 🌠 Cosmic (+28 more)
 
-### Community 27 - "Mage Arena"
-Cohesion: 0.33
-Nodes (6): Controls, Core loop (Arena), Mage Arena, Progression, Why it's replayable, Why it's satisfying
+### Community 27 - "Similar moves (reviewed 2026-10-27)"
+Cohesion: 0.25
+Nodes (6): Alike within one element, Similar moves (reviewed 2026-10-27), Similar (same role, different twist), Very similar (near-duplicates), Done (2026-10-27), To-do (noted 2026-10-26)
 
 ### Community 28 - "onEvent"
-Cohesion: 0.22
-Nodes (13): animEnemy(), bossAnim(), bossCol(), bossDeath(), bossWind(), castFx(), distTo(), makeEnemy() (+5 more)
+Cohesion: 0.21
+Nodes (19): animEnemy(), arcFx(), bossAnim(), bossArrive(), bossAura(), bossCol(), bossDeath(), bossGait() (+11 more)
 
 ### Community 29 - "gainXP"
 Cohesion: 0.47
 Nodes (6): gainXP(), needXP(), renderProg(), renderTalents(), saveProg(), xpBar()
 
-### Community 30 - "Enemies"
-Cohesion: 0.50
-Nodes (4): Enemies, Fighting them, Wave budget, Wave modifiers
+### Community 30 - "Mage Arena"
+Cohesion: 0.33
+Nodes (6): Controls, Core loop (Arena), Mage Arena, Progression, Why it's replayable, Why it's satisfying
 
 ### Community 31 - "blocks.js"
-Cohesion: 0.15
-Nodes (7): BLOCK, BLOCK_ARC, BLOCK_LOOK, guardFrame(), guardMake(), guardParticles(), GV
+Cohesion: 0.22
+Nodes (6): BLOCK, BLOCK_LOOK, guardFrame(), guardMake(), guardParticles(), GV
 
 ### Community 32 - "css"
 Cohesion: 0.67
@@ -214,35 +210,35 @@ Nodes (3): comboText(), css(), tintRig()
 Cohesion: 1.00
 Nodes (3): MUSIC, playMood(), track()
 
-### Community 34 - "Netcode"
+### Community 34 - "Enemies"
 Cohesion: 0.50
-Nodes (3): Cross-platform, Known ceilings (`ponytail:` comments in the code), Netcode
+Nodes (4): Enemies, Fighting them, Wave budget, Wave modifiers
 
 ### Community 38 - "grab"
 Cohesion: 0.67
 Nodes (3): grab(), sp(), Conventions
 
-### Community 39 - "rand"
-Cohesion: 0.40
-Nodes (6): animateArena(), burst(), emit(), popNum(), rand(), V()
+### Community 39 - "Netcode"
+Cohesion: 0.50
+Nodes (3): Cross-platform, Known ceilings (`ponytail:` comments in the code), Netcode
 
 ## Knowledge Gaps
-- **5 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **6 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `Blender Assets` connect `elements.js` to `Elements.md`, `grab`, `build_elements.py`, `Mesh`?**
-  _High betweenness centrality (0.350) - this node is a cross-community bridge._
+- **Why does `Blender Assets` connect `build_elements.py` to `Elements.md`, `grab`, `Mesh`, `elements.js`?**
+  _High betweenness centrality (0.352) - this node is a cross-community bridge._
 - **Are the 14 inferred relationships involving `build_hell()` (e.g. with `rim()` and `cage()`) actually correct?**
   _`build_hell()` has 14 INFERRED edges - model-reasoned connections that need verification._
 - **Should `sim.js` be split into smaller, more focused modules?**
-  _Cohesion score 0.06129830573005901 - nodes in this community are weakly interconnected._
-- **Why does `Mesh` connect `Mesh` to `build_elements.py`, `lib.py`, `elements.js`?**
-  _High betweenness centrality (0.239) - this node is a cross-community bridge._
+  _Cohesion score 0.06011949215832711 - nodes in this community are weakly interconnected._
+- **Why does `Mesh` connect `Mesh` to `build_elements.py`, `lib.py`, `part`?**
+  _High betweenness centrality (0.241) - this node is a cross-community bridge._
 - **Should `core.js` be split into smaller, more focused modules?**
   _Cohesion score 0.023255813953488372 - nodes in this community are weakly interconnected._
+- **Why does `In-game look` connect `elements.js` to `addShader`, `build_elements.py`?**
+  _High betweenness centrality (0.148) - this node is a cross-community bridge._
 - **Should `dungeon.js` be split into smaller, more focused modules?**
   _Cohesion score 0.07486338797814207 - nodes in this community are weakly interconnected._
-- **Should `view.js` be split into smaller, more focused modules?**
-  _Cohesion score 0.05121951219512195 - nodes in this community are weakly interconnected._
