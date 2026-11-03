@@ -5,7 +5,7 @@
 #   <id>_pillar_<k>_r<NN>  an obstacle (collision radius NN/10 m, origin at its foot)
 #   <id>_brazier_<k> / <id>_flame_<k>  a brazier and its flame (the game gives the flame its fire shader and a light)
 #   <id>_float_<k>  rocks floating round the island
-# plus bridge_<id>: one 2.2 m deck segment in each island's style, laid end to end by the game.
+# plus each island's bridge pieces (bridge_ / bridgepost_ / bridgegate_ / bridgepier_<id>), put together by the game.
 # Run: blender --background --factory-startup --python blender/build_islands.py
 # Islands sit in a ring (shared with js/areas.js ISLES): game (x, z) = Blender (x, -y). Feet on z = 0.
 import os, sys
@@ -893,34 +893,192 @@ def build_void():
 
 
 # ======================================================================== bridges
-def bridge(id_, deck, rail, trim=None, glow=None):
-    """One 2.2 m segment, deck top at z = 0, running along Blender Y. The game lays them end to end."""
+# Each island's bridge in its own architecture, from four pieces the game puts together (deck runs along Blender Y):
+#   bridge_<id>      one 2.2 m deck segment, top at z = 0, 4.4 m wide (walkable half-width 1.9)
+#   bridgepost_<id>  a lantern post, stood on the rail every few segments
+#   bridgegate_<id>  the archway at each end, straddling the deck
+#   bridgepier_<id>  a great pier hanging under the middle of the span
+def bridge(id_, style, deck, rail, trim, glow):
+    rnd = random.Random(hash(id_) & 0xffff)
     m = Mesh('bridge_' + id_, BR)
-    m.prism(deck, [(-2.2, -1.1), (2.2, -1.1), (2.2, 1.1), (-2.2, 1.1)], -0.45, 0.0)
-    for k in range(4):  # paving joints
-        m.prism(trim or deck, [(-2.15 + k * 1.1 + .03, -1.06), (-2.15 + (k + 1) * 1.1 - .03, -1.06), (-2.15 + (k + 1) * 1.1 - .03, 1.06), (-2.15 + k * 1.1 + .03, 1.06)], 0.0, 0.04)
-    m.prism(deck, [(-1.6, -1.1), (1.6, -1.1), (0.9, 1.1), (-0.9, 1.1)], -1.4, -0.45, M=TRS(rot=(math.pi / 2, 0, 0)) @ TRS((0, -0.45, 0)))  # keel
-    m.lathe(deck, [(0.5, 0), (0.15, -1.2), (0, -1.6)], n=6, M=Matrix.Translation((0, 0, -1.3)))
-    for sx in (-1, 1):  # posts and a rail on both sides
-        m.prism(rail, [(sx * 2.05 - .14, -0.14), (sx * 2.05 + .14, -0.14), (sx * 2.05 + .14, 0.14), (sx * 2.05 - .14, 0.14)], 0.0, 1.05)
-        m.prism(rail, [(sx * 2.05 - .09, -1.1), (sx * 2.05 + .09, -1.1), (sx * 2.05 + .09, 1.1), (sx * 2.05 - .09, 1.1)], 0.9, 1.02)
-        if glow:
-            m.ico(glow, 0.09, Matrix.Translation((sx * 2.05, 0, 1.12)), sub=1)
+    if style == 'void':  # hovering plates with gaps between them, no rails: only lines of light
+        for k in range(2):
+            y0, y1 = -1.1 + k * 1.1 + 0.06, -1.1 + (k + 1) * 1.1 - 0.06
+            m.prism(deck, [(-2.2, y0), (2.2, y0), (2.0, y1), (-2.0, y1)], -0.3, 0.0)
+            m.prism(trim, [(-1.9, y0 + 0.1), (1.9, y0 + 0.1), (1.9, y0 + 0.14), (-1.9, y0 + 0.14)], 0.0, 0.012)
+            crystal(m, rail, aim((0, 0, -1), (rnd.uniform(-1.2, 1.2), (y0 + y1) / 2, -0.3)), 0.25, rnd.uniform(0.8, 1.5))
+        for sx in (-1, 1):
+            m.tube(glow, [(sx * 2.1, -1.1, 0.95), (sx * 2.1, 1.1, 0.95)], 0.035, n=6)
+            m.tube(trim, [(sx * 2.1, -1.1, 0.35), (sx * 2.1, 1.1, 0.35)], 0.02, n=5)
+        return m.done()
+    # the deck: a slab with a chamfered lip, paved, a curb down each side
+    m.prism(deck, [(-2.2, -1.1), (2.2, -1.1), (2.2, 1.1), (-2.2, 1.1)], -0.5, -0.05)
+    m.prism(deck, [(-2.32, -1.1), (2.32, -1.1), (2.32, 1.1), (-2.32, 1.1)], -0.32, -0.18)  # a moulded string course
+    if style == 'ice':  # planks of clear ice with dark gaps
+        for k in range(5):
+            x0 = -1.95 + k * 0.78
+            m.prism(deck, [(x0 + 0.03, -1.08), (x0 + 0.75, -1.08), (x0 + 0.75, 1.08), (x0 + 0.03, 1.08)], -0.05, 0.02 + rnd.uniform(0, 0.03))
+    else:
+        for k in range(4):
+            for j in range(2):
+                x0, y0 = -1.95 + k * 0.98, -1.06 + j * 1.08
+                m.prism(trim if (k + j) % 2 else deck, [(x0 + .02, y0 + .02), (x0 + .96, y0 + .02), (x0 + .96, y0 + 1.04), (x0 + .02, y0 + 1.04)], -0.05, rnd.uniform(0.0, 0.03))
+    if style == 'hell':  # a channel of lava down the middle
+        m.prism(glow, [(-0.28, -1.1), (0.28, -1.1), (0.28, 1.1), (-0.28, 1.1)], -0.05, 0.012)
+        for sx in (-1, 1):
+            m.prism(rail, [(sx * 0.3 - .05, -1.1), (sx * 0.3 + .05, -1.1), (sx * 0.3 + .05, 1.1), (sx * 0.3 - .05, 1.1)], -0.05, 0.05)
+    for sx in (-1, 1):
+        m.prism(rail, [(sx * 2.0, -1.1), (sx * 2.22, -1.1), (sx * 2.22, 1.1), (sx * 2.0, 1.1)], -0.05, 0.2)  # curb
+    # the railing
+    for sx in (-1, 1):
+        x = sx * 2.1
+        if style == 'hell':  # brass chains slung from post to post
+            for z in (0.55, 0.95):
+                pts = [(x, -1.1 + i * 0.22, z - 0.12 * math.sin(math.pi * i / 10)) for i in range(11)]
+                for i, p in enumerate(pts):
+                    m.lathe(rail, [(0.05, -0.02), (0.06, 0.0), (0.05, 0.02)], n=6, M=TRS(p, (0 if i % 2 else math.pi / 2, math.pi / 2, 0)), closed=True)
+            m.prism(deck, [(x - .12, -1.1), (x + .12, -1.1), (x + .12, -0.85), (x - .12, -0.85)], 0.2, 1.1)
+            continue
+        for k in range(5):  # balusters
+            y = -0.88 + k * 0.44
+            m.lathe(rail, [(0, 0.2), (0.07, 0.22), (0.05, 0.3), (0.09, 0.55), (0.05, 0.78), (0.07, 0.86), (0, 0.88)], n=8, M=Matrix.Translation((x, y, 0)), smooth=True)
+        m.prism(rail, [(x - .13, -1.1), (x + .13, -1.1), (x + .13, 1.1), (x - .13, 1.1)], 0.86, 1.0)  # handrail
+        if style == 'ice':  # snow on the rail, icicles off the lip
+            m.prism(trim, [(x - .15, -1.1), (x + .15, -1.1), (x + .15, 1.1), (x - .15, 1.1)], 1.0, 1.07)
+            for k in range(5):
+                crystal(m, glow, aim((0, 0, -1), (sx * 2.25, -0.9 + k * 0.45, -0.32)), 0.04, rnd.uniform(0.25, 0.6))
+        if style == 'crypt':  # iron spikes along the rail
+            for k in range(5):
+                m.lathe(trim, [(0.03, 0), (0, 0.22)], n=4, M=Matrix.Translation((x, -0.88 + k * 0.44, 1.0)))
+    # underneath: corbels under each lip and a tapering keel stone
+    for sx in (-1, 1):
+        m.prism(deck, [(sx * 2.25, -0.6), (sx * 2.25, 0.6), (sx * 1.6, 0.4), (sx * 1.6, -0.4)], -0.9, -0.5)
+    m.lathe(deck, [(0.9, 0), (0.6, -0.5), (0.25, -1.3), (0, -1.8)], n=6, M=Matrix.Translation((0, 0, -0.5)), noise=0.03)
     return m.done()
+
+
+def bridge_post(id_, style, deck, rail, trim, glow):
+    m = Mesh('bridgepost_' + id_, BR)
+    if style == 'void':  # a hovering shard with a light caught in it
+        crystal(m, rail, TRS((0, 0, 0.3)), 0.16, 2.2)
+        m.ico(glow, 0.14, Matrix.Translation((0, 0, 2.0)), sub=2)
+        m.annulus(trim, 0.3, 0.33, 2.0, 32)
+        return m.done()
+    m.prism(rail, [(-0.22, -0.22), (0.22, -0.22), (0.22, 0.22), (-0.22, 0.22)], 0.0, 0.25)
+    m.lathe(rail, [(0.16, 0.25), (0.14, 1.6), (0.2, 1.7), (0.2, 1.78), (0, 1.78)], n=8, M=Matrix.Translation((0, 0, 0)))
+    if style == 'hell':  # a brazier on a horned post
+        m.lathe(rail, [(0, 1.78), (0.26, 1.85), (0.3, 2.05), (0.24, 2.05), (0.05, 1.9)], n=10, smooth=True)
+        m.lathe(glow, [(0, 1.95), (0.2, 2.0), (0.12, 2.25), (0, 2.45)], n=7, twist=0.6)
+        for a in (0, 2.1, 4.2):
+            m.lathe(deck, [(0.04, 0), (0, 0.35)], n=4, M=TRS((0.25 * math.cos(a), 0.25 * math.sin(a), 2.0), (0.4 * math.sin(a), -0.4 * math.cos(a), 0)))
+        return m.done()
+    if style == 'ice':
+        crystal(m, glow, TRS((0, 0, 1.78)), 0.14, 0.7)
+        for a in (0, 2.1, 4.2):
+            crystal(m, glow, aim((math.cos(a), math.sin(a), 1.4), (0, 0, 1.85)), 0.06, 0.35)
+        m.lathe(trim, [(0, 1.76), (0.24, 1.78), (0.2, 1.84), (0, 1.86)], n=10, smooth=True)  # a cap of snow
+        return m.done()
+    # a lantern: an iron cage with the island's fire in it
+    m.ico(glow, 0.14, Matrix.Translation((0, 0, 2.05)), sub=2)
+    for a in [k * math.pi / 2 for k in range(4)]:
+        m.tube(trim, [(0.17 * math.cos(a), 0.17 * math.sin(a), 1.8), (0.2 * math.cos(a), 0.2 * math.sin(a), 2.05), (0.08 * math.cos(a), 0.08 * math.sin(a), 2.32)], 0.015, n=4)
+    m.lathe(trim, [(0, 2.3), (0.12, 2.32), (0.02, 2.45), (0, 2.5)], n=8)
+    if style == 'crypt':  # a skull at the foot of the lantern
+        m.sphere(deck, 0.12, TRS((0, -0.17, 1.86), scale=(1, 0.9, 1.05)), u=10, v=8)
+    return m.done()
+
+
+def bridge_gate(id_, style, deck, rail, trim, glow):
+    m = Mesh('bridgegate_' + id_, BR)
+    for sx in (-1, 1):  # two great pillars
+        x = sx * 2.75
+        if style == 'void':
+            crystal(m, deck, TRS((x, 0, 0)), 0.45, 5.4)
+            crystal(m, rail, aim((sx * 0.3, 0, 1), (x, 0, 2.5)), 0.2, 2.6)
+            continue
+        m.prism(rail, [(x - .55, -.55), (x + .55, -.55), (x + .55, .55), (x - .55, .55)], 0.0, 0.5)
+        m.lathe(deck, [(0.42, 0.5), (0.38, 3.6), (0.5, 3.75), (0.5, 3.95), (0, 3.95)], n=8, M=Matrix.Translation((x, 0, 0)), flute=0.03 if style in ('shadow', 'frost') else 0)
+    if style == 'void':  # a ring of light hung between the shards
+        m.lathe(glow, [(2.6, -0.06), (2.75, -0.06), (2.75, 0.06), (2.6, 0.06)], n=48, M=TRS((0, 0, 3.0), (math.pi / 2, 0, 0)), closed=True)
+        m.lathe(trim, [(2.9, -0.03), (2.98, -0.03), (2.98, 0.03), (2.9, 0.03)], n=48, M=TRS((0, 0, 3.0), (math.pi / 2, 0, 0)), closed=True)
+        return m.done()
+    # the arch over the deck: voussoirs round a half-circle, a glowing keystone
+    for k in range(9):
+        a0, a1 = math.pi * k / 9, math.pi * (k + 1) / 9
+        pts = [(3.3 * math.cos(a0), 3.95 + 1.6 * math.sin(a0)), (3.3 * math.cos(a1), 3.95 + 1.6 * math.sin(a1)), (2.6 * math.cos(a1), 3.95 + 1.15 * math.sin(a1)), (2.6 * math.cos(a0), 3.95 + 1.15 * math.sin(a0))]
+        m.prism(glow if k == 4 else deck, [(x, z) for x, z in pts], -0.45, 0.45, M=TRS(rot=(math.pi / 2, 0, 0)))
+    if style == 'hell':
+        for sx in (-1, 1):
+            horn_(m, rail, (sx * 2.8, 0, 3.95), (sx * 1, 0, 0.6), 1.6, 0.18, curl=(sx * -0.6, 0, 1.2))
+    if style == 'crypt':
+        m.sphere(trim, 0.35, TRS((0, -0.45, 5.55), scale=(1, 0.8, 1.05)), u=12, v=8)  # a skull over the arch
+        for sx in (-1, 1):
+            m.ico(glow, 0.09, Matrix.Translation((sx * 0.13, -0.73, 5.6)), sub=1)
+    if style == 'ice':
+        for k in range(7):
+            crystal(m, glow, aim((0, 0, -1), (-2.4 + k * 0.8, 0, 4.0 + 1.1 * math.sin(math.pi * (k + 1) / 8))), 0.05, 0.5 + (k % 2) * 0.4)
+    if style == 'shadow':
+        for sx in (-1, 1):
+            m.ico(glow, 0.16, Matrix.Translation((sx * 2.75, 0, 4.15)), sub=2)
+    return m.done()
+
+
+def bridge_pier(id_, style, deck, rail, trim, glow):
+    m = Mesh('bridgepier_' + id_, BR)
+    if style == 'void':  # a slow-turning cluster of shards holding up the span
+        for k in range(7):
+            d = Vector((random.uniform(-0.5, 0.5), random.uniform(-0.5, 0.5), -1)).normalized()
+            crystal(m, deck if k % 2 else rail, aim(d, (random.uniform(-1, 1), random.uniform(-0.6, 0.6), -0.5)), random.uniform(0.3, 0.55), random.uniform(3, 6))
+        m.ico(glow, 0.3, Matrix.Translation((0, 0, -2.5)), sub=2)
+        return m.done()
+    m.lathe(deck, [(2.4, -0.5), (1.9, -1.4), (1.5, -3.5), (1.1, -6.0), (0.5, -8.5), (0, -9.5)], n=8, noise=0.05)  # a column of rock tapering into the clouds
+    m.lathe(rail, [(2.0, -1.2), (2.1, -1.35), (2.0, -1.5)], n=8, closed=True)
+    for k in range(6):  # buttress ribs
+        a = TAU * k / 6 + 0.26
+        m.tube(rail, [(2.2 * math.cos(a), 2.2 * math.sin(a), -0.5), (1.8 * math.cos(a), 1.8 * math.sin(a), -2.5), (1.0 * math.cos(a), 1.0 * math.sin(a), -6.0)], [0.22, 0.18, 0.1], n=6)
+    for k in range(4):  # hanging lights
+        a = TAU * k / 4
+        m.tube(trim, [(1.9 * math.cos(a), 1.9 * math.sin(a), -1.4), (2.0 * math.cos(a), 2.0 * math.sin(a), -2.6)], 0.02, n=3)
+        m.ico(glow, 0.15, Matrix.Translation((2.0 * math.cos(a), 2.0 * math.sin(a), -2.75)), sub=1)
+    if style == 'hell':
+        for k in range(5):
+            a = random.uniform(0, TAU)
+            m.tube(glow, [(1.8 * math.cos(a), 1.8 * math.sin(a), -1), (1.3 * math.cos(a + .2), 1.3 * math.sin(a + .2), -4), (0.7 * math.cos(a), 0.7 * math.sin(a), -7)], 0.06, n=4)
+    if style == 'ice':
+        for k in range(10):
+            a = random.uniform(0, TAU)
+            crystal(m, glow, aim((0, 0, -1), (1.6 * math.cos(a), 1.6 * math.sin(a), -1.5)), 0.08, random.uniform(0.6, 1.8))
+    return m.done()
+
+
+def horn_(m, mt, base, d, L, r, curl=(0, 0, 0), n=6, seg=6):
+    d, curl = Vector(d).normalized(), Vector(curl)
+    pts, p = [], Vector(base)
+    for i in range(seg + 1):
+        pts.append(p.copy())
+        d = (d + curl * (1 / seg)).normalized()
+        p = p + d * (L / seg)
+    m.tube(mt, pts, [r * (1 - i / seg) + 0.003 for i in range(seg + 1)], n=n)
 
 
 BR = coll('bridges')
 roots = [build_crypt(), build_frost(), build_hell(), build_void()]
-bridges = [  # the bridge into each island is in that island's style
-    bridge('shadow', mat('br_stone', (0.4, 0.38, 0.42), rough=0.9), mat('br_stone_b', (0.32, 0.31, 0.36), rough=0.9), glow=mat('br_gold', (1, 0.75, 0.35), emit=4)),
-    bridge('crypt', mat('br_crypt', (0.2, 0.21, 0.2), rough=0.92), mat('br_crypt_iron', (0.07, 0.07, 0.08), rough=0.45, metal=0.85), glow=mat('br_crypt_soul', (0.35, 1, 0.55), emit=6)),
-    bridge('frost', mat('br_ice', (0.45, 0.68, 0.86), rough=0.06, metal=0.15), mat('br_frost_stone', (0.7, 0.75, 0.82), rough=0.85), trim=mat('br_frost_snow', (0.82, 0.86, 0.92), rough=0.9), glow=mat('br_frost_glow', (0.5, 0.85, 1), emit=5)),
-    bridge('hell', mat('br_basalt', (0.09, 0.075, 0.07), rough=0.8), mat('br_brass', (0.45, 0.24, 0.1), rough=0.35, metal=0.9), trim=mat('br_hell_crust', (0.28, 0.06, 0.02), rough=0.9, emit=1.4, ecolor=(1, 0.25, 0.05)), glow=mat('br_hell_lava', (1, 0.35, 0.05), emit=7)),
-    bridge('void', mat('br_void', (0.05, 0.04, 0.08), rough=0.2, metal=0.45), mat('br_void_chitin', (0.05, 0.03, 0.07), rough=0.2, metal=0.3), trim=mat('br_void_line', (0.65, 0.3, 1), emit=4), glow=mat('br_void_cyan', (0.3, 0.9, 1), emit=4)),
-]
+STYLES = {  # the bridge into each island is in that island's style: (style, deck, rail, trim, glow)
+    'shadow': ('shadow', mat('br_stone', (0.4, 0.38, 0.42), rough=0.9), mat('br_stone_b', (0.32, 0.31, 0.36), rough=0.9), mat('br_stone_c', (0.28, 0.27, 0.31), rough=0.9), mat('br_gold', (1, 0.75, 0.35), emit=4)),
+    'crypt': ('crypt', mat('br_crypt', (0.2, 0.21, 0.2), rough=0.92), mat('br_crypt_iron', (0.07, 0.07, 0.08), rough=0.45, metal=0.85), mat('br_crypt_bone', (0.6, 0.57, 0.48), rough=0.6), mat('br_crypt_soul', (0.35, 1, 0.55), emit=6)),
+    'frost': ('ice', mat('br_ice', (0.45, 0.68, 0.86), rough=0.06, metal=0.15), mat('br_frost_stone', (0.7, 0.75, 0.82), rough=0.85), mat('br_frost_snow', (0.86, 0.9, 0.95), rough=0.9), mat('br_frost_glow', (0.5, 0.85, 1), emit=5)),
+    'hell': ('hell', mat('br_basalt', (0.09, 0.075, 0.07), rough=0.8), mat('br_brass', (0.45, 0.24, 0.1), rough=0.35, metal=0.9), mat('br_hell_crust', (0.28, 0.06, 0.02), rough=0.9, emit=1.4, ecolor=(1, 0.25, 0.05)), mat('br_hell_lava', (1, 0.35, 0.05), emit=7)),
+    'void': ('void', mat('br_void', (0.05, 0.04, 0.08), rough=0.2, metal=0.45), mat('br_void_chitin', (0.05, 0.03, 0.07), rough=0.2, metal=0.3), mat('br_void_line', (0.65, 0.3, 1), emit=4), mat('br_void_cyan', (0.3, 0.9, 1), emit=4)),
+}
+bridges = []
+for id_, (style, *ms) in STYLES.items():
+    for fn in (bridge, bridge_post, bridge_gate, bridge_pier):
+        bridges.append(fn(id_, style, *ms))
 for b in bridges:
-    apply_bevel(b, 0.03, segs=1, angle=40)
-bake_ao(bridges, bridges, rays=8, dist=1.5, strength=0.6)
+    if not b.name.startswith('bridgepier_void'):
+        apply_bevel(b, 0.02, segs=1, angle=40)
+for b in bridges:  # each on its own: they're all built on top of one another at the origin
+    bake_ao([b], [b], rays=8, dist=1.5, strength=0.6)
 
 bpy.ops.wm.save_as_mainfile(filepath=os.path.join(HERE, 'islands.blend'))
 export('islands.glb', roots + bridges)

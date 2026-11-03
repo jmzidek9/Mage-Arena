@@ -1171,12 +1171,19 @@ function islandInit() {
   }
   for (let k = 0; k < 5; k++) {
     const b = bridgeEnds(k), L = Math.hypot(b.bx - b.ax, b.bz - b.az), n = Math.ceil(L / 2.2), yaw = Math.atan2(b.ux, b.uz);
-    const tpl = islandsG.getObjectByName('bridge_' + ISLES[(k + 1) % 5].id) || islandsG.getObjectByName('bridge_shadow');
+    const id = ISLES[(k + 1) % 5].id, piece = nm => islandsG.getObjectByName(nm + id) || islandsG.getObjectByName(nm + 'shadow');
+    const tpl = piece('bridge_'), post = piece('bridgepost_'), gate = piece('bridgegate_'), pier = piece('bridgepier_');
     const segs = [];
     for (let i = 0; i < n; i++) {
       if (!tpl) break;
       const o = tpl.clone(); o.visible = false; scene.add(o);
       const u = (i + .5) / n; o.position.set(b.ax + (b.bx - b.ax) * u, 0, b.az + (b.bz - b.az) * u); o.rotation.y = yaw;
+      // dressed as it's laid: lantern posts every third segment, an archway at each end, a pier under the middle of the span
+      const add = (t, x, z) => { if (!t) return; const c = t.clone(); c.position.set(x, 0, z); o.add(c); };
+      if (i % 3 === 1) for (const sx of [-1, 1]) add(post, sx * 2.1, 0);
+      if (i === 0) add(gate, 0, -1.1);
+      if (i === n - 1) add(gate, 0, 1.1);
+      if (i === n >> 1) add(pier, 0, 0);
       segs.push({ o, p: o.position.clone(), t0: -1 });
     }
     IV.bridges.push({ segs, n });
@@ -1217,7 +1224,11 @@ function islandFrame(src, dt) {
       if (!want) { s.o.visible = false; s.t0 = -1; continue; }
       if (s.t0 < 0) { s.t0 = t >= 1 && !(src.br?.k === k) ? now - 1 : now; if (now - s.t0 < .5 && i % 2 === 0 && distTo(s.p.x, s.p.z) < 35) sfx('earth'); }
       const u = clamp((now - s.t0) / .45, 0, 1), e = easeBack(u);
-      if (u >= 1 && !s.land) { s.land = 1; for (let j = 0; j < 10; j++) emit(s.p.x + rand(-2, 2), .1, s.p.z + rand(-1, 1), rand(-2, 2), rand(1, 3), rand(-2, 2), 0xb8a890, rand(.08, .14), .6, 9, 1); }
+      if (u >= 1 && !s.land) {
+        s.land = 1; const c = ISLE_FIRE[ISLES[(k + 1) % 5].id] ?? 0xffc070;
+        for (let j = 0; j < 10; j++) emit(s.p.x + rand(-2, 2), .1, s.p.z + rand(-1, 1), rand(-2, 2), rand(1, 3), rand(-2, 2), 0xb8a890, rand(.08, .14), .6, 9, 1);
+        for (let j = 0; j < 8; j++) { const sx = j % 2 ? 1 : -1, a = s.o.rotation.y; emit(s.p.x + Math.cos(a) * sx * 2.1, rand(.2, 1.1), s.p.z - Math.sin(a) * sx * 2.1, 0, rand(.5, 1.5), 0, c, rand(.1, .18), .7, -.5); } // its rails light up
+      }
       if (u < 1) s.land = 0;
       s.o.visible = true; s.o.position.set(s.p.x, -7 * (1 - e), s.p.z); s.o.rotation.z = (1 - e) * .5;
       if (u < 1 && Math.random() < .4) emit(s.p.x + rand(-2, 2), -1, s.p.z + rand(-2, 2), 0, rand(2, 5), 0, 0xd8c8a8, rand(.06, .12), .5, 6);
