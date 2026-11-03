@@ -687,7 +687,8 @@ function animEnemy(v, e, dt, t) {
   v.last = pos.clone(); v.spd += (Math.min(sp, 20) - v.spd) * Math.min(1, dt * 8);
   const frozen = e.ts || (e.cc && ['freeze', 'stasis', 'encase'].includes(e.cc));
   const walk = frozen ? 0 : clamp(v.spd / (tp.spd * 1.1), 0, 1.6);
-  if (!frozen) v.ph += dt * (3 + v.spd * 1.7) * (BOSS_GAIT[e.type]?.rate ?? 1);
+  const BG = BOSS_GAIT[e.type]; // a walking boss steps in time with the ground it covers (a stride of BG.step leg-lengths), not at a monster's quick patter
+  if (!frozen) v.ph += dt * (BG?.step ? Math.PI * Math.max(v.spd, .6) / (BG.step * legLen(v)) : (3 + v.spd * 1.7) * (BG?.rate ?? 1));
   v.flinch = Math.max(0, v.flinch - dt * 6); v.strike = Math.max(0, v.strike - dt * 3.2);
   // turning: lean into it
   const yr = v.ly == null ? 0 : Math.atan2(Math.sin(g.rotation.y - v.ly), Math.cos(g.rotation.y - v.ly)) * ID; v.ly = g.rotation.y;
@@ -746,20 +747,23 @@ function animEnemy(v, e, dt, t) {
   if (BOSS_GAIT[e.type]) bossGait(v, e, t, walk, wind, BOSS_GAIT[e.type]);
 }
 // each boss moves its own way (on top of the shared rig, fading out while it attacks):
-// rate: stride speed, stride/arm/twist: how far legs, arms and shoulders swing, bob: how hard it drops onto each foot,
+// step: stride length in leg-lengths (sets both how fast it steps and how far its legs swing, so planted feet don't skate),
+// arm/twist: how far arms and shoulders swing, bob: how hard it drops onto each foot,
 // roll: side-to-side sway, hunch: leaning into the walk, tail/wing/spine: those swinging with it, float: it glides instead
 const BOSS_GAIT = {
-  boss:       { rate: .8,  stride: .35, bob: .14, roll: .05, twist: .14, arm: .25, hunch: .06, quake: .1 },   // an armoured march, the greatsword carried
-  frostgiant: { rate: .62, stride: .3,  bob: .22, roll: .12, twist: .08, arm: .7,  hunch: .2,  quake: .14, dangle: .35 }, // lumbering, arms swinging low
-  pitlord:    { rate: .72, stride: .3,  bob: .18, roll: .08, twist: .18, arm: .5,  hunch: .14, quake: .12, tail: .55, wing: .12 }, // a brute's swagger
-  devourer:   { rate: .7,  stride: .2,  bob: .2,  roll: .14, twist: .22, arm: .6,  hunch: .32, quake: .1,  lurch: 1, dangle: .2 }, // lurching, reaching for you
-  archdemon:  { rate: 1,   stride: .4,  bob: .07, roll: .03, twist: .22, arm: .3,  hunch: -.05, wing: .3 }, // a proud stalk, wings half-spread
-  bonedragon: { rate: .8,  bob: .1, spine: .2, tail: .9, wing: .14, hunch: .06, quake: .08 },               // slinking on four legs, its spine snaking
+  boss:       { step: .75, bob: .14, roll: .05, twist: .12, arm: .25, hunch: .06, quake: .1 },   // an armoured march, the greatsword carried
+  frostgiant: { step: .85, bob: .22, roll: .12, twist: .08, arm: .7,  hunch: .2,  quake: .14, dangle: .35 }, // lumbering, arms swinging low
+  pitlord:    { step: .8,  bob: .18, roll: .08, twist: .16, arm: .5,  hunch: .14, quake: .12, tail: .55, wing: .12 }, // a brute's swagger
+  devourer:   { step: .85, bob: .16, roll: .08, twist: .14, arm: .4,  hunch: .2,  quake: .1,  lurch: 1, dangle: .2 }, // lurching, reaching for you
+  archdemon:  { step: .95, bob: .07, roll: .03, twist: .16, arm: .3,  hunch: -.05, wing: .3 }, // a proud stalk, wings half-spread
+  bonedragon: { step: .8,  bob: .1, spine: .1, tail: .9, wing: .14, hunch: .06, quake: .08 },               // slinking on four legs, its spine snaking
   lich:       { float: 1, hover: .22, lean: .22, arm: .25, trail: C_SOUL },
   frostqueen: { float: 1, hover: .18, lean: .28, arm: .35, trail: 0xe8f8ff },
   umbra:      { float: 1, lift: 1.3, hover: .45, lean: .32, arm: .3,  trail: 0x2a1040, tent: .9 }, // Nyx floats well clear of the floor
   watcher:    { float: 1, hover: .26, lean: .18, trail: 0x6a2aaa, tent: .5 },
 };
+// hip height (the length of a leg), for matching a boss's stride to the ground it covers
+const legLen = v => v.legLen ??= Math.max(.8, (v.parts.legL ? v.parts.legL.p.y : v.parts.leg0 ? v.parts.body.p.y + v.parts.leg0.p.y : 2) * v.sc);
 function bossGait(v, e, t, walk, wind, G) {
   v.dt0 = t - (v.t0 ?? t) || .016; v.t0 = t;
   const P = v.parts, g = v.g, S1 = Math.sin(v.ph), C1 = Math.cos(v.ph), k = walk * (1 - wind * .8), sc = v.sc;
@@ -782,15 +786,19 @@ function bossGait(v, e, t, walk, wind, G) {
   g.position.y += G.bob * sc * k * .5 * Math.cos(2 * v.ph);
   g.rotation.z += Math.sin(v.ph - .6) * (G.roll || 0) * .6 * k + (G.lurch ? Math.sin(v.ph * .5 + 1) * .08 * k : 0);
   g.rotation.x += (G.hunch || 0) * .6 * k + clamp(v.acc * .012, -.05, .05) + (G.lurch ? Math.abs(Math.sin(v.ph * .5)) * .08 * k : 0);
-  add('body', -Math.cos(2 * v.ph) * .03 * k, Math.sin(v.ph - .3) * ((G.twist || 0) + (G.spine || 0)) * k);
+  const twist = Math.sin(v.ph - .3) * ((G.twist || 0) + (G.spine || 0)) * k;
+  add('body', -Math.cos(2 * v.ph) * .03 * k, twist);
   add('head', Math.cos(2 * v.ph - .8) * .05 * k - (G.hunch || 0) * .5 * k, -Math.sin(v.ph - .9) * (G.twist || G.spine || 0) * 1.1 * k); // the head steadies itself against the body
-  add('legL', S1 * (G.stride || 0) * k); add('legR', -S1 * (G.stride || 0) * k);
+  // legs swing just far enough to cover the ground it walks (replacing the shared rig's swing, which is tuned for small, quick monsters)
+  const A = Math.asin(Math.min(.95, G.step / 2)), kk = Math.min(1, walk / .9) * (1 - wind * .8), dl = A * kk - .75 * walk * (1 - (v.airK || 0));
+  add('legL', S1 * dl); add('legR', -S1 * dl);
   for (const [n, s] of [['legL', 1], ['legR', -1]]) { const p = P[n]; if (p) p.o.position.y = p.p.y + Math.max(0, -s * C1) * .12 * sc * k; } // the swinging foot lifts clear instead of sliding
   const sw = Math.sin(v.ph - .5); // arms swing a beat behind the legs, their weight following through
-  add('armL', (S1 * .5 - sw * (.5 + (G.arm || 0))) * k, 0, (G.dangle || 0) * k); add('armR', (-S1 * .5 + sw * (.5 + (G.arm || 0))) * k, 0, -(G.dangle || 0) * k);
+  const aa = A * (1 + (G.arm || 0)) * kk; // and the arms in proportion to the legs
+  add('armL', S1 * .5 * walk - sw * aa, 0, (G.dangle || 0) * k); add('armR', -S1 * .5 * walk + sw * aa, 0, -(G.dangle || 0) * k);
   add('weapon', S1 * .12 * k);
   add('tail', Math.sin(v.ph * 2) * .1 * k, Math.sin(v.ph + 1) * (G.tail || 0) * (.4 + k));
-  if (G.spine) for (let i = 0; i < 4; i++) add('leg' + i, Math.sin(v.ph + (i % 2 ? Math.PI : 0) + (i > 1 ? Math.PI / 2 : 0)) * .25 * k); // longer reach on all fours
+  if (P.leg0) for (let i = 0; i < 4; i++) add('leg' + i, Math.sin(v.ph + (i % 2 ? Math.PI : 0) + (i > 1 ? Math.PI / 2 : 0)) * (A * kk - .8 * walk * (1 - (v.airK || 0))), -twist); // on all fours: the same matched stride, and the feet stay put while the spine snakes above them
   if (P.wingL) { // big wings beat slowly (the shared rig flaps them like an insect's), and properly when it flies
     const sky = e.vs === 'sky' || e.y > 1.5, a = sky ? Math.sin(t * 5) * .9 : Math.sin(t * 1.8 + e.id) * G.wing + S1 * G.wing * .5 * k;
     P.wingL.o.rotation.z = P.wingL.r.z + a; P.wingR.o.rotation.z = P.wingR.r.z - a;
@@ -1041,11 +1049,18 @@ function hud(src, mp) {
   const cur = mp.cur || mp.el, kit = EL[cur];
   const key = cur + (mp.el2 || '');
   if (key !== hudKey) {
-    hudKey = key; buildBar(kit); tintRig(cur);
+    hudKey = key; buildBar(kit); tintRig(cur); $('meGlyph').textContent = kit.glyph;
     $('elName').innerHTML = `<b>${kit.glyph} ${kit.name}</b>${mp.el2 ? ` <em>TAB ⇄ ${EL[mp.el2 === cur ? mp.el : mp.el2].glyph} ${EL[mp.el2 === cur ? mp.el : mp.el2].name}</em>` : ''}`;
   }
-  $('meHp').style.width = sp.hp / sp.max * 100 + '%';
-  $('meName').textContent = `${Math.ceil(sp.hp)} / ${sp.max}`;
+  // health: what you just lost lingers as a pale chip, then drains away; a heal flashes it green; low health pulses red
+  const f = clamp(sp.hp / sp.max, 0, 1), now = performance.now(), V0 = hud.v ??= { f, chip: f, hold: 0, last: now, heal: 0 }, hdt = Math.min(.1, (now - V0.last) / 1000);
+  V0.last = now;
+  if (f < V0.f - .001) V0.hold = .45; if (f > V0.f + .004) V0.heal = .35;
+  V0.f = f; V0.hold -= hdt; V0.heal -= hdt;
+  V0.chip = f >= V0.chip ? f : V0.hold > 0 ? V0.chip : Math.max(f, V0.chip - hdt * .6);
+  $('meHp').style.width = f * 100 + '%'; $('meChip').style.width = V0.chip * 100 + '%';
+  const hpTxt = `<b>${Math.ceil(sp.hp)}</b> / ${sp.max}`; if (hpTxt !== V0.txt) $('meName').innerHTML = V0.txt = hpTxt;
+  $('me').classList.toggle('low', f < .3 && sp.hp > 0); $('me').classList.toggle('heal', V0.heal > 0);
   $('guardBar').style.width = (sp.gk > 0 ? (1 - sp.gk / BLOCK_DOWN) : sp.gm ? (sp.gh ?? sp.gm) / sp.gm : 1) * 100 + '%'; $('guard').classList.toggle('broken', sp.gk > 0); $('guard').style.setProperty('--gc', css(kit.color));
   $('dashBar').style.width = (1 - clamp(mp.dcd / stats(mp).dashCd, 0, 1)) * 100 + '%';
   const slots = $('slots').children, cds = mp.cds?.[cur] || [];
