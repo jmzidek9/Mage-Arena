@@ -389,6 +389,19 @@ rt, body = caster('plaguebearer', dict(robe=plague, trim=leather_c, hand=rot, gl
                      [m.tube(brass, [(0.11 * math.cos(a), 0.11 * math.sin(a), -0.6), (0.12 * math.cos(a), 0.12 * math.sin(a), -0.7)], 0.008, n=3) for a in [k * 1.05 for k in range(6)]],
                      m.sphere(pus, 0.07, TRS((0, 0, -0.63)), u=10, v=8))), robe_h=1.3)
 
+# a phylactery: a crystal heart held in a cage of bone on a black stone plinth, soul fire inside
+rt = root('phylactery')
+def ph_body(m):
+    m.lathe(iron, [(0, 0), (0.5, 0), (0.5, 0.15), (0.38, 0.25), (0.3, 0.9), (0.42, 1.0), (0.42, 1.1), (0, 1.1)], n=8)
+    runes(m, soul, 0.33, 0.08, 8, 0.01, 0.55, random.Random(91))
+    m.ico(soul, 0.32, TRS((0, 0, 1.7), scale=(1, 1, 1.4)), sub=2)
+    crystal(m, ghost, TRS((0, 0, 1.25)), 0.3, 0.95)
+    for k in range(6):
+        a = TAU * k / 6
+        m.tube(bone, [(0.4 * math.cos(a), 0.4 * math.sin(a), 1.1), (0.55 * math.cos(a), 0.55 * math.sin(a), 1.7), (0.15 * math.cos(a), 0.15 * math.sin(a), 2.35)], [0.04, 0.035, 0.02], n=5)
+    ell(m, bone, (0, 0, 2.38), (0.12, 0.13, 0.12))
+body = part(rt, 'body', rt, (0, 0, 0), ph_body)
+part(rt, 'ring', body, (0, 0, 1.7), lambda m: (m.annulus(soul, 0.8, 0.83, 0, 48), runes(m, soul, 0.95, 0.12, 8, 0.012, 0, random.Random(92))))
 # colossus: a giant built of bones, a skull for a head, soul fire for a heart
 def co_body(m):
     m.ico(soul, 0.35, TRS((0, -0.1, 0.85)), sub=2)
@@ -747,6 +760,22 @@ rt, body = keg('gorger', dict(body=hide, limb=hide2, noise=0.03, face=gg_face,
     fuse=lambda m: (m.lathe(lava, [(0, 0), (0.1, 0.06), (0.06, 0.2), (0, 0.32)], n=7, twist=0.5), m.ico(ember, 0.06, Matrix.Translation((0, 0, 0.04)), sub=1))))
 bake_scale(rt, 2.0)
 
+# a hellgate: a ring of black iron and horn standing on its edge, a sheet of fire roaring inside it
+rt = root('hellgate')
+def hg_body(m):
+    m.lathe(obsid, [(0, 0), (1.0, 0), (1.1, 0.25), (0.8, 0.35), (0, 0.35)], n=10, noise=0.03)
+    for k in range(10):
+        a = TAU * k / 10
+        horn(m, horn_m, (0.95 * math.cos(a), 0.95 * math.sin(a), 0.3), (math.cos(a), math.sin(a), 0.8), 0.5, 0.07, curl=(0, 0, 0.6))
+def hg_ring(m):
+    M = TRS((0, 0, 1.6), (math.pi / 2, 0, 0))
+    m.lathe(blackst, [(1.2, -0.1), (1.35, -0.1), (1.35, 0.1), (1.2, 0.1)], n=32, M=M, closed=True)
+    m.lathe(lava, [(0, -0.02), (1.2, -0.02), (1.2, 0.02), (0, 0.02)], n=32, M=M)
+    for k in range(8):
+        a = TAU * k / 8
+        crystal(m, obsid, TRS((1.35 * math.cos(a), 0, 1.6 + 1.35 * math.sin(a)), (0, -a + math.pi / 2, 0)), 0.08, 0.4)
+body = part(rt, 'body', rt, (0, 0, 0), hg_body)
+part(rt, 'crown', body, (0, 0, 0), hg_ring)
 # pyre priest: red robes, a horned hood, a staff bearing a burning brazier
 rt, body = caster('pyrepriest', dict(robe=redrobe, trim=brass, hand=hide, glow=ember,
     head=lambda m: (m.lathe(redrobe, [(0, -0.05), (0.2, 0.0), (0.24, 0.18), (0.2, 0.36), (0.1, 0.46), (0, 0.5)], n=16, M=TRS((0, 0.04, 0)), smooth=True),
@@ -952,9 +981,9 @@ for name, parts in PARTS.items():
 bpy.ops.wm.save_as_mainfile(filepath=os.path.join(HERE, 'foes.blend'))
 export('foes.glb', ROOTS)
 pv = Previewer(res=420)
-GROUPS = {'crypt': ['crawler', 'bonearcher', 'plaguebearer', 'banshee', 'colossus', 'necromancer', 'lich', 'bonedragon'],
+GROUPS = {'crypt': ['crawler', 'bonearcher', 'plaguebearer', 'banshee', 'colossus', 'necromancer', 'phylactery', 'lich', 'bonedragon'],
           'frost': ['snowcat', 'ram', 'cryomancer', 'frosttotem', 'icegolem', 'harpy', 'yeti', 'frostgiant', 'frostqueen'],
-          'hell': ['cinderimp', 'berserker', 'cannoneer', 'tormentor', 'pyrepriest', 'gorger', 'pitlord', 'archdemon'],
+          'hell': ['cinderimp', 'berserker', 'cannoneer', 'tormentor', 'pyrepriest', 'gorger', 'hellgate', 'pitlord', 'archdemon'],
           'void': ['shade', 'maw', 'lancer', 'orbiter', 'gazer', 'mindflayer', 'watcher', 'devourer'], 'shadow': ['umbra', 'stalker']}
 pv.scene.render.resolution_x, pv.scene.render.resolution_y = 1400, 420
 for g, names in GROUPS.items():

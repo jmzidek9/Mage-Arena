@@ -562,6 +562,7 @@ function stepMove(p, i, dt) {
   p.dcd -= dt;
   for (const k in p.bf) if (p.bf[k] > 0) p.bf[k] -= dt;
   if (p.bf.chill > 0) { vx *= .55; vz *= .55; } // chilled by frost attacks
+  if (p.bf.frozen > 0) { vx = 0; vz = 0; } // locked in a Frost Queen's ice tomb
   if (p.bf.stun > 0 || p.bf.root > 0) { vx = vz = 0; i = { ...i, dashN: p.dashN, jumpN: p.jumpN }; } // held in place (duel crowd control)
   const kk = p.kick || [0, 0, 0], ks = p.kickSeen || kk; // knockback handed over by the host as running totals, so none is lost or doubled
   p.kx = (p.kx || 0) + kk[0] - ks[0]; p.kz = (p.kz || 0) + kk[1] - ks[1]; if (kk[2] - ks[2] > .1) p.vy = Math.max(p.vy, kk[2] - ks[2]); p.kickSeen = kk.slice();
@@ -844,7 +845,7 @@ function stepEnemies(dt) {
     }
     // vertical: held aloft by bubble / levitate, otherwise gravity (launches, slams)
     if (ctype === 'bubble' || ctype === 'lift') { e.y += ((ctype === 'lift' ? 3.2 : 2.2) - e.y) * Math.min(1, dt * 4); e.vy = 0; }
-    else if (!t.fly && (e.y > 0 || e.vy > 0)) {
+    else if (!t.fly && !e.fly && (e.y > 0 || e.vy > 0)) {
       e.vy -= 26 * dt; e.y += e.vy * dt;
       if (e.y <= 0) {
         const v = -e.vy; e.y = 0; e.vy = 0;
@@ -859,7 +860,7 @@ function stepEnemies(dt) {
     }
     // knockback; a hard enough hit near the edge knocks them off the island
     e.x += e.kx * dt; e.z += e.kz * dt; const kd = Math.exp(-5 * dt); e.kx *= kd; e.kz *= kd;
-    if (!MAP.rects && offMap(e.x, e.z, .3) && !t.boss && !t.fly) { e.fall = true; e.vy = 0; continue; }
+    if (!MAP.rects && offMap(e.x, e.z, .3) && !t.boss && !t.fly && !e.fly) { e.fall = true; e.vy = 0; continue; }
     // ponytail: O(n^2) separation, fine below ~150 enemies; use a grid if waves get huge
     for (const o of S.enemies) {
       if (o === e || o.dead || o.rise > 0) continue;
@@ -867,7 +868,7 @@ function stepEnemies(dt) {
       if (d < m && d > 0) { const push = (m - d) * .5; e.x += dx / d * push; e.z += dz / d * push; }
     }
     if (Math.hypot(e.kx, e.kz) < 5) collide(e, R, sol);
-    if (hard || (e.y > .3 && !t.fly)) continue;
+    if (hard || (e.y > .3 && !t.fly && !e.fly)) continue;
     // field effects (slow fields, heat waves) are written onto e.fs by entity ticks each frame
     const fieldSlow = e.fs || 0; e.fs = 0;
     const slow = Math.min(.85, Math.max(e.m.slow, fieldSlow)), rate = (1 - slow) * haste * (e.rage > S.t ? 1.4 : 1); // rage: a Pyre Priest's war-chant
@@ -897,8 +898,8 @@ function stepEnemies(dt) {
       continue;
     }
     if (t.boss && !e.enraged && e.hp < e.max * .5) { // phase two: faster, summons help
-      e.enraged = true; ev({ k: 'enrage', id: e.id });
-      for (let k = 0; k < 4; k++) { const a = TAU * k / 4, q = confine({ x: e.x + Math.sin(a) * 5, z: e.z + Math.cos(a) * 5 }, 1); spawnEnemy(t.minions?.[k % 2] ?? (k % 2 ? 'runner' : 'grunt'), q.x, q.z); }
+      e.enraged = true; ev({ k: 'enrage', id: e.id }); t.phase2?.(e); // each boss's second phase (areas.js)
+      for (let k = 0; k < (t.phase2 ? 2 : 4); k++) { const a = TAU * k / 4, q = confine({ x: e.x + Math.sin(a) * 5, z: e.z + Math.cos(a) * 5 }, 1); spawnEnemy(t.minions?.[k % 2] ?? (k % 2 ? 'runner' : 'grunt'), q.x, q.z); }
     }
     const dx = tgt.x - e.x, dz = tgt.z - e.z, d = Math.hypot(dx, dz) || 1;
     if (t.tick?.(e, dt, tgt, d, ps)) continue; // the area monsters' own behaviours (areas.js); true: it handled its own turn
@@ -932,7 +933,8 @@ function stepEnemies(dt) {
     }
     if (t.boss && !e.atk && (e.sp -= dt) <= 0) {
       e.sp = rand(3.5, 5.5) * (e.enraged ? .7 : 1);
-      const sp = pick(t.spec || ['meteor', 'ring', 'ring', 'charge', 'charge']); // each boss its own specials (areas.js)
+      const pool = (e.enraged && t.spec2) || t.spec || ['meteor', 'ring', 'ring', 'charge', 'charge']; // each boss its own specials, new ones from half health (areas.js)
+      let sp = pick(pool); if (sp === e.lastSp) sp = pick(pool); e.lastSp = sp;
       if (typeof sp === 'object') startAttack(e, tgt, sp);
       else if (sp === 'meteor') bossMeteors(e, ps, scale);
       else if (sp === 'ring') { S.rings.push({ x: e.x, z: e.z, r: R, life: 2.4, hit: [] }); ev({ k: 'ring', x: r2(e.x), z: r2(e.z), r: R }); }

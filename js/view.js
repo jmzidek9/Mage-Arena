@@ -227,6 +227,27 @@ const FOE_FX = {
     sfx('swing');
   },
   null(e) { circleFx('sigil', V(e.x, .08, e.z), 4, { life: 5, color: 0x7a3aff }); pillarFx(e.x, 0, e.z, 4, 3, 0x3a1060, .6); sfx('abyss_big'); },
+  laser(e) { // one frame of a held or sweeping beam: light, no fuss
+    const a = V(e.x, e.y, e.z), b = V(e.x + Math.sin(e.yaw) * e.len, .7, e.z + Math.cos(e.yaw) * e.len);
+    beamFx(a, b, e.c, (e.w || .6) * .35, .12); beamFx(a, b, 0xffffff, (e.w || .6) * .1, .1);
+    if (Math.random() < .5) emit(b.x, .3, b.z, rand(-2, 2), rand(1, 3), rand(-2, 2), e.c, rand(.12, .22), .4); if (e.s) sfx('laser_big');
+  },
+  iceblink(e) { for (const [x, z] of [[e.x, e.z], [e.x2, e.z2]]) { burst(x, 2, z, 40, 0xe8f8ff, 7, .2, .6, 1); ringFx(x, .1, z, 3, C_ICE, .5); } sfx('frost_big'); },
+  frozen(e) { // a block of ice round the caught player
+    const P = () => srcState()?.players[e.id] || e, o = model('frost__block', 0x4cc8ff); o.scale.set(1.3, 2.1, 1.3);
+    addFx(o, 1.6, (o, k) => { const p = P(); o.position.set(p.x, p.y || 0, p.z); o.scale.y = 2.1 * (k < .1 ? k / .1 : 1); });
+    if (e.id === myId) { banner('FROZEN!', '#9fe6ff', 1200); shake(.2); } sfx('frost_big');
+  },
+  doom(e) { // a burning brand over the marked player's head, tightening until it settles
+    const P = () => srcState()?.players[e.id], c = circleFx('sigil', V(0, .08, 0), 5, { life: e.d, color: 0xff4a1a });
+    addFx(new THREE.Group(), e.d, (o, k, dt) => { const p = P(); if (!p) return; c.position.set(p.x, .08, p.z); c.scale.setScalar(1.6 - k * .6); spinCircle(c, dt, 4); if (Math.random() < .5) emit(p.x + rand(-.4, .4), 2.4, p.z + rand(-.4, .4), 0, 1.5, 0, flameColor(), .2, .4, -1); });
+    if (e.id === myId) banner('DOOM IS ON YOU: KEEP CLEAR OF YOUR FRIEND', '#ff6a3a', 2000); sfx('fire_big');
+  },
+  gazeflash(e) { flash(e.x, e.y, e.z, 0xffffff, 140, .5); burst(e.x, e.y, e.z, 80, 0xd8aaff, 14, .3, .6); shake(.3); sfx('laser_big'); },
+  unward(e) { pillarFx(e.x, 0, e.z, 3, 14, 0xffffff, .7); ringFx(e.x, .2, e.z, 8, 0xffffff, .6); burst(e.x, 2, e.z, 90, 0xffffff, 12, .3, .7); shake(.5); banner('ITS SHIELD BREAKS: STRIKE NOW!', '#ffe08a', 2000); sfx('ring'); },
+  eclipse(e) { flash(e.x, 3, e.z, 0x3a1060, 80, .6); smokeFx(e.x, 1, e.z, 4, 0x0a0614, 2, 10, 1.4); banner('THE LIGHT GOES OUT', '#9a6aff', 1600); sfx('shadow_big'); },
+  takeoff(e) { dustFx(e.x, e.z, 5, 0xd8d0b8); ringFx(e.x, .2, e.z, 9, 0xe8dcc0, .6); shake(.4); sfx('swing'); },
+  inhale(e) { ringFx(e.x, .2, e.z, 16, 0x7a3aff, 1.2); sfx('abyss_big'); },
   bind(e) { // a chain of soul light snaps from the binder to its ward
     const a = V(e.x2, 1.6, e.z2), b = V(e.x, 1.2, e.z); beamFx(a, b, C_SOUL, .15, .5);
     circleFx('sigil', V(e.x, .08, e.z), 1.6, { life: .8, color: C_SOUL }); burst(e.x, 1.2, e.z, 24, C_SOUL, 4, .2, .5, -1); sfx('soul_big');
@@ -361,7 +382,8 @@ function onEvent(e) {
     case 'dodge':
       if (e.id === myId) { banner('PERFECT DODGE', '#8ae8ff', 1000); dodgeFx = .6; sfx('dodge'); const m = me(); if (m) m.dcd = 0; }
       break;
-    case 'enrage': banner(`${(ET[views.e.get(e.id)?.type]?.name || 'The Tyrant').toUpperCase()} IS ENRAGED`, '#ff5a3a', 2200); shake(.6); sfx('ring'); break;
+    case 'enrage': { const t = ET[views.e.get(e.id)?.type]; banner((t?.p2 || `${t?.name || 'The Tyrant'} is enraged`).toUpperCase(), '#ff5a3a', 3200); shake(.6); sfx('ring'); break; }
+    case 'gaze': { banner('LOOK AWAY!', '#d88aff', 1600); sfx('abyss_big'); const v = views.e.get(e.id); if (v) bossWind(v, 'gaze', e.d); break; }
     case 'ult': if (e.id !== myId) banner(`PARTNER: ${e.name.toUpperCase()}`, css(EL[e.el].color), 1300); else sfx('ult'); break;
     case 'echo': if (e.id === myId) popNum(camera.position.x, camera.position.y + .3, camera.position.z, 'ECHO', '#ffd36a', 'tag'); break;
     case 'heal': if (e.id === myId) { healT = 1; } break;
@@ -420,12 +442,12 @@ const FALLBACK = { stalker: 'grunt', bomber: 'runner', knight: 'grunt', shaman: 
 Object.assign(FALLBACK, { berserker: 'grunt', cannoneer: 'brute', tormentor: 'grunt', gorger: 'bomber', snowcat: 'runner', ram: 'runner', cryomancer: 'shaman', frosttotem: 'shaman', icegolem: 'brute', harpy: 'grunt', crawler: 'grunt', bonearcher: 'grunt', plaguebearer: 'shaman', banshee: 'shaman', colossus: 'brute', necromancer: 'shaman', lich: 'shaman', bonedragon: 'boss',
   yeti: 'brute', frostgiant: 'boss', frostqueen: 'shaman',
   cinderimp: 'grunt', pyrepriest: 'shaman', pitlord: 'boss', archdemon: 'boss',
-  shade: 'stalker', maw: 'shooter', lancer: 'knight', orbiter: 'shooter', gazer: 'shooter', mindflayer: 'shaman', watcher: 'shooter', devourer: 'boss', umbra: 'boss' });
+  nyxshade: 'umbra', phylactery: 'shaman', hellgate: 'shaman', shade: 'stalker', maw: 'shooter', lancer: 'knight', orbiter: 'shooter', gazer: 'shooter', mindflayer: 'shaman', watcher: 'shooter', devourer: 'boss', umbra: 'boss' });
 const PART_RE =/_(body|head|jaw|armL|armR|legL|legR|leg\d|tail|wingL|wingR|ring|tent\d|shield|weapon|eye|fuse|staff|crown)$/;
 const RIM = { stalker: 0x9a4cff, boss: 0xff5a20, bomber: 0xffa020, knight: 0xa0c0ff, shaman: 0x40ff90, skeleton: 0xbfd4ff, rat: 0xffb060, archer: 0xbfd4ff, ghoul: 0x7aff6a, dknight: 0xff4a4a, warden: 0x5ad8ff };
 // the islands' monsters get a softer rim light in their island's colour (their own models are paler than the originals)
 for (const k in ET) if (RIM[k] == null && ET[k].zone && { crypt: 1, frost: 1, hell: 1, void: 1 }[ET[k].zone]) RIM[k] = { crypt: 0x2a6a40, frost: 0x40607a, hell: 0x7a3010, void: 0x50247a }[ET[k].zone];
-RIM.umbra = 0x50247a; RIM.stalker = 0x50247a;
+RIM.umbra = 0x50247a; RIM.stalker = 0x50247a; RIM.nyxshade = 0x50247a;
 function makeEnemy(e) {
   const tpl = ETPL[e.type] || ETPL[FALLBACK[e.type]] || ETPL.grunt;
   const g = tpl.clone(), mats = [], parts = {};
@@ -509,6 +531,18 @@ const POSE = {
   fling:  { w: [-.2, .8, 0, 2.2, .4, 0],    s: [.3, -.8, 0, .4, .4, 0] },
   beam:   { w: [-.3, 0, 0, 0, 0, 0],        s: [.15, 0, 0, 0, 0, 0] },
   null:   { w: [-.3, 0, -.05, 2.6, 2.6, 0], s: [.45, 0, .15, -.8, -.8, 0] },
+  // the bosses' own
+  sweep:  { w: [-.3, .6, 0, 1.7, 1.7, 0],   s: [.2, -.6, 0, 1.6, 1.6, 0] },
+  tailsweep: { w: [0, 1.1, .1, 0, 0, 0],    s: [0, -2.2, .05, .4, .4, 0] },   // wound up the other way, then the whole body whips round
+  avalanche: { w: [-.4, 0, .1, 2.8, 2.8, 0], s: [.6, 0, .15, 1, 1, 0] },
+  stomp:  { w: [-.1, 0, -.05, .6, .6, 1.6], s: [.3, 0, .2, -.3, -.3, -1.4] },
+  tomb:   { w: [-.2, 0, 0, 2, 2, 0],        s: [.3, 0, 0, 1.5, 1.5, 0] },
+  shards: { w: [.3, 0, .2, -.6, -.6, 0],    s: [-.4, 0, -.15, 3, 3, 0] },
+  gates:  { w: [-.2, 0, 0, 2.6, 2.6, 0],    s: [.5, 0, .2, -1, -1, 0] },
+  crescent: { w: [-.3, 1, 0, .4, 2.8, 0],   s: [.5, -1.4, .1, 0, -2.4, 0] },
+  spin:   { w: [-.2, 0, 0, 0, 0, 0],        s: [0, 0, 0, 0, 0, 0] },
+  inhale: { w: [-.5, 0, -.1, 1.5, 1.5, 0],  s: [-.6, 0, -.1, 2, 2, 0] },
+  gaze:   { w: [-.4, 0, 0, 0, 0, 0],        s: [0, 0, 0, 0, 0, 0] },
 };
 // bosses: the colour of their power, for wind-ups, auras and their bigger attack effects
 const BOSS_COL = { boss: 0xff5a20, umbra: 0x9a4cff, warden: 0x5ad8ff, bonedragon: 0x8aff50, frostgiant: 0x9fe6ff, pitlord: 0xff6a1a, devourer: 0xb04cff };

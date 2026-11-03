@@ -48,13 +48,9 @@ Object.assign(ET, {
     tick(e) { for (const o of S.enemies) if (o.bnd === e.id && (o.dead || Math.hypot(o.x - e.x, o.z - e.z) > 22)) o.bnd = 0; return false; },
     die(e) { for (const o of S.enemies) if (o.bnd === e.id) o.bnd = 0; } },
   lich:       { hp: 1500, spd: 2.4, r: .9, h: 3.6, dmg: 14, reach: 26, cost: 0, from: 99, kb: .04, poise: 650, atk: 'volley', wind: .9, cd: 2.4, boss: 1, ranged: 1, keep: [8, 14], oc: C_SOUL, zone: 'crypt',
-    name: 'The Lich King', minions: ['crawler', 'bonearcher'],
-    spec: [{ atk: 'rain', n: 4, r: 2.4, dmg: 18, c: 0xe8dcc0, s: 'bone' }, { atk: 'summon', wind: 1.2, n: 4, type: 'crawler', cap: 10 },
-      { atk: 'nova', wind: 1.1, r: 7, dmg: 22, c: C_SOUL, s: 'soul', chill: 2 }, { atk: 'ray', wind: 1, len: 24, w: 1.6, dmg: 24, c: C_SOUL, s: 'soul' }] },
+    name: 'The Lich King', minions: ['crawler', 'bonearcher'] },
   bonedragon: { hp: 1900, spd: 2.3, r: 2.2, h: 4.4, dmg: 30, reach: 5, cost: 0, from: 99, kb: .04, poise: 700, atk: 'smash', wind: 1.05, cd: 2.2, boss: 1, zone: 'crypt',
-    name: 'The Bone Dragon', minions: ['crawler', 'plaguebearer'],
-    spec: [{ atk: 'cone', wind: 1.1, r: 15, ang: 55, dmg: 26, c: C_POI, s: 'breath', pool: { life: 4, dps: 10 } }, 'charge',
-      { atk: 'rain', n: 3, r: 2.8, dmg: 22, c: 0xe8dcc0, s: 'bone' }, 'ring'] },
+    name: 'The Bone Dragon', minions: ['crawler', 'plaguebearer'] },
 
   // ---------- 3: the Frost Giants' Peaks ----------
   // Rime Stalker: a snow cat you can barely see until it's on you; a pounce out of hiding hits twice as hard, and hitting it gives it away
@@ -121,13 +117,9 @@ Object.assign(ET, {
   yeti:       { hp: 240, spd: 2.4, r: 1.1, h: 2.8, dmg: 22, reach: 3,   cost: 4, from: 6, kb: .25, poise: 140, atk: 'slam',  wind: .9, cd: 2.2, zone: 'frost', name: 'Yeti',
     alt: { atk: 'roll', min: 5, max: 22, wind: 1.1, cd: 7, dmg: 24, len: 24, chill: 1.5 } },
   frostgiant: { hp: 1700, spd: 2.1, r: 2.2, h: 5.4, dmg: 30, reach: 5, cost: 0, from: 99, kb: .04, poise: 700, atk: 'smash', wind: 1.05, cd: 2.2, boss: 1, zone: 'frost',
-    name: 'Hrimgar the Frost Giant', minions: ['snowcat', 'ram'],
-    spec: [{ atk: 'lob', wind: 1.2, r: 3.6, dmg: 26, c: 0xd8f0ff, s: 'boulder', pool: { life: 4, dps: 3, chill: 1 } }, { atk: 'spikes', wind: 1.1, dmg: 22, c: C_ICE, s: 'ice' },
-      { atk: 'nova', wind: 1.2, r: 9, dmg: 22, c: C_ICE, s: 'ice', chill: 2.5 }, 'ring'] },
+    name: 'Hrimgar the Frost Giant', minions: ['snowcat', 'ram'] },
   frostqueen: { hp: 1800, spd: 2.6, r: 1, h: 3.8, dmg: 13, reach: 26, cost: 0, from: 99, kb: .04, poise: 650, atk: 'volley', wind: .85, cd: 2.2, boss: 1, ranged: 1, keep: [9, 15], oc: C_ICE, zone: 'frost',
-    name: 'Skadi, the Frost Queen', minions: ['snowcat', 'harpy'],
-    spec: [{ atk: 'rain', n: 5, r: 2, dmg: 16, c: C_ICE, s: 'ice', chill: 1.5 }, { atk: 'cone', wind: 1.2, r: 17, ang: 70, dmg: 18, c: C_ICE, s: 'frost', chill: 3 },
-      { atk: 'summon', wind: 1, n: 3, type: 'snowcat', cap: 8 }, { atk: 'ray', wind: 1, len: 26, w: 1.8, dmg: 24, c: C_ICE, s: 'ice', chill: 2 }] },
+    name: 'Skadi, the Frost Queen', minions: ['snowcat', 'harpy'] },
 
   // ---------- 4: the Infernal Legion ----------
   // Cinder Imps: they come in threes, never stand still (a puff of cinders and they're somewhere else round you) and spit fire up close
@@ -177,13 +169,10 @@ Object.assign(ET, {
       return true;
     } },
   pitlord:    { hp: 1800, spd: 2.1, r: 2.2, h: 5.4, dmg: 31, reach: 5, cost: 0, from: 99, kb: .04, poise: 700, atk: 'smash', wind: 1.05, cd: 2.2, boss: 1, zone: 'hell',
-    name: 'Azgaroth the Pit Lord', minions: ['cinderimp', 'berserker'],
-    spec: [{ atk: 'cone', wind: 1.1, r: 15, ang: 55, dmg: 26, c: C_FIRE, s: 'breath', pool: { life: 4, dps: 12 } }, 'meteor', 'ring', 'charge'] },
+    name: 'Azgaroth the Pit Lord', minions: ['cinderimp', 'berserker'] },
   archdemon:  { hp: 1900, spd: 2.5, r: 1.4, h: 4.4, dmg: 28, reach: 4, cost: 0, from: 99, kb: .04, poise: 700, atk: 'swipe', wind: .8, cd: 1.8, boss: 1, zone: 'hell',
     name: 'Belphegor the Archdemon', minions: ['cinderimp', 'tormentor'],
-    alt: { atk: 'blink', min: 7, max: 22, wind: .7, cd: 7, dmg: 26 },
-    spec: [{ atk: 'ray', wind: 1, len: 26, w: 2, dmg: 26, c: C_FIRE, s: 'fire', pool: { life: 3, dps: 10 } }, { atk: 'summon', wind: 1, n: 3, type: 'cinderimp', cap: 9 },
-      { atk: 'nova', wind: 1.1, r: 8, dmg: 24, c: C_FIRE, s: 'fire', pool: { life: 3, dps: 10 } }, { atk: 'rain', n: 4, r: 2.4, dmg: 20, c: C_FIRE, s: 'meteor' }] },
+    alt: { atk: 'blink', min: 7, max: 22, wind: .7, cd: 7, dmg: 26 } },
 
   // ---------- 5: the Void ----------
   // Mirror Shade: walks in with two reflections of itself that shatter at a touch; only one of the three is real, and it can trade places with a reflection
@@ -238,20 +227,14 @@ Object.assign(ET, {
   mindflayer: { hp: 62,  spd: 2.9, r: .55, h: 2.1, dmg: 0,  reach: 18,  cost: 4, from: 6, kb: 1,   poise: 30,  atk: 'null',  wind: 1.1, cd: 7, ranged: 1, keep: [12, 18], zone: 'void', name: 'Null Priest',
     alt: { atk: 'pull', min: 4, max: 20, wind: .9, cd: 6, dmg: 8, len: 20, w: 1.8, c: C_VOID } },
   watcher:    { hp: 1700, spd: 2, r: 1.6, h: 5.2, dmg: 14, reach: 26, cost: 0, from: 99, kb: .04, poise: 650, atk: 'volley', wind: .85, cd: 2.2, boss: 1, ranged: 1, keep: [10, 16], oc: C_VOID, zone: 'void',
-    name: 'The Watcher Beyond', minions: ['shade', 'gazer'],
-    spec: [{ atk: 'ray', wind: 1, len: 28, w: 2, dmg: 26, c: C_VOID, s: 'void', n: 3 }, { atk: 'rain', n: 4, r: 2.4, dmg: 20, c: C_VOID, s: 'void' },
-      { atk: 'nova', wind: 1.1, r: 8, dmg: 22, c: C_VOID, s: 'void' }, { atk: 'summon', wind: 1, n: 2, type: 'gazer', cap: 6 }] },
+    name: 'The Watcher Beyond', minions: ['shade', 'gazer'] },
   devourer:   { hp: 2000, spd: 2.1, r: 2.2, h: 5, dmg: 31, reach: 5, cost: 0, from: 99, kb: .04, poise: 700, atk: 'smash', wind: 1.05, cd: 2.2, boss: 1, zone: 'void',
-    name: 'The Devourer of Stars', minions: ['shade', 'maw'],
-    spec: [{ atk: 'spikes', wind: 1.1, dmg: 24, c: C_VOID, s: 'tentacle', n: 3 }, { atk: 'pull', wind: 1, len: 24, w: 3, dmg: 10, c: C_VOID, then: 'nova' },
-      { atk: 'rain', n: 4, r: 2.6, dmg: 20, c: C_VOID, s: 'void' }, { atk: 'nova', wind: 1.1, r: 9, dmg: 24, c: C_VOID, s: 'void', pool: { life: 4, dps: 7, pull: 1 } }] },
+    name: 'The Devourer of Stars', minions: ['shade', 'maw'] },
 
   // ---------- 1: the Shadow Realm's second boss ----------
   umbra:      { hp: 1500, spd: 2.6, r: 1.3, h: 4.2, dmg: 26, reach: 4, cost: 0, from: 99, kb: .04, poise: 650, atk: 'swipe', wind: .8, cd: 1.8, boss: 1,
     name: 'Nyx, the Umbral Wraith', minions: ['stalker', 'grunt'],
-    alt: { atk: 'blink', min: 7, max: 22, wind: .7, cd: 6, dmg: 26 },
-    spec: [{ atk: 'summon', wind: 1, n: 3, type: 'stalker', cap: 6 }, { atk: 'rain', n: 4, r: 2.4, dmg: 18, c: 0x9a4cff, s: 'shadow' },
-      { atk: 'cone', wind: 1, r: 14, ang: 60, dmg: 22, c: 0x9a4cff, s: 'shadow' }, { atk: 'nova', wind: 1.1, r: 8, dmg: 22, c: 0x9a4cff, s: 'shadow' }] },
+    alt: { atk: 'blink', min: 7, max: 22, wind: .7, cd: 6, dmg: 26 } },
 });
 ET.boss.name = 'The Obsidian Tyrant'; ET.warden.name = 'The Bone Warden';
 
@@ -425,7 +408,7 @@ const FOE_ATK = {
   rain: { // things falling from the sky onto marked circles round every player (no windup: the circles are the warning)
     start(e, t, al) {
       const ps = players().filter(p => !p.down), sc = 1 + .06 * (S.wave - 1), dmg = al.dmg * sc * (e.elite ? 1.5 : 1);
-      ev({ k: 'strike', id: e.id, a: 'call' }); e.acd = Math.max(e.acd, 1.2);
+      if (!al.quiet) { ev({ k: 'strike', id: e.id, a: 'call' }); e.acd = Math.max(e.acd, 1.2); }
       for (const p of ps) for (let i = 0; i < al.n; i++) {
         const q = i ? confine({ x: p.x + rand(-4, 4), z: p.z + rand(-4, 4) }, 1) : { x: p.x, z: p.z }, d = 1.1 + i * .35;
         ev({ k: 'tele', a: 'meteor', s: al.s, c: al.c, shape: 'circle', x: r2(q.x), z: r2(q.z), r: al.r, d: r2(d) });
@@ -572,10 +555,11 @@ const FOE_ATK = {
     hit(e, a, dmg) { e.dv = { yaw: a.yaw, t: 0, hit: [], dmg }; ev({ k: 'fx', m: 'foe', f: 'swoop', x: r2(e.x), y: r2(e.y), z: r2(e.z) }); },
   },
   gust: { // one great beat of its wings: everything in front is blown away
-    start: (e, t, al, yaw) => ({ shape: 'cone', x: e.x, z: e.z, yaw, r: 9, ang: 70 }),
+    start: (e, t, al, yaw) => ({ shape: 'cone', x: e.x, z: e.z, yaw, r: al.r || 9, ang: al.ang || 70 }),
     hit(e, a, dmg, ps) {
-      ev({ k: 'fx', m: 'foe', f: 'cone', x: r2(e.x), y: r2(e.y + 1), z: r2(e.z), yaw: r2(a.yaw), r: 9, ang: 70, c: 0xe8f4ff, s: 'frost' });
-      for (const p of ps) if (inCone(p, e.x, e.z, a.yaw, 9.4, 76) && p.y < 4 && foeHit(p, dmg, e, { chill: 1 })) shove(p, Math.sin(a.yaw) * 20, Math.cos(a.yaw) * 20, 4);
+      const r = a.al.r || 9, ang = a.al.ang || 70, k = a.al.push || 20;
+      ev({ k: 'fx', m: 'foe', f: 'cone', x: r2(e.x), y: r2(e.y + 1), z: r2(e.z), yaw: r2(a.yaw), r, ang, c: 0xe8f4ff, s: 'frost', b: ET[e.type].boss || 0 });
+      for (const p of ps) if (inCone(p, e.x, e.z, a.yaw, r + .4, ang + 6) && p.y < 4 && foeHit(p, dmg, e, { chill: 1 })) shove(p, Math.sin(a.yaw) * k, Math.cos(a.yaw) * k, 4);
     },
   },
   roll: { // a snowball shoved down a lane, bigger the further it goes
@@ -726,9 +710,351 @@ const FOE_ATK = {
       ev({ k: 'fx', m: 'foe', f: 'null', x: r2(a.lx), z: r2(a.lz) });
     },
   },
+  // ----- the bosses' own -----
+  clones: { // Nyx: shades of her step out of the dark all round you, each marks a lane and tears down it
+    start(e, t, al) {
+      const n = al.n || 3, a0 = rand(0, TAU);
+      for (let i = 0; i < n; i++) { const a = a0 + TAU * i / n, q = confine({ x: t.x + Math.sin(a) * 9, z: t.z + Math.cos(a) * 9 }, 1), o = spawnEnemy('nyxshade', q.x, q.z); Object.assign(o, { rise: 0, y: 0, go: S.t + 1 + i * .2, dmg: al.dmg * bsc() }); ev({ k: 'fx', m: 'foe', f: 'blink', x: r2(e.x), z: r2(e.z), x2: r2(q.x), z2: r2(q.z), h: 3 }); }
+      ev({ k: 'strike', id: e.id, a: 'call' }); return 'done';
+    },
+  },
+  eclipse: { // Nyx: the light goes out, and she fades into the dark with it
+    start(e, t, al) { if (!e.night) { e.mod0 = S.mod === 'darkness' ? null : S.mod; S.mod = 'darkness'; } e.ecl = S.t + al.t; ev({ k: 'fx', m: 'foe', f: 'eclipse', x: r2(e.x), z: r2(e.z) }); return 'done'; },
+  },
+  sweep: { // a beam swept across a wide arc (the warning shows all of it); stay low behind it or jump it
+    start: (e, t, al, yaw) => ({ shape: 'cone', x: e.x, z: e.z, yaw, r: al.len, ang: al.arc }),
+    hit(e, a, dmg) {
+      const al = a.al, n = Math.round(al.arc / 12), hit = new Set();
+      for (let i = 0; i <= n; i++) later(i * .05, () => {
+        if (e.dead) return;
+        const yaw = a.yaw + (i / n - .5) * al.arc * Math.PI / 180;
+        ev({ k: 'fx', m: 'foe', f: 'laser', x: r2(e.x), y: r2(e.y + ET[e.type].h * e.sc * .7), z: r2(e.z), yaw: r2(yaw), len: al.len, c: al.c, w: 1, s: i ? 0 : 1 });
+        for (const p of players()) if (!p.down && !hit.has(p.id) && inLine(p, e.x, e.z, yaw, al.len, 1.4) && p.y < 1.4) { hit.add(p.id); foeHit(p, dmg, e, al); }
+      });
+    },
+  },
+  graves: { // the Lich: hands of bone claw up round every player, three marked circles each
+    start(e, t, al) {
+      const s = bsc(); ev({ k: 'strike', id: e.id, a: 'call' }); e.acd = Math.max(e.acd, 1.2);
+      for (const p of livePs()) for (let i = 0; i < 3; i++) {
+        const q = i ? confine({ x: p.x + rand(-4, 4), z: p.z + rand(-4, 4) }, 1) : { x: p.x, z: p.z }, d = 1 + i * .25;
+        ev({ k: 'tele', shape: 'circle', x: r2(q.x), z: r2(q.z), r: 2.2, d });
+        later(d, () => {
+          for (let j = 0; j < 6; j++) ev({ k: 'fx', m: 'foe', f: 'spike', x: r2(q.x + Math.sin(TAU * j / 6) * 1.8), z: r2(q.z + Math.cos(TAU * j / 6) * 1.8), i: j, c: 0xe8dcc0, s: 'bone' });
+          for (const o of livePs()) if (Math.hypot(o.x - q.x, o.z - q.z) < 2.4 && o.y < 1.4) foeHit(o, al.dmg * s, e, { chill: 1.5 });
+        });
+      }
+      return 'done';
+    },
+  },
+  tailsweep: { // the Bone Dragon: its tail swept round everything but what's in front of it
+    start: (e, t, al) => ({ shape: 'circle', x: e.x, z: e.z, r: al.r }),
+    hit(e, a, dmg, ps) {
+      const al = a.al;
+      ev({ k: 'fx', m: 'foe', f: 'nova', x: r2(e.x), z: r2(e.z), r: al.r, c: 0xe8dcc0, s: 'bone', b: 1 });
+      for (const p of ps) { const dx = p.x - e.x, dz = p.z - e.z, k = Math.hypot(dx, dz) || 1; if (k < al.r + .3 && p.y < 1.4 && !inCone(p, e.x, e.z, a.yaw, al.r + 1, 70) && foeHit(p, dmg, e)) shove(p, dx / k * 14, dz / k * 14, 5); }
+    },
+  },
+  skyfall: { start(e, t, al) { e.sky = { runs: al.runs || 3, run: null }; e.atk = null; ev({ k: 'fx', m: 'foe', f: 'takeoff', x: r2(e.x), z: r2(e.z) }); return 'done'; } },
+  avalanche: { // Hrimgar: a fan of great snowballs bowled down the mountain at you
+    start(e, t, al, yaw) {
+      const n = al.n || 3;
+      for (let i = 0; i < n; i++) if (i !== (n - 1) / 2) ev({ k: 'tele', shape: 'line', x: r2(e.x), z: r2(e.z), yaw: r2(yaw + (i - (n - 1) / 2) * .32), len: 26, w: 3, d: r2(al.wind) });
+      return { shape: 'line', x: e.x, z: e.z, yaw, len: 26, w: 3 };
+    },
+    hit(e, a, dmg) { const n = a.al.n || 3; for (let i = 0; i < n; i++) FOE_ATK.roll.hit(e, { ...a, yaw: a.yaw + (i - (n - 1) / 2) * .32, al: { len: 26, chill: 2 } }, dmg); },
+  },
+  stomp: { // Hrimgar: stamps again and again, each one a ring of frost racing outward (jump them)
+    start: (e) => ({ shape: 'circle', x: e.x, z: e.z, r: 5 }),
+    hit(e, a) {
+      const n = a.al.n || 3, R = ET[e.type].r * e.sc;
+      for (let i = 0; i < n; i++) later(i * .5, () => { if (e.dead) return; S.rings.push({ x: e.x, z: e.z, r: R, life: 2.4, hit: [] }); ev({ k: 'ring', x: r2(e.x), z: r2(e.z), r: R }); ev({ k: 'fx', m: 'foe', f: 'nova', x: r2(e.x), z: r2(e.z), r: 4, c: C_ICE, s: 'ice' }); ev({ k: 'strike', id: e.id, a: 'stomp' }); });
+    },
+  },
+  tomb: { // Skadi: ice closes round you; caught inside, you can't move for a moment
+    start(e, t, al) {
+      e.atk.tg = (al.all ? livePs() : [t]).map(p => ({ id: p.id, x: p.x, z: p.z }));
+      for (const q of e.atk.tg) ev({ k: 'tele', shape: 'circle', x: r2(q.x), z: r2(q.z), r: 1.8, d: r2(e.atk.t) });
+      return null;
+    },
+    hit(e, a, dmg) {
+      for (const q of a.tg) {
+        const p = S.players[q.id]; ev({ k: 'fx', m: 'foe', f: 'nova', x: r2(q.x), z: r2(q.z), r: 1.8, c: C_ICE, s: 'ice' });
+        if (p && !p.down && Math.hypot(p.x - q.x, p.z - q.z) < 2 && foeHit(p, dmg, e)) { p.bf.frozen = 1.6; ev({ k: 'fx', m: 'foe', f: 'frozen', id: p.id, x: r2(p.x), z: r2(p.z) }); }
+      }
+    },
+  },
+  shards: { // Skadi: rings of ice shards fired out all round, each ring turned a little: find the gaps
+    start: (e) => ({ shape: 'circle', x: e.x, z: e.z, r: 3, ally: 1 }),
+    hit(e, a, dmg) {
+      const w = a.al.waves || 3;
+      for (let k = 0; k < w; k++) later(k * .35, () => {
+        if (e.dead) return;
+        for (let i = 0; i < 14; i++) { const ang = TAU * i / 14 + k * .11; S.shots.push({ id: S.nid++, foe: 1, mv: 'foe', el: 'foe', x: e.x, y: e.y + 1.4, z: e.z, vx: Math.sin(ang) * 10, vy: 0, vz: Math.cos(ang) * 10, life: 2.6, dmg, sc: 1, c: C_ICE }); }
+        ev({ k: 'fx', m: 'foe', f: 'nova', x: r2(e.x), z: r2(e.z), r: 2, c: C_ICE, s: 'ice' });
+      });
+    },
+  },
+  gates: { // Azgaroth: tears open two hellgates that spill imps until you close them
+    start(e) { e.atk.at = aroundIsle(2, 13); for (const q of e.atk.at) ev({ k: 'tele', shape: 'circle', x: r2(q.x), z: r2(q.z), r: 2, d: r2(e.atk.t), ally: 1 }); return null; },
+    hit(e, a) { for (const q of a.at) { spawnEnemy('hellgate', q.x, q.z); ev({ k: 'fx', m: 'foe', f: 'summon', x: r2(q.x), z: r2(q.z), c: C_FIRE, b: 1 }); } },
+  },
+  geysers: { // Azgaroth: the ground splits open in fountains of lava all over the island, and under you
+    start(e, t, al) {
+      const s = bsc(), pts = [...livePs().map(p => ({ x: p.x, z: p.z })), ...Array.from({ length: al.n }, () => inIsle())];
+      ev({ k: 'strike', id: e.id, a: 'call' }); e.acd = Math.max(e.acd, 1.2);
+      pts.forEach((q, i) => {
+        const d = 1 + i * .1; ev({ k: 'tele', shape: 'circle', x: r2(q.x), z: r2(q.z), r: 2, d: r2(d) });
+        later(d, () => { ev({ k: 'fx', m: 'foe', f: 'spike', x: r2(q.x), z: r2(q.z), i, c: C_FIRE, s: 'fire' }); for (const o of livePs()) if (Math.hypot(o.x - q.x, o.z - q.z) < 2.3 && o.y < 2.5) foeHit(o, al.dmg * s, e); });
+      });
+      return 'done';
+    },
+  },
+  crescent: { // Belphegor: the sword swung so hard a crescent of fire rolls off it across the ground
+    start(e, t, al, yaw) {
+      const n = al.n || 1;
+      for (let i = 0; i < n; i++) if (i !== (n - 1) / 2) ev({ k: 'tele', shape: 'line', x: r2(e.x), z: r2(e.z), yaw: r2(yaw + (i - (n - 1) / 2) * .5), len: 24, w: 5, d: r2(al.wind) });
+      return { shape: 'line', x: e.x, z: e.z, yaw, len: 24, w: 5 };
+    },
+    hit(e, a, dmg) {
+      const n = a.al.n || 1, x0 = e.x, z0 = e.z;
+      for (let j = 0; j < n; j++) {
+        const yaw = a.yaw + (j - (n - 1) / 2) * .5, fx = Math.sin(yaw), fz = Math.cos(yaw), hit = new Set();
+        for (let i = 1; i <= 10; i++) later(i * .06, () => {
+          const cx = x0 + fx * i * 2.4, cz = z0 + fz * i * 2.4;
+          for (const s of [-1.7, 0, 1.7]) ev({ k: 'fx', m: 'foe', f: 'spike', x: r2(cx + fz * s), z: r2(cz - fx * s), i: s ? 1 : i, c: C_FIRE, s: 'fire' });
+          for (const p of players()) if (!p.down && !hit.has(p.id) && inLine(p, cx - fx * 1.3, cz - fz * 1.3, yaw, 2.6, 5) && p.y < 1.4) { hit.add(p.id); foeHit(p, dmg, e); }
+        });
+      }
+    },
+  },
+  doom: { // Belphegor: a brand of doom on every player; it follows you, settles, and bursts: keep away from your friend
+    start(e, t, al) {
+      const s = bsc();
+      for (const p of livePs()) {
+        ev({ k: 'fx', m: 'foe', f: 'doom', id: p.id, d: 2.6 });
+        later(2.6, () => {
+          const q = { x: p.x, z: p.z }; ev({ k: 'tele', shape: 'circle', x: r2(q.x), z: r2(q.z), r: 5, d: .9 });
+          later(.9, () => { ev({ k: 'fx', m: 'foe', f: 'nova', x: r2(q.x), z: r2(q.z), r: 5, c: C_FIRE, s: 'fire', b: 1 }); for (const o of livePs()) if (Math.hypot(o.x - q.x, o.z - q.z) < 5.3 && o.y < 2) foeHit(o, al.dmg * s, e); });
+        });
+      }
+      return 'done';
+    },
+  },
+  gaze: { // the Watcher opens its eye wide: anyone still looking at it when it flashes is struck
+    start(e, t, al) {
+      const s = bsc(); ev({ k: 'gaze', id: e.id, d: 1.8 }); e.acd = Math.max(e.acd, 2);
+      later(1.8, () => {
+        if (e.dead) return;
+        ev({ k: 'fx', m: 'foe', f: 'gazeflash', x: r2(e.x), y: r2(e.y + 3.2), z: r2(e.z) });
+        for (const p of livePs()) { const dx = e.x - p.x, dz = e.z - p.z, k = Math.hypot(dx, dz) || 1, f = flatAim(p); if ((f.x * dx + f.z * dz) / k > .6) foeHit(p, al.dmg * s, e, { chill: 2 }); }
+      });
+      return 'done';
+    },
+  },
+  spin: { // the Watcher: a beam swung round and round, low over the floor (see spinTick)
+    start: (e) => ({ shape: 'circle', x: e.x, z: e.z, r: 24 }),
+    hit(e, a, dmg) { e.spinL = { t: a.al.t || 4, yaw: a.yaw, two: a.al.two, k: 0, hitT: {}, dmg }; },
+  },
+  inhale: { // the Devourer opens wide and breathes in (see inhaleTick)
+    start: (e) => ({ shape: 'circle', x: e.x, z: e.z, r: ET[e.type].r * e.sc + 3 }),
+    hit(e, a, dmg) { e.inh = { t: 2.6, k: 0, dmg }; ev({ k: 'fx', m: 'foe', f: 'inhale', x: r2(e.x), z: r2(e.z) }); },
+  },
+  starfall: { // the Devourer: stars torn out of the sky, all over the island and onto you
+    start(e, t, al) {
+      const s = bsc(), pts = [...livePs().map(p => ({ x: p.x, z: p.z })), ...Array.from({ length: al.n }, () => inIsle())];
+      ev({ k: 'strike', id: e.id, a: 'call' }); e.acd = Math.max(e.acd, 1.2);
+      pts.forEach((q, i) => {
+        const d = 1.1 + i * .17; ev({ k: 'tele', a: 'meteor', s: 'void', c: C_VOID, shape: 'circle', x: r2(q.x), z: r2(q.z), r: 2.2, d: r2(d) });
+        later(d, () => { ev({ k: 'fx', m: 'foe', f: 'impact', x: r2(q.x), z: r2(q.z), r: 2.2, c: C_VOID, s: 'void', b: 1 }); for (const o of livePs()) if (Math.hypot(o.x - q.x, o.z - q.z) < 2.5 && o.y < 1.5) foeHit(o, al.dmg * s, e); });
+      });
+      return 'done';
+    },
+  },
 };
-for (const k of ['erupt', 'cage', 'siphon', 'stampede', 'dive', 'roll', 'hurl', 'pounce', 'blast', 'lash', 'hook', 'firewall', 'pyre', 'flop', 'zigzag', 'fling', 'beam', 'null']) LOCKED.add(k);
+for (const k of ['sweep', 'tailsweep', 'avalanche', 'crescent', 'gust', 'erupt', 'cage', 'siphon', 'stampede', 'dive', 'roll', 'hurl', 'pounce', 'blast', 'lash', 'hook', 'firewall', 'pyre', 'flop', 'zigzag', 'fling', 'beam', 'null']) LOCKED.add(k);
 const RIMC = { necromancer: 0x9a6aff, lich: 0x7ae8ff, frostqueen: 0x9fe6ff, archdemon: 0xff6a1a, watcher: 0xb04cff, umbra: 0x9a4cff };
+
+// ===================== the bosses =====================
+// Every boss fights its own way: spec is what it picks from every few seconds, spec2 replaces it from half health, and
+// phase2 changes the fight itself at that point (phylacteries to break, a blizzard, rising lava, a closed eye, endless night).
+const bsc = () => 1 + .06 * (S.wave - 1);
+const livePs = () => players().filter(p => !p.down);
+function aroundIsle(n, r) { const I = isleCenter(), a0 = rand(0, TAU); return Array.from({ length: n }, (_, i) => ({ x: I.x + Math.sin(a0 + TAU * i / n) * r, z: I.z + Math.cos(a0 + TAU * i / n) * r })); }
+function inIsle(pad = 3) { const I = isleCenter(), a = rand(0, TAU), r = Math.sqrt(Math.random()) * (I.r - pad); return { x: I.x + Math.sin(a) * r, z: I.z + Math.cos(a) * r }; }
+// a boss hiding behind things you have to break first: untouchable (and slowly mending) until they're gone, then stunned and open
+function guardTick(e, dt, mend) {
+  if (!e.guard?.length) { if (e.vs === 'warded') e.vs = 0; return; }
+  e.guard = e.guard.filter(id => S.enemies.some(o => o.id === id && !o.dead));
+  if (e.guard.length) { e.vs = 'warded'; e.hp = Math.min(e.max * .5, e.hp + e.max * mend * dt); return; }
+  e.vs = 0; e.bare = S.t + 7; e.atk = null; e.cc = { type: 'stun', t: 3.5, max: 3.5 };
+  ev({ k: 'fx', m: 'foe', f: 'unward', x: r2(e.x), z: r2(e.z), id: e.id });
+}
+const guardWard = (e, n) => e.guard?.length ? 0 : e.bare > S.t ? n * 1.5 : n;
+function guards(e, type, n, r) { e.guard = aroundIsle(n, r).map(q => { const o = spawnEnemy(type, q.x, q.z); o.gl = e.id; return o.id; }); }
+
+// ---- the boss-only helpers ----
+Object.assign(ET, {
+  phylactery: { hp: 240, spd: 0, r: .7, h: 2.4, dmg: 10, reach: 0, cost: 0, from: 99, kb: 0, poise: 999, atk: 'nova', wind: 1, cd: 3, zone: 'crypt', name: 'Phylactery', oc: C_SOUL,
+    tick(e, dt, tgt, d, ps) { if ((e.pt = (e.pt ?? 2) - dt) <= 0) { e.pt = 2.6; foeOrb(e, {}, ps, 0, 10 * bsc()); } return true; } },
+  hellgate: { hp: 180, spd: 0, r: .9, h: 3, dmg: 0, reach: 0, cost: 0, from: 99, kb: 0, poise: 999, atk: 'nova', wind: 1, cd: 3, zone: 'hell', name: 'Hellgate',
+    tick(e, dt) {
+      if ((e.life = (e.life ?? 16) - dt) <= 0) { kill(e, null, null); return true; }
+      if ((e.pt = (e.pt ?? 1) - dt) <= 0 && S.enemies.filter(o => o.type === 'cinderimp' && !o.dead).length < 9) {
+        e.pt = 2.8; spawnEnemy('cinderimp', e.x + rand(-1, 1), e.z + rand(-1, 1)).pack = 1; ev({ k: 'fx', m: 'foe', f: 'summon', x: r2(e.x), z: r2(e.z), c: C_FIRE });
+      }
+      return true;
+    } },
+  nyxshade: { hp: 30, spd: 0, r: .6, h: 4.2, dmg: 0, reach: 0, cost: 0, from: 99, kb: 0, poise: 999, atk: 'swipe', wind: 1, cd: 9, name: 'Shade of Nyx',
+    tick(e, dt, tgt) { // marks its lane, then tears down it once and is gone
+      if (e.ly == null) { e.ly = Math.atan2(tgt.x - e.x, tgt.z - e.z); ev({ k: 'tele', shape: 'line', x: r2(e.x), z: r2(e.z), yaw: r2(e.ly), len: 18, w: 2, d: r2(Math.max(.2, e.go - S.t)) }); }
+      e.yaw = e.ly;
+      if (S.t < e.go) return true;
+      const x0 = e.x, z0 = e.z; e.x += Math.sin(e.ly) * 18; e.z += Math.cos(e.ly) * 18;
+      ev({ k: 'fx', m: 'foe', f: 'phase', x: r2(x0), z: r2(z0), x2: r2(e.x), z2: r2(e.z), c: 0x9a4cff });
+      for (const p of livePs()) if (inLine(p, x0, z0, e.ly, 18, 2) && p.y < 2) foeHit(p, e.dmg, e);
+      kill(e, null, null); return true;
+    },
+    ward(e) { ev({ k: 'fx', m: 'foe', f: 'shatter', x: r2(e.x), z: r2(e.z) }); kill(e, null, null); return 0; } },
+});
+
+// ---- 1: Nyx, the Umbral Wraith ----
+Object.assign(ET.umbra, {
+  p2: 'Nyx drags the island into endless night',
+  spec: [{ atk: 'clones', n: 3, dmg: 18 }, { atk: 'eclipse', t: 7 }, { atk: 'rain', n: 4, r: 2.4, dmg: 18, c: 0x9a4cff, s: 'shadow' }, { atk: 'cone', wind: 1, r: 14, ang: 60, dmg: 22, c: 0x9a4cff, s: 'shadow' }],
+  spec2: [{ atk: 'clones', n: 5, dmg: 20 }, { atk: 'spikes', wind: 1, dmg: 22, c: 0x9a4cff, s: 'shadow', n: 5 }, { atk: 'rain', n: 5, r: 2.4, dmg: 20, c: 0x9a4cff, s: 'shadow' }, { atk: 'nova', wind: 1.1, r: 8, dmg: 22, c: 0x9a4cff, s: 'shadow' }],
+  phase2(e) { e.night = 1; S.mod = 'darkness'; },
+  tick(e) { if (e.ecl && S.t > e.ecl) { e.ecl = 0; if (!e.night) S.mod = e.mod0 ?? null; } e.vs = e.ecl ? 'hide' : 0; return false; },
+  die(e) { if (e.night || e.ecl) S.mod = null; },
+});
+// ---- 2: the Lich King ----
+Object.assign(ET.lich, {
+  p2: 'The Lich King hides his soul in three phylacteries: break them!',
+  spec: [{ atk: 'sweep', wind: 1.1, len: 24, arc: 140, dmg: 22, c: C_SOUL }, { atk: 'graves', dmg: 16 }, { atk: 'summon', wind: 1.2, n: 4, type: 'crawler', cap: 10 }, { atk: 'rain', n: 4, r: 2.4, dmg: 18, c: 0xe8dcc0, s: 'bone' }],
+  spec2: [{ atk: 'sweep', wind: 1, len: 24, arc: 230, dmg: 24, c: C_SOUL }, { atk: 'graves', dmg: 18 }, { atk: 'nova', wind: 1.3, r: 10, dmg: 26, c: C_SOUL, s: 'soul', pool: { life: 4, dps: 8 } }, { atk: 'summon', wind: 1, n: 2, type: 'bonearcher', cap: 4 }],
+  phase2: e => guards(e, 'phylactery', 3, 11),
+  tick(e, dt) { guardTick(e, dt, .02); return false; },
+  ward: guardWard,
+});
+// ---- 2: the Bone Dragon ----
+Object.assign(ET.bonedragon, {
+  p2: 'The Bone Dragon takes to the sky',
+  spec: [{ atk: 'cone', wind: 1.1, r: 15, ang: 55, dmg: 26, c: C_POI, s: 'breath', pool: { life: 4, dps: 10 } }, { atk: 'tailsweep', wind: .9, r: 7, dmg: 24 }, { atk: 'gust', wind: .9, r: 14, ang: 100, push: 26, dmg: 8 }, { atk: 'rain', n: 3, r: 2.8, dmg: 22, c: 0xe8dcc0, s: 'bone' }],
+  spec2: [{ atk: 'cone', wind: 1, r: 16, ang: 60, dmg: 28, c: C_POI, s: 'breath', pool: { life: 5, dps: 12 } }, { atk: 'tailsweep', wind: .8, r: 7.5, dmg: 26 }, { atk: 'skyfall', runs: 3 }, { atk: 'gust', wind: .8, r: 14, ang: 100, push: 26, dmg: 8 }],
+  phase2: e => FOE_ATK.skyfall.start(e, null, { runs: 3 }),
+  tick: skyTick,
+});
+// ---- 3: Hrimgar the Frost Giant ----
+Object.assign(ET.frostgiant, {
+  p2: 'A blizzard howls over the peaks',
+  spec: [{ atk: 'avalanche', wind: 1.2, dmg: 24 }, { atk: 'stomp', wind: 1.1, n: 3 }, { atk: 'lob', wind: 1.2, r: 3.6, dmg: 26, c: 0xd8f0ff, s: 'boulder', pool: { life: 4, dps: 3, chill: 1 } }, { atk: 'spikes', wind: 1.1, dmg: 22, c: C_ICE, s: 'ice', n: 3 }],
+  spec2: [{ atk: 'avalanche', wind: 1, dmg: 26, n: 5 }, { atk: 'stomp', wind: 1, n: 4 }, { atk: 'spikes', wind: 1, dmg: 24, c: C_ICE, s: 'ice', n: 5 }, { atk: 'nova', wind: 1.2, r: 9, dmg: 22, c: C_ICE, s: 'ice', chill: 2.5 }],
+  phase2(e) { e.bliz = 1; },
+  tick(e, dt) {
+    if (e.bliz && (e.bt = (e.bt ?? 2) - dt) <= 0) { e.bt = 3.2; FOE_ATK.rain.start(e, null, { n: 2, r: 1.8, dmg: 12, c: C_ICE, s: 'ice', chill: 1, quiet: 1 }); }
+    e.vs = e.bliz ? 'bliz' : 0; return false;
+  },
+});
+// ---- 3: Skadi, the Frost Queen ----
+Object.assign(ET.frostqueen, {
+  p2: 'Skadi calls down a storm of shards',
+  spec: [{ atk: 'tomb', wind: .9, dmg: 10 }, { atk: 'rain', n: 5, r: 2, dmg: 16, c: C_ICE, s: 'ice', chill: 1.5 }, { atk: 'cone', wind: 1.2, r: 17, ang: 70, dmg: 18, c: C_ICE, s: 'frost', chill: 3 }, { atk: 'summon', wind: 1, n: 3, type: 'snowcat', cap: 8 }],
+  spec2: [{ atk: 'shards', wind: .9, waves: 4, dmg: 12 }, { atk: 'tomb', wind: .8, dmg: 12, all: 1 }, { atk: 'ray', wind: 1, len: 26, w: 1.8, dmg: 24, c: C_ICE, s: 'ice', chill: 2, n: 3 }, { atk: 'rain', n: 5, r: 2, dmg: 16, c: C_ICE, s: 'ice', chill: 1.5 }],
+  phase2(e) { e.glide = S.t + 2; },
+  tick(e) { // from half health she never stays put: a flurry of ice and she's somewhere else on the island
+    if (e.glide && S.t > e.glide && !e.atk) { e.glide = S.t + 7; const q = inIsle(4); ev({ k: 'fx', m: 'foe', f: 'iceblink', x: r2(e.x), z: r2(e.z), x2: r2(q.x), z2: r2(q.z) }); e.x = q.x; e.z = q.z; }
+    return false;
+  },
+});
+// ---- 4: Azgaroth the Pit Lord ----
+Object.assign(ET.pitlord, {
+  p2: 'The pit rises: lava swallows the edge of the island',
+  spec: [{ atk: 'smash', wind: 1.05, chain: 2, dmg: 30 }, { atk: 'cone', wind: 1.1, r: 15, ang: 55, dmg: 26, c: C_FIRE, s: 'breath', pool: { life: 4, dps: 12 } }, { atk: 'gates', wind: 1.2 }, { atk: 'geysers', n: 12, dmg: 22 }],
+  spec2: [{ atk: 'smash', wind: .95, chain: 3, dmg: 30 }, { atk: 'geysers', n: 18, dmg: 24 }, { atk: 'gates', wind: 1 }, 'charge'],
+  phase2(e) { e.lava = 1; },
+  tick(e, dt) { // the lava ring round the edge, laid fresh every few seconds while it lives
+    if (e.lava && (e.lt = (e.lt ?? 0) - dt) <= 0) { e.lt = 5.5; const I = isleCenter(); for (let k = 0; k < 26; k++) { const a = TAU * k / 26; addPool(I.x + Math.sin(a) * (I.r - 1.5), I.z + Math.cos(a) * (I.r - 1.5), 3, { life: 6, dps: 16, c: C_FIRE, s: 'fire' }); } }
+    return false;
+  },
+});
+// ---- 4: Belphegor the Archdemon ----
+Object.assign(ET.archdemon, {
+  p2: 'Belphegor spreads his wings: doom falls from the sky',
+  spec: [{ atk: 'crescent', wind: .9, dmg: 26 }, { atk: 'doom', dmg: 32 }, { atk: 'summon', wind: 1, n: 3, type: 'cinderimp', cap: 9 }, { atk: 'nova', wind: 1.1, r: 8, dmg: 24, c: C_FIRE, s: 'fire', pool: { life: 3, dps: 10 } }],
+  spec2: [{ atk: 'crescent', wind: .8, dmg: 28, n: 3 }, { atk: 'doom', dmg: 34 }, { atk: 'rain', n: 6, r: 2.4, dmg: 20, c: C_FIRE, s: 'meteor' }, { atk: 'ray', wind: 1, len: 26, w: 2, dmg: 26, c: C_FIRE, s: 'fire', pool: { life: 3, dps: 10 } }],
+  phase2: e => FOE_ATK.doom.start(e, null, { dmg: 34 }),
+});
+// ---- 5: the Watcher Beyond ----
+Object.assign(ET.watcher, {
+  p2: 'The Watcher closes its eye: kill its brood to open it',
+  spec: [{ atk: 'gaze', dmg: 30 }, { atk: 'ray', wind: 1, len: 28, w: 2, dmg: 26, c: C_VOID, s: 'void', n: 3 }, { atk: 'spin', wind: 1.2, dmg: 22, t: 4 }, { atk: 'rain', n: 4, r: 2.4, dmg: 20, c: C_VOID, s: 'void' }],
+  spec2: [{ atk: 'gaze', dmg: 34 }, { atk: 'spin', wind: 1, dmg: 24, t: 5, two: 1 }, { atk: 'ray', wind: .9, len: 28, w: 2, dmg: 26, c: C_VOID, s: 'void', n: 5 }, { atk: 'summon', wind: 1, n: 2, type: 'gazer', cap: 4 }],
+  phase2: e => guards(e, 'gazer', 3, 9),
+  tick(e, dt, tgt, d, ps) { guardTick(e, dt, .01); return spinTick(e, dt, ps); },
+  ward: guardWard,
+});
+// ---- 5: the Devourer of Stars ----
+Object.assign(ET.devourer, {
+  p2: 'The Devourer hungers: it feeds on its own brood',
+  spec: [{ atk: 'inhale', wind: .8, dmg: 34 }, { atk: 'spikes', wind: 1.1, dmg: 24, c: C_VOID, s: 'tentacle', n: 3 }, { atk: 'rain', n: 4, r: 2.6, dmg: 20, c: C_VOID, s: 'void' }, { atk: 'nova', wind: 1.1, r: 9, dmg: 24, c: C_VOID, s: 'void', pool: { life: 4, dps: 7, pull: 1 } }],
+  spec2: [{ atk: 'inhale', wind: .7, dmg: 38 }, { atk: 'starfall', n: 16, dmg: 22 }, { atk: 'spikes', wind: 1, dmg: 24, c: C_VOID, s: 'tentacle', n: 6 }, { atk: 'summon', wind: 1, n: 3, type: 'maw', cap: 3 }],
+  phase2(e) { e.feed = S.t + 3; },
+  tick(e, dt, tgt, d, ps) {
+    if (e.feed && S.t > e.feed && !e.atk && !e.inh) { // it drags in up to two of its own and swallows them whole
+      e.feed = S.t + 9;
+      const food = S.enemies.filter(o => o !== e && alive(o) && !ET[o.type].boss).sort((a, b) => Math.hypot(a.x - e.x, a.z - e.z) - Math.hypot(b.x - e.x, b.z - e.z)).slice(0, 2);
+      for (const o of food) { ev({ k: 'fx', m: 'foe', f: 'pull', x: r2(e.x), y: 3, z: r2(e.z), yaw: r2(Math.atan2(o.x - e.x, o.z - e.z)), len: r2(Math.hypot(o.x - e.x, o.z - e.z)), c: C_VOID }); ev({ k: 'fx', m: 'foe', f: 'devour', x: r2(o.x), z: r2(o.z) }); e.hp = Math.min(e.max, e.hp + e.max * .06); kill(o, null, null); }
+    }
+    return inhaleTick(e, dt, ps);
+  },
+});
+
+// the Bone Dragon's flight: three strafing runs low over the island, poison pouring down, then it crashes down on someone
+function skyTick(e, dt, tgt, d, ps) {
+  const K = e.sky; if (!K) return false;
+  Object.assign(e, { gone: 1, fly: 1, vy: 0, vs: 'sky', atk: null });
+  let R = K.run;
+  if (!R) {
+    if (K.runs-- <= 0) {
+      const p = near(e, ps) || tgt, q = confine({ x: p.x + rand(-2, 2), z: p.z + rand(-2, 2) }, 2);
+      Object.assign(e, { sky: null, gone: 0, fly: 0, vs: 0, leap: { x0: e.x, z0: e.z, x1: q.x, z1: q.z, t: 0, dmg: 30 * bsc(), r: 6 } });
+      ev({ k: 'tele', shape: 'circle', x: r2(q.x), z: r2(q.z), r: 6, d: .5 });
+      return true;
+    }
+    const p = ps[Math.floor(Math.random() * ps.length)] || tgt, a = rand(0, TAU), fx = Math.sin(a), fz = Math.cos(a);
+    R = K.run = { x0: p.x - fx * 16, z0: p.z - fz * 16, fx, fz, yaw: a, t: -1.3, hit: [], drop: 0 };
+    ev({ k: 'tele', shape: 'line', x: r2(R.x0), z: r2(R.z0), yaw: r2(a), len: 32, w: 3.4, d: 1.3 });
+  }
+  R.t += dt; e.yaw = R.yaw;
+  if (R.t < 0) { const k = Math.min(1, dt * 3); e.x += (R.x0 - e.x) * k; e.z += (R.z0 - e.z) * k; e.y += (8 - e.y) * Math.min(1, dt * 2); return true; }
+  const u = R.t / 1.4; e.x = R.x0 + R.fx * 32 * u; e.z = R.z0 + R.fz * 32 * u; e.y += (4.5 - e.y) * Math.min(1, dt * 6);
+  if ((R.drop -= dt) <= 0) { R.drop = .14; addPool(e.x, e.z, 1.6, { life: 4, dps: 10, c: C_POI, s: 'bile' }); }
+  for (const p of ps) if (!R.hit.includes(p.id) && Math.hypot(p.x - e.x, p.z - e.z) < 2.8) { R.hit.push(p.id); foeHit(p, 22 * bsc(), e); }
+  if (u >= 1) K.run = null;
+  return true;
+}
+// the Watcher's spinning beam, held low: jump it as it comes round
+function spinTick(e, dt, ps) {
+  const L = e.spinL; if (!L) return false;
+  L.t -= dt; L.yaw += dt * 1.6; e.yaw = L.yaw;
+  const beams = L.two ? [L.yaw, L.yaw + Math.PI] : [L.yaw];
+  if ((L.k -= dt) <= 0) { L.k = .08; for (const y of beams) ev({ k: 'fx', m: 'foe', f: 'laser', x: r2(e.x), y: r2(e.y + 3), z: r2(e.z), yaw: r2(y), len: 24, c: C_VOID }); }
+  for (const p of ps) for (const y of beams) if (!(L.hitT[p.id] > S.t) && inLine(p, e.x, e.z, y, 24, .9) && p.y < .7) { L.hitT[p.id] = S.t + .6; foeHit(p, L.dmg, e); }
+  if (L.t <= 0) e.spinL = null;
+  return true;
+}
+// the Devourer breathes in: everything is dragged toward its maw, and then it bites
+function inhaleTick(e, dt, ps) {
+  const H = e.inh; if (!H) return false;
+  H.t -= dt; e.vs = 'inhale';
+  if ((H.k -= dt) <= 0) { H.k = .2; for (const p of ps) { const dx = e.x - p.x, dz = e.z - p.z, k = Math.hypot(dx, dz) || 1; if (k > 2 && k < 26 && p.y < 3) shove(p, dx / k * 3.4, dz / k * 3.4); } }
+  if (H.t <= 0) {
+    e.inh = null; e.vs = 0;
+    ev({ k: 'fx', m: 'foe', f: 'nova', x: r2(e.x), z: r2(e.z), r: 5, c: C_VOID, s: 'void', b: 1 }); ev({ k: 'strike', id: e.id, a: 'smash' });
+    for (const p of ps) if (Math.hypot(p.x - e.x, p.z - e.z) < ET[e.type].r * e.sc + 3 && p.y < 2.5) foeHit(p, H.dmg, e);
+  }
+  return true;
+}
 
 // ===================== how the island monsters' states look (view side) =====================
 // vs: 'under' (burrowed: only churned-up dirt shows), 'ghost' (half-there), 'pile' (a heap of bones); bd: the id of the Soulbinder holding it
@@ -748,9 +1074,14 @@ function foeLook(v, e, src, t) {
   if (e.vs === 'rage' && Math.random() < .5) emit(P.x + rand(-.5, .5), P.y + rand(.4, 2), P.z + rand(-.5, .5), 0, rand(1, 2.5), 0, flameColor(), rand(.12, .25), .4, -2);
   if (e.sc !== v.sc) v.sc += (e.sc - v.sc) * .1; // a Gorger swelling after a meal
   if (e.type === 'orbiter' && v.parts.ring) v.parts.ring.o.rotation.y = t * 4; // the blades spin fast enough to be a saw
-  if (e.bd) { // a stream of soul light from the binder
-    const b = src.enemies.find(o => o.id === e.bd);
-    if (b) for (let i = 0; i < 2; i++) { const k = Math.random(); emit(b.x + (e.x - b.x) * k, 1.6 + (1.2 - 1.6) * k + Math.sin(k * Math.PI) * .6, b.z + (e.z - b.z) * k, 0, 0, 0, C_SOUL, rand(.08, .15), .25); }
+  const T = ET[e.type];
+  if (e.vs === 'warded') { const c = bossCol(e.type), r = T.r * e.sc * 1.4, h = T.h * e.sc; for (let i = 0; i < 3; i++) { const a = rand(0, TAU); emit(P.x + Math.cos(a) * r, P.y + rand(0, h), P.z + Math.sin(a) * r, 0, .3, 0, Math.random() < .3 ? 0xffffff : c, rand(.1, .2), .5); } }
+  if (e.vs === 'bliz') for (let i = 0; i < 8; i++) emit(camera.position.x + rand(-14, 14), camera.position.y + rand(1, 9), camera.position.z + rand(-14, 14), rand(-3, -1), rand(-4, -2), rand(-1, 1), 0xffffff, rand(.06, .12), 2.2, 0);
+  if (e.vs === 'sky') for (let i = 0; i < 3; i++) emit(P.x + rand(-1, 1), P.y + 3, P.z + rand(-1, 1), rand(-1, 1), rand(-6, -3), rand(-1, 1), C_POI, rand(.15, .3), .6, 4);
+  if (e.vs === 'inhale') for (let i = 0; i < 6; i++) { const a = rand(0, TAU), r = rand(8, 18); emit(P.x + Math.cos(a) * r, rand(.3, 3), P.z + Math.sin(a) * r, -Math.cos(a) * r * 1.6, rand(.5, 2), -Math.sin(a) * r * 1.6, Math.random() < .5 ? 0xc890ff : 0x4a1080, rand(.1, .2), .6); }
+  if (e.bd) { // a stream of light from whatever holds it: a Soulbinder, or the boss it's guarding
+    const b = src.enemies.find(o => o.id === e.bd), c = b && ET[b.type].boss ? bossCol(b.type) : C_SOUL, hb = b ? ET[b.type].h * b.sc * .6 : 1.6;
+    if (b) for (let i = 0; i < 2; i++) { const k = Math.random(); emit(b.x + (e.x - b.x) * k, hb + (1.2 - hb) * k + Math.sin(k * Math.PI) * .6, b.z + (e.z - b.z) * k, 0, 0, 0, c, rand(.08, .15), .25); }
     if (Math.random() < .2) emit(P.x + rand(-.5, .5), P.y + rand(.3, 1.8), P.z + rand(-.5, .5), 0, .5, 0, C_SOUL, .14, .5, -.4);
   }
 }
