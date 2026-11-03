@@ -352,6 +352,7 @@ function onEvent(e) {
     }
     case 'blk': cityApply(e); break; // Mage City: blocks blasted out or collapsing
     case 'prop': cityPropFx(e); break;
+    case 'blkd': cityCrackFx(e); break; // Mage City: blocks hit but still standing
     case 'cityreset': if (role === 'guest') cityReset(); break;
     case 'spawn': {
       circleFx('sigil', V(e.x, .06, e.z), 1.6 * Math.max(1, e.s * 1.4), { life: 1.1, color: 0xff3050 });

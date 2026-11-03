@@ -921,9 +921,10 @@ function stepEnemies(dt) {
     if (t.ranged) {
       const [lo, hi] = t.keep, w = d > hi ? 1 : d < lo ? -1 : 0, side = Math.sin(S.t * .7 + e.id) * .6;
       const g = navTo(e, tgt);
-      if (rooted) {} else if (g !== tgt) { const gx = g.x - e.x, gz = g.z - e.z, gd = Math.hypot(gx, gz) || 1; e.x += gx / gd * spd * dt; e.z += gz / gd * spd * dt; e.yaw = Math.atan2(gx, gz); }
+      const sight = S.mode !== 'city' || cityLOS(e, tgt); // Mage City: no shooting through walls; find a line first
+      if (rooted) {} else if (g !== tgt && !(sight && d < hi)) { const gx = g.x - e.x, gz = g.z - e.z, gd = Math.hypot(gx, gz) || 1; e.x += gx / gd * spd * dt; e.z += gz / gd * spd * dt; e.yaw = Math.atan2(gx, gz); }
       else { e.x += (dx / d * w - dz / d * side) * spd * dt; e.z += (dz / d * w + dx / d * side) * spd * dt; }
-      if ((e.acd -= dt * rate) <= 0 && d < t.reach + 8) startAttack(e, tgt);
+      if ((e.acd -= dt * rate) <= 0 && d < t.reach + 8 && sight) startAttack(e, tgt);
     } else {
       if (d > t.reach * e.sc * .7 && !rooted) { // round walls through the doorways (dungeon), straight at you otherwise
         const g = navTo(e, tgt), gx = g.x - e.x, gz = g.z - e.z, gd = Math.hypot(gx, gz) || 1;

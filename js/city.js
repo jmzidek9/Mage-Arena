@@ -180,7 +180,7 @@ function cityMap() {
 function cityReset() {
   if (!CITY.ready) cityMap();
   const B = CITY.lay.blocks; CITY.occ.fill(0); CITY.blk.clear();
-  for (let i = 0, n = 0; i < B.length; i += 5, n++) { const k = cKey(B[i], B[i + 1], B[i + 2]); CITY.occ[B[i] * CN + B[i + 1]] |= 1 << B[i + 2]; CITY.blk.set(k, { hp: B[i + 2] === 0 ? 45 : 32, n, gone: 0 }); }
+  for (let i = 0, n = 0; i < B.length; i += 5, n++) { const k = cKey(B[i], B[i + 1], B[i + 2]); CITY.occ[B[i] * CN + B[i + 1]] |= 1 << B[i + 2]; const hp = B[i + 2] === 0 ? 45 : 32; CITY.blk.set(k, { hp, max: hp, st: 0, n, gone: 0 }); }
   for (const p of CITY.props) p.hp = p.max;
   PILLARS.length = 0; for (const p of CITY.props) if (p.solid) PILLARS.push(p.solid);
   cityPropMask(); cityViewReset(); CITY.dist = null;
@@ -195,7 +195,7 @@ function killProp(p) { if (p.hp <= 0 && p.dead) return; p.hp = 0; p.dead = 1; if
 // host: damage blocks (and props) within r of a point; whatever breaks, and whatever that leaves hanging, goes out as one 'blk' event
 function cityHit(x, y, z, r, dmg) {
   if (S.mode !== 'city' || role === 'guest' || !CITY.ready || dmg <= 0) return;
-  const gone = [], i0 = cIx(x - r), i1 = cIx(x + r), j0 = cIx(z - r), j1 = cIx(z + r), l0 = Math.max(0, Math.floor((y - r) / CB)), l1 = Math.floor((y + r) / CB);
+  const gone = [], hurt = [], i0 = cIx(x - r), i1 = cIx(x + r), j0 = cIx(z - r), j1 = cIx(z + r), l0 = Math.max(0, Math.floor((y - r) / CB)), l1 = Math.floor((y + r) / CB);
   for (let ix = Math.max(0, i0); ix <= Math.min(CN - 1, i1); ix++) for (let iz = Math.max(0, j0); iz <= Math.min(CN - 1, j1); iz++) {
     const bits = CITY.occ[ix * CN + iz]; if (!bits) continue;
     for (let lv = l0; lv <= Math.min(31, l1); lv++) {
@@ -204,11 +204,18 @@ function cityHit(x, y, z, r, dmg) {
       const k = cKey(ix, iz, lv), b = CITY.blk.get(k);
       b.hp -= dmg * (1 - .5 * Math.min(1, d / (r + .01)));
       if (b.hp <= 0) { CITY.occ[ix * CN + iz] &= ~(1 << lv); b.gone = 1; gone.push(k); }
+      else { const st = Math.min(3, Math.floor((1 - b.hp / b.max) * 4)); if (st !== b.st) { b.st = st; hurt.push(k, st); } } // cracked, then badly cracked: it shows
     }
   }
+  if (hurt.length) ev({ k: 'blkd', d: hurt });
   for (const p of CITY.props) if (p.hp > 0 && p.max < 1e8 && Math.hypot(p.x - x, p.z - z) < r + p.rad && y < p.top + r && y > (p.y ?? 0) - r - 1) { if ((p.hp -= dmg) <= 0) killProp(p); }
   if (!gone.length) return;
-  const fall = citySettle(x, z, r + 6);
+  const fall = citySettle(x, z, r + 10);
+  for (let i = 0; i < fall.length && i < 48; i += 2) { // what comes down lands on whatever is underneath
+    const k = fall[i], lv = k % 32, c = (k - lv) / 32, fx = cX((c / CN) | 0), fz = cX(c % CN);
+    for (const e of S.enemies) if (alive(e) && !ET[e.type].boss && Math.hypot(e.x - fx, e.z - fz) < 1.6 + ET[e.type].r * e.sc) damage(e, 30 + lv * 6, 'earth', null);
+    for (const p of players()) if (!p.down && Math.hypot(p.x - fx, p.z - fz) < 1.2 && p.y < lv * CB) enemyHits(p, 10, null);
+  }
   for (const k of [...gone, ...fall]) { const i = CITY.owned.get(k); if (i != null && CITY.props[i].hp > 0) killProp(CITY.props[i]); } // a tower that loses its top loses its roof
   ev({ k: 'blk', a: gone, f: fall, x: r2(x), y: r2(y), z: r2(z), s: r2(Math.min(26, 5 + Math.sqrt(dmg) * 1.6)), r: r2(r) });
   CITY.dist = null; // re-route the monsters
@@ -237,6 +244,17 @@ function citySettle(x, z, rad) {
     below = sup.map(v => v >= 2 ? 1 : 0);
   }
   return fall;
+}
+// a 'blkd' event: blocks that took a hit and hold, darker the closer they are to breaking
+function cityCrackFx(e) {
+  const V3 = CITY.view; if (!V3) return;
+  const B = CITY.lay.blocks, col = new THREE.Color();
+  for (let j = 0; j < e.d.length; j += 2) {
+    const b = CITY.blk.get(e.d[j]); if (!b || b.hidden) continue; b.st = e.d[j + 1];
+    const i = b.n, d = V3.bm[V3.where[i * 3]]; col.set(B[i * 5 + 3]).multiplyScalar(1 - .17 * b.st);
+    d.bm.setColorAt(V3.where[i * 3 + 1], col); d.im.setColorAt(V3.where[i * 3 + 2], col); d.im.instanceColor.needsUpdate = true;
+    if (b.st >= 2) { const m = V3.blockM[i]; for (let q = 0; q < 3; q++) emit(m.elements[12] + rand(-.6, .6), m.elements[13] + rand(-.6, .6), m.elements[14] + rand(-.6, .6), rand(-1, 1), rand(0, 2), rand(-1, 1), 0x9a95a4, rand(.06, .12), .5, 9); }
+  }
 }
 // apply a 'blk' event (both machines; the host already cleared its grid)
 function cityApply(e) {
@@ -272,8 +290,20 @@ function cityField() {
   }
   CITY.dist = dist;
 }
+// clear line of sight between two points at chest height (walls block it)
+function cityLOS(a, b, h = 1.4) {
+  const dx = b.x - a.x, dz = b.z - a.z, n = Math.ceil(Math.hypot(dx, dz) / .6);
+  for (let i = 1; i < n; i++) if (blockAt(a.x + dx * i / n, h, a.z + dz * i / n)) return false;
+  return true;
+}
 function cityNav(e, tgt) {
-  const D = CITY.dist; if (!D || Math.hypot(tgt.x - e.x, tgt.z - e.z) < 4) return tgt;
+  const dd = Math.hypot(tgt.x - e.x, tgt.z - e.z);
+  if (e.breach) return tgt; // a breacher goes straight at you, through whatever is in the way
+  if (dd < 9 && !ET[e.type].ranged && cityLOS(e, tgt)) { // close, in sight: spread round you rather than queue up behind each other
+    const a = e.id * 2.39996, r = Math.min(dd * .5, 1.6 + ET[e.type].r);
+    return { x: tgt.x + Math.sin(a) * r, z: tgt.z + Math.cos(a) * r };
+  }
+  const D = CITY.dist; if (!D || dd < 4) return tgt;
   const ix = cIx(e.x), iz = cIx(e.z); let best = D[ix * CN + iz], bx = 0, bz = 0;
   if (best === 65535) return tgt;
   for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) {
@@ -291,6 +321,14 @@ function cityStep(dt) {
     if (e.dead || e.rise > 0 || e.pid) continue;
     if ((e.stT = (e.stT ?? 1.2) - dt) > 0) continue;
     const moved = Math.hypot(e.x - (e.lx ?? e.x + 9), e.z - (e.lz ?? e.z + 9)); e.lx = e.x; e.lz = e.z; e.stT = 1.2;
+    // big ones (brutes, bosses) don't take the long way round: if the streets wind well past the straight line, they smash straight through
+    const t = ET[e.type], D = CITY.dist, tg = players().filter(p => !p.down).sort((a, b) => Math.hypot(a.x - e.x, a.z - e.z) - Math.hypot(b.x - e.x, b.z - e.z))[0];
+    if (t.r >= 1 && D && tg) { const road = D[cIx(e.x) * CN + cIx(e.z)] * CB, line = Math.hypot(tg.x - e.x, tg.z - e.z); e.breach = road > line * 1.3 + 6 && line > 6; }
+    if (e.breach && !e.cc && !e.atk) { // shoulder first into the wall ahead
+      const f = V(Math.sin(e.yaw), 0, Math.cos(e.yaw)), R = t.r * e.sc, px = e.x + f.x * (R + .8), pz = e.z + f.z * (R + .8);
+      if (blockAt(px, .8, pz) || blockAt(px, 2.2, pz)) { cityHit(px, 1.8, pz, 1.6 + R * .5, 140); ev({ k: 'strike', id: e.id, a: 'smash' }); e.stT = .5; }
+      continue;
+    }
     if (moved > .4 || e.cc || e.atk) continue;
     const f = V(Math.sin(e.yaw), 0, Math.cos(e.yaw)), R = ET[e.type].r * e.sc, px = e.x + f.x * (R + .9), pz = e.z + f.z * (R + .9);
     const prop = CITY.props.find(q => q.solid && q.hp > 0 && Math.hypot(q.x - px, q.z - pz) < q.solid.r + 1);
@@ -558,6 +596,8 @@ function cityViewReset() {
   if (V3.attGlow) for (const g of V3.attGlow.values()) V3.gbm.setVisibleAt(g, true);
   const Dd = V3.debris; Dd.on.fill(0); for (let i = 0; i < Dd.n; i++) Dd.bm.setVisibleAt(i, false); Dd.used = 0; V3.hm.fill(0);
   for (const b of CITY.blk.values()) b.hidden = 0;
+  const col = new THREE.Color(); for (let i = 0; i < n; i++) { const d = V3.bm[V3.where[i * 3]]; col.set(B[i * 5 + 3]); d.bm.setColorAt(V3.where[i * 3 + 1], col); d.im.setColorAt(V3.where[i * 3 + 2], col); }
+  for (const d of V3.bm) if (d.im.instanceColor) d.im.instanceColor.needsUpdate = true;
 }
 
 // ---------- debris: thrown, tumbling, piling up, kicked about again ----------
