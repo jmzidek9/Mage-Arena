@@ -755,7 +755,7 @@ function animEnemy(v, e, dt, t) {
 // arm/twist: how far arms and shoulders swing, bob: how hard it drops onto each foot,
 // roll: side-to-side sway, hunch: leaning into the walk, tail/wing/spine: those swinging with it, float: it glides instead
 const BOSS_GAIT = {
-  boss:       { step: .75, bob: .14, roll: .05, twist: .12, arm: .25, hunch: .06, quake: .1 },   // an armoured march, the greatsword carried
+  boss:       { step: .75, bob: .14, roll: 0, twist: .12, arm: .25, hunch: .06, quake: .1 },   // an armoured march, the greatsword carried
   frostgiant: { step: .85, bob: .22, roll: .12, twist: .08, arm: .7,  hunch: .2,  quake: .14, dangle: .35 }, // lumbering, arms swinging low
   pitlord:    { step: .8,  bob: .18, roll: .08, twist: .16, arm: .5,  hunch: .14, quake: .12, tail: .55, wing: .12 }, // a brute's swagger
   devourer:   { step: .8,  plant: .62, twist: .1, arm: .4, hunch: .22, quake: .12, dangle: .12 }, // a planted, lurching tread, reaching for you (heavyGait)
