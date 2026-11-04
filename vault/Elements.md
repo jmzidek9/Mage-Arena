@@ -86,16 +86,16 @@ Speed and chaos. Lightning that leaps from foe to foe.
 *Storm rework (2026-11-04):* Ball Lightning is replaced by **Lightning Dash**: you streak forward as a jagged bolt with a white core, leaving a fading afterimage where you stood and a crackling trail. A dash never ends inside a monster: it runs on past it, or stops short if the monster is too big (the same rule as Blade Dance). **Thunderclap** now warns with a storm sigil, static crawling up off it and flickers overhead, then lands as a heavy branching bolt (`bigBoltFx`): a white-hot core, forks, a glowing column that lingers, shockwave rings, a scorched crater, arcs over the floor, and arcs that visibly jump to each chained monster. **Thunderstorm** spreads a wide, low storm front of grey-violet cloud overhead, lit by flickers inside it, with driving rain, and every strike is a heavy branching bolt; strikes within 6 m of you are drawn without the white core so they can't white out your view. Bench: crowd 1.10, boss 1.16. Later the same day both got flashier: Thunderclap stabs three thinner bolts down round the sigil before it lands, and its main strike adds an electric dome bursting outward, rubble, sparks raining back down and ground that keeps crackling for a moment; in Thunderstorm, sheet lightning crawls across the cloud's underside, lighting it, and about one strike in three is an extra-heavy bolt with the same dome and rubble plus a crown of bolts arcing out of it. **While Thunderstorm lasts, the whole sky turns into a storm** (`uStorm` in the sky shader, driven from net.js): a dark churning overcast hides the stars, and lightning flashes light the clouds from inside with forked veins running across the sky; the heavy strikes and Thunderclap flash it too. Thunderclap also gathers a knot of storm cloud over its target. Heavy strikes within 9 m of you skip the white core, forks and crown, so they can't white out your view.
 
 ## 🌊 Water
-Push and pull. Wash enemies off the island, trap them, and surf straight through the crowd.
+Push and pull. Wash enemies off the island, scoop them up, trap them and pound them flat.
 
 **Passive.** Tidal Force: your knockback is 40% stronger. Soaked enemies fly even further.
 
 | Key | Move | Cooldown | What it does |
 |---|---|---|---|
 | LMB | 💧 **Aqua Bullets** | 0.14 s | Rapid-fire water bullets with heavy knockback. |
-| RMB | 🪢 **Water Whip** | 3.5 s | Crack a 10 m whip of water straight ahead. Everything along it is dragged toward you, and the tip cracks for double damage and a 0.5 s stun. |
+| RMB | 🌀 **Riptide Ring** | 4.5 s | Hurl a spinning ring of water 15 m ahead. It scoops up the enemies it touches (up to 5), hits them for 16 and carries them along inside it, then bursts at the end of its run: 30 damage to everything within 4 m, flinging them away. A boss is too heavy to carry: the ring bursts on it. |
 | Q | 🫧 **Bubble Prison** | 9 s | Trap an enemy in a floating bubble. It is helpless and takes 30% more damage. |
-| E | 🏄 **Surf** | 9 s | Ride a wave 14 m forward. Every enemy in your way is hit for 24, soaked and thrown aside, clearing a lane through the crowd. |
+| E | 🚿 **Waterfall** *(hold to aim, release to cast)* | 10 s | A waterfall crashes down on the target for 3 s. Enemies under it (3 m) are pinned and pounded for 8 every 0.25 s. When it stops, the pool it leaves surges outward: 35 damage to everything within 6 m, sweeping them away. |
 | R | 🌊 **Tsunami** | ultimate | Unleash a towering wave that sweeps across the island, carrying enemies with it, often right off the edge. |
 
 ## 🪨 Earth
@@ -119,13 +119,13 @@ Mobility and crowd control. Fly over the fight and hurl enemies off the edge.
 | Key | Move | Cooldown | What it does |
 |---|---|---|---|
 | LMB | 🌀 **Wind Blades** | 0.36 s | Wide crescent blades of air that slice through every enemy in a line. |
-| RMB | 🍃 **Gale Force** | 5 s | A massive gust that hurls enemies away and blows enemy shots out of the air. Great for ring-outs. |
+| RMB | 💨 **Jet Stream** | 6 s | Open a 16 m wind tunnel straight ahead for 3 s. Enemies that enter it are swept along it, 6 damage every 0.25 s, and hurled out of the far end for 20 more and a launch. Aim it at the edge for ring-outs. Bosses only take the damage. |
 | Q | 🪶 **Updraft** | 7 s | Launch yourself high into the air (and nearby enemies with you). Hold Space to glide. |
 | E | 🌪️ **Tornado** | 10 s | Send out a tornado that sucks enemies in, spins them around, then flings them away. |
 | R | 🌪️ **Downburst** | ultimate | Rip every enemy within 15 m (up to 12) into the sky. For 2 s they are carried through the air toward wherever you aim, then hurled down together for 120 damage and a 1.2 s stun to everything within 5 m of the landing. Aim at the edge for ring-outs. |
 
 ## 🌿 Nature
-Patient and resilient. Root enemies in place, plant guardians and seeds that grow inside your foes.
+Patient and resilient. Root enemies in place, wall them off with brambles and slam them with living vines.
 
 **Passive.** Regrowth: regenerate 1.5 HP per second.
 
@@ -133,8 +133,8 @@ Patient and resilient. Root enemies in place, plant guardians and seeds that gro
 |---|---|---|---|
 | LMB | 🌵 **Thorn Volley** | 0.5 s | Fire a quick burst of three barbed thorns. They stick in the enemy, and every 6th thorn in the same enemy makes them all burst out for 12. |
 | RMB | 🪴 **Entangle** *(hold to aim, release to cast)* | 6 s | Roots burst from the ground and hold every enemy in the area in place. As long as they have something to hold, the roots keep spreading: 1 m wider every second, up to 7 m, catching anyone nearby. |
-| Q | 🌱 **Parasite Seed** | 11 s | Shoot a seed into an enemy. It grows inside it for 3 s, slowing it more and more, then bursts into vines that root it and up to 3 enemies near it for 2 s, 30 damage each. |
-| E | 🪤 **Snaptrap** *(hold to aim, release to cast)* | 14 s | Plant a carnivorous flytrap that chomps the nearest enemy for huge damage and pins it. Small monsters (not elites or bosses) are swallowed whole. |
+| Q | 🌿 **Vine Slam** | 8 s | Lash a vine at the first enemy in your sights (16 m). It is hoisted up and slammed into the ground 3 times, side to side: 30 damage per slam, plus 20 to every enemy within 2.5 m of where it lands. Then it is flung away. Bosses are too heavy to lift: they are rooted and take the slams where they stand. |
+| E | 🌵 **Bramble Wall** *(hold to aim, release to cast)* | 12 s | Raise a 10 m hedge of thorny brambles across the target for 5 s, side-on to you. Monsters cannot walk through it and enemy shots stop dead in it. Anything touching it is slowed and takes 12 every 0.5 s. When it withers it bursts into a hail of thorns: 25 to everything within 2.5 m of it. |
 | R | 🌳 **World Tree** *(hold to aim, release to cast)* | ultimate | Grow a great tree that roots every enemy around it and lashes them with vines. |
 
 ## 🌑 Shadow
@@ -439,6 +439,8 @@ A calligrapher. Living ink: brush strokes that mire, koi that hunt, and a dragon
 | R | 🐉 **Ink Dragon** *(hold to aim, release to cast)* | ultimate | Paint a great ink dragon that bursts from the floor and coils around the target for 4 s. Its body is a cage: nothing caught inside can get out, and the coil tightens, squeezing everyone toward the centre while ink rains on them. Then it dives in: 90 damage and a 1.2 s stun. |
 
 ## Balance
+**Ability rework, part 1 (2026-11-04):** Water Whip became Riptide Ring and Surf became Waterfall; Gale Force became Jet Stream; Parasite Seed became Vine Slam and Snaptrap became Bramble Wall. Tsunami, Tectonic Quake, Entangle and World Tree got new looks (a curling crest and spray, racing molten cracks and rings of spikes, roots tearing up round the area, vines whipping out of the tree). Bench after: Water 1.07 / 0.88, Earth 0.85 / 0.99, Nature 0.83 / 0.90 (then Vine Slam 25 + 15 raised to 30 + 20), Wind 0.74 / 1.00 (control kit). Riptide Ring bursts on a boss instead of passing through it.
+
 **After the 30-element playtest (2026-11-04):** ultimates no longer charge themselves, and the bench (`node playtest/bench.js`) now runs every element 3 times and reports damage per move, because a single 30 s crowd run swings by up to 2x. Five rounds of tuning brought every element to 0.85–1.2x the median on crowds and bosses. Control and mobility kits (Frost, Wind, Gravity on bosses) sit lower, and so do Sonic, Rune and Abyss against a lone boss (about 0.65–0.75x): they are built for crowds. The main changes:
 - **Too strong:** Supernova 140 → 55 (bosses still take 140), Thunderstorm 38 → 16, Phantasmagoria 120 → 55 and charmed monsters hit each other ×1.2 (was ×1.6), Prism Nova 28 → 17, burns 7 → 3/s, burning-death blasts 20 → 12, Fireball 18 → 16, and the Conflagration eruption cut to 12 + 8 per burn, Blood Moon drain 7 → 5 (pop 30 → 18, 8 targets), Carpet Bomb 130 → 50, Grenade 21 → 17, Fusion Beam 15 → 5.5, Plasma Cannon −25%, Blade Storm 20 → 16, Meteor lava 8 → 6 for 4 s.
 - **Too strong on bosses:** Arcane Torrent missiles do 2.5 to a boss (16 to anything else), Barrage 12 → 8.5. Spirit summons do about half damage to bosses (Army 12/4.5, Wolf 34/13, Command 20/9). World Tree vines do 14 to bosses.

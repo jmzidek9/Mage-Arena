@@ -360,6 +360,53 @@ const wardView = (top, ts) => ({ make: n => wardMake(n, top, ts), upd: wardUpd, 
 
 const godKill = (e, p) => damage(e, 1e9, 'god', p, { raw: true }); // God Mode: lethal through shields, stasis and time stop
 
+// Earth: molten cracks racing out across the floor from (x, z): n jagged ribbons that grow to radius r, glow, then cool and fade
+function quakeCracks(x, z, r, n, life = 1.3, hue = .08) {
+  const pos = [], idx = [], seg = 10, base = [];
+  for (let c = 0; c < n; c++) {
+    let a = TAU * c / n + rand(-.25, .25), px = x + Math.cos(a) * 1.4, pz = z + Math.sin(a) * 1.4; const L = r * rand(.7, 1.05); base.push(pos.length / 3);
+    for (let i = 0; i <= seg; i++) { const w = .5 * (1 - i / seg) + .1, nx = -Math.sin(a), nz = Math.cos(a); pos.push(px + nx * w, .07, pz + nz * w, px - nx * w, .07, pz - nz * w); a += rand(-.35, .35); px += Math.cos(a) * L / seg; pz += Math.sin(a) * L / seg; }
+  }
+  for (let i = 0; i < seg; i++) for (const b of base) { const q = b + i * 2; idx.push(q, q + 1, q + 2, q + 1, q + 3, q + 2); } // segment by segment across all cracks, so a growing draw range grows them all outward together
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx);
+  const m = new THREE.MeshBasicMaterial({ color: 0xffa040, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false }), o = new THREE.Mesh(g, m);
+  addFx(o, life, (o, k) => { g.setDrawRange(0, Math.ceil(idx.length * Math.min(1, k * life / .25) / 6) * 6); // they race outward in the first quarter second
+    m.color.setHSL(hue - .04 * k, 1, .6 - .3 * k); m.opacity = k < .2 ? 1 : 1 - (k - .2) / .8; });
+  g.setDrawRange(0, 0);
+  return o;
+}
+// Nature: a living vine drawn as a chain of short segments, re-laid every frame along a sagging curve from a to b (Vine Slam, World Tree)
+const VINE_GEO = new THREE.CylinderGeometry(.09, .12, 1, 6, 1, true).rotateX(Math.PI / 2).translate(0, 0, .5);
+const vineMat = () => new THREE.MeshStandardMaterial({ color: 0x4f9a2a, emissive: 0x5ae03a, emissiveIntensity: .9, roughness: .7, transparent: true });
+function vineChain(n = 14, w = 1) { const g = new THREE.Group(), m = vineMat(); g.userData.mats = [m]; g.userData.segs = Array.from({ length: n }, (_, i) => { const s = new THREE.Mesh(VINE_GEO, m); s.scale.x = s.scale.y = w * (1.4 - i / n * .8); g.add(s); return s; }); return g; }
+// lay the vine from a to b, arching `lift` m up in the middle and writhing by `wr`; k (0-1) is how far it has grown out
+function layVine(g, a, b, lift = 1, wr = .3, k = 1, t = 0) {
+  const segs = g.userData.segs, n = segs.length, pt = s => { const q = a.clone().lerp(b, s * k); q.y += Math.sin(s * k * Math.PI) * lift + Math.sin(s * 9 - t * 8) * wr * s; q.x += Math.cos(s * 7 + t * 6) * wr * s; return q; };
+  let prev = pt(0); for (let i = 0; i < n; i++) { const nx = pt((i + 1) / n), s = segs[i]; s.position.copy(prev); s.lookAt(nx); s.scale.z = prev.distanceTo(nx) * 1.15; prev = nx; }
+}
+// Nature: n clumps of roots tearing up out of the floor round a circle of radius r
+function entangleRing(x, z, r, n, s = 1) { for (let i = 0; i < n; i++) { const a = TAU * i / n + rand(-.25, .25), d = r * rand(.75, 1); riseFx('nature__roots', 0x4ee04a, x + Math.cos(a) * d, z + Math.sin(a) * d, rand(.5, .75) * s, 1.3); burst(x + Math.cos(a) * d, .3, z + Math.sin(a) * d, 5, 0x9aff80, 4, .15, .35, 6, 2); } }
+const WARM = []; // client: extra meshes and shaders compiled at game start (warmFx), so their first cast does not hitch
+WARM.push(() => vineChain(2));
+// Water: flowing water (Riptide Ring, Waterfall): streaks scrolling along the uv by uS per second, foam on the bright bits; normal-blended, so it reads as water and not as glow
+const waterMat = (sx, sy, a0 = .7) => Object.assign(addShader(`uniform float uA, uA0; uniform vec2 uS; void main(){
+  vec2 q = vUv + uS * uTime; float n = fbm(vec3(q.x * 14., q.y * 6., uTime * .5)), st = smoothstep(.55, .85, fbm(vec3(q.x * 30., q.y * 3., 2.)));
+  vec3 col = mix(vec3(.03, .22, .62), vec3(.3, .72, 1.), n) + vec3(.85, .95, 1.) * st;
+  gl_FragColor = vec4(col, clamp(uA0 + .3 * st + .2 * n, 0., 1.) * uA); }`, { uA: { value: 1 }, uA0: { value: a0 }, uS: { value: new THREE.Vector2(sx, sy) } }), { blending: THREE.NormalBlending });
+const RING_GEO = new THREE.TorusGeometry(1, .17, 10, 48).rotateX(Math.PI / 2); // a flat hoop
+const FALL_GEO = new THREE.CylinderGeometry(1, 1.2, 1, 28, 1, true).translate(0, .5, 0); // a column, 0 at the floor to 1 at the top
+// a big water splash at (x, z): spray thrown up and out, a ring, mist and a wet patch
+function splashFx(x, z, r, k = 1) {
+  burst(x, 1, z, Math.round(40 * k), 0xbfe8ff, 9 * Math.sqrt(r / 3), .25, .6, 12, 5); burst(x, .5, z, Math.round(20 * k), 0xffffff, 6, .35, .45, 10, 3);
+  ringFx(x, .1, z, r, 0x9fd8ff, .45); ringFx(x, .15, z, r * .6, 0xffffff, .3);
+  if (distTo(x, z) > r + 3) smokeFx(x, .6, z, r * .6, 0xd0e8ff, 1.4, Math.round(3 + r), 1); // no mist over your own camera
+  wetFx(x, z, r * .8, 3.5);
+  flash(x, 1, z, 0x7fc8ff, 25 * k, .25); shake(clamp((.4 - distTo(x, z) * .02) * k, .04, .35)); sfx('water_big'); cityPush(x, 1, z, r + 2, 6 * k);
+}
+// a soaked patch of floor: a faint blue sheen that dries off
+function wetFx(x, z, r, life = 3) { const d = T.disc.clone(), m = discMat(0x2a7dff); d.material = m; d.userData.mats = [m]; d.position.set(x, .06, z); d.scale.setScalar(r); addFx(d, life, (o, k) => m.uniforms.uA.value = .55 * (k < .1 ? k / .1 : 1 - (k - .1) / .9)); }
+WARM.push(() => new THREE.Mesh(RING_GEO, waterMat(1, 0)));
+
 // ---------- the elements ----------
 const ELEMENTS = {
 // ================================================================== FIRE
@@ -640,7 +687,7 @@ storm: {
 // ================================================================== WATER
 water: {
   name: 'Water', color: 0x2a7dff, glyph: '🌊', adj: 'SOAKED', react: { name: 'TORRENT', kind: 'pull' },
-  blurb: 'Push and pull. Wash enemies off the island, trap them, and surf straight through the crowd.',
+  blurb: 'Push and pull. Wash enemies off the island, scoop them up, trap them and pound them flat.',
   passive: 'Tidal Force: your knockback is 40% stronger. Soaked enemies fly even further.',
   st: { kb: 1.6 },
   moves: [
@@ -648,46 +695,66 @@ water: {
       cast(p, c) { for (let k = 0; k < c.multi; k++) shoot(p, c, 38, { d: spread(c.d.clone().add(V(rand(-.02, .02), rand(-.02, .02), rand(-.02, .02))).normalize(), k, c.multi, .07), r: .25, dmg: 10.5 * c.dmg, kb: 4.5, sc: c.mega ? 2 : 1 }); },
       look: { m: 'water__drop', trail: [0x7fc8ff, .14, .3, 3, 1], light: 3 },
       fx: { det: e => boomFx(e.x, e.y, e.z, 2.5, 0x2a7dff, .6), nova: e => boomFx(e.x, .5, e.z, 4.5, 0x2a7dff, .8) } },
-    { name: 'Water Whip', icon: '🪢', cd: 3.5, desc: 'Crack a 10 m whip of water straight ahead. Everything along it is dragged toward you, and the tip cracks for double damage and a 0.5 s stun.',
-      cast(p, c) { later(.12, () => { // lands as the lash snaps straight
-        if (p.down) return; const f = flatAim(p);
-        for (const { e, t } of rayHits(V(p.x, p.y + 1, p.z), f, 10, 1.1)) {
-          const tip = t > 7.5, q = center(e);
-          hitEnemy(e, 'water', (tip ? 44 : 22) * c.dmg, p, 0, 0, 0, { src: p });
-          if (tip) { cc(e, 'stun', .5, p); fxe(c.m.key, 'crack', { x: r2(q.x), y: r2(q.y), z: r2(q.z) }); }
-          if (!ET[e.type].boss) { const st = 3.5 + ET[e.type].r * e.sc; e.kx = (p.x + f.x * st - e.x) * 5; e.kz = (p.z + f.z * st - e.z) * 5; } // dragged to 3.5 m in front of you, not into the camera
-        }
-      }); },
-      fx: { cast(e) { // a chain of water that unfurls from your hand in a travelling wave, snaps straight, then recoils
-          const yaw = Math.atan2(e.d[0], e.d[2]), f = V(Math.sin(yaw), 0, Math.cos(yaw)), sd = V(f.z, 0, -f.x), N = 20, L = 10;
-          const g = new THREE.Group(); g.userData.mats = [];
-          const segs = Array.from({ length: N }, (_, i) => { const o = model('water__drop', 0x4aa0ff); o.scale.setScalar(.55 - .3 * i / N); g.add(o); g.userData.mats.push(...o.userData.mats); return o; });
-          const pt = (s, k, h) => { const ext = k < .3 ? easeOut(k / .3) : 1 - easeOut((k - .3) / .7) * .95, w = Math.sin(s * Math.PI * 2.5 - k * 20) * .7 * s * (1 - s * .5) * (k < .3 ? 1 - k / .3 : (k - .3) * 1.5);
-            return h.clone().addScaledVector(f, .6 + (L - .6) * s * ext).addScaledVector(sd, w).setY(h.y + (e.y + 1.1 - h.y) * s + Math.sin(s * Math.PI) * .5 * ext); };
-          addFx(g, .45, (o, k) => {
-            const h = handPos(e.id);
-            segs.forEach((m, i) => { const s = i / (N - 1); m.position.copy(pt(s, k, h)); m.lookAt(pt(Math.min(1, s + .05), k, h)); });
-            if (k > .27 && !o.userData.cr) { o.userData.cr = 1; const q = segs[N - 1].position; ringFx(q.x, q.y, q.z, 1.2, 0xbfe8ff, .25); burst(q.x, q.y, q.z, 24, 0x9fd8ff, 9, .15, .35, 8); flash(q.x, q.y, q.z, 0x9fd8ff, 20, .12); sfx('water_big'); }
-            if (Math.random() < .7) { const q = segs[(Math.random() * N) | 0].position; emit(q.x, q.y, q.z, rand(-1, 1), rand(-1, 1), rand(-1, 1), 0x9fd8ff, rand(.08, .16), .35, 8); }
-            fade(o, k < .8 ? 1 : (1 - k) * 5);
-          });
+    { name: 'Riptide Ring', icon: '🌀', cd: 4.5, desc: 'Hurl a spinning ring of water 15 m ahead. It scoops up the enemies it touches (up to 5), hits them for 16 and carries them along inside it, then bursts at the end of its run: 30 damage to everything within 4 m, flinging them away. A boss is too heavy to carry: the ring bursts on it.',
+      cast(p, c) { const f = c.flat; ent(p, c, p.x + f.x * 2, p.z + f.z * 2, { life: 1, r: 1.7, dx: f.x, dz: f.z, yaw: Math.atan2(f.x, f.z), c: [] }); },
+      ent: {
+        tick(n, dt) {
+          n.x += n.dx * 14 * dt; n.z += n.dz * 14 * dt;
+          if (offMap(n.x, n.z, MAP.rects ? 0 : 8)) { n.life = 0; return; } // a wall or the edge ends its run
+          for (const e of S.enemies) {
+            if (!alive(e) || Math.hypot(e.x - n.x, e.z - n.z) > n.r + ET[e.type].r * e.sc || n.hit[e.id]) continue;
+            n.hit[e.id] = 1; hitEnemy(e, 'water', 16 * n.mul, own(n), n.dx, n.dz, ET[e.type].boss ? 3 : 0, { aoe: true });
+            if (ET[e.type].boss) { n.life = 0; return; } // too heavy to carry: the ring breaks over it and bursts
+            if (n.c.length < 5) { n.c.push(e.id); fxe(n.mv, 'catch', { x: e.x, y: e.y + 1, z: e.z }); }
+          }
+          n.c.forEach((id, i) => { const e = S.enemies.find(x => x.id === id); if (!e || !alive(e)) return; // carried round inside the ring
+            const a = n.t * 7 + TAU * i / Math.max(1, n.c.length), d = n.c.length > 1 ? .7 : 0; e.x = n.x + Math.cos(a) * d; e.z = n.z + Math.sin(a) * d; e.kx = e.kz = 0; e.atk = null; });
         },
-        crack(e) { burst(e.x, e.y, e.z, 30, 0xbfe8ff, 8, .18, .4, 8); ringFx(e.x, e.y, e.z, 1.6, 0xffffff, .2); popNum(e.x, e.y + 1.2, e.z, 'CRACK', '#9fd8ff', 'tag'); } } },
+        end(n) { boomAt(ctxN(n), n.x, 1, n.z, 4, 30 * n.mul, { kb: 9, fx: { yaw: n.yaw } }, 'burst'); for (const id of n.c) launch(S.enemies.find(x => x.id === id), 7); },
+      },
+      view: { make(n) { // a hoop of racing water at waist height, a thinner faster one inside it, drops flung off the rim
+          const g = new THREE.Group(), u = g.userData, a = new THREE.Mesh(RING_GEO, waterMat(1.4, .5, .65)), b = new THREE.Mesh(RING_GEO, waterMat(-2.2, .8, .5));
+          b.scale.setScalar(.72); g.add(a, b); u.a = a; u.b = b; u.mats = [a.material, b.material]; sfx('water_big'); return g; },
+        upd(o, n, dt, t) { const u = o.userData, k = Math.min(1, n.t * 6), R = n.r * (.6 + .4 * k);
+          o.position.y = 1; u.a.scale.set(R, R * (1 + .25 * Math.sin(t * 9)), R); u.a.rotation.y += dt * 9; u.b.rotation.y -= dt * 14; u.b.rotation.z = Math.sin(t * 7) * .2;
+          fade(o, Math.min(1, n.l * 8) * (n.own === myId && n.t < .15 ? .5 : 1));
+          for (let i = 0; i < 6; i++) { const a = rand(0, TAU), x = n.x + Math.cos(a) * R, z = n.z + Math.sin(a) * R; emit(x, 1 + rand(-.2, .2), z, -Math.sin(a) * 6 + rand(-1, 1), rand(1, 3), Math.cos(a) * 6 + rand(-1, 1), Math.random() < .4 ? 0xffffff : 0x7fc8ff, rand(.08, .18), .45, 9); }
+          if (Math.random() < .5) emit(n.x + rand(-1, 1), .1, n.z + rand(-1, 1), 0, rand(.5, 1.5), 0, 0x9fd8ff, rand(.2, .35), .5, -1); },
+        drop: o => o.removeFromParent() },
+      fx: { catch(e) { burst(e.x, e.y, e.z, 16, 0xbfe8ff, 6, .15, .35, 8); ringFx(e.x, e.y, e.z, 1.2, 0x9fd8ff, .2); popNum(e.x, e.y + .8, e.z, 'CAUGHT', '#9fd8ff', 'tag'); sfx('water'); },
+        burst(e) { splashFx(e.x, e.z, e.r, 1); } } },
     { name: 'Bubble Prison', icon: '🫧', cd: 9, desc: 'Trap an enemy in a floating bubble. It is helpless and takes 30% more damage.',
       cast(p, c) { shoot(p, c, 26, { r: .5, life: 1.5, dmg: 10 * c.dmg }); },
       shot: { hit(s, e) { const p = own(s); hitEnemy(e, 'water', s.dmg, p, 0, 0, 0); if (!cc(e, 'bubble', 3, p)) damage(e, 30 * s.mul, 'water', p); return 'end'; } },
       look: { m: 'gen__orb', s: .45, trail: [0xbfe8ff, .15, .3, 0, 1], light: 4 },
       fx: { pop(e) { burst(e.x, e.y, e.z, 30, 0xbfe8ff, 6, .25, .4, 6); sfx('tink'); } } },
-    { name: 'Surf', icon: '🏄', cd: 9, desc: 'Ride a wave 14 m forward. Every enemy in your way is hit for 24, soaked and thrown aside, clearing a lane through the crowd.',
-      self(p) { const f = flatAim(p); p.mo = { t: 0, T: .55, vx: f.x * 26, vz: f.z * 26, trail: 0x7fc8ff }; },
-      cast(p, c) { ent(p, c, p.x, p.z, { follow: 1, life: .6, r: 2.6, dx: c.flat.x, dz: c.flat.z, yaw: Math.atan2(c.flat.x, c.flat.z) }); },
-      ent: { tick(n) { // shoved out to whichever side of the wave they were on
-        for (const e of enemiesNear(n.x, n.z, n.r)) if (ready(n, e, 99)) { const side = Math.sign((e.x - n.x) * n.dz - (e.z - n.z) * n.dx) || 1; hitEnemy(e, 'water', 24 * n.mul, own(n), n.dz * side + n.dx * .3, -n.dx * side + n.dz * .3, 8, { aoe: true }); }
-      } },
-      view: { make() { const o = model('water__wave', 0x4aa0ff); o.scale.setScalar(.45); sfx('water_big'); return o; },
-        upd(o, n) { o.rotation.y = n.yaw; o.position.y = n.y - .2; fade(o, Math.min(1, n.l * 4) * (n.own === myId ? .35 : .8));
-          for (let k = 0; k < 6; k++) { const s = k % 2 ? 1 : -1, sx = Math.cos(n.yaw) * s, sz = -Math.sin(n.yaw) * s; emit(n.x + sx * rand(.5, 1.8), n.y + rand(.1, 1.2), n.z + sz * rand(.5, 1.8), sx * rand(4, 9), rand(2, 6), sz * rand(4, 9), Math.random() < .5 ? 0x9fd8ff : 0xffffff, rand(.1, .22), .5, 12); } },
-        drop: dropFade(.3) } },
+    { name: 'Waterfall', icon: '🚿', cd: 10, mode: 'aim', range: 18, aimR: 3, desc: 'A waterfall crashes down on the target for 3 s. Enemies under it (3 m) are pinned and pounded for 8 every 0.25 s. When it stops, the pool it leaves surges outward: 35 damage to everything within 6 m, sweeping them away.',
+      cast(p, c) { ent(p, c, c.tgt.x, c.tgt.z, { life: 3, r: 3 }); },
+      ent: {
+        tick(n, dt) { if (n.t > .25 && pulse(n, dt, .25)) for (const e of enemiesNear(n.x, n.z, n.r)) { hitEnemy(e, 'water', 8 * n.mul, own(n), 0, 0, 0, { aoe: true }); cc(e, 'stun', .4, own(n)); } },
+        end(n) { boomAt(ctxN(n), n.x, 0, n.z, 6, 35 * n.mul, { kb: 10 }, 'surge'); },
+      },
+      view: { make(n) { // a churning hole in the sky, a column of water pouring out of it, and a boiling pool where it lands
+          const g = new THREE.Group(), u = g.userData, top = 15;
+          const outer = new THREE.Mesh(FALL_GEO, waterMat(0, .9, .62)), core = new THREE.Mesh(FALL_GEO, waterMat(.2, 1.4, .8)), pool = zoneCircle('water', n.r, .8), cl = model('water__cloud', 0x2a7dff);
+          outer.scale.set(n.r * .75, top, n.r * .75); core.scale.set(n.r * .45, top, n.r * .45); cl.position.y = top; cl.scale.setScalar(1.6);
+          g.add(outer, core, pool, cl); Object.assign(u, { outer, core, pool, cl, mats: [outer.material, core.material, ...cl.userData.mats], top, mist: 0, ring: 0 });
+          smokeFx(n.x, top, n.z, n.r * 1.4, 0x2a3e66, 1.5, 6, -.2); sfx('water_big'); return g; },
+        upd(o, n, dt, t) {
+          const u = o.userData, on = Math.min(1, n.t * 4), off = Math.min(1, n.l * 10), drop = n.t < .25 ? (n.t / .25) ** 2 : 1; // the column falls from the sky in the first quarter second
+          u.outer.position.y = u.core.position.y = u.top * (1 - drop); u.outer.scale.y = u.core.scale.y = u.top * Math.max(.02, drop);
+          u.outer.material.uniforms.uA.value = .95 * on * off; u.core.material.uniforms.uA.value = on * off; fade(u.cl, on * off); u.cl.rotation.y += dt * .8; spinCircle(u.pool, dt, 2);
+          if (n.t < .25) return;
+          if (!u.hit) { u.hit = 1; ringFx(n.x, .1, n.z, n.r * 1.4, 0xbfe8ff, .4); burst(n.x, .4, n.z, 40, 0xbfe8ff, 10, .2, .5, 9); shake(clamp(.35 - distTo(n.x, n.z) * .02, .05, .3)); sfx('water_big'); }
+          for (let i = 0; i < 8; i++) { const a = rand(0, TAU), d = n.r * rand(.4, .8), sp = rand(4, 9); emit(n.x + Math.cos(a) * d, .2, n.z + Math.sin(a) * d, Math.cos(a) * sp, rand(3, 7), Math.sin(a) * sp, Math.random() < .4 ? 0xffffff : 0x7fc8ff, rand(.1, .22), .6, 14); } // spray thrown out of the pool
+          if ((u.mist -= dt) <= 0) { u.mist = .3; if (distTo(n.x, n.z) > 6) smokeFx(n.x, .4, n.z, n.r * .9, 0xc8e4ff, 1, 2, .8); } // white mist boiling off the impact
+          if ((u.ring -= dt) <= 0) { u.ring = .25; ringFx(n.x, .1, n.z, n.r * 1.2, 0x9fd8ff, .3, n.r * .5); }
+          if (Math.random() < dt * 3) wetFx(n.x + rand(-1, 1), n.z + rand(-1, 1), n.r * rand(1, 1.6), 2); },
+        drop: dropFade(.3) },
+      fx: { surge(e) { // the pool bursts outward in a racing ring of water
+          splashFx(e.x, e.z, e.r, 1.2);
+          const o = new THREE.Mesh(RING_GEO, waterMat(1, 0, .7)); o.position.set(e.x, .3, e.z);
+          addFx(o, .5, (o, k) => { const s = e.r * (.2 + .9 * easeOut(k)); o.scale.set(s, 1 + 2 * (1 - k), s); o.material.uniforms.uA.value = 1 - k; }); } } },
     { name: 'Tsunami', icon: '🌊', desc: 'ULTIMATE. Unleash a towering wave that sweeps across the island, carrying enemies with it, often right off the edge.',
       cast(p, c) { const f = c.flat; ent(p, c, p.x + f.x * 4, p.z + f.z * 4, { life: 2.6, dx: f.x, dz: f.z, w: 9, yaw: Math.atan2(f.x, f.z), r: 7 }); }, // rises 4 m out, so the wave isn't a wall over your eyes
       ent: {
@@ -698,17 +765,40 @@ water: {
             const rx = e.x - n.x, rz = e.z - n.z, along = rx * n.dx + rz * n.dz, lat = Math.abs(rx * n.dz - rz * n.dx);
             if (along > -2 && along < 1.4 && lat < n.w) {
               e.x += n.dx * 11 * dt * ET[e.type].kb ** .3; e.z += n.dz * 11 * dt * ET[e.type].kb ** .3; e.atk = null;
-              if (ready(n, e, 99)) hitEnemy(e, 'water', 110 * n.mul, own(n), n.dx, n.dz, 2, { aoe: true });
+              if (ready(n, e, 99)) { hitEnemy(e, 'water', 110 * n.mul, own(n), n.dx, n.dz, 2, { aoe: true }); fxe(n.mv, 'hit', { x: e.x, y: e.y + 1, z: e.z }); }
             }
           }
           for (const s of S.shots) if (s.foe && Math.abs((s.x - n.x) * n.dz - (s.z - n.z) * n.dx) < n.w && Math.abs((s.x - n.x) * n.dx + (s.z - n.z) * n.dz) < 2) s.dead = true;
         },
-        end(n) { for (const e of S.enemies) if (alive(e) && n.hit[e.id]) { e.kx += n.dx * 14 * ET[e.type].kb; e.kz += n.dz * 14 * ET[e.type].kb; } },
+        end(n) { for (const e of S.enemies) if (alive(e) && n.hit[e.id]) { e.kx += n.dx * 14 * ET[e.type].kb; e.kz += n.dz * 14 * ET[e.type].kb; } fxe(n.mv, 'crash', { x: n.x, z: n.z, yaw: n.yaw, r: n.r }); },
       },
-      view: { make(n) { const o = model('water__wave', 0x3a8aff), wm = waveMat(); o.traverse(m => { if (m.isMesh) m.material = wm; }); o.userData.mats = [wm]; o.rotation.y = n.yaw; o.scale.set(n.r * 2, 3.8, 3.2); sfx('water_big'); shake(.3); return o; },
-        upd(o, n, dt) { o.position.y = -1 + Math.min(1, n.t * 3); fade(o, Math.min(1, n.l * 5)); const s = Math.sin(n.yaw), cz = Math.cos(n.yaw);
-          for (let k = 0; k < 6; k++) { const l = rand(-n.r, n.r); emit(n.x + cz * l + s * .5, rand(2.5, 4.2), n.z - s * l + cz * .5, s * rand(2, 6), rand(1, 4), cz * rand(2, 6), Math.random() < .5 ? 0xe0f4ff : 0x6ab0ff, rand(.25, .5), .6, 9); } },
-        drop: dropFade(.3) } },
+      view: { make(n) { // a dark swell behind, the towering face in front, and a curling lip of foam along the crest
+          const g = new THREE.Group(), u = g.userData, face = model('water__wave', 0x3a8aff), back = model('water__wave', 0x1a5aff), wm = waveMat(), bm = waveMat();
+          face.traverse(m => { if (m.isMesh) m.material = wm; }); back.traverse(m => { if (m.isMesh) m.material = bm; });
+          back.position.z = -1.8; g.add(back, face); g.rotation.y = n.yaw;
+          Object.assign(u, { face, back, mats: [wm, bm], mist: 0, wet: 0 }); sfx('water_big'); sfx('explosion_big'); shake(.35); return g; },
+        upd(o, n, dt, t) {
+          const u = o.userData, grow = easeOut(Math.min(1, n.t * 2.2)), H = 3.8 + 2.4 * grow + Math.sin(t * 3) * .2, s = Math.sin(n.yaw), cz = Math.cos(n.yaw);
+          u.face.scale.set(n.r * 2, H, 3.2); u.back.scale.set(n.r * 2.15, H * 1.2, 3.6); o.position.y = -1.2 + Math.min(1.2, n.t * 4);
+          const far = clamp((distTo(n.x, n.z) - 5) / 7, 0, 1), L = Math.min(1, n.l * 5); // see-through while it is still right in front of you
+          u.mats[0].uniforms.uA.value = L * (.4 + .6 * far); u.mats[1].uniforms.uA.value = .7 * L * far;
+          for (let k = 0; k < 6; k++) { const l = rand(-n.r, n.r), y = H * rand(.9, 1.1); emit(n.x + cz * l + s * .8, y, n.z - s * l + cz * .8, s * rand(4, 9), rand(-1, 3), cz * rand(4, 9), Math.random() < .6 ? 0xffffff : 0x9fd8ff, rand(.25, .55), .7, 14); } // the lip curling over and pouring down the front
+          for (let k = 0; k < 2; k++) { const l = rand(-n.r, n.r); emit(n.x + cz * l + s * 1.6, .2, n.z - s * l + cz * 1.6, s * rand(6, 11), rand(2, 5), cz * rand(6, 11), 0xe0f4ff, rand(.2, .4), .5, 12); } // spray kicked up off the floor ahead
+          if ((u.mist -= dt) <= 0 && distTo(n.x, n.z) > 9) { u.mist = .15; const l = rand(-n.r, n.r); smokeFx(n.x + cz * l + s, H * .9, n.z - s * l + cz, 2.2, 0xd8ecff, 1.1, 2, .6); } // white spindrift blowing off the crest
+          if ((u.wet -= dt) <= 0) { u.wet = .1; const l = rand(-n.r, n.r); wetFx(n.x + cz * l - s * 2, n.z - s * l - cz * 2, rand(2, 3.2), 3); } // it leaves the floor soaked behind it
+          if (distTo(n.x, n.z) < 14) shake(.06);
+        },
+        drop: dropFade(.3) },
+      fx: {
+        cast(e) { // the sea rises round you before the wave rolls out
+          ringFx(e.x, .1, e.z, 6, 0x9fd8ff, .5); splashFx(e.x + e.d[0] * 6, e.z + e.d[2] * 6, 5, isMe(e.id) ? .5 : 1.2);
+          if (!isMe(e.id)) for (let i = 0; i < 30; i++) { const a = rand(0, TAU), d = rand(1.5, 4); emit(e.x + Math.cos(a) * d, .1, e.z + Math.sin(a) * d, 0, rand(6, 11), 0, Math.random() < .5 ? 0xffffff : 0x7fc8ff, rand(.2, .4), .9, 14); }
+          if (isMe(e.id)) fovKick = Math.max(fovKick, 1.2); },
+        hit(e) { burst(e.x, e.y, e.z, 18, 0xe0f4ff, 7, .2, .4, 8); popNum(e.x, e.y + 1, e.z, 'SWEPT', '#9fd8ff', 'tag'); },
+        crash(e) { // the wave breaks: a wall of spray along its whole width, then mist
+          const s = Math.sin(e.yaw), c = Math.cos(e.yaw);
+          for (let i = -3; i <= 3; i++) { const x = e.x + c * i * e.r / 3 + s * 1.5, z = e.z - s * i * e.r / 3 + c * 1.5; burst(x, 2, z, 14, i % 2 ? 0xffffff : 0x9fd8ff, 10, .3, .7, 12, 4); if (distTo(x, z) > 6) smokeFx(x, 1, z, 2.4, 0xd8ecff, 1.6, 2, 1); wetFx(x, z, 3, 4); }
+          ringFx(e.x + s * 2, .1, e.z + c * 2, e.r * 1.2, 0xbfe8ff, .5); shake(clamp(.4 - distTo(e.x, e.z) * .015, .05, .35)); sfx('water_big'); } } },
   ],
 },
 // ================================================================== EARTH
@@ -744,12 +834,21 @@ earth: {
       },
       fx: { spike(e) { riseFx('earth__spike', 0xd9913a, e.x, e.z, rand(.9, 1.3), 1.1); dustFx(e.x, e.z, 1.2); debrisFx(e.x, .3, e.z, 2, 'earth__pebble', 0xd9913a, .25, 6); scarFx(e.x, e.z, 1.1, 0xd9913a, 1.6); if (Math.random() < .5) sfx('earth'); shake(.06); } } },
     { name: 'Tectonic Quake', icon: '🌋', desc: 'ULTIMATE. Shake the island with four quakes that stun every grounded enemy nearby.',
-      cast(p, c) { for (let i = 0; i < 4; i++) later(i * .8, () => { if (!p.down) boomAt(c, p.x, 0, p.z, 12, 40 * c.dmg, { ground: true, cc: ['stun', 1.2], lift: 5, kb: 3 }, 'quake'); }); },
-      fx: { quake(e) {
-        ringFx(e.x, .1, e.z, e.r, 0xd9913a, .8, 1); ringFx(e.x, .2, e.z, e.r * .6, 0xffd08a, .6);
-        for (let i = 0; i < 16; i++) { const a = rand(0, TAU), d = rand(2, e.r); riseFx('earth__spike', 0xd9913a, e.x + Math.cos(a) * d, e.z + Math.sin(a) * d, rand(.5, 1), .9); }
-        for (let i = 0; i < 6; i++) { const a = TAU * i / 6 + rand(0, 1); dustFx(e.x + Math.cos(a) * e.r * .75, e.z + Math.sin(a) * e.r * .75, 2); } // dust rolls up round the edge, not over you
-        debrisFx(e.x, .5, e.z, 10, 'earth__pebble', 0xd9913a, .4, 11); shake(.6); sfx('earth_big'); sfx('smash');
+      cast(p, c) { for (let i = 0; i < 4; i++) later(i * .8, () => { if (!p.down) boomAt(c, p.x, 0, p.z, 12, 40 * c.dmg, { ground: true, cc: ['stun', 1.2], lift: 5, kb: 3, fx: { i } }, 'quake'); }); },
+      fx: { quake(e) { // each quake is bigger than the last: glowing cracks race out from you, a wave of spikes rolls outward behind them, the ground heaves
+        const k = ((e.i ?? 0) + 1) / 4, last = e.i === 3;
+        quakeCracks(e.x, e.z, e.r, 8 + Math.round(k * 6), 1.6 + k * .6);
+        ringFx(e.x, .1, e.z, e.r, 0xd9913a, .8, 1); ringFx(e.x, .2, e.z, e.r * .6, 0xffd08a, .6); if (last) ringFx(e.x, .3, e.z, e.r * 1.3, 0xff9a40, 1, 2);
+        let wave = 0; // four rings of spikes, one after another, so the shockwave visibly rolls out across the floor
+        addFx(new THREE.Group(), .3, (o, q) => { while (wave < 4 && q >= wave / 4) { const d = 3.8 + (e.r - 3.8) * wave / 3, n = 6 + wave * 3; // the first ring stands clear of your view
+          for (let i = 0; i < n; i++) { const a = TAU * i / n + rand(-.2, .2) + wave; riseFx('earth__spike', 0xd9913a, e.x + Math.cos(a) * d, e.z + Math.sin(a) * d, rand(.6, 1.1) * (.8 + k * .5), .9); }
+          for (let i = 0; i < 3; i++) { const a = rand(0, TAU); dustFx(e.x + Math.cos(a) * d, e.z + Math.sin(a) * d, 1.2 + wave * .3); }
+          wave++; } });
+        if (last) for (let i = 0; i < 10; i++) { const a = TAU * i / 10 + rand(-.15, .15), d = e.r * rand(.55, .85); riseFx('earth__pillar', 0xd9913a, e.x + Math.cos(a) * d, e.z + Math.sin(a) * d, rand(1.1, 1.6), 1.6, a); } // the last quake heaves great slabs out of the floor
+        for (let i = 0; i < 6; i++) { const a = TAU * i / 6 + rand(0, 1); dustFx(e.x + Math.cos(a) * e.r * .75, e.z + Math.sin(a) * e.r * .75, 2 + k); } // dust rolls up round the edge, not over you
+        debrisFx(e.x, .5, e.z, Math.round(8 + 8 * k), 'earth__pebble', 0xd9913a, .35 + k * .15, 9 + k * 4);
+        for (let i = 0; i < 14; i++) { const a = rand(0, TAU), d = rand(3, e.r); emit(e.x + Math.cos(a) * d, .1, e.z + Math.sin(a) * d, 0, rand(3, 7) * (.6 + k), 0, Math.random() < .5 ? 0xffb050 : 0xd9913a, rand(.1, .2), .8, 14); } // grit bouncing off the shaking floor
+        flash(e.x, 1, e.z, 0xff9a40, 15 + 20 * k, .3); shake(.35 + .35 * k); if (last && isMe(e.id)) fovKick = Math.max(fovKick, 1); sfx('earth_big'); sfx('smash'); if (last) sfx('explosion_big');
       } } },
   ],
 },
@@ -764,16 +863,34 @@ wind: {
       cast(p, c) { for (let k = 0; k < c.multi; k++) shoot(p, c, 34, { d: spread(c.d, k, c.multi, .12), life: .75, r: .9, pierce: 99, dmg: 26 * c.dmg, kb: 3, sc: c.mega ? 1.8 : 1 }); },
       look: { m: 'wind__blade', trail: [0xd0fff0, .2, .2, 0, 2] },
       fx: { det: e => boomFx(e.x, e.y, e.z, 2.5, 0x9dffd6, .6), nova: e => boomFx(e.x, .5, e.z, 4.5, 0x9dffd6, .8) } },
-    { name: 'Gale Force', icon: '🍃', cd: 5, desc: 'A massive gust that hurls enemies away and blows enemy shots out of the air. Great for ring-outs.',
-      cast(p, c) {
-        for (const e of coneHits(p, 10, 70)) { hitEnemy(e, 'wind', 16 * c.dmg, p, e.x - p.x, e.z - p.z, 22, { src: p }); launch(e, 4); }
-        const f = c.flat; for (const s of S.shots) if (s.foe) { const dx = s.x - p.x, dz = s.z - p.z, d = Math.hypot(dx, dz); if (d < 11 && (dx * f.x + dz * f.z) / d > .6) s.dead = true; }
-      },
-      fx: { cast(e) {
-        const o = model('gen__cone', 0xbfffe8), a = V(...e.o), d = V(...e.d);
-        o.position.copy(a).addScaledVector(d, 1.8); /* the gust starts ahead of your hand, not across your eyes */ o.lookAt(a.clone().add(d)); addFx(o, .35, (o, k) => { o.scale.set(6 * easeOut(k) + .5, 6 * easeOut(k) + .5, 10 * easeOut(k) + .5); fade(o, (1 - k) * .6); o.rotation.z += .2; });
-        for (let i = 0; i < 40; i++) { const s = rand(14, 24); emit(a.x, a.y, a.z, d.x * s + rand(-4, 4), d.y * s + rand(-2, 3), d.z * s + rand(-4, 4), 0xe0fff4, rand(.15, .3), .45, 0, 2); }
-      } } },
+    { name: 'Jet Stream', icon: '💨', cd: 6, desc: 'Open a 16 m wind tunnel straight ahead for 3 s. Enemies that enter it are swept along it, 6 damage every 0.25 s, and hurled out of the far end for 20 more and a launch. Aim it at the edge for ring-outs. Bosses only take the damage.',
+      cast(p, c) { const f = c.flat; ent(p, c, p.x + f.x * 18, p.z + f.z * 18, { life: 3, r: 1.5, fx0: p.x + f.x * 2, fz0: p.z + f.z * 2, dx: f.x, dz: f.z, yaw: Math.atan2(f.x, f.z), out: {} }); },
+      ent: { tick(n, dt) {
+        const L = 16, tick = pulse(n, dt, .25);
+        for (const e of nearSeg(n, n.r)) {
+          const p = own(n), along = (e.x - n.fx0) * n.dx + (e.z - n.fz0) * n.dz;
+          if (tick) hitEnemy(e, 'wind', 6 * n.mul, p, 0, 0, 0, { aoe: true });
+          if (ET[e.type].boss || n.out[e.id]) continue;
+          const side = (e.x - n.fx0) * n.dz - (e.z - n.fz0) * n.dx; // swept along, and drawn into the middle of the lane
+          e.x += (n.dx * 15 - n.dz * side * 3) * dt; e.z += (n.dz * 15 + n.dx * side * 3) * dt; e.y = Math.max(e.y, .6 + .3 * Math.sin(n.t * 8 + e.id)); e.vy = 0; e.kx = e.kz = 0; e.atk = null;
+          if (along > L - 1) { n.out[e.id] = 1; hitEnemy(e, 'wind', 20 * n.mul, p, n.dx, n.dz, 16, { aoe: true }); launch(e, 8); fxe(n.mv, 'out', { x: e.x, y: e.y + 1, z: e.z, yaw: n.yaw }); }
+        }
+      } },
+      view: { make(n) { // a tunnel of spinning wind hoops racing along the lane, and streaks of air pouring through them
+          const g = new THREE.Group(), u = g.userData; u.mats = []; u.rings = [];
+          for (let i = 0; i < 6; i++) { const r = model('wind__ring', 0xbfffe8, { flat: true }); r.rotation.x = Math.PI / 2; r.scale.setScalar(1.5); g.add(r); u.rings.push(r); u.mats.push(...r.userData.mats); }
+          sfx('wind_big'); return g; },
+        upd(o, n, dt, t) {
+          const u = o.userData, a = Math.min(1, n.t * 4, n.l * 6), L = Math.hypot(n.x - n.fx0, n.z - n.fz0), dx = (n.x - n.fx0) / L, dz = (n.z - n.fz0) / L;
+          o.position.set(n.fx0, 0, n.fz0); o.rotation.y = Math.atan2(dx, dz);
+          u.rings.forEach((r, i) => { const s = ((t * .9 + i / 6) % 1), z = s * L; r.position.set(0, 1.3, z); r.rotation.z += dt * (6 + i); r.scale.setScalar(1.3 + .5 * Math.sin(s * Math.PI));
+            const wx = n.fx0 + dx * z, wz = n.fz0 + dz * z; fade(r, a * Math.sin(s * Math.PI) * clamp((distTo(wx, wz) - 1.5) / 3, 0, 1) * .9); }); // fade out as one passes over your camera
+          for (let k = 0; k < 6; k++) { if (Math.random() > a) continue; const s = rand(0, .3), an = rand(0, TAU), rr = rand(.2, 1.4), sp = rand(18, 28);
+            emit(n.fx0 + dx * s * L + Math.cos(an) * rr * dz, 1.3 + Math.sin(an) * rr, n.fz0 + dz * s * L - Math.cos(an) * rr * dx, dx * sp, 0, dz * sp, Math.random() < .5 ? 0xe0fff4 : 0x9dffd6, rand(.06, .14), .6, 0, .2); } // streaks of air racing down the tunnel
+          if (Math.random() < .5 * a) { const s = rand(0, 1); emit(n.fx0 + dx * s * L + rand(-1, 1), .1, n.fz0 + dz * s * L + rand(-1, 1), dx * 10, rand(.5, 1.5), dz * 10, 0xbfb09a, rand(.15, .3), .5, 0, 1); } }, // dust dragged along the floor
+        drop: dropFade(.25) },
+      fx: { out(e) { const s = Math.sin(e.yaw), c = Math.cos(e.yaw); burst(e.x, e.y, e.z, 22, 0xe0fff4, 8, .2, .4); for (let i = 0; i < 12; i++) emit(e.x, e.y, e.z, s * rand(10, 18) + rand(-3, 3), rand(2, 6), c * rand(10, 18) + rand(-3, 3), 0xbfffe8, rand(.1, .2), .4, 0, 1.5);
+          modelFx('wind__ring', 0xe0fff4, V(e.x, e.y, e.z), .35, (o, k) => { o.rotation.set(Math.PI / 2, e.yaw, 0); o.scale.setScalar(.8 + 2 * k); fade(o, 1 - k); }, { flat: true }); popNum(e.x, e.y + .8, e.z, 'LAUNCHED', '#bfffe8', 'tag'); sfx('wind'); } } },
     { name: 'Updraft', icon: '🪶', cd: 7, desc: 'Launch yourself high into the air (and nearby enemies with you). Hold Space to glide.',
       self(p) { p.vy = 15; p.y = Math.max(p.y, .05); p.bf.glide = 3.5; },
       cast(p, c) { buff(p, 'glide', 3.5); boomAt(c, p.x, .2, p.z, 3.5, 15 * c.dmg, { lift: 10, kb: 2 }, 'gust'); },
@@ -825,7 +942,7 @@ wind: {
 // ================================================================== NATURE
 nature: {
   name: 'Nature', color: 0x4ee04a, glyph: '🌿', adj: 'ENTANGLED', react: { name: 'BLOOM', kind: 'heal' },
-  blurb: 'Patient and resilient. Root enemies in place, plant guardians and seeds that grow inside your foes.',
+  blurb: 'Patient and resilient. Root enemies in place, wall them off with brambles and slam them with living vines.',
   passive: 'Regrowth: regenerate 1.5 HP per second.',
   st: { slow: .3 },
   moves: [
@@ -843,55 +960,90 @@ nature: {
         for (const e of enemiesNear(n.x, n.z, n.r)) if (ready(n, e, 99)) cc(e, 'root', 2.6, own(n));
         if (pulse(n, dt, .5)) for (const e of enemiesNear(n.x, n.z, n.r)) hitEnemy(e, 'nature', 6 * n.mul, own(n), 0, 0, 0, { aoe: true });
       } },
-      view: { make(n) { const g = new THREE.Group(), r = model('nature__roots', 0x4ee04a, { shadow: true }); r.scale.setScalar(n.r / 1.5); g.add(r); g.userData.mats = r.userData.mats.slice(); g.userData.circle = zoneCircle('nature', n.r, .6); g.add(g.userData.circle); dustFx(n.x, n.z, n.r, 0x5a4a30); sfx('nature_big'); return g; },
-        upd(o, n, dt) { const r = o.children[0], c = o.userData.circle, s = c.scale.x + (n.r - c.scale.x) * Math.min(1, dt * 5); c.scale.setScalar(s); r.scale.setScalar(s / 1.5); r.position.y = -1.2 * (1 - easeOut(Math.min(1, n.t * 5))); spinCircle(c, dt, .4);
-          if (Math.random() < .3) { const a = rand(0, TAU); emit(n.x + Math.cos(a) * s, .1, n.z + Math.sin(a) * s, 0, rand(.5, 1.5), 0, 0x6ef04a, rand(.1, .2), .5); } }, drop: dropFade() } },
-    { name: 'Parasite Seed', icon: '🌱', cd: 11, desc: 'Shoot a seed into an enemy. It grows inside it for 3 s, slowing it more and more, then bursts into vines that root it and up to 3 enemies near it for 2 s, 30 damage each.',
-      cast(p, c) { shoot(p, c, 40, { r: .3, life: 1, dmg: 8 * c.dmg }); },
-      shot: { hit(s, e) { const c = ctxS(s); hitEnemy(e, 'nature', s.dmg, c.p, 0, 0, 0); if (c.p) ent(c.p, c, e.x, e.z, { life: 3, r: 6, s: e.id }); return 'end'; } },
-      look: { m: 'nature__thorn', s: .8, trail: [0x9aff80, .1, .25, 0, 1] },
-      ent: { tick(n) { const e = S.enemies.find(x => x.id === n.s && alive(x)); if (!e) { n.life = 0; return; } n.x = e.x; n.z = e.z; e.fs = Math.max(e.fs || 0, .2 + .6 * n.t / n.max); },
-        end(n) { // bursts early if the host dies first
-          const c = ctxN(n), es = [S.enemies.find(x => x.id === n.s && alive(x)), ...enemiesNear(n.x, n.z, n.r).filter(x => x.id !== n.s).slice(0, 3)].filter(Boolean);
-          fxe(n.mv, 'sprout', { x: n.x, z: n.z, to: es.map(e => [r2(e.x), r2(e.z)]) });
-          for (const e of es) { hitEnemy(e, 'nature', 30 * n.mul, c.p, 0, 0, 0, { aoe: true }); cc(e, 'root', 2, c.p); }
-        } },
-      // a flower grows out of the host's head, getting bigger until it bursts
-      view: { make() { const o = model('nature__flower', 0x4ee04a); o.scale.setScalar(.2); return o; },
-        upd(o, n, dt) { const v = views.e.get(n.s); if (v) o.position.copy(v.g.position).add(V(0, 1.9, 0)); o.scale.setScalar(.25 + 1.1 * (1 - n.l)); o.rotation.y += dt * 2;
-          if (Math.random() < .3) emit(o.position.x, o.position.y, o.position.z, rand(-1, 1), rand(0, 1), rand(-1, 1), 0x9aff80, .1, .4); },
-        drop: o => o.removeFromParent() },
-      fx: { sprout(e) { for (const [x, z] of e.to) { beamFx(V(e.x, 1.4, e.z), V(x, .4, z), 0x6ef04a, .1, .5); riseFx('nature__roots', 0x4ee04a, x, z, 1, 2); } burst(e.x, 1.6, e.z, 40, 0x9aff80, 6, .3, .5); sfx('nature_big'); } } },
-    { name: 'Snaptrap', icon: '🪤', cd: 14, mode: 'aim', range: 14, aimR: 4.5, desc: 'Plant a carnivorous flytrap that chomps the nearest enemy for huge damage and pins it. Small monsters (not elites or bosses) are swallowed whole.',
-      cast(p, c) { ent(p, c, c.tgt.x, c.tgt.z, { life: 12, r: 4.5, solid: [{ x: c.tgt.x, z: c.tgt.z, r: .5 }], h: 2 }); },
-      ent: { tick(n, dt) {
-        const e = nearest(n.x, n.z, n.r);
-        if (e) n.yaw = Math.atan2(e.x - n.x, e.z - n.z);
-        if (e && pulse(n, dt, 1.1)) {
-          n.s++;
-          if (!ET[e.type].boss && !e.elite && !e.pid && ET[e.type].r * e.sc < .75) { const q = center(e); fxe(n.mv, 'gulp', { x: q.x, y: q.y, z: q.z }); damage(e, e.hp + 1, 'nature', own(n), { raw: true }); } // one bite
-          else { hitEnemy(e, 'nature', 45 * n.mul, own(n), n.x - e.x, n.z - e.z, 5); cc(e, 'root', 1, own(n)); }
-        }
-      } },
-      view: { make(n) { const g = new THREE.Group(), m = model('nature__trap', 0x4ee04a, { shadow: true }); g.add(m); g.userData.mats = m.userData.mats.slice(); g.userData.jU = m.getObjectByName('nature__trap_jawU'); g.userData.jL = m.getObjectByName('nature__trap_jawL'); g.userData.bite = 0; g.userData.s = n.s; dustFx(n.x, n.z, 1.2, 0x5a4a30); return g; },
+      view: { make(n) { // the ground splits with green light, then a tangle of roots heaves up all over the area, thickest at the rim
+          const g = new THREE.Group(), r = model('nature__roots', 0x4ee04a, { shadow: true }); r.scale.setScalar(n.r / 1.5); g.add(r); g.userData.mats = r.userData.mats.slice(); g.userData.circle = zoneCircle('nature', n.r, .6); g.add(g.userData.circle); g.userData.lastR = n.r;
+          quakeCracks(n.x, n.z, n.r, 9, 1.4, .3); entangleRing(n.x, n.z, n.r, 9);
+          dustFx(n.x, n.z, n.r, 0x5a4a30); burst(n.x, .5, n.z, 40, 0x9aff80, 7, .2, .5, 6, 3); sfx('nature_big'); shake(clamp(.25 - distTo(n.x, n.z) * .01, .04, .2)); return g; },
+        upd(o, n, dt, t) { const u = o.userData, r = o.children[0], c = u.circle, s = c.scale.x + (n.r - c.scale.x) * Math.min(1, dt * 5); c.scale.setScalar(s); r.scale.setScalar(s / 1.5); r.position.y = -1.2 * (1 - easeOut(Math.min(1, n.t * 5))); spinCircle(c, dt, .4);
+          if (n.r > u.lastR + .5) { u.lastR = n.r; entangleRing(n.x, n.z, n.r, 7); ringFx(n.x, .1, n.z, n.r, 0x9aff80, .4); sfx('nature'); } // fed: the roots surge out to the new edge
+          for (let i = 0; i < 2; i++) { const a = rand(0, TAU), d = rand(.3, 1) * s; emit(n.x + Math.cos(a) * d, .1, n.z + Math.sin(a) * d, -Math.sin(a) * 1.5, rand(.6, 1.6), Math.cos(a) * 1.5, Math.random() < .3 ? 0xffe080 : 0x6ef04a, rand(.1, .2), .7, -.5); } }, // pollen and leaves drifting up off the roots
+        drop: dropFade() } },
+    { name: 'Vine Slam', icon: '🌿', cd: 8, desc: 'Lash a vine at the first enemy in your sights (16 m). It is hoisted up and slammed into the ground 3 times, side to side: 30 damage per slam, plus 20 to every enemy within 2.5 m of where it lands. Then it is flung away. Bosses are too heavy to lift: they are rooted and take the slams where they stand.',
+      cast(p, c) {
+        const e = rayHits(c.eye, c.aim, 16, .9)[0]?.e;
+        if (!e) { const q = c.eye.clone().addScaledVector(c.aim, 12); fxe(c.m.key, 'miss', { id: p.id, x: q.x, y: Math.max(.2, q.y), z: q.z }); return; }
+        const dx = e.x - p.x, dz = e.z - p.z, d = Math.hypot(dx, dz) || 1;
+        ent(p, c, e.x, e.z, { life: 1.6, r: 2.5, s: e.id, x0: e.x, z0: e.z, sx: -dz / d, sz: dx / d, dx: dx / d, dz: dz / d, n: 0 });
+        cc(e, ET[e.type].boss ? 'root' : 'stun', 1.6, p);
+      },
+      ent: { tick(n) {
+          const e = S.enemies.find(x => x.id === n.s && alive(x)); if (!e) { n.life = 0; return; }
+          const T = [.35, .8, 1.25], i = n.n, boss = ET[e.type].boss;
+          if (!boss && i < 3) { // swung up and over between slam spots on either side of where it stood
+            const t0 = i ? T[i - 1] : 0, u = clamp((n.t - t0) / (T[i] - t0), 0, 1), side = i % 2 ? -1 : 1, from = i ? -side : 0;
+            const fx = n.x0 + n.sx * from * 2.2, fz = n.z0 + n.sz * from * 2.2, tx = n.x0 + n.sx * side * 2.2, tz = n.z0 + n.sz * side * 2.2;
+            e.x = fx + (tx - fx) * u; e.z = fz + (tz - fz) * u; e.y = Math.sin(u * Math.PI) * 3.4; e.vy = 0; e.kx = e.kz = 0; e.atk = null;
+          }
+          if (i < 3 && n.t >= T[i]) { n.n++; const p = own(n); if (!boss) e.y = 0;
+            hitEnemy(e, 'nature', 30 * n.mul, p, 0, 0, 0, { aoe: true }); blast(e.x, e.z, 2.5, 20 * n.mul, ctxN(n), { raw: true, kb: 5, skip: [e.id] });
+            fxe(n.mv, 'slam', { x: e.x, z: e.z, k: n.n }); }
+          n.x = e.x; n.z = e.z;
+        },
+        end(n) { const e = S.enemies.find(x => x.id === n.s && alive(x)); if (e && !ET[e.type].boss) { e.kx += n.dx * 16 * ET[e.type].kb; e.kz += n.dz * 16 * ET[e.type].kb; launch(e, 6); } } },
+      view: { make(n) { const o = vineChain(16, n.own === myId ? .55 : 1.3); sfx('nature_big'); return o; }, // your own vine runs straight away from you: thin, or it reads as a green wall
+        upd(o, n, dt, t) { // the vine runs from your hand to the monster, whipping as it swings
+          const v = views.e.get(n.s); if (!v) return; o.position.set(0, 0, 0);
+          const h = handPos(n.own), b = v.g.position.clone(); b.y += 1; const a = n.own === myId ? h.clone().lerp(b, .3) : h; // your own vine starts well out: right by the camera its segments filled the view
+          layVine(o, a, b, 1.2, .25, Math.min(1, n.t * 8), t); fade(o, Math.min(1, n.l * 8));
+          if (Math.random() < .5) { const q = a.clone().lerp(b, rand(.2, 1)); emit(q.x, q.y, q.z, rand(-1, 1), rand(-.5, 1), rand(-1, 1), Math.random() < .7 ? 0x6ef04a : 0xffe080, rand(.08, .16), .6, 3); } },
+        drop: dropFade(.2) },
+      fx: { slam(e) { // a crater of torn earth, roots bursting up round it, leaves everywhere
+          dustFx(e.x, e.z, 1.8, 0x6a5a3a); ringFx(e.x, .1, e.z, 2.5, 0x9aff80, .4); scarFx(e.x, e.z, 1.2, 0x4ee04a, 2.5); debrisFx(e.x, .3, e.z, 6, 'earth__pebble', 0x8a6a3a, .3, 8);
+          for (let i = 0; i < 5; i++) { const a = TAU * i / 5 + rand(-.3, .3); riseFx('nature__roots', 0x4ee04a, e.x + Math.cos(a) * 1.4, e.z + Math.sin(a) * 1.4, rand(.4, .6), .7); }
+          burst(e.x, .6, e.z, 26, 0x9aff80, 7, .2, .45, 8, 2); flash(e.x, 1, e.z, 0x6ef04a, 20, .2); popNum(e.x, 2.2, e.z, e.k === 3 ? 'SLAM!' : 'SLAM', '#9aff80', 'tag');
+          shake(clamp(.3 - distTo(e.x, e.z) * .015, .05, .25)); sfx('smash'); sfx('nature_big'); },
+        miss(e) { const o = vineChain(16, 1.3); addFx(o, .4, (o, k) => { const h = handPos(e.id); layVine(o, isMe(e.id) ? h.clone().lerp(V(e.x, e.y, e.z), .3) : h, V(e.x, e.y - k * 2, e.z), .8, .3, k < .4 ? k / .4 : 1, k * 3); fade(o, 1 - k); }); } } },
+    { name: 'Bramble Wall', icon: '🌵', cd: 12, mode: 'aim', range: 16, aimR: 1.5, desc: 'Raise a 10 m hedge of thorny brambles across the target for 5 s, side-on to you. Monsters cannot walk through it and enemy shots stop dead in it. Anything touching it is slowed and takes 12 every 0.5 s. When it withers it bursts into a hail of thorns: 25 to everything within 2.5 m of it.',
+      cast(p, c) { const f = c.flat, sx = -f.z, sz = f.x, q = c.tgt, solid = [];
+        for (let i = -5; i <= 5; i++) solid.push({ x: q.x + sx * i, z: q.z + sz * i, r: .65 });
+        ent(p, c, q.x + sx * 5, q.z + sz * 5, { life: 5, r: 1.3, fx0: q.x - sx * 5, fz0: q.z - sz * 5, solid, h: 3 }); },
+      ent: { tick(n, dt) { const es = nearSeg(n, n.r), hurt = pulse(n, dt, .5); for (const e of es) { e.fs = Math.max(e.fs || 0, .5); if (hurt) hitEnemy(e, 'nature', 12 * n.mul, own(n), 0, 0, 0, { aoe: true }); } },
+        end(n) { for (const e of nearSeg(n, 2.5)) hitEnemy(e, 'nature', 25 * n.mul, own(n), 0, 0, 3, { aoe: true }); fxe(n.mv, 'burst', { x: n.x, z: n.z, x0: n.fx0, z0: n.fz0 }); } },
+      view: { make(n) { // clumps of roots heave up one after another from the middle out, thorns bristling, two thick vines writhing through it
+          const g = new THREE.Group(), u = g.userData, L = Math.hypot(n.x - n.fx0, n.z - n.fz0); u.mats = []; u.clumps = []; u.L = L;
+          for (let i = 0; i <= 8; i++) { const m = model('nature__roots', 0x4ee04a, { shadow: true }); m.position.z = L * i / 8; m.rotation.y = rand(0, TAU); g.add(m); u.mats.push(...m.userData.mats); u.clumps.push({ m, d: Math.abs(i - 4) * .06, s: rand(1.3, 1.7) }); }
+          for (let i = 0; i < 26; i++) { const m = model('nature__thorn', 0x4ee04a); m.position.set(rand(-.6, .6), rand(.3, 2), rand(0, L)); m.rotation.set(rand(-1, 1), rand(0, TAU), rand(-1.4, 1.4)); m.scale.setScalar(rand(.7, 1.2)); g.add(m); u.mats.push(...m.userData.mats); u.clumps.push({ m, d: Math.abs(m.position.z / L - .5) * .5 + .1, s: m.scale.x, th: 1 }); }
+          u.vines = [vineChain(14, 1.6), vineChain(14, 1.3)]; for (const v of u.vines) { g.add(v); u.mats.push(...v.userData.mats); }
+          for (let i = 0; i <= 4; i++) { const k = i / 4; dustFx(n.fx0 + (n.x - n.fx0) * k, n.fz0 + (n.z - n.fz0) * k, 1.2, 0x5a4a30); }
+          sfx('nature_big'); return g; },
         upd(o, n, dt, t) {
-          const m = o.children[0], u = o.userData; m.scale.setScalar(easeOutBack(Math.min(1, n.t * 3)));
-          m.rotation.y = lerpAngle(m.rotation.y, n.yaw || 0, Math.min(1, dt * 6));
-          if (n.s !== u.s) { u.s = n.s; u.bite = 1; sfx('nature'); burst(n.x + Math.sin(n.yaw) * 1.5, 1.3, n.z + Math.cos(n.yaw) * 1.5, 16, 0x9aff80, 5, .2, .4, 4); }
-          u.bite = Math.max(0, u.bite - dt * 4);
-          const open = u.bite > 0 ? (u.bite > .7 ? 1 : 0) : .55 + .1 * Math.sin(t * 3);
-          if (u.jU) u.jU.rotation.x = -open * .9; if (u.jL) u.jL.rotation.x = open * .5;
-        }, drop: dropFade() } },
+          const u = o.userData, dx = n.x - n.fx0, dz = n.z - n.fz0; o.position.set(n.fx0, 0, n.fz0); o.rotation.y = Math.atan2(dx, dz);
+          for (const c of u.clumps) { const k = clamp((n.t - c.d) * 5, 0, 1); c.m.scale.setScalar(c.s * (c.th ? easeOutBack(k) : 1)); if (!c.th) { c.m.scale.y = c.s * 2.4 * easeOutBack(k); c.m.position.y = -1.5 * (1 - k); } }
+          layVine(u.vines[0], V(0, .9, 0), V(0, .9, u.L), .9, .25, Math.min(1, n.t * 3), t); layVine(u.vines[1], V(0, 1.5, u.L), V(0, 1.5, 0), .6, .3, Math.min(1, n.t * 3), t + 1);
+          fade(o, Math.min(1, n.l * 8));
+          if (Math.random() < .4) { const k = rand(0, 1); emit(n.fx0 + dx * k + rand(-.5, .5), rand(.3, 2), n.fz0 + dz * k + rand(-.5, .5), 0, rand(.3, 1), 0, Math.random() < .3 ? 0xffe080 : 0x6ef04a, rand(.08, .15), .8, -.3); } },
+        drop: dropFade(.25) },
+      fx: { burst(e) { for (let i = 0; i <= 5; i++) { const k = i / 5, x = e.x0 + (e.x - e.x0) * k, z = e.z0 + (e.z - e.z0) * k; debrisFx(x, 1, z, 4, 'nature__thorn', 0x4ee04a, .35, 10); burst(x, 1, z, 14, 0x9aff80, 7, .15, .4, 6); }
+          sfx('nature_big'); shake(.12); } } },
     { name: 'World Tree', icon: '🌳', mode: 'aim', range: 18, aimR: 10, desc: 'ULTIMATE. Grow a great tree that roots every enemy around it and lashes them with vines.',
       cast(p, c) { const t = c.tgt, r = 10 * c.st.aoe; ent(p, c, t.x, t.z, { life: 9, r, solid: [{ x: t.x, z: t.z, r: 1.3 }], h: 8 }); blast(t.x, t.z, r, 40 * c.dmg, c, { raw: true, kb: 0, cc: ['root', 3] }); },
       ent: { tick(n, dt) {
         if (pulse(n, dt, .4, 'v')) { const es = enemiesNear(n.x, n.z, n.r); if (es.length) { const e = pick(es), q = center(e); fxe(n.mv, 'vine', { x: n.x, z: n.z, ex: q.x, ey: q.y, ez: q.z }); hitEnemy(e, 'nature', (ET[e.type].boss ? 14 : 25) * n.mul, own(n), e.x - n.x, e.z - n.z, 3, { aoe: true }); } }
       } },
-      view: { make(n) { const g = new THREE.Group(), m = model('nature__tree', 0x4ee04a, { shadow: true }); g.add(m); g.userData.mats = m.userData.mats.slice(); g.userData.circle = zoneCircle('nature', n.r, .55); g.add(g.userData.circle); dustFx(n.x, n.z, 3, 0x5a4a30); sfx('ult'); shake(.3); return g; },
-        upd(o, n, dt) { const m = o.children[0]; m.scale.setScalar(.15 + .85 * easeOutBack(Math.min(1, n.t * 1.2))); m.rotation.y += dt * .05; spinCircle(o.userData.circle, dt, .2);
-          if (Math.random() < .5) emit(n.x + rand(-4, 4), rand(4, 8), n.z + rand(-4, 4), rand(-.5, .5), -1, rand(-.5, .5), Math.random() < .5 ? 0x9aff80 : 0xffe080, rand(.12, .25), 2.5, .2, .3); },
+      view: { make(n) { // the earth splits in green fire, a ring of great roots tears up, and the tree bursts out of the middle in a column of light
+          const g = new THREE.Group(), m = model('nature__tree', 0x4ee04a, { shadow: true }); g.add(m); g.userData.mats = m.userData.mats.slice(); g.userData.circle = zoneCircle('nature', n.r, .55); g.add(g.userData.circle);
+          quakeCracks(n.x, n.z, n.r, 14, 2.2, .3); entangleRing(n.x, n.z, n.r * .85, 12, 1.4); entangleRing(n.x, n.z, n.r * .45, 7, 1.1);
+          pillarFx(n.x, 0, n.z, 2.2, 14, 0x9aff80, .9); ringFx(n.x, .1, n.z, n.r, 0x9aff80, .7, 1); burst(n.x, 1, n.z, 60, 0x9aff80, 10, .3, .7, 8, 4);
+          dustFx(n.x, n.z, 3, 0x5a4a30); debrisFx(n.x, .5, n.z, 10, 'earth__pebble', 0x6a5a3a, .4, 10); sfx('ult'); sfx('nature_big'); shake(.4); return g; },
+        upd(o, n, dt, t) { const m = o.children[0]; m.scale.setScalar(.15 + .85 * easeOutBack(Math.min(1, n.t * 1.2))); m.rotation.y += dt * .05; spinCircle(o.userData.circle, dt, .2);
+          if (Math.random() < .6) emit(n.x + rand(-4, 4), rand(4, 8), n.z + rand(-4, 4), rand(-.5, .5), -1, rand(-.5, .5), Math.random() < .5 ? 0x9aff80 : 0xffe080, rand(.12, .25), 2.5, .2, .3); // leaves and blossom drifting down
+          if (Math.random() < .5) { const a = rand(0, TAU), d = rand(1, n.r); emit(n.x + Math.cos(a) * d, .1, n.z + Math.sin(a) * d, 0, rand(1, 2.5), 0, 0xfff0a0, rand(.06, .12), 1.4, -.4); } // motes of life rising off the ground
+          if (Math.random() < dt * 1.5) ringFx(n.x, .1, n.z, n.r, 0x6ef04a, .6, n.r * .3); }, // the tree's pulse
         drop(o) { addFx(o, .8, (o, k) => { o.children[0].scale.setScalar(1 - k * .9); fade(o, 1 - k); }); } },
-      fx: { vine(e) { const a = V(e.x, 2.5, e.z), b = V(e.ex, e.ey, e.ez); beamFx(a, b, 0x6ef04a, .12, .3); burst(e.ex, e.ey, e.ez, 14, 0x9aff80, 4, .2, .4); } } },
+      fx: { vine(e) { // a thick vine whips out of the canopy, wraps the victim, and roots burst up under it
+          const o = vineChain(16, 2), a = V(e.x + rand(-1, 1), rand(3, 5), e.z + rand(-1, 1)), b = V(e.ex, e.ey, e.ez); let hit = 0;
+          addFx(o, .5, (o, k) => { layVine(o, a, b, 1.6, .3, k < .3 ? easeOut(k / .3) : 1, k * 4); fade(o, k < .6 ? 1 : 1 - (k - .6) / .4);
+            if (!hit && k > .3) { hit = 1; burst(e.ex, e.ey, e.ez, 18, 0x9aff80, 5, .2, .4, 4); riseFx('nature__roots', 0x4ee04a, e.ex, e.ez, .6, .7); sfx('nature'); } }); } } },
   ],
 },
 // ================================================================== SHADOW

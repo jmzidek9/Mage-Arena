@@ -1194,6 +1194,7 @@ function warmFx() {
   for (const k in T) for (const o of [T[k]].flat()) add(glowify(o.clone(), glowMats(0xffffff)));
   const b = T.beam.clone(), d = T.disc.clone(); b.material = beamMat(0xffffff); d.material = discMat(0xffffff); add(b); add(d);
   add(new THREE.Sprite(new THREE.SpriteMaterial({ map: puffTex(), transparent: true, depthWrite: false })));
+  for (const f of WARM) add(f()); // moves' own meshes and shaders (elements.js)
   add(new THREE.Mesh(JET_GEO, jetMat(0))); // the Flamethrower's fire shader
   if (!inkPool.length) { const d = inkDragonBuild(); inkPool.push(d); g.add(d, d.userData.body); } // the Ink Dragon is built (and compiled) now, not on its first cast
   g.scale.setScalar(.05);
