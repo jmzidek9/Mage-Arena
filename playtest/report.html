@@ -37,18 +37,18 @@ code{background:var(--bar);padding:0 4px;border-radius:4px;font-size:13px}
 <body>
 <main>
 <h1>Mage Arena playtest</h1>
-<p class="sub">19 Opus agents each played one element in the real game: every move cast alone, then 30 s against a wave-5 crowd and 30 s against the Tyrant, with screenshots and metrics saved. Not covered: Shadow, Earth, Bone, Rune, Plasma, Soul, Abyss, Laser, Arcane, Blades and Ink.</p>
+<p class="sub">30 Opus agents, one per element, each played the real game: every move cast alone, then 30 s against a wave-5 crowd and 30 s against the Tyrant, with screenshots and metrics saved.</p>
 
 <div class="kpis">
- <div class="card kpi"><b>19</b><span>elements tested</span></div>
- <div class="card kpi"><b>225 / 134</b><span>median dps, crowd / boss</span></div>
- <div class="card kpi"><b class="ok">5</b><span>in band on both</span></div>
+ <div class="card kpi"><b>30</b><span>elements tested</span></div>
+ <div class="card kpi"><b>218 / 137</b><span>median dps, crowd / boss</span></div>
+ <div class="card kpi"><b class="ok">7</b><span>in band on both</span></div>
  <div class="card kpi"><b class="hi">1 bug</b><span>behind the worst outliers</span></div>
 </div>
 
 <h2>The big one: ultimates recharge themselves</h2>
 <div class="card alert">
-<p>Every hit adds ultimate charge (<code>addUlt</code> in <code>js/sim.js</code> <code>damage()</code>), and that includes hits from the ultimate itself. A big area ultimate refills its own meter almost at once. In 30 s, <b>Storm cast Thunderstorm 25 times</b>, Blood cast Blood Moon 16 times, Spirit cast Army 16 times against the boss, and Cosmic cast Supernova 14 times. Without its ultimate, Storm lands right at the median.</p>
+<p>Every hit adds ultimate charge (<code>addUlt</code> in <code>js/sim.js</code> <code>damage()</code>), and that includes hits from the ultimate itself. A big area ultimate refills its own meter almost at once. In 30 s, <b>Laser cast Prism Nova 35 times</b>, Storm cast Thunderstorm 25 times, Arcane stacked 25 Torrent rifts on the boss, and Blood, Spirit and Cosmic recast 14–16 times. Without its ultimate, Storm lands right at the median, while Laser drops to about 0.4×.</p>
 <p><b>Fix once, in the shared code:</b> damage dealt by an ultimate gives no ultimate charge (a <code>noUlt</code> flag that <code>damage()</code> checks). Then rerun the bench before tuning any numbers.</p>
 </div>
 
@@ -59,17 +59,17 @@ code{background:var(--bar);padding:0 4px;border-radius:4px;font-size:13px}
 <h2>Effects that blind your own view</h2>
 <div class="card">
 <ul>
-<li><b>White-outs:</b> Storm Thunderstorm, Cosmic Supernova, Spirit Army, Illusion Phantasmagoria, Fire Conflagration, Light Blinding Flash, Explosion Carpet Bomb.</li>
-<li><b>Starts at your eyes:</b> Light Solar Beam, Wind Gale Force and Tornado, Water Tsunami, Frost Glacial Lance and Blizzard cloud, Sonic Sound Wave, Illusion Mesmerize.</li>
-<li><b>Things in your face:</b> Steel Magnetize and Water Whip pull monsters too close, Spirit Wolf spawns on the camera, Cosmic Moons orbit at eye height, Venom wasps are too big.</li>
+<li><b>White-outs:</b> Storm Thunderstorm, Cosmic Supernova, Laser Prism Nova, Spirit Army, Arcane Torrent, Illusion Phantasmagoria, Fire Conflagration, Light Blinding Flash, Explosion Carpet Bomb, Plasma Vent, Blades Colossal Blade, Rune Word of Ruin, Abyss Kraken, Soul Reaper.</li>
+<li><b>Starts at your eyes:</b> Light Solar Beam, Wind Gale Force and Tornado, Water Tsunami, Frost Glacial Lance and Blizzard cloud, Sonic Sound Wave, Illusion Mesmerize, Plasma Thermal Lance, Earth Fissure, Boulder and Quake dust.</li>
+<li><b>Things in your face:</b> Steel Magnetize and Water Whip pull monsters too close, Blade Dance leaves the camera inside the target, Spirit Wolf and Bone's skeleton spawn beside the camera, an Abyss tentacle stands dead centre, Cosmic Moons and the Arcane Familiar orbit at eye height, Venom wasps are too big.</li>
 </ul>
 <p>The usual fix: start the effect 1.5–4 m in front of you, lower its opacity or flash, or cap the <code>whiteFx</code> value.</p>
 </div>
 
 <h2>Performance hot list</h2>
 <div class="card"><p>Peak live particles from one move (the pool holds 4000):</p>
-<ul><li>Water Tsunami 1031</li><li>Explosion Carpet Bomb 910 (plus 252 fx objects)</li><li>Frost Blizzard 900</li><li>Fire Fire Brand 883</li><li>Illusion Kaleidoscope 844 (84 fx objects)</li><li>Blood 822</li><li>Storm 802 (Ball Lightning 91 fx objects)</li></ul>
-<p class="sub">Frame times were taken with software rendering and 19 browsers running at once, so only compare them within one element.</p></div>
+<ul><li>Water Tsunami 1031</li><li>Explosion Carpet Bomb 910 (plus 252 fx objects)</li><li>Frost Blizzard 900</li><li>Fire Fire Brand 883</li><li>Illusion Kaleidoscope 844 (84 fx objects)</li><li>Blood 822</li><li>Storm 802 (Ball Lightning 91 fx objects)</li><li>Soul Soulstorm 685</li></ul><p>Ink's Dragon freezes the game for a moment on its first cast while its 30 segment models are built. Fix: prebuild them when the game loads.</p>
+<p class="sub">Frame times were taken with software rendering and many browsers running at once, so only compare them within one element.</p></div>
 
 <h2>Top changes by element</h2>
 <div class="els" id="els"></div>
@@ -82,29 +82,39 @@ code{background:var(--bar);padding:0 4px;border-radius:4px;font-size:13px}
 </ul></div>
 </main>
 <script>
-const B=[["Storm",987.6,4.39,907.6,6.76,1],["Cosmic",712,3.16,98.7,.73,1],["Blood",580.3,2.58,155.2,1.16,1],["Sonic",323.7,1.44,85.3,.64],["Illusion",295.9,1.31,121.9,.91],["Explosion",282.1,1.25,298.8,2.22,1],["Water",258.1,1.15,119.9,.89],["Fire",257.1,1.14,156.8,1.17],["Gravity",231,1.03,72.5,.54],["Steel",225.1,1,134.3,1],["Nature",217.5,.97,208.5,1.55],["Magma",206.3,.92,146.3,1.09],["Light",171.3,.76,133.4,.99],["Crystal",163.8,.73,95.9,.71],["Venom",164,.73,210.9,1.57],["Spirit",139.2,.62,566.4,4.22,1],["Chrono",129.9,.58,137.1,1.02],["Frost",105.6,.47,116.8,.87],["Wind",78,.35,65.8,.49]];
+const B=[["Laser",1455.9,6.68,195.9,1.43,1],["Storm",987.6,4.53,907.6,6.62,1],["Cosmic",712,3.26,98.7,.72,1],["Blood",580.3,2.66,155.2,1.13,1],["Sonic",323.7,1.48,85.3,.62],["Illusion",295.9,1.36,121.9,.89],["Plasma",292.9,1.34,349.8,2.55,1],["Explosion",282.1,1.29,298.8,2.18,1],["Arcane",278.4,1.28,913.2,6.66,1],["Water",258.1,1.18,119.9,.87],["Fire",257.1,1.18,156.8,1.14],["Gravity",231,1.06,72.5,.53],["Earth",226.5,1.04,139,1.01],["Steel",225.1,1.03,134.3,.98],["Nature",217.5,1,208.5,1.52],["Shadow",218.1,1,151.3,1.1],["Rune",208.8,.96,51.5,.38],["Magma",206.3,.95,146.3,1.07],["Light",171.3,.79,133.4,.97],["Bone",163.6,.75,91,.66],["Crystal",163.8,.75,95.9,.7],["Venom",164,.75,210.9,1.54],["Abyss",143.8,.66,86.4,.63],["Spirit",139.2,.64,566.4,4.13,1],["Blades",134.2,.62,166.4,1.21],["Chrono",129.9,.6,137.1,1],["Ink",124,.57,75.1,.55],["Frost",105.6,.48,116.8,.85],["Wind",78,.36,65.8,.48],["Soul",53,.24,90.5,.66]];
 const cls=x=>x>1.2?'hi':x<.85?'lo':'ok';
 const bar=x=>`<div class="bar"><span class="band" style="left:${.85/3*100}%;width:${.35/3*100}%"></span><i style="width:${Math.min(100,x/3*100)}%;background:var(--${x>1.2?'hi':x<.85?'lo':'ok'})"></i></div>`;
 document.querySelector('#bal tbody').innerHTML=B.map(([n,c,cx,b,bx,u])=>`<tr><td>${n}${u?' <span class="tag">⚠ ult loop</span>':''}</td><td class="num">${c} <span class="${cls(cx)}">${cx}×</span></td><td class="barcell">${bar(cx)}</td><td class="num">${b} <span class="${cls(bx)}">${bx}×</span></td><td class="barcell">${bar(bx)}</td></tr>`).join('');
-const E=[["Storm","Thunderstorm blast 38→22, one cloud at a time","Soften the cloud flash; fewer rain particles","Drop sky:1 from the passive strike; one bolt event per Ball Lightning pulse"],
+const E=[["Laser","Fix the ult loop (Prism Nova cast 35× in 30 s); less washed-out Nova","After the fix: Pulse 6.5→9, Ricochet 18+40k→24+56k, Drone 9→12, Refractor 25→40","Your own lasers visible in first person; drone and lens shots don't reset Focus"],["Storm","Thunderstorm blast 38→22, one cloud at a time","Soften the cloud flash; fewer rain particles","Drop sky:1 from the passive strike; one bolt event per Ball Lightning pulse"],
 ["Cosmic","Fix the ult loop (Supernova cast 14× in 30 s)","Boss: Star Shot 8.5/30→10/36, Moons 30→36","Cap Supernova whiteFx at .6; raise and shrink the Moons"],
 ["Blood","Blood Moon drain 7→5, pop 30→18, cap 12→8","Lower the moon (1+8→1+5.5), darker and thinner tethers","Exsanguinate backup range 8→12 m"],
 ["Spirit","Knight hits give no ult charge; clear old knights","Wolf spawns ahead of you, not on the camera","Wisps 24→30, Wolf 30→36, Command 20→30"],
 ["Explosion","Carpet Bomb 130→75","noUlt flag on Carpet Bomb","Less Carpet Bomb smoke and fx (910 particles, 252 fx)"],
 ["Sonic","Smaller Sound Wave light; dimmer, further-out rings","Crowd: pierce 99→4, Resonance 40→32, Bass Drop 60/18→50/15","Boss: Sound Wave 11.5→13, Sonic Boom 45·k→60·k"],
 ["Illusion","Phantasmagoria: mirror opacity .45, whiteFx .4","Charmed-on-charmed damage 1.6→1.2, Kaleidoscope pop 50→44","Mesmerize rings start 2 m out; trim Kaleidoscope fx"],
+["Plasma","Vent blast at your feet and half size (it whites out the screen)","Smaller Fusion Beam ball in your own view; Thermal Lance starts from the hand","Bolt heat 9→7 so holding LMB doesn't overheat every 6 s"],
+["Arcane","Only one Torrent rift at a time (25 stacked on the boss)","Familiar orbit 2.6→3.6 m and higher, spawns ahead","Missiles 6→7.5, Barrage pierce 1; your charge orbs out of the camera"],
 ["Water","Whip pulls to 3.5 m (not 2.2)","Tsunami spawns 4 m out","Surf wave more visible in first person, splash where you land"],
 ["Fire","Conflagration flash 35→20","Thinner, more see-through Flamethrower in your view","Fire Brand fuse 1.2→.9 s, fewer particles"],
 ["Gravity","Levitate's +25% damage taken also applies to bosses; Crush +45 on bosses; Graviton 22→25","Remove the duplicate Repulsor ring","Singularity fewer particles, radius 3.2→4 m"],
+["Earth","Fissure starts 4.5 m out; nearest spikes smaller","Tectonic Quake dust around the edge, not over the screen","Boulder spawns 2.4 m out (fills the screen now)"],
 ["Steel","Magnetize stops at 3 m plus the monster's size","Railgun beam visible in first person; recoil 16→10","Blade Storm swords tilted, not edge-on"],
 ["Nature","World Tree vines 25→14 on bosses","Less World Tree clutter","Easier to read: Thorn trail, Seed flower; Entangle tick 6→8"],
+["Shadow","Night Terror shadows drawn dark, not as pale rims","After the ult fix: Daggers 10.5→12, Blackout 16→24, Snare 12→18","Purple instead of white bursts; back-stab popup"],
+["Rune","Word of Ruin up to 3× on a lone boss; Bolt 13→16, Glyph Trap 45→55, wards arm at 0.6 s","Word of Ruin flash 60→30, softer pillar","Glyph Trap gets a floating glyph; smaller Empowered circle over the hand"],
 ["Magma","Heat Wave band 1.3→1.6","Meteor field 8→6 dmg, 5→4 s","Lava easier to read; bigger Eruption geyser"],
 ["Light","Solar Beam starts 1.2 m forward, narrower","Blinding Flash 1.5 m forward, softer","Penance 60→70, Flash cd 9→8, Orbs 17→19, Judgment lands on the pack"],
+["Bone","Bone Toss 17→21, Skull 18→22 (cd 4→3.5), Raise Dead chance .25→.35","Marrow skeleton spawns ahead; Bone Cage fades when you're inside","Bone Dragon passes aimed at the target (miss 3.1→1.8 m)"],
 ["Crystal","Prism Shard 14→17 (split 5→6)","Spire turret 10→13, Resonant base 15→25","Geode: fewer, bigger spikes"],
 ["Venom","Contagion n·7→n·5; Spit 8→10, puddle tick 2→3, Serpent 11→14","Wasps 1.25→.85 scale","Easier-to-read puddle and cloud; Serpent spawns 2.5 m out"],
+["Abyss","Tentacle Ring wider so none stands in front of you","Void Bolt 13→16, Ring 18→22; Grasp 45 and Maw 50 on bosses; Kraken haul 85→100","Kraken end flash 60→30; Maw's trap faintly visible"],
+["Blades","Blade Dance dashes until clear of enemies; invulnerability .35→.6 s","Volley at least 3 swords, pierce 3→5; Halo keeps some swords; wider Dance and Rain","Colossal Blade flash 90→40, smaller blast"],
 ["Chrono","Rewind 35→55, cone 80→100°","Chrono Bolt echo splashes half damage","Slow Field deals 10/s"],
 ["Frost","Nova radius 6.5→7.5, dmg 20→34; hail 8→12; Permafrost stacks 4→3","Smaller Glacial Lance release","Higher, thinner Blizzard cloud; fewer snow particles"],
-["Wind","Wind Blades 17→24, cd .42→.36","Tornado spawns 5 m out, ticks 6→9, cd 12→10","Downburst hits bosses (120); Gale Force cone further out"]];
+["Ink","Bolt 14.5→18, Brush 30→40, Pool tick 8→12, passive splash 15→20","Dragon: ink-rain blast on each pulse, dive 90→120","Floor ink easier to read; prebuild the Dragon models"],
+["Wind","Wind Blades 17→24, cd .42→.36","Tornado spawns 5 m out, ticks 6→9, cd 12→10","Downburst hits bosses (120); Gale Force cone further out"],
+["Soul","Losing Souls when hit: 2→1 per hit, with 0.5 s of protection, so Souls build","Soulfire 12→16, Reap 30→45 (reach 7.5), Soulstorm at least 8 missiles","Reaper fades near the camera; sweep particles 60→36"]];
 document.getElementById('els').innerHTML=E.map(([n,...t])=>`<div class="card"><h3>${n}</h3><ul>${t.map(x=>`<li>${x}</li>`).join('')}</ul></div>`).join('');
 </script>
 </body>
