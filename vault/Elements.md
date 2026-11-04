@@ -458,7 +458,7 @@ Every element that kicks up dust now gets real dust too.
 ## Blocks
 Hold **C** to raise your element's block (`js/blocks.js`). Every block works the same way: while it holds, nothing reaches you from any side; it has 80 health, breaks when that runs out (back in 4 s) and mends when you let go. Only the look is the element's own: its casting rings and a signature piece (a frost wall, a spirit knight, a saw...). Water, Arcane and God Mode raise a bubble round you.
 
-**Brightness (2026-11-04):** blocks glow at full strength on purpose: dimming the glow was tried and read as too dim. Frost's Ice Mirror tints its ice wall a deeper blue with half the glow (pale ice bloomed into a white slab); the Ice Wall spell itself is unchanged. Checked for all 30: each one soaks a full monster hit.
+**Brightness (2026-11-04):** blocks glow at full strength on purpose: dimming the glow was tried and read as too dim. Frost's Ice Mirror tints its ice wall a deeper blue with half the glow (pale ice bloomed into a white slab); the Ice Wall spell itself is unchanged. Spirit's Ancestral Ward glows at 75%, a touch softer than the rest. Checked for all 30: each one soaks a full monster hit.
 
 ## Element resources
 Some elements build up something you can see above your ability bar and around your wizard: Plasma's **Heat** (a bar that turns into OVERHEATED), Soul's **Souls** (pale flames circling you), Arcane's **charges** (orbs whirling round you), Blades' **swords** (orbiting your waist), Bone's armor **plates**, Rune's count toward the next **Empowered** spell and Laser's **Focus** pips.

@@ -45,13 +45,13 @@ const myGuard = p => !!(keys[BIND.block] || virt.b) && !p.down && !(p.gk > 0) &&
 // The block is cast like a spell: the element's own casting circle (outer and inner rings, sigil) spins up in front of the
 // raised hand, with its signature piece (a frost wall, a bone cage, a spirit knight...) inside it. Others see it in front of
 // your wizard; a block that covers every side is a bubble round you.
-const BLOCK_LOOK = { // m: the signature model inside the circle, s: its size (1 = the circle's), f: a squash, y: lift, spin: turns a second, k: its particles, tint: recolour a solid (non-glow) piece
+const BLOCK_LOOK = { // m: the signature model inside the circle, s: its size (1 = the circle's), f: a squash, y: lift, spin: turns a second, k: its particles, tint: recolour a solid (non-glow) piece, glow: this element's glow strength (1 = full)
   fire: { m: 'fire__flame', s: .9, k: 'flames' }, frost: { m: 'frost__wall', s: 1.1, tint: 0x3aa8ff }, storm: { m: 'storm__coil', s: .8, spin: 2, k: 'sparks' },
   water: { m: 'gen__orb', k: 'bubble' }, earth: { m: 'earth__pillar', s: 1.2, f: [1.2, .8, .3], k: 'slab' }, wind: { m: 'wind__tornado', s: .9, spin: 4, k: 'swirl' },
   nature: { m: 'nature__roots', k: 'leaves' }, shadow: { m: 'gen__cloud', s: 1.1, k: 'smoke' }, light: { m: 'light__halo', spin: .6, k: 'rays' },
   venom: { m: 'venom__glob', s: .8, k: 'drip' }, steel: { m: 'steel__saw', s: 1.05 }, magma: { m: 'magma__glob', s: .85, k: 'embers' },
   crystal: { m: 'crystal__prism', s: .9, spin: .4 }, sonic: { m: 'sonic__rings', spin: 1, k: 'pulse' }, gravity: { m: 'gravity__hole', s: .8, spin: 1.5, k: 'suck' },
-  chrono: { m: 'chrono__clock', spin: .2 }, blood: { m: 'blood__moon', s: .8, k: 'drip' }, spirit: { m: 'spirit__knight', s: 1.2, k: 'wisps' },
+  chrono: { m: 'chrono__clock', spin: .2 }, blood: { m: 'blood__moon', s: .8, k: 'drip' }, spirit: { m: 'spirit__knight', s: 1.2, k: 'wisps', glow: .75 },
   cosmic: { m: 'cosmic__star', s: .7, spin: .5, k: 'stars' }, explosion: { m: 'explosion__mine', s: .75, spin: .3, k: 'sparks' }, illusion: { m: 'illusion__mirrors', spin: .3 },
   bone: { m: 'bone__cage', s: 1.1 }, rune: { m: 'rune__glyph', s: .9, spin: .5 }, plasma: { m: 'plasma__orb', s: .75, k: 'sparks' },
   soul: { m: 'soul__flame', s: .9, k: 'wisps' }, abyss: { m: 'abyss__maw', s: .9, spin: .4, k: 'suck' }, laser: { m: 'laser__lens', s: .9, spin: .8 },
@@ -74,7 +74,7 @@ function guardMake(el) {
   if (core && L.f) core.scale.multiply(V(...L.f));
   if (core) core.position.y = L.y || 0;
   if (core && L.tint) core.traverse(o => { const m = o.material; if (o.isMesh && m?.emissive && !m.uniforms) { m.color.set(L.tint); m.emissive.set(L.tint); m.emissiveIntensity *= .45; } }); // a solid piece (Frost's ice) in the element's colour: pale and glowing it bloomed into a white slab
-  const mats = []; g.traverse(o => { if (o.material) for (const m of [].concat(o.material)) { m.transparent = true; m.depthWrite = false; m.side = THREE.DoubleSide; mats.push(m); } });
+  const mats = []; g.traverse(o => { if (o.material) for (const m of [].concat(o.material)) { m.transparent = true; m.depthWrite = false; m.side = THREE.DoubleSide; if (L.glow && m.uniforms?.uA) m.uniforms.uA.value = L.glow; mats.push(m); } });
   return { g, outer, inner, sig, core, mats, L, col, el, omni, a: 0, hit: 0, brk: 0, kp: 0, kv: 0, tilt: 0 };
 }
 // every frame: shields up for whoever is blocking (src: the state being drawn, me: my own player)
