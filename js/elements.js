@@ -148,6 +148,14 @@ function laserFx(pts, color, w = .06, life = .16) {
   for (let i = 1; i < P.length; i++) { const { x, y, z } = P[i], end = i === P.length - 1; burst(x, y, z, end ? 8 : 5, color, 4, .12, .25); flash(x, y, z, color, end ? 10 : 6, .1); }
 }
 // a glowing see-through copy of the wizard (Illusion's decoy, Shadow's Night Terror)
+// Ink Dragon: a head and 30 tapering body segments, built once at game start (warmFx) and reused: building them on the first cast froze the game
+const inkPool = [];
+function inkDragonBuild() {
+  const SEGS = 30, o = model('ink__dragon_head', 0x3a52ff, { shadow: true }), u = o.userData; o.scale.setScalar(2.4);
+  u.body = new THREE.Group();
+  u.segs = Array.from({ length: SEGS }, (_, k) => { const s = model('ink__dragon_seg', 0x3a52ff, { shadow: true }); s.scale.setScalar(2.2 * (1 - .7 * (k / SEGS) ** 1.5)); u.body.add(s); u.mats.push(...s.userData.mats); return s; });
+  return o;
+}
 // Blade Dance: 9 m, or on until you are clear of the monster you would stop inside (up to 14 m)
 function danceLen(p, f) {
   let L = 9; const inside = L => S.enemies.some(e => alive(e) && Math.hypot(e.x - p.x - f.x * L, e.z - p.z - f.z * L) < ET[e.type].r * e.sc + .8);
@@ -228,7 +236,7 @@ function blastFx(e, k = 1) {
   boomFx(e.x, e.y, e.z, e.r, 0xffa020, .8 * k);
   smokeFx(e.x, Math.max(e.y, .5), e.z, e.r * .5 * k, 0xffa040, .55, 5, 2.2); // the fireball: bright fire-lit puffs that burn out fast
   smokeFx(e.x, Math.max(e.y, .5), e.z, e.r * .6, 0xc0662a, 1, 4, 1.8);
-  smokeFx(e.x, Math.max(e.y, .5), e.z, e.r * .8, 0x5a5047, 2.4, Math.round(4 + e.r * 1.5), 1.4);
+  smokeFx(e.x, Math.max(e.y, .5), e.z, e.r * .8, 0x5a5047, 2.4, Math.round(2 + e.r * .6), 1.4);
   debrisFx(e.x, .4, e.z, Math.round(2 + e.r), 'earth__pebble', 0xff8a20, .2, 8);
   scarFx(e.x, e.z, e.r * .6, 0xff5a10, 4);
   burst(e.x, e.y + .3, e.z, 14, 0xffb050, 7, .08, 1.1, 9, 3); // embers
@@ -290,7 +298,7 @@ fire: {
           u.outer.scale.set(3.2 + heat * .8, 3.2 + heat * .8, 7.5); u.outer.rotation.z += dt * 3; fade(u.outer, (.2 + heat * .12) * (mine ? .7 : 1));
           u.core.scale.set(1.2 + heat * .6, 1.2 + heat * .6, 6.5); u.core.rotation.z -= dt * 5; fade(u.core, (.12 + heat * .3) * (mine ? .6 : 1));
           const hot = () => heat > .65 && Math.random() < heat - .5 ? 0xfff1d0 : flameColor();
-          for (let k = 0; k < 8 + heat * 6; k++) { const s = rand(10, 16), sp = 2.5 + heat; emit(a.x + d.x * .3, a.y + d.y * .3, a.z + d.z * .3, d.x * s + rand(-sp, sp), d.y * s + rand(-1.5, 2.5), d.z * s + rand(-sp, sp), hot(), rand(.28, .62) * (1 + heat * .3), rand(.35, .55), -2.5, 1.2); }
+          for (let k = 0; k < 6 + heat * 4; k++) { const s = rand(10, 16), sp = 2.5 + heat; emit(a.x + d.x * .3, a.y + d.y * .3, a.z + d.z * .3, d.x * s + rand(-sp, sp), d.y * s + rand(-1.5, 2.5), d.z * s + rand(-sp, sp), hot(), rand(.28, .62) * (1 + heat * .3), rand(.35, .55), -2.5, 1.2); }
           for (let k = 0; k < 2; k++) { const q = a.clone().addScaledVector(d, rand(1.5, 7)); emit(q.x + rand(-.5, .5), q.y + rand(-.3, .3), q.z + rand(-.5, .5), rand(-1, 1), rand(2, 4), rand(-1, 1), 0xffe0a0, rand(.04, .08), rand(.6, 1), 3, .5); } // sparks
           if (Math.random() < .35) flash(a.x + d.x * 3, a.y, a.z + d.z * 3, heat > .7 ? 0xffd8a0 : 0xff6a1a, 9 + heat * 8, .1);
           if (d.y < -.05) { const L = Math.min(7.5, -a.y / d.y), g = a.clone().addScaledVector(d, L); if (L < 7.4 && Math.random() < .12) scarFx(g.x, g.z, rand(.5, .9), 0xff4a10, 2.5); if (L < 7.4 && Math.random() < .3) smokeFx(g.x, .3, g.z, .7, 0x3a2a24, 1.1, 1, 1.4); } // it scorches the floor it licks
@@ -309,7 +317,7 @@ fire: {
           burst(e.x, e.y, e.z, 24, 0xffb040, 4, .25, .6, -1); sfx('fire_sizzle');
           const c = makeCircle('fire'); addFx(c, 1.2, (o, k, dt) => { const v = views.e.get(e.id); if (v) o.position.copy(v.g.position).add(V(0, 2.5 + k * .3, 0)); o.scale.setScalar(.9 - k * .25); spinCircle(o, dt, 2 + k * 8); setOpacity(o.userData.mats, (.55 + .45 * Math.sin(k * k * 60)) * (1 - k * .2)); if (Math.random() < .5) emit(o.position.x + rand(-.4, .4), o.position.y, o.position.z + rand(-.4, .4), 0, 1.5, 0, flameColor(), .2, .4, -1); });
         },
-        spread(e) { const a = V(e.x, e.y, e.z), b = V(e.x2, e.y2, e.z2); for (let i = 0; i <= 14; i++) { const q = a.clone().lerp(b, i / 14); q.y += Math.sin(i / 14 * Math.PI) * 1.4; emit(q.x, q.y, q.z, 0, rand(.5, 2), 0, flameColor(), rand(.18, .34), .5, -1); } burst(b.x, b.y, b.z, 16, 0xffb040, 4, .22, .4, -1); },
+        spread(e) { const a = V(e.x, e.y, e.z), b = V(e.x2, e.y2, e.z2); for (let i = 0; i <= 8; i++) { const q = a.clone().lerp(b, i / 8); q.y += Math.sin(i / 8 * Math.PI) * 1.4; emit(q.x, q.y, q.z, 0, rand(.5, 2), 0, flameColor(), rand(.18, .34), .5, -1); } burst(b.x, b.y, b.z, 16, 0xffb040, 4, .22, .4, -1); },
         boom: e => { fireBoom(e.x, e.y, e.z, e.r, 1.25); shake(.2); } } },
     { name: 'Ring of Fire', icon: '⭕', cd: 12, desc: 'Raise a roaring wall of flame around you. Enemies that cross it are scorched and thrown back.',
       cast(p, c) { ent(p, c, p.x, p.z, { r: 5.5 * c.st.aoe, life: 5 }); },
@@ -319,7 +327,7 @@ fire: {
           if (Math.abs(d - n.r) < 1 + ET[e.type].r * e.sc && ready(n, e, .3)) { const out = d > n.r - .2 ? 1 : -1; hitEnemy(e, 'fire', 11 * n.mul, own(n), dx * out, dz * out, 9, { aoe: true }); fxe(n.mv, 'lick', { x: n.x + dx / d * n.r, z: n.z + dz / d * n.r }); }
         } } },
       view: {
-        make(n) { const g = ringOf('fire__flame', 0xff5a1a, 40, n.r, 1.6, { flame: true }); g.children.forEach(f => f.userData.h = rand(.85, 1.35)); g.userData.circle = zoneCircle('fire', n.r + .4, .6); g.add(g.userData.circle); sfx('fire_whoosh'); burst(n.x, .4, n.z, 60, 0xffb040, 9, .3, .5, -1); return g; },
+        make(n) { const g = ringOf('fire__flame', 0xff5a1a, 28, n.r, 1.6, { flame: true }); g.children.forEach(f => f.userData.h = rand(.85, 1.35)); g.userData.circle = zoneCircle('fire', n.r + .4, .6); g.add(g.userData.circle); sfx('fire_whoosh'); burst(n.x, .4, n.z, 60, 0xffb040, 9, .3, .5, -1); return g; },
         upd(o, n, dt, t) {
           const grow = easeOutBack(Math.min(1, n.t * 3.5));
           o.children.forEach((f, i) => { if (f !== o.userData.circle) f.scale.set(.8, (1 + .35 * Math.sin(t * 13 + i * 1.7)) * grow * 1.35 * f.userData.h, .8); });
@@ -436,7 +444,7 @@ storm: {
     { name: 'Ball Lightning', icon: '🔮', cd: 6, desc: 'A slow orb of lightning that zaps nearby enemies as it drifts, then bursts.',
       cast(p, c) { shoot(p, c, 9, { r: .7, life: 2.4, pierce: 99, dmg: 6 * c.dmg, kb: .5 }); },
       shot: {
-        tick(s, dt) { if (!pulse(s, dt, .25, 'z')) return; const p = own(s); for (const e of enemiesNear(s.x, s.z, 6).slice(0, 2)) { const q = center(e); ev({ k: 'bolt', el: 'storm', pts: [[s.x, s.y, s.z], [q.x, q.y, q.z]].map(a => a.map(r2)), q: 1 }); hitEnemy(e, 'storm', 5 * s.mul, p, 0, 0, 0); } },
+        tick(s, dt) { if (!pulse(s, dt, .25, 'z')) return; const p = own(s); for (const e of enemiesNear(s.x, s.z, 6).slice(0, 2)) { const q = center(e); if (!s.zv) ev({ k: 'bolt', el: 'storm', pts: [[s.x, s.y, s.z], [q.x, q.y, q.z]].map(a => a.map(r2)), q: 1 }); s.zv = !s.zv; hitEnemy(e, 'storm', 5 * s.mul, p, 0, 0, 0); } }, // one zap drawn per pulse (both still hit): 2 bolts every .25 s was the storm kit's worst fx load
         ground(s) { s.vy = Math.abs(s.vy); },
         end(s) { boomAt(ctxS(s), s.x, s.y, s.z, 3, 20 * s.mul, { kb: 6 }); },
       },
@@ -479,7 +487,7 @@ storm: {
       } },
       view: { make() { const o = model('storm__cloud', 0xb08cff); o.scale.setScalar(1.6); return o; },
         upd(o, n, dt, t) { o.position.y = 9; o.rotation.y += dt * .4; fade(o, Math.min(1, n.t * 3, n.l * 5)); if (Math.random() < dt * 8) flash(n.x, 8, n.z, 0xb08cff, 25, .1);
-          for (let k = 0; k < 4; k++) emit(n.x + rand(-6, 6), rand(4, 8), n.z + rand(-6, 6), 1, -14, 0, 0x9fb8ff, .06, .5, 0, 0); },
+          for (let k = 0; k < 2; k++) emit(n.x + rand(-6, 6), rand(4, 8), n.z + rand(-6, 6), 1, -14, 0, 0x9fb8ff, .06, .5, 0, 0); },
         drop: dropFade() } },
   ],
 },
@@ -1396,8 +1404,8 @@ blood: {
           u.moon.position.y = u.halo.position.y = y; u.moon.rotation.y += dt * .6; u.halo.rotation.y -= dt * .3; fade(u.moon, a); fade(u.halo, a * (.22 + .08 * Math.sin(t * 5)));
           u.dm.uniforms.uA.value = a * (.5 + .15 * Math.sin(t * 3)); spinCircle(u.circle, dt, .6); setOpacity(u.circle.userData.mats, a * .7);
           const top = V(o.position.x, y, o.position.z);
-          if (Math.random() < .7) flash(top.x, y, top.z, 0xff1030, 18 * a, .15);
-          for (let i = 0; i < 3; i++) { const ang = rand(0, TAU), d = rand(1, n.r); emit(top.x + Math.cos(ang) * d, .2, top.z + Math.sin(ang) * d, -Math.cos(ang) * d * .25, rand(2, 4), -Math.sin(ang) * d * .25, Math.random() < .6 ? 0xe8102e : 0x5a0010, rand(.1, .2), 1.2, -1, 0); } // blood rains up into it
+          if (Math.random() < .2) flash(top.x, y, top.z, 0xff1030, 18 * a, .15);
+          for (let i = 0; i < 2; i++) { const ang = rand(0, TAU), d = rand(1, n.r); emit(top.x + Math.cos(ang) * d, .2, top.z + Math.sin(ang) * d, -Math.cos(ang) * d * .25, rand(2, 4), -Math.sin(ang) * d * .25, Math.random() < .6 ? 0xe8102e : 0x5a0010, rand(.1, .2), 1.2, -1, 0); } // blood rains up into it
           const ids = Array.isArray(n.s) ? n.s : [];
           while (u.tethers.length < ids.length) { const b = beamMesh(0xff1030, .07, true); scene.add(b); u.tethers.push(b); }
           u.tethers.forEach((b, i) => { const v = views.e.get(ids[i]); b.visible = !!v && i < ids.length; if (v) { const to = v.g.position.clone().add(V(0, 1, 0)); aimBeam(b, to, top, .06 + .03 * Math.sin(t * 20 + i)); fade(b, a * .8); if (Math.random() < .5) emit(to.x, to.y, to.z, (top.x - to.x) * 1.2, (top.y - to.y) * 1.2, (top.z - to.z) * 1.2, 0xff2040, .18, .8, 0, 0); } });
@@ -1588,7 +1596,7 @@ explosion: {
     { name: 'Carpet Bomb', icon: '✈️', desc: 'ULTIMATE. Call in a bombing run: fourteen bombs drop in a line ahead of you, one after another.',
       cast(p, c) { const f = c.flat, x0 = p.x, z0 = p.z; for (let i = 0; i < 14; i++) { const q = clampArena(V(x0 + f.x * (4 + i * 2), 0, z0 + f.z * (4 + i * 2)), .8); later(.25 + i * .12, () => { fxe(c.m.key, 'drop', { x: q.x, z: q.z }); later(.4, () => boomAt(c, q.x, .3, q.z, 4.5, 130 * c.dmg, { kb: 8, lift: 4, raw: true })); }); } fxe(c.m.key, 'run', {}); },
       fx: { drop(e) { modelFx('explosion__bomb', 0xffa020, V(e.x, 25, e.z), .41, (o, k) => { o.position.y = 25 * (1 - k * k); }); },
-        boom: e => blastFx(e, 1.2),
+        boom: e => blastFx(e, .8),
         run() { sfx('ult'); } } },
   ],
 },
@@ -1640,10 +1648,10 @@ illusion: {
         end(n) { boomAt(ctxN(n), n.x, 1, n.z, n.r, 50 * n.mul, { kb: 4, skip: n.t > .5 && !nearest(n.x, n.z, 14, [n.src]) ? [] : [n.src] }, 'pop'); } },
       view: { make() { const o = model('illusion__mask', 0xf0a6ff); o.scale.setScalar(1.3); return o; },
         upd(o, n, dt, t) { o.position.y = 1.2 + Math.sin(t * 9 + n.id) * .15; o.rotation.y = n.yaw + Math.PI; tint(o, shimmer(t * 3 + n.id)); fade(o, (.55 + .3 * Math.sin(t * 30 + n.id)) * Math.min(1, n.t * 6));
-          for (let k = 0; k < 2; k++) emit(o.position.x + rand(-.3, .3), o.position.y + rand(-.4, .4), o.position.z + rand(-.3, .3), 0, rand(0, .5), 0, shimmer(rand(0, 9)).getHex(), rand(.08, .16), .4); },
+          emit(o.position.x + rand(-.3, .3), o.position.y + rand(-.4, .4), o.position.z + rand(-.3, .3), 0, rand(0, .5), 0, shimmer(rand(0, 9)).getHex(), rand(.08, .16), .4); },
         drop: o => o.removeFromParent() },
-      fx: { split(e) { burst(e.x, e.y, e.z, 30, 0xffc8ff, 6, .2, .4); flash(e.x, e.y, e.z, 0xf0a6ff, 20, .2); sfx('illusion_big'); },
-        pop(e) { boomFx(e.x, e.y, e.z, e.r, 0xf0a6ff, .7); debrisFx(e.x, e.y, e.z, 8, 'illusion__shard', 0xf0a6ff, .2, 9); sfx('tink'); } } },
+      fx: { split(e) { burst(e.x, e.y, e.z, 20, 0xffc8ff, 6, .2, .4); flash(e.x, e.y, e.z, 0xf0a6ff, 20, .2); sfx('illusion_big'); },
+        pop(e) { boomFx(e.x, e.y, e.z, e.r, 0xf0a6ff, .7); debrisFx(e.x, e.y, e.z, 5, 'illusion__shard', 0xf0a6ff, .2, 9); sfx('tink'); } } },
     { name: 'Phantasmagoria', icon: '🎪', desc: 'ULTIMATE. Trap everything within 14 m in a hall of mirrors: monsters are charmed and fight each other for 5 s, then the mirrors shatter for 120 damage to every one of them.',
       cast(p, c) { ent(p, c, p.x, p.z, { life: 5, r: 14 * c.st.aoe }); },
       ent: { tick(n) { for (const e of enemiesNear(n.x, n.z, n.r)) { if (ready(n, e, 99)) { cc(e, 'charm', n.life, own(n)); applyStatus(e, 'illusion', own(n)); } e.fs = Math.max(e.fs || 0, .3); } },
@@ -1916,7 +1924,8 @@ soul: {
       look: { m: 'soul__flame', trail: [() => Math.random() < .5 ? 0x8cb4ff : 0xe0ecff, .14, .4, -1, 2], light: 3 },
       fx: { storm(e) { // the souls spiral up round you in a tall column before they dive
           ringFx(e.x, e.y + .1, e.z, 3, 0x8cb4ff, .5); sfx('soul_big');
-          for (let i = 0; i < 40 + e.n * 3; i++) { const a = TAU * i / 12, h = i * .09; emit(e.x + Math.cos(a) * 2, e.y + .3 + h, e.z + Math.sin(a) * 2, -Math.sin(a) * 6, 4 + h, Math.cos(a) * 6, i % 3 ? 0x8cb4ff : 0xe0ecff, rand(.12, .22), .7, -1, 1); }
+          for (let i = 0; i < 24 + e.n * 2; i++) {
+ const a = TAU * i / 12, h = i * .09; emit(e.x + Math.cos(a) * 2, e.y + .3 + h, e.z + Math.sin(a) * 2, -Math.sin(a) * 6, 4 + h, Math.cos(a) * 6, i % 3 ? 0x8cb4ff : 0xe0ecff, rand(.12, .22), .7, -1, 1); }
         } } },
     { name: 'The Reaper', icon: '💀', mode: 'aim', range: 20, aimR: 9, desc: 'ULTIMATE. Summon the Reaper at the target. It spends your Souls: its scythe sweeps round three times, plus once more for every 3 Souls spent (up to 8 sweeps), cutting everything within 9 m for 50 and reaping any monster left under 25% health.',
       cast(p, c) { const sw = 3 + Math.min(5, Math.floor((p.bd.souls || 0) / 3)); p.bd.souls = 0; ent(p, c, c.tgt.x, c.tgt.z, { life: 1.6 + sw * .6, r: 9 * c.st.aoe, sw }); },
@@ -2288,9 +2297,8 @@ ink: {
         }
       } },
       view: { make(n) {
-          const SEGS = 30, o = model('ink__dragon_head', 0x3a52ff, { shadow: true }), u = o.userData; o.scale.setScalar(2.4);
-          u.body = new THREE.Group(); scene.add(u.body); u.trail = [];
-          u.segs = Array.from({ length: SEGS }, (_, k) => { const s = model('ink__dragon_seg', 0x3a52ff, { shadow: true }); s.scale.setScalar(2.2 * (1 - .7 * (k / SEGS) ** 1.5)); u.body.add(s); u.mats.push(...s.userData.mats); return s; }); // tapering to the tail
+          const o = inkPool.pop() || inkDragonBuild(), u = o.userData;
+          scene.add(u.body); u.trail = []; o.rotation.set(0, 0, 0); fade(o, 1);
           sfx('ult'); return o;
         },
         upd(o, n, dt, t) { // the body follows the path the head has drawn, like a brush stroke
@@ -2303,7 +2311,7 @@ ink: {
           if (Math.random() < .7) { const s = pick(u.segs); emit(s.position.x, s.position.y - .2, s.position.z, rand(-.3, .3), -rand(2, 5), rand(-.3, .3), Math.random() < .6 ? 0x3a52ff : 0x9aa8ff, rand(.12, .25), .7, 6); } // ink raining off it
           if (h.y < .4 && h.y > -.8 && Math.random() < .5) burst(h.x, .1, h.z, 6, 0x5a70ff, 4, .2, .4, 8); // breaking the surface
         },
-        drop(o) { o.userData.body.removeFromParent(); o.removeFromParent(); } },
+        drop(o) { o.userData.body.removeFromParent(); o.removeFromParent(); inkPool.push(o); } },
       fx: { rise(e) { circleFx('ink', V(e.x, .08, e.z), e.r, { life: 4.6 }); inkDecal(e.x, e.z, e.r * .5, 4.6); shake(.3); },
         crash(e) { inkDecal(e.x, e.z, e.r * .9, 3.5); boomFx(e.x, .5, e.z, e.r, 0x3a52ff, 1.6); pillarFx(e.x, .05, e.z, e.r * .5, 10, 0x3a52ff, .7); burst(e.x, .5, e.z, 70, 0x9aa8ff, 10, .3, .8, 10); shake(.7); sfx('ink_big'); } } },
   ],

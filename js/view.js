@@ -1194,6 +1194,7 @@ function warmFx() {
   for (const k in T) for (const o of [T[k]].flat()) add(glowify(o.clone(), glowMats(0xffffff)));
   const b = T.beam.clone(), d = T.disc.clone(); b.material = beamMat(0xffffff); d.material = discMat(0xffffff); add(b); add(d);
   add(new THREE.Sprite(new THREE.SpriteMaterial({ map: puffTex(), transparent: true, depthWrite: false })));
+  if (!inkPool.length) { const d = inkDragonBuild(); inkPool.push(d); g.add(d, d.userData.body); } // the Ink Dragon is built (and compiled) now, not on its first cast
   g.scale.setScalar(.05);
   camera.add(g); g.position.set(0, 0, -3);
   try { renderer.compile(scene, camera); renderer.render(scene, camera); } catch (err) { console.error(err); }
