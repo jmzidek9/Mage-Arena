@@ -135,7 +135,7 @@ function skyFx(x, y, z, color) {
   boltFx(pts, color); burst(x, y, z, 18, color, 7, .2, .3); flash(x, y + 1, z, color, 40, .2);
 }
 // a heavy lightning strike from the sky at (x, z): a branching bolt with a white-hot core, a shockwave, a scorched crater and arcs crawling over the floor
-function bigBoltFx(x, z, r = 3, top = 16) {
+function bigBoltFx(x, z, r = 3, top = 16, epic = false) {
   const pts = [[x + rand(-1.5, 1.5), top, z + rand(-1.5, 1.5)]];
   for (let i = 1; i < 8; i++) { const f = 1 - i / 8; pts.push([x + rand(-1.1, 1.1) * f, top * f, z + rand(-1.1, 1.1) * f]); }
   pts.push([x, 0, z]);
@@ -147,6 +147,12 @@ function bigBoltFx(x, z, r = 3, top = 16) {
   ringFx(x, .1, z, r, 0xb08cff, .45); ringFx(x, .15, z, r * .55, 0xe8dcff, .3); scarFx(x, z, r * .5, 0x8a5cff, 2.5);
   burst(x, .3, z, Math.round(14 + r * 6), 0xd8c8ff, 8, .2, .4, 4); dustFx(x, z, r * .4, 0x6a6078);
   flash(x, 2, z, 0xc8b0ff, near ? 15 : 40, .2);
+  if (!epic) return;
+  // epic: an electric dome bursting outward, rubble thrown up, and the ground left crackling for a moment
+  modelFx('gen__dome', 0xb08cff, V(x, 0, z), .45, (o, k) => { o.scale.setScalar(r * (.25 + 1.1 * easeOut(k))); fade(o, (1 - k) * (near ? .2 : .55)); });
+  debrisFx(x, .3, z, Math.round(4 + r * 2), 'earth__pebble', 0x8a5cff, .3, 9);
+  for (let i = 0; i < 14; i++) { const a = rand(0, TAU), sp = rand(6, 12); emit(x, 1, z, Math.cos(a) * sp, rand(2, 7), Math.sin(a) * sp, Math.random() < .5 ? 0xffffff : 0xd8c8ff, rand(.05, .1), rand(.5, .8), 9, .8); } // hot sparks raining back down
+  addFx(new THREE.Group(), .9, (o, k) => { if (Math.random() < .55 * (1 - k)) { const a = rand(0, TAU), d = rand(.3, r * .9), a2 = a + rand(-.8, .8), d2 = d + rand(.6, 1.4); boltFx([[x + Math.cos(a) * d, .06, z + Math.sin(a) * d], [x + Math.cos((a + a2) / 2) * (d + d2) / 2, rand(.15, .45), z + Math.sin((a + a2) / 2) * (d + d2) / 2], [x + Math.cos(a2) * d2, .06, z + Math.sin(a2) * d2]], 0xc8b0ff); } });
 }
 // dust kicked up off the floor: real (normal-blended) puffs, plus a little bright grit
 function dustFx(x, z, r, color = 0x9a8a78) {
@@ -577,9 +583,11 @@ storm: {
       fx: { mark(e) { // the warning: a storm sigil on the ground, static crawling up off it, flickers gathering overhead
           circleFx('storm', V(e.x, .08, e.z), e.r, { life: .55 });
           for (let i = 0; i < 24; i++) { const a = rand(0, TAU), d = rand(0, e.r); emit(e.x + Math.cos(a) * d, .1, e.z + Math.sin(a) * d, 0, rand(2, 5), 0, Math.random() < .5 ? 0xffffff : 0xc0a0ff, rand(.05, .1), .45); }
-          addFx(new THREE.Group(), .45, (o, k) => { if (Math.random() < .35) flash(e.x, 12, e.z, 0xb08cff, 20 * k, .08); if (Math.random() < .25) boltFx([[e.x + rand(-3, 3), 13, e.z + rand(-3, 3)], [e.x + rand(-3, 3), 12, e.z + rand(-3, 3)]], 0xd8c8ff); });
+          let stab = 0; // three thinner bolts stab down round the sigil's edge as the strike builds
+          addFx(new THREE.Group(), .45, (o, k) => { if (Math.random() < .35) flash(e.x, 12, e.z, 0xb08cff, 20 * k, .08); if (Math.random() < .25) boltFx([[e.x + rand(-3, 3), 13, e.z + rand(-3, 3)], [e.x + rand(-3, 3), 12, e.z + rand(-3, 3)]], 0xd8c8ff);
+            if (k > [.25, .5, .75][stab]) { const a = rand(0, TAU), x = e.x + Math.cos(a) * e.r * .9, z = e.z + Math.sin(a) * e.r * .9; skyFx(x, 0, z, 0xc0a0ff); scarFx(x, z, .5, 0x8a5cff, 1.5); stab++; } });
           sfx('storm'); },
-        strike(e) { bigBoltFx(e.x, e.z, e.r); sfx('storm_big'); shake(e.r > 2 ? .3 : .12); },
+        strike(e) { const main = e.r > 2; bigBoltFx(e.x, e.z, e.r, 16, main); sfx('storm_big'); if (main) sfx('explosion_big'); shake(main ? .4 : .12); },
         arc(e) { const a = V(e.x, 1.4, e.z), b = V(e.x2, 1.2, e.z2), pts = []; for (let i = 0; i <= 6; i++) { const q = a.clone().lerp(b, i / 6), j = i % 6 ? 1 : 0; q.y += Math.sin(i / 6 * Math.PI) * 1.6; pts.push([q.x + rand(-.4, .4) * j, q.y, q.z + rand(-.4, .4) * j]); } boltFx(pts, 0xd8c8ff); } } },
     { name: 'Tesla Coil', icon: '🗼', cd: 13, mode: 'aim', range: 16, aimR: 9, desc: 'Plant a tesla coil that zaps up to 3 enemies every half second. Two of your coils within 12 m of each other link up with a crackling fence that shocks anything crossing it.',
       cast(p, c) { ent(p, c, c.tgt.x, c.tgt.z, { life: 9, r: 9, solid: [{ x: c.tgt.x, z: c.tgt.z, r: .6 }], h: 2.5 }); },
@@ -615,11 +623,13 @@ storm: {
         upd(o, n, dt, t) {
           const u = o.userData, a = Math.min(1, n.t * 2, n.l * 4); u.core.rotation.y += dt * .4; fade(u.core, a);
           if (Math.random() < dt * 5) { const q = pick(u.puffs); q.lit = 1; flash(n.x + q.sp.position.x, 8.5, n.z + q.sp.position.z, 0xb08cff, 25, .12); } // lightning flickering inside the cloud
+          if (Math.random() < dt * 3) { const a = rand(0, TAU), d = rand(3, 11), x = n.x + Math.cos(a) * d, z = n.z + Math.sin(a) * d, b = a + rand(-1.2, 1.2), pts = [[x, 8.6, z]]; // sheet lightning crawling across the underside of the cloud
+            for (let i = 1; i <= 5; i++) pts.push([x + Math.cos(b) * i * 1.8 + rand(-.7, .7), 8.6 + rand(-.5, .3), z + Math.sin(b) * i * 1.8 + rand(-.7, .7)]); boltFx(pts, 0xd8c8ff); for (const q of u.puffs) if (Math.hypot(n.x + q.sp.position.x - x, n.z + q.sp.position.z - z) < 7) q.lit = Math.max(q.lit, .7); }
           for (const q of u.puffs) { q.a += q.s * dt; q.sp.position.x = Math.cos(q.a) * q.d; q.sp.position.z = Math.sin(q.a) * q.d; q.lit = Math.max(0, q.lit - dt * 6); q.m.opacity = .82 * a; q.m.color.setRGB(.34 + q.lit * .5, .3 + q.lit * .45, .48 + q.lit * .5); /* storm grey with a violet cast: a near-black cloud vanished against the night sky */ }
           for (let k = 0; k < 3; k++) emit(n.x + rand(-11, 11), rand(5, 10), n.z + rand(-11, 11), 1.5, -18, 0, 0xb8c8ff, .07, .55, 0, 0); // driving rain
         },
         drop: dropFade() },
-      fx: { bolt(e) { bigBoltFx(e.x, e.z, 1.4, 9); shake(.06); if (Math.random() < .5) sfx('storm'); } } },
+      fx: { bolt(e) { const epic = Math.random() < .25; bigBoltFx(e.x, e.z, epic ? 2.4 : 1.4, 9, epic); shake(epic ? .18 : .06); if (epic || Math.random() < .5) sfx(epic ? 'storm_big' : 'storm'); } } }, // about one strike in four is an extra-heavy one
   ],
 },
 // ================================================================== WATER
