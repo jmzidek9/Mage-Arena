@@ -1,17 +1,17 @@
 # Graph Report - Test Game  (2026-11-04)
 
 ## Corpus Check
-- 70 files · ~278,523 words
+- 70 files · ~279,517 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 2 file(s) not represented in the graph (top: (none) 2)
 
 ## Summary
-- 1338 nodes · 2484 edges · 66 communities (61 shown, 5 thin omitted)
+- 1338 nodes · 2486 edges · 68 communities (63 shown, 5 thin omitted)
 - Extraction: 90% EXTRACTED · 10% INFERRED · 0% AMBIGUOUS · INFERRED: 247 edges (avg confidence: 0.9)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `6e35fbf6`
+- Built from commit: `b52865c6`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -35,13 +35,15 @@
 - run.js
 - build_enemies.py
 - boltFx
-- ringFx
+- addFx
 - Wind playtest report
+- boomAt
 - Checklist: adding or changing a move or an element
 - clamp
 - build_foes.py
 - renderLobby
 - Elements
+- Mage Arena
 - onEvent
 - icons.js
 - animEnemy
@@ -53,7 +55,7 @@
 - keyName
 - lockMouse
 - grab
-- dustFx
+- In-game look
 - Magma playtest report
 - Explosion playtest report
 - Steel playtest report
@@ -79,7 +81,7 @@
 - Laser playtest report
 - Mage Arena playtest report (all 30 elements)
 - Earth playtest report
-- Gravity playtest report
+- ringFx
 - all.sh
 - burst
 
@@ -98,10 +100,10 @@
 ## Surprising Connections (you probably didn't know these)
 - `Finishing pass` --references--> `bake_ao()`  [INFERRED]
   vault/Blender Assets.md → blender/lib.py
-- `E: Repulsor (cd 9, 24 dmg r7, kb 18, reflects shots within 9 m)` --references--> `ringFx()`  [INFERRED]
-  playtest/reports/gravity.md → js/core.js
 - `R: Bass Drop` --references--> `ringFx()`  [INFERRED]
   playtest/reports/sonic.md → js/core.js
+- `Passive: Kindling (death blast 20 x dmgMul, r 2.6)` --references--> `fireBoom()`  [INFERRED]
+  playtest/reports/fire.md → js/elements.js
 - `LMB: Grenade` --references--> `blastFx()`  [INFERRED]
   playtest/reports/explosion.md → js/elements.js
 - `R: Colossal Blade (ult, 130 impact r 6 + 5 x 26 waves, halo to 6)` --references--> `addUlt()`  [INFERRED]
@@ -110,7 +112,7 @@
 ## Import Cycles
 - None detected.
 
-## Communities (66 total, 5 thin omitted)
+## Communities (68 total, 5 thin omitted)
 
 ### Community 0 - "sim.js"
 Cohesion: 0.05
@@ -142,7 +144,7 @@ Nodes (30): spell_circle(), barm(), boss_body(), boss_sword(), brute_body(), par
 
 ### Community 7 - "elements.js"
 Cohesion: 0.06
-Nodes (16): _bgeo, ctxS(), ELEMENTS, fxe(), inkPool, inkSplash(), JET_GEO, puffTex() (+8 more)
+Nodes (12): _bgeo, ELEMENTS, inkPool, JET_GEO, puffTex(), REAP_ARC, smokeCloud(), spectralMat() (+4 more)
 
 ### Community 9 - "Venom playtest report"
 Cohesion: 0.18
@@ -181,20 +183,24 @@ Cohesion: 0.22
 Nodes (17): arm(), boss_arm(), claws(), dkbody(), ellipsoid(), horn(), kbody(), leg() (+9 more)
 
 ### Community 18 - "boltFx"
-Cohesion: 0.15
-Nodes (16): animateArena(), boltFx(), circleFx(), easeOutBack(), glowify(), glowMats(), makeCircle(), nearFade() (+8 more)
+Cohesion: 0.14
+Nodes (17): animateArena(), boltFx(), circleFx(), easeOutBack(), glowify(), glowMats(), makeCircle(), nearFade() (+9 more)
 
-### Community 19 - "ringFx"
-Cohesion: 0.16
-Nodes (15): addFx(), addShader(), beamMat(), discMat(), easeOut(), fireMat(), meshFx(), pillarFx() (+7 more)
+### Community 19 - "addFx"
+Cohesion: 0.28
+Nodes (9): addFx(), addShader(), beamMat(), discMat(), easeOut(), fireMat(), meshFx(), pillarFx() (+1 more)
 
 ### Community 20 - "Wind playtest report"
 Cohesion: 0.20
 Nodes (9): E: Tornado (lines 619-638), Expected landing, LMB: Wind Blades (`js/elements.js` line 602), Passive: Tailwind (`js/sim.js` lines 94 and 582), Q: Updraft (lines 615-618), R: Downburst (lines 639-659), RMB: Gale Force (lines 605-614), Top 3 (+1 more)
 
+### Community 21 - "boomAt"
+Cohesion: 0.25
+Nodes (8): boomAt(), ctxS(), fxe(), inkSplash(), summonAI(), RMB: Crush (cd 6, 55 dmg r3.5, stun 1 s, slams airborne), Q: Sigilfall, Q: Implosion
+
 ### Community 22 - "Checklist: adding or changing a move or an element"
-Cohesion: 0.13
-Nodes (14): Checklist: adding or changing a move or an element, Don't lag the PC (this has happened twice), Knowledge, Mage Arena, Never lose data, Spell icons, energyMat(), flameMat() (+6 more)
+Cohesion: 0.22
+Nodes (9): Checklist: adding or changing a move or an element, energyMat(), flameMat(), flash(), model(), nearOff(), ent(), R: Divine Judgment (+1 more)
 
 ### Community 23 - "clamp"
 Cohesion: 0.50
@@ -211,6 +217,10 @@ Nodes (12): bestFor(), PICKABLE(), pickMode(), pvShow(), renderDetail(), renderL
 ### Community 26 - "Elements"
 Cohesion: 0.06
 Nodes (36): 🐙 Abyss, 🔮 Arcane, Balance, 🗡️ Blades, Blocks, 🩸 Blood, 💀 Bone, ⏳ Chrono (+28 more)
+
+### Community 27 - "Mage Arena"
+Cohesion: 0.33
+Nodes (5): Don't lag the PC (this has happened twice), Knowledge, Mage Arena, Never lose data, Spell icons
 
 ### Community 28 - "onEvent"
 Cohesion: 0.24
@@ -244,9 +254,9 @@ Nodes (9): center(), lane_angle(), apply_bevel(), bake_ao(), basis(), coll(), pa
 Cohesion: 0.67
 Nodes (3): grab(), sp(), Conventions
 
-### Community 39 - "dustFx"
+### Community 39 - "In-game look"
 Cohesion: 0.26
-Nodes (12): bigBoltFx(), blastFx(), debrisFx(), dustFx(), fxRoom(), scarFx(), smokeFx(), Passive: Raise Dead (25% raise, Brittle +12%) (+4 more)
+Nodes (13): bigBoltFx(), blastFx(), debrisFx(), fireBoom(), flameColor(), fxRoom(), inkDecal(), modelFx() (+5 more)
 
 ### Community 40 - "Magma playtest report"
 Cohesion: 0.20
@@ -261,16 +271,16 @@ Cohesion: 0.22
 Nodes (8): E · Caltrops, LMB · Saw Blade, Passive · Armor Breaker, Q · Magnetize, R · Blade Storm, RMB · Railgun, Steel playtest report, Top 3
 
 ### Community 43 - "Sonic playtest report"
-Cohesion: 0.18
-Nodes (10): boomAt(), RMB: Crush (cd 6, 55 dmg r3.5, stun 1 s, slams airborne), Q: Sigilfall, LMB: Sound Wave, Passive: Resonance, Q: Implosion, R: Bass Drop, RMB: Sonic Boom (+2 more)
+Cohesion: 0.17
+Nodes (11): beamFx(), beamMesh(), laserFx(), LMB: Pulse Laser (line 2037), E: Harmonic Link, LMB: Sound Wave, Passive: Resonance, R: Bass Drop (+3 more)
 
 ### Community 44 - "Illusion playtest report"
 Cohesion: 0.22
 Nodes (8): E: Kaleidoscope (cd 7), Illusion playtest report, LMB: Phantom Moths (cd .45), Passive: Misdirection (`st: { weak: .2 }`, sim.js:435 1-in-3 miss), Q: Mesmerize (cd 10), R: Phantasmagoria (ultimate), RMB: Decoy (cd 8), Top 3
 
 ### Community 45 - "Light playtest report"
-Cohesion: 0.17
-Nodes (11): aimBeam(), beamFx(), beamMesh(), E: Penance, Light playtest report, LMB: Radiant Orbs, Passive: Radiance, Q: Blinding Flash (+3 more)
+Cohesion: 0.22
+Nodes (8): aimBeam(), E: Penance, Light playtest report, LMB: Radiant Orbs, Passive: Radiance, Q: Blinding Flash, RMB: Solar Beam, Top 3
 
 ### Community 46 - "Crystal playtest report"
 Cohesion: 0.22
@@ -285,8 +295,8 @@ Cohesion: 0.25
 Nodes (7): Cosmic playtest report, E: Meteor Shower, LMB: Star Shot, Passive: Stellar Rhythm / Starstruck, Q: Constellation, R: Supernova, RMB: Orbiting Moons
 
 ### Community 49 - "Fire playtest report"
-Cohesion: 0.18
-Nodes (11): fireBoom(), flameColor(), spread(), Balance summary, E: Ring of Fire (dmg 95, 476 ms avg = fire's slowest, 577 particles, 41 fx, 1 ent), Fire playtest report, LMB: Fireball (dmg 26 into pack, 170 ms avg, 339 particles, 27 fx), Passive: Kindling (death blast 20 x dmgMul, r 2.6) (+3 more)
+Cohesion: 0.20
+Nodes (9): spread(), Balance summary, E: Ring of Fire (dmg 95, 476 ms avg = fire's slowest, 577 particles, 41 fx, 1 ent), Fire playtest report, LMB: Fireball (dmg 26 into pack, 170 ms avg, 339 particles, 27 fx), Passive: Kindling (death blast 20 x dmgMul, r 2.6), Q: Fire Brand (dmg 37 measured, see note; 386 ms avg, 883 particles = fire's highest, 30 fx), RMB: Flamethrower (dmg 118, 381 ms avg, 7347 ms worst, 812 particles, 40 fx) (+1 more)
 
 ### Community 50 - "Abyss playtest report"
 Cohesion: 0.22
@@ -337,20 +347,20 @@ Cohesion: 0.47
 Nodes (6): gainXP(), needXP(), renderProg(), renderTalents(), saveProg(), xpBar()
 
 ### Community 66 - "Laser playtest report"
-Cohesion: 0.20
-Nodes (11): laserFx(), laserShot(), novaBeams(), E: Laser Drone (lines 2050-2063), Laser playtest report, LMB: Pulse Laser (line 2037), Passive: Ricochet and Focus (laserShot, lines 35-61), Q: Refractor (lines 2042-2049) (+3 more)
+Cohesion: 0.24
+Nodes (9): laserShot(), novaBeams(), E: Laser Drone (lines 2050-2063), Laser playtest report, Passive: Ricochet and Focus (laserShot, lines 35-61), Q: Refractor (lines 2042-2049), R: Prism Nova (lines 2064-2089, novaBeams line 63), RMB: Ricochet Beam (line 2040) (+1 more)
 
 ### Community 67 - "Mage Arena playtest report (all 30 elements)"
 Cohesion: 0.25
 Nodes (7): Balance (median of 30: crowd 218.1 dps, boss 137.1 dps), Harness caveats, Mage Arena playtest report (all 30 elements), Performance hot list (peak particles in one move; the pool holds 4000), Second theme: effects that blind your own view, The one big bug: ultimates recharge themselves, Top changes by element
 
 ### Community 69 - "Earth playtest report"
-Cohesion: 0.22
-Nodes (8): Earth playtest report, LMB: Stone Shot (cd .7, 5 x 10 dmg, spread ±.13), Other, Passive: Bedrock (15% less damage, poise x2, st vuln .1), Q: Stone Pillar (aim, cd 9, 26 dmg, lift 12, solid wall for 6 s), R: Tectonic Quake (ult, 4 quakes x 40 dmg, 12 m, stun 1.2), RMB: Boulder (cd 5, 38 dmg pierce + 20 AoE at end), Top 3
+Cohesion: 0.13
+Nodes (14): dustFx(), zoneCircle(), E: Rain of Blades (cd 11, 12 x 20 in r 1.8 stabs, 6 s field, 30% slow, pick-up), Passive: Raise Dead (25% raise, Brittle +12%), E: Fissure (cd 10, 12 spikes x 28 dmg, line from 3 m to 16.75 m), Earth playtest report, LMB: Stone Shot (cd .7, 5 x 10 dmg, spread ±.13), Other (+6 more)
 
-### Community 73 - "Gravity playtest report"
-Cohesion: 0.17
-Nodes (11): inkDecal(), modelFx(), zoneCircle(), E: Rain of Blades (cd 11, 12 x 20 in r 1.8 stabs, 6 s field, 30% slow, pick-up), E: Repulsor (cd 9, 24 dmg r7, kb 18, reflects shots within 9 m), Gravity playtest report, LMB: Graviton (cd .55, 22 dmg implosion r2, pulls in 3.5 m), Passive: Crushing Weight (x2 dmg vs `e.y > .4`; slams +50% fall dmg) (+3 more)
+### Community 73 - "ringFx"
+Cohesion: 0.18
+Nodes (11): ringFx(), shake(), skyFx(), Q: Arcane Familiar (dmg 22 in window, 257 ms avg, **5634 ms worst**, 467 particles, 1 ent), E: Repulsor (cd 9, 24 dmg r7, kb 18, reflects shots within 9 m), Gravity playtest report, LMB: Graviton (cd .55, 22 dmg implosion r2, pulls in 3.5 m), Passive: Crushing Weight (x2 dmg vs `e.y > .4`; slams +50% fall dmg) (+3 more)
 
 ### Community 79 - "burst"
 Cohesion: 0.06
@@ -362,17 +372,17 @@ Nodes (28): burst(), Arcane playtest report, E: Polymorph (dmg 15, 94 ms avg, 68
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `Blender Assets` connect `build_elements.py` to `Elements.md`, `grab`, `aim`, `dustFx`?**
-  _High betweenness centrality (0.231) - this node is a cross-community bridge._
+- **Why does `Blender Assets` connect `build_elements.py` to `Elements.md`, `grab`, `aim`, `In-game look`?**
+  _High betweenness centrality (0.227) - this node is a cross-community bridge._
 - **Are the 14 inferred relationships involving `build_hell()` (e.g. with `rim()` and `cage()`) actually correct?**
   _`build_hell()` has 14 INFERRED edges - model-reasoned connections that need verification._
 - **Should `sim.js` be split into smaller, more focused modules?**
   _Cohesion score 0.053726453726453724 - nodes in this community are weakly interconnected._
-- **Why does `In-game look` connect `dustFx` to `build_elements.py`, `Checklist: adding or changing a move or an element`?**
-  _High betweenness centrality (0.158) - this node is a cross-community bridge._
+- **Why does `In-game look` connect `In-game look` to `build_elements.py`, `Earth playtest report`, `Checklist: adding or changing a move or an element`?**
+  _High betweenness centrality (0.155) - this node is a cross-community bridge._
 - **Should `core.js` be split into smaller, more focused modules?**
   _Cohesion score 0.023529411764705882 - nodes in this community are weakly interconnected._
 - **Why does `Mesh` connect `aim` to `lib.py`, `build_hell`, `Venom playtest report`, `build_elements.py`, `build_foes.py`?**
-  _High betweenness centrality (0.154) - this node is a cross-community bridge._
+  _High betweenness centrality (0.150) - this node is a cross-community bridge._
 - **Should `dungeon.js` be split into smaller, more focused modules?**
   _Cohesion score 0.07486338797814207 - nodes in this community are weakly interconnected._
