@@ -261,6 +261,17 @@ function scarFx(x, z, r, color, life = 4) {
 }
 // Fire's explosions: a ball of flame that swells and burns out, tongues of fire licking outward, embers flung up that fall,
 // a puff of dark smoke, a shockwave and a scorch. A Flare (hot) burns whiter.
+// Flamethrower jet: an open cone, local z 0 at the nozzle to 1 at the far end; turbulent tongues of fire scroll outward
+const JET_GEO = (() => { const g = new THREE.ConeGeometry(1, 1, 28, 14, true); g.rotateX(-Math.PI / 2); g.translate(0, 0, .5); return g; })();
+const jetMat = core => addShader(`uniform float uA, uHeat, uCore; void main(){
+  float s = clamp(lp.z, 0., 1.);
+  float n = fbm(vec3(vUv.x * 7., s * 5. - uTime * 7., uTime * .6)), m = fbm(vec3(vUv.x * 15. + 3., s * 11. - uTime * 12., 1.7));
+  float body = smoothstep(.36, .78, n * .75 + m * .45 + (1. - s) * .28 + uCore * .12);
+  float a = body * smoothstep(0., .1, s) * (1. - smoothstep(.68, 1., s)) * uA;
+  vec3 hot = mix(vec3(1., .9, .6) * 1.6, vec3(1., .48, .1) * 1.3, smoothstep(.06, .42, s));
+  vec3 col = mix(hot, vec3(.7, .13, .03), smoothstep(.5, .95, s));
+  col = mix(col, vec3(1., .96, .88) * 1.9, uHeat * uCore * (1. - s) * .6); // white-hot at full heat
+  gl_FragColor = vec4(col * a, a); }`, { uA: { value: 1 }, uHeat: { value: 0 }, uCore: { value: core } });
 function fireBoom(x, y, z, r, k = 1, hot = false) {
   const c1 = hot ? 0xffe2a0 : 0xff6a1a, P = V(x, Math.max(y, .3), z), n = Math.round(8 * k + 2);
   flash(x, y + .6, z, c1, 40 * k, .3); shake(clamp((.5 - distTo(x, z) * .03) * Math.min(1.6, r / 2.6), .03, .45) * k);
@@ -333,35 +344,43 @@ fire: {
         det: e => fireBoom(e.x, e.y, e.z, 2.5, .6), nova: e => fireBoom(e.x, .5, e.z, 4.5, .9) } },
     { name: 'Flamethrower', icon: '🌋', cd: 4, mode: 'channel', max: 2.6, desc: 'Hold to pour a roaring cone of fire. It stacks burns and ramps up the longer you hold, burning white-hot at full heat.',
       tick(p, c, dt) { if (pulse(p.bd, dt, .1, 'ft')) for (const e of coneHits(p, 7.5, 50)) hitEnemy(e, 'fire', 3.8 * c.dmg * (1 + p.chT * .45), p, e.x - p.x, e.z - p.z, .8, { src: p }); },
-      chv: {
-        make() { const g = new THREE.Group(), core = model('gen__cone', 0xffd27a), outer = model('gen__cone', 0xff5a1a); g.add(outer, core); g.userData.mats = [...core.userData.mats, ...outer.userData.mats]; Object.assign(g.userData, { core, outer, snd: 0 }); return g; },
+      chv: { // a turbulent jet of real fire: white-yellow at the nozzle, orange, then deep red tongues and dark smoke rolling off the end
+        make() { const g = new THREE.Group(), outer = new THREE.Mesh(JET_GEO, jetMat(0)), core = new THREE.Mesh(JET_GEO, jetMat(1)); g.add(outer, core); g.userData.mats = []; Object.assign(g.userData, { core, outer, snd: 0, smk: 0 }); return g; },
         upd(o, a, d, dt, t, p, T) {
           const u = o.userData, heat = Math.min(1, (T || 0) / 2.2), mine = p?.id === myId; // 0 at the start, 1 when white-hot
-          o.position.copy(a); o.lookAt(a.clone().add(d));
-          u.outer.scale.set(3.2 + heat * .8, 3.2 + heat * .8, 7.5); u.outer.rotation.z += dt * 3; fade(u.outer, (.2 + heat * .12) * (mine ? .7 : 1));
-          u.core.scale.set(1.2 + heat * .6, 1.2 + heat * .6, 6.5); u.core.rotation.z -= dt * 5; fade(u.core, (.12 + heat * .3) * (mine ? .6 : 1));
-          const hot = () => heat > .65 && Math.random() < heat - .5 ? 0xfff1d0 : flameColor();
-          for (let k = 0; k < 6 + heat * 4; k++) { const s = rand(10, 16), sp = 2.5 + heat; emit(a.x + d.x * .3, a.y + d.y * .3, a.z + d.z * .3, d.x * s + rand(-sp, sp), d.y * s + rand(-1.5, 2.5), d.z * s + rand(-sp, sp), hot(), rand(.28, .62) * (1 + heat * .3), rand(.35, .55), -2.5, 1.2); }
-          for (let k = 0; k < 2; k++) { const q = a.clone().addScaledVector(d, rand(1.5, 7)); emit(q.x + rand(-.5, .5), q.y + rand(-.3, .3), q.z + rand(-.5, .5), rand(-1, 1), rand(2, 4), rand(-1, 1), 0xffe0a0, rand(.04, .08), rand(.6, 1), 3, .5); } // sparks
-          if (Math.random() < .35) flash(a.x + d.x * 3, a.y, a.z + d.z * 3, heat > .7 ? 0xffd8a0 : 0xff6a1a, 9 + heat * 8, .1);
-          if (d.y < -.05) { const L = Math.min(7.5, -a.y / d.y), g = a.clone().addScaledVector(d, L); if (L < 7.4 && Math.random() < .12) scarFx(g.x, g.z, rand(.5, .9), 0xff4a10, 2.5); if (L < 7.4 && Math.random() < .3) smokeFx(g.x, .3, g.z, .7, 0x3a2a24, 1.1, 1, 1.4); } // it scorches the floor it licks
+          const a2 = a.clone().addScaledVector(d, .9), L = 7.2, R = (2.3 + heat * .6) * (mine ? .7 : 1); // starts a step ahead of the hand; narrower in your own view, where you look straight down it
+          o.position.copy(a2); o.lookAt(a2.clone().add(d));
+          u.outer.scale.set(R, R, L); u.outer.rotation.z += dt * 2.5; u.outer.material.uniforms.uA.value = (.75 + heat * .2) * (mine ? .5 : 1); u.outer.material.uniforms.uHeat.value = heat;
+          u.core.scale.set(R * .42, R * .42, L * .8); u.core.rotation.z -= dt * 4; u.core.material.uniforms.uA.value = mine ? .45 : .9; u.core.material.uniforms.uHeat.value = heat * (mine ? .4 : 1);
+          for (let k = 0; k < 4 + heat * 3; k++) { const s = rand(10, 15), sp = 2 + heat; emit(a2.x, a2.y, a2.z, d.x * s + rand(-sp, sp), d.y * s + rand(-1, 2.5), d.z * s + rand(-sp, sp), heat > .8 && Math.random() < .2 ? 0xfff1d0 : flameColor(), rand(.3, .6), rand(.35, .5), -2.5, 1.2); } // licks of flame thrown along the jet
+          for (let k = 0; k < 2; k++) { const q = a2.clone().addScaledVector(d, rand(1.5, 6.5)); emit(q.x + rand(-.5, .5), q.y + rand(-.3, .3), q.z + rand(-.5, .5), rand(-1, 1), rand(2, 4), rand(-1, 1), 0xffc060, rand(.04, .08), rand(.6, 1), 3, .5); } // embers
+          const tip = d.y < -.05 ? Math.min(L, -a2.y / d.y) : L, g = a2.clone().addScaledVector(d, tip * .9);
+          if ((u.smk -= dt) <= 0) { u.smk = .14; smokeFx(g.x, Math.max(.3, g.y), g.z, .8, 0x2a1c16, 1.3, 2, 1.8); } // black smoke rolling off the end
+          if (Math.random() < .3) flash(a2.x + d.x * 3, a2.y, a2.z + d.z * 3, heat > .7 ? 0xffc890 : 0xff6a1a, 8 + heat * 6, .1);
+          if (tip < L - .1) { if (Math.random() < .12) scarFx(g.x, g.z, rand(.5, .9), 0xff4a10, 2.5); } // it scorches the floor it licks
           if ((u.snd -= dt) <= 0) { u.snd = .3; sfx('fire_roar'); }
         } } },
-    { name: 'Fire Brand', icon: '🔥', cd: 6, desc: 'Brand the first enemy you hit with 3 burns. A moment later the brand detonates, blasting everything around it and setting every enemy caught in the blast burning with 3 burns of its own.',
-      cast(p, c) { shoot(p, c, 34, { r: .45, life: 1, dmg: 10 * c.dmg }); },
-      shot: { hit(s, e) {
-        const c = ctxS(s); hitEnemy(e, 'fire', s.dmg, c.p, 0, 0, 0); for (let i = 0; i < 2; i++) applyStatus(e, 'fire', c.p);
-        fxe(s.mv, 'brand', { id: e.id, x: e.x, y: e.y + 1, z: e.z });
-        later(1.2, () => { const hit = boomAt(c, e.x, e.y + .8, e.z, 3.5, 40 * s.mul, { kb: 7 }); for (const o of hit) if (!o.dead) { for (let i = 0; i < 2; i++) applyStatus(o, 'fire', c.p); if (o !== e) fxe(s.mv, 'spread', { x: e.x, y: e.y + 1, z: e.z, x2: o.x, y2: o.y + 1, z2: o.z }); } });
-        return 'end';
-      } },
-      look: { m: 'fire__ball', s: .55, spin: [0, 0, 14], trail: [flameColor, .22, .3, -1.5, 3], light: 6 },
-      fx: { brand(e) { // a burning sigil hangs over the branded enemy and flickers faster until it blows
-          burst(e.x, e.y, e.z, 24, 0xffb040, 4, .25, .6, -1); sfx('fire_sizzle');
-          const c = makeCircle('fire'); addFx(c, 1.2, (o, k, dt) => { const v = views.e.get(e.id); if (v) o.position.copy(v.g.position).add(V(0, 2.5 + k * .3, 0)); o.scale.setScalar(.9 - k * .25); spinCircle(o, dt, 2 + k * 8); setOpacity(o.userData.mats, (.55 + .45 * Math.sin(k * k * 60)) * (1 - k * .2)); if (Math.random() < .5) emit(o.position.x + rand(-.4, .4), o.position.y, o.position.z + rand(-.4, .4), 0, 1.5, 0, flameColor(), .2, .4, -1); });
+    { name: 'Phoenix Strike', icon: '🐦', cd: 7, desc: 'Loose a phoenix of living flame that flies 20 m along your aim, searing everything it passes for 22 and setting it burning twice, then dives into the ground and bursts for 40 around it.',
+      cast(p, c) { const f = c.flat; ent(p, c, p.x + f.x * 2.5, p.z + f.z * 2.5, { life: 1.1, r: 1.6, y: 1.6, dx: f.x, dz: f.z, yaw: Math.atan2(f.x, f.z) }); }, // leaves 2.5 m ahead of you
+      ent: { tick(n, dt) {
+          n.x += n.dx * 18 * dt; n.z += n.dz * 18 * dt; n.y = 1.6 - 1.4 * Math.max(0, (n.t / n.max - .7) / .3) ** 2; // a level flight, then a dive
+          if (offMap(n.x, n.z)) n.life = 0;
+          for (const e of enemiesNear(n.x, n.z, n.r)) if (ready(n, e, 99)) { hitEnemy(e, 'fire', 22 * n.mul, own(n), n.dx, n.dz, 4, { aoe: true }); applyStatus(e, 'fire', own(n)); applyStatus(e, 'fire', own(n)); fxe(n.mv, 'sear', { x: r2(e.x), y: r2(e.y + 1), z: r2(e.z) }); }
         },
-        spread(e) { const a = V(e.x, e.y, e.z), b = V(e.x2, e.y2, e.z2); for (let i = 0; i <= 8; i++) { const q = a.clone().lerp(b, i / 8); q.y += Math.sin(i / 8 * Math.PI) * 1.4; emit(q.x, q.y, q.z, 0, rand(.5, 2), 0, flameColor(), rand(.18, .34), .5, -1); } burst(b.x, b.y, b.z, 16, 0xffb040, 4, .22, .4, -1); },
-        boom: e => { fireBoom(e.x, e.y, e.z, e.r, 1.25); shake(.2); } } },
+        end(n) { boomAt(ctxN(n), n.x, .5, n.z, 3.5, 40 * n.mul, { kb: 7, lift: 3 }, 'dive'); } },
+      view: { make(n) { const o = model('fire__phoenix', 0xff7a2a), g = new THREE.Group(); g.add(o); o.scale.setScalar(1.4); g.userData.mats = o.userData.mats; g.userData.b = o; g.rotation.y = n.yaw; burst(n.x, 1.6, n.z, 30, 0xffb040, 6, .3, .4, -1); sfx('fire_whoosh'); return g; },
+        upd(o, n, dt, t) {
+          const u = o.userData, f = V(Math.sin(n.yaw), 0, Math.cos(n.yaw)), dive = Math.max(0, (1 - n.l - .7) / .3);
+          o.rotation.y = n.yaw; u.b.rotation.x = dive * .9; u.b.rotation.z = Math.sin(t * 10) * .12; u.b.scale.set(1.4 * (1 + .18 * Math.sin(t * 16)), 1.4 * (1 - .08 * Math.sin(t * 16)), 1.4); // wingbeats
+          fade(o, Math.min(1, n.t * 8));
+          for (let k = 0; k < 3; k++) { const side = rand(-2.4, 2.4); emit(n.x - f.x * rand(.3, 1.5) + f.z * side, (n.y || 1.6) + rand(-.3, .3), n.z - f.z * rand(.3, 1.5) - f.x * side, -f.x * rand(1, 3), rand(.5, 2), -f.z * rand(1, 3), flameColor(), rand(.25, .5), rand(.3, .5), -2, 1.5); } // feathers of flame shed from the wings
+          if (Math.random() < .35) emit(n.x, (n.y || 1.6), n.z, rand(-1, 1), rand(1, 3), rand(-1, 1), 0xffe0a0, rand(.05, .09), rand(.6, 1), 4, .5);
+          if (Math.random() < .25) scarFx(n.x, n.z, rand(.6, 1), 0xff4a10, 2); // a burnt trail along the floor beneath it
+          if (Math.random() < .4) flash(n.x, (n.y || 1.6), n.z, 0xff8a3a, 14, .1);
+        },
+        drop: dropFade(.12) },
+      fx: { sear(e) { burst(e.x, e.y, e.z, 14, 0xffb040, 5, .25, .35, -1); sfx('fire_sizzle'); },
+        dive: e => { fireBoom(e.x, e.y, e.z, e.r, 1.15); for (let i = 0; i < 18; i++) { const a = TAU * i / 18; emit(e.x, .4, e.z, Math.cos(a) * 9, rand(1, 3), Math.sin(a) * 9, flameColor(), rand(.3, .5), .45, -1, 2); } } } },
     { name: 'Ring of Fire', icon: '⭕', cd: 12, desc: 'Raise a roaring wall of flame around you. Enemies that cross it are scorched and thrown back.',
       cast(p, c) { ent(p, c, p.x, p.z, { r: 5.5 * c.st.aoe, life: 5 }); },
       ent: { tick(n, dt) {

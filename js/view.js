@@ -420,8 +420,8 @@ function onEvent(e) {
     case 'dmg': {
       const col = e.b ? '#9a9aa8' : e.c ? '#ffe36a' : css(EL[e.el]?.color ?? 0xffffff);
       if (!e.d || Math.random() < .5) popNum(e.x, e.y, e.z, e.c ? e.n + '!' : e.n, col, (e.c ? 'crit ' : '') + (e.d ? 'dot' : ''));
-      const v = views.e.get(e.id); if (v && !e.d) { v.flash = .09; v.flinch = Math.min(1.3, v.flinch + (e.c ? 1.1 : .6)); v.fdir = Math.random() < .5 ? -1 : 1; }
-      if (!e.d) sfx(e.c ? 'crit' : 'hit');
+      const v = views.e.get(e.id); if (v && !e.d) { if (!(v.flashT > performance.now() - 250)) { v.flash = .09; v.flashT = performance.now(); } v.flinch = Math.min(1.3, v.flinch + (e.c ? 1.1 : .6)); v.fdir = Math.random() < .5 ? -1 : 1; }
+      if (!e.d) sfx(e.c ? 'crit' : 'hit'); // (the white hit flash is limited to one per 0.25 s, so a stream of hits doesn't keep a monster solid white)
       break;
     }
     case 'combo': {
@@ -1194,6 +1194,7 @@ function warmFx() {
   for (const k in T) for (const o of [T[k]].flat()) add(glowify(o.clone(), glowMats(0xffffff)));
   const b = T.beam.clone(), d = T.disc.clone(); b.material = beamMat(0xffffff); d.material = discMat(0xffffff); add(b); add(d);
   add(new THREE.Sprite(new THREE.SpriteMaterial({ map: puffTex(), transparent: true, depthWrite: false })));
+  add(new THREE.Mesh(JET_GEO, jetMat(0))); // the Flamethrower's fire shader
   if (!inkPool.length) { const d = inkDragonBuild(); inkPool.push(d); g.add(d, d.userData.body); } // the Ink Dragon is built (and compiled) now, not on its first cast
   g.scale.setScalar(.05);
   camera.add(g); g.position.set(0, 0, -3);

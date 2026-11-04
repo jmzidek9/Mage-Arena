@@ -14,7 +14,7 @@ Every group below is moves that worked or looked alike **before the rework**. Al
 8. **Launch enemies up from the ground at a target.** Earth *Stone Pillar* and Magma *Eruption*. Abyss *Grasp of the Deep* and Gravity *Levitate* also lift enemies, then drop them.
 9. **Shield that blocks damage.** Crystal *Diamond Shell* and Bone *Bone Armor*. Both soak hits and then hurt enemies with the pieces.
 10. **Rain projectiles on an area.** Cosmic *Meteor Shower* and Blades *Rain of Blades*. Both drop 12 things on the target area.
-11. **Delayed blast on an enemy.** Fire *Fire Brand* and Explosion *Sticky Bomb*. Both stick to an enemy and blow up a moment later.
+11. **Delayed blast on an enemy.** Explosion *Sticky Bomb* (Fire's *Fire Brand* used to be its twin; it is now *Phoenix Strike*).
 12. **Step-on trap that launches.** Rune *Glyph Trap* and Explosion *Proximity Mines*. Both are placed traps that blow when an enemy walks over them.
 13. **Swarm of homing missiles.** Venom *Plague Swarm*, Soul *Soulstorm*, Arcane *Arcane Torrent* and Ink *Ink Koi*. All of them release things that hunt enemies.
 14. **Beam that follows your aim.** Light *Solar Beam* and Plasma *Fusion Beam*. Light *Divine Judgment* is a pillar that follows your crosshair, which is very close too.
