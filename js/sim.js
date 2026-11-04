@@ -54,13 +54,13 @@ const BOSS_SKY = new Set(['bonedragon', 'watcher', 'umbra', 'archdemon']); // th
 const S = { phase: 'lobby', mode: 'arena', actor: null, t: 0, wave: 0, isl: 0, ib: 1, brs: 0, br: null, players: {}, enemies: [], shots: [], ents: [], rings: [], timers: [], events: [], nid: 1,
   budget: 0, bossLeft: 0, eliteLeft: 0, spawnT: 0, restT: 0, hitstop: 0, slowmo: 0, tstop: 0, mod: null };
 const ev = e => S.events.push(e);
-function later(t, fn) { S.timers.push({ t, fn, a: S.actor }); } // remembers who scheduled it (see alive)
+function later(t, fn) { S.timers.push({ t, fn, a: S.actor, u: S.ultSrc }); } // remembers who scheduled it (see alive), and whether an ultimate did
 function stepTimers(dt) {
   for (const tm of S.timers) tm.t -= dt;
   const due = S.timers.filter(tm => tm.t <= 0);
   S.timers = S.timers.filter(tm => tm.t > 0);
-  for (const tm of due) { S.actor = tm.a; tm.fn(); }
-  S.actor = null;
+  for (const tm of due) { S.actor = tm.a; S.ultSrc = tm.u; tm.fn(); }
+  S.actor = null; S.ultSrc = false;
 }
 
 // mid-game element menu: replace the active loadout with `el` (picking the other loadout just swaps to it)
@@ -112,7 +112,9 @@ function heal(p, n) {
   const before = p.hp; p.hp = Math.min(p.max, p.hp + n);
   if (p.hp - before >= 4) ev({ k: 'heal', id: p.id, n: Math.round(p.hp - before) });
 }
-const addUlt = (p, a) => { if (p) p.ult = Math.min(1, p.ult + a * stats(p).ultMul); };
+// S.ultSrc: what's running now was started by an ultimate (its cast, shots, entities, timers): that never charges the ultimate,
+// or the big ones would refill themselves and recast at once (the playtest saw Thunderstorm 25 times in 30 s)
+const addUlt = (p, a) => { if (p && !S.ultSrc) p.ult = Math.min(1, p.ult + a * stats(p).ultMul); };
 
 // ===================== geometry helpers =====================
 function solids() { const out = PILLARS.slice(); for (const n of S.ents) if (n.solid) out.push(...n.solid); return out; }
@@ -444,7 +446,7 @@ const MAX_SHOTS = 400, MAX_ENTS = 160;
 function shoot(p, c, spd, o = {}) {
   const st = p ? stats(p) : null, org = o.o || c.o, d = o.d || c.d;
   const s = { id: S.nid++, own: p?.id, mv: c.m.key, el: c.el, x: org.x, y: org.y, z: org.z, vx: d.x * spd, vy: d.y * spd, vz: d.z * spd,
-    life: 2, r: .3, dmg: 10, kb: 2.5, pierce: st ? st.pierce : 0, bounce: st ? st.bounce : 0, grav: 0, home: 0, hit: [], t: 0, sc: 1, mul: c.dmg ?? 1, ...o };
+    life: 2, r: .3, dmg: 10, kb: 2.5, pierce: st ? st.pierce : 0, bounce: st ? st.bounce : 0, grav: 0, home: 0, hit: [], t: 0, sc: 1, mul: c.dmg ?? 1, ult: S.ultSrc || c.m.slot === 4, ...o };
   delete s.o; delete s.d;
   if (S.shots.length < MAX_SHOTS) S.shots.push(s);
   return s;
@@ -454,7 +456,7 @@ function stepShots(dt) {
   for (const s of S.shots) {
     if (s.dead) continue;
     if (s.foe) { stepFoeShot(s, dt); continue; }
-    S.actor = s.own;
+    S.actor = s.own; S.ultSrc = !!s.ult;
     const H = MOVE[s.mv]?.shot || {};
     s.t += dt; s.life -= dt;
     if (s.stuck != null) {
@@ -506,7 +508,7 @@ function stepShots(dt) {
     }
     if (!s.dead && s.life <= 0) endShot(s, 'life');
   }
-  S.actor = null;
+  S.actor = null; S.ultSrc = false;
   S.shots = S.shots.filter(s => !s.dead);
 }
 function stepFoeShot(s, dt) {
@@ -526,7 +528,7 @@ function stepFoeShot(s, dt) {
 
 // ===================== persistent entities (zones, walls, turrets, summons) =====================
 function ent(p, c, x, z, o = {}) {
-  const n = { id: S.nid++, own: p?.id, mv: c.m.key, el: c.el, x, y: 0, z, r: 1, life: 5, yaw: 0, t: 0, mul: c.dmg ?? 1, hit: {}, s: 0, acc: 0, ...o };
+  const n = { id: S.nid++, own: p?.id, mv: c.m.key, el: c.el, x, y: 0, z, r: 1, life: 5, yaw: 0, t: 0, mul: c.dmg ?? 1, hit: {}, s: 0, acc: 0, ult: S.ultSrc || c.m.slot === 4, ...o };
   n.max ??= n.life;
   if (S.ents.length < MAX_ENTS) S.ents.push(n);
   return n;
@@ -538,13 +540,13 @@ function ready(n, e, cd) { if ((n.hit[e.id] || 0) > n.t) return false; n.hit[e.i
 function stepEnts(dt) {
   for (const n of S.ents) {
     if (n.dead) continue;
-    n.t += dt; n.life -= dt; S.actor = n.own;
+    n.t += dt; n.life -= dt; S.actor = n.own; S.ultSrc = !!n.ult;
     if (n.follow) { const p = own(n); if (p) { n.x = p.x; n.z = p.z; n.y = p.y; } }
     const H = MOVE[n.mv]?.ent;
     H?.tick?.(n, dt);
     if (n.life <= 0 && !n.dead) { n.dead = true; H?.end?.(n); }
   }
-  S.actor = null;
+  S.actor = null; S.ultSrc = false;
   S.ents = S.ents.filter(n => !n.dead);
 }
 const entsOf = (p, mv) => S.ents.filter(n => n.own === p.id && n.mv === mv);
@@ -632,7 +634,7 @@ function fire(p, m, k, host) {
     if ((m.slot === 2 || m.slot === 3) && Math.random() < c.st.echo) { cds[m.slot] = 0; ev({ k: 'echo', id: p.id }); }
     EL[m.el].onCast?.(p, m, c);
     ev(castEv(p, m, c));
-    m.cast?.(p, c);
+    S.ultSrc = m.slot === 4; m.cast?.(p, c); S.ultSrc = false;
   }
   if (!host || p.id === 'h') m.self?.(p, c);   // movement belongs to whoever owns the player
   if (!host) castFx(castEv(p, m, c));          // the guest draws its own cast at once (prediction)
