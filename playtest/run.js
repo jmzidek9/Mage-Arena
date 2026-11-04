@@ -63,6 +63,7 @@ const HELPERS = () => {
     fight(boss, sec, picEvery) {
       MP.setup(PTX.el, boss ? ['boss'] : CROWD); const p = S.players.h, kit = EL[PTX.el].moves;
       p.max = p.hp = 1000; S.wave = 5; for (const e of S.enemies) e.acd = 1.5;
+      S.dmgBy = {};
       const H = { cur: -1, left: 0 }, used = [0, 0, 0, 0, 0], ready = [0, 0, 0, 0, 0], dmgBy = [0, 0, 0, 0, 0], pics = {};
       let kills = 0, k0 = p.stats.kills, hpLost = 0, healed = 0, simMs = 0, d0 = p.stats.dmg, hp = p.hp, F = Math.round(sec * 60), minHp = p.hp;
       for (let f = 0; f < F; f++) {
@@ -89,6 +90,7 @@ const HELPERS = () => {
       const dmg = p.stats.dmg - d0; kills = p.stats.kills - k0;
       return { sec, dmg: Math.round(dmg), dps: +(dmg / sec).toFixed(1), kills, hpLost: Math.round(hpLost), healed: Math.round(healed), lowestHp: Math.round(minHp),
         casts: Object.fromEntries(kit.map((m, i) => [m.name, used[i]])), cooldownReadyPct: Object.fromEntries(kit.map((m, i) => [m.name, Math.round(ready[i] / F * 100)])),
+        byMove: Object.fromEntries(Object.entries(S.dmgBy).map(([k, v]) => [MOVE[k]?.name || k, Math.round(v / sec)]).sort((x, y) => y[1] - x[1])), // dps per move
         simMsPerFrame: +(simMs / F).toFixed(2), pics };
     },
   };
@@ -121,10 +123,10 @@ const save = (pics, name) => Object.entries(pics).map(([f, url]) => { const file
     }
   }
   for (const [k, boss] of [['kit', false], ['boss', true]]) {
-    if (WHAT !== 'all' && WHAT !== k) continue;
+    if (WHAT !== 'all' && WHAT !== k && WHAT !== 'fight') continue;
     const r = await p.evaluate(`PTX.fight(${boss}, 30, 600)`);
     r.screenshots = save(r.pics, k); delete r.pics; res[k] = r;
-    console.log(`  ${k}: ${r.dps} dps, ${r.kills} kills, ${r.hpLost} hp lost, ${r.healed} healed`);
+    console.log(`  ${k}: ${r.dps} dps, ${r.kills} kills, ${r.hpLost} hp lost, ${r.healed} healed  ${JSON.stringify(r.byMove)}`);
   }
   fs.writeFileSync(mfile, JSON.stringify(res, null, 1));
   await b.close();

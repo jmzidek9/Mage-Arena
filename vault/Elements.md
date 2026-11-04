@@ -57,7 +57,7 @@ Raw destruction. Stack burns on everything, then blow it all up.
 ## ❄️ Frost
 Control the battlefield. Slow everything down, freeze it solid, then shatter it.
 
-**Passive.** Permafrost: 4 Frost hits freeze an enemy solid. Frozen enemies take 40% more damage.
+**Passive.** Permafrost: 3 Frost hits freeze an enemy solid. Frozen enemies take 40% more damage.
 
 | Key | Move | Cooldown | What it does |
 |---|---|---|---|
@@ -113,10 +113,10 @@ Mobility and crowd control. Fly over the fight and hurl enemies off the edge.
 
 | Key | Move | Cooldown | What it does |
 |---|---|---|---|
-| LMB | 🌀 **Wind Blades** | 0.42 s | Wide crescent blades of air that slice through every enemy in a line. |
+| LMB | 🌀 **Wind Blades** | 0.36 s | Wide crescent blades of air that slice through every enemy in a line. |
 | RMB | 🍃 **Gale Force** | 5 s | A massive gust that hurls enemies away and blows enemy shots out of the air. Great for ring-outs. |
 | Q | 🪶 **Updraft** | 7 s | Launch yourself high into the air (and nearby enemies with you). Hold Space to glide. |
-| E | 🌪️ **Tornado** | 12 s | Send out a tornado that sucks enemies in, spins them around, then flings them away. |
+| E | 🌪️ **Tornado** | 10 s | Send out a tornado that sucks enemies in, spins them around, then flings them away. |
 | R | 🌪️ **Downburst** | ultimate | Rip every enemy within 15 m (up to 12) into the sky. For 2 s they are carried through the air toward wherever you aim, then hurled down together for 120 damage and a 1.2 s stun to everything within 5 m of the landing. Aim at the edge for ring-outs. |
 
 ## 🌿 Nature
@@ -154,8 +154,8 @@ Holy power. Burn enemies with beams of sunlight and smite anything that dares to
 |---|---|---|---|
 | LMB | ✨ **Radiant Orbs** | 0.4 s | Fast, dead-straight bolts of light. No homing, but a headshot hits 75% harder. |
 | RMB | 🔆 **Solar Beam** *(hold)* | 6 s | Hold to fire a piercing beam of sunlight. It starts wide and soft, then focuses the longer you hold it: narrower, but much stronger. |
-| Q | 💥 **Blinding Flash** | 9 s | A searing flash in front of you. Enemies caught in it are blinded for 1 s and left Illuminated for 5 s: they glow, and take 20% more damage from everything. |
-| E | ⚖️ **Penance** | 12 s | Brand every enemy in front of you (14 m) with a halo for 8 s. The first 2 times a branded enemy tries to attack, a spear of light smites it for 60 and stuns it for 0.6 s before the attack lands. |
+| Q | 💥 **Blinding Flash** | 8 s | A searing flash in front of you. Enemies caught in it are blinded for 1 s and left Illuminated for 5 s: they glow, and take 20% more damage from everything. |
+| E | ⚖️ **Penance** | 12 s | Brand every enemy in front of you (14 m) with a halo for 8 s. The first 2 times a branded enemy tries to attack, a spear of light smites it for 70 and stuns it for 0.6 s before the attack lands. |
 | R | 🌞 **Divine Judgment** | ultimate | Call down a colossal pillar of light that follows your crosshair for 4.5 seconds, searing everything beneath it. |
 
 ## ☠️ Venom
@@ -205,8 +205,8 @@ Precision and geometry. Shards that split and refract, turrets, and diamond-hard
 | Key | Move | Cooldown | What it does |
 |---|---|---|---|
 | LMB | 🔷 **Prism Shard** | 0.45 s | A crystal shard that splits into three smaller shards when it hits. |
-| RMB | 🪩 **Geode Bomb** | 6 s | Lob a geode that cracks open and sprays crystal shards in every direction. The shards stick in the ground as a field of crystal spikes for 4 s that cut anything walking over them for 6. |
-| Q | 💠 **Resonant Crystal** *(hold to aim, release to cast)* | 12 s | Plant a humming crystal for 6 s. It soaks up a share of all the damage dealt to enemies within 6 m of it, glowing brighter, then shatters for 15 plus 8% of everything it soaked (up to 50 more) to every enemy in range. |
+| RMB | 🪩 **Geode Bomb** | 6 s | Lob a geode that cracks open and sprays crystal shards in every direction. The shards stick in the ground as a field of crystal spikes for 4 s that cut anything walking over them for 9. |
+| Q | 💠 **Resonant Crystal** *(hold to aim, release to cast)* | 12 s | Plant a humming crystal for 6 s. It soaks up a share of all the damage dealt to enemies within 6 m of it, glowing brighter, then shatters for 25 plus 8% of everything it soaked (up to 50 more) to every enemy in range. |
 | E | 🔮 **Crystal Spire** *(hold to aim, release to cast)* | 14 s | Grow a crystal spire that shoots enemies. Your own projectiles that pass by it refract into three. |
 | R | 🏺 **Crystal Tomb** *(hold to aim, release to cast)* | ultimate | Encase every enemy in the area in crystal. After 2.5 seconds the tombs shatter for massive damage. |
 
@@ -245,7 +245,7 @@ Master of time. Echoing attacks, frozen moments, rewinding your enemies, and sto
 |---|---|---|---|
 | LMB | 🕐 **Chrono Bolt** | 0.45 s | A bolt of frozen time. Each hit echoes 1.2 seconds later for the same damage again. |
 | RMB | ⏸️ **Stasis** | 8 s | Freeze an enemy in time for 3 seconds. Damage it takes meanwhile is stored and lands all at once, 30% stronger. |
-| Q | ⏪ **Rewind** | 6 s | Mark the spot every enemy in front of you (14 m) is standing on. 2.5 s later time snaps back: each one is yanked back to its mark and takes 35, plus 14 for every metre it had moved (up to 235). Bosses take 150 more. Knock them far away first. |
+| Q | ⏪ **Rewind** | 6 s | Mark the spot every enemy in front of you (14 m) is standing on. 2.5 s later time snaps back: each one is yanked back to its mark and takes 55, plus 14 for every metre it had moved (up to 255). Bosses take 150 more. Knock them far away first. |
 | E | 🕰️ **Slow Field** *(hold to aim, release to cast)* | 13 s | Warp time in an area: enemies inside move and attack 70% slower, and enemy shots crawl. |
 | R | ⏱️ **Time Stop** | ultimate | Stop time for 4 seconds. Enemies freeze, and all the damage you deal piles up and lands 50% stronger when time resumes. |
 
@@ -259,8 +259,8 @@ Brutal damage that grows the lower your health gets. Make enemies bleed, pile th
 | LMB | 🩸 **Blood Bolt** | 0.4 s | A fast bolt of blood magic that hits hard. |
 | RMB | 🌙 **Crimson Fan** | 3.5 s | Fling a fan of five blood blades that slice through everything in front of you, 16 damage each, and make enemies bleed. Up close, every blade lands. |
 | Q | 💉 **Exsanguinate** | 8 s | Rip open every bleeding enemy within 20 m: 30 damage plus 12 for every second of bleed left on it, and the bleed is used up. Enemies it kills burst, making everything around them bleed. Enemies within 8 m that were not bleeding take 15 and start bleeding. |
-| E | 🩸 **Crimson Mire** | 9 s | Aimed. Splash a pool of blood on the ground for 4 seconds. It drags enemies toward its centre and makes them bleed, 10 damage every half second. Pile them up, then Exsanguinate. |
-| R | 🌕 **Blood Moon** | ultimate | A blood moon rises above you and drains every enemy nearby for 4 seconds. Anything it drains to death bursts, splashing 30 damage on the enemies around it. |
+| E | 🩸 **Crimson Mire** | 9 s | Splash a pool of blood on the ground for 4 seconds. It drags enemies toward its centre and makes them bleed, 10 damage every half second. Pile them up, then Exsanguinate. |
+| R | 🌕 **Blood Moon** | ultimate | A blood moon rises above you and drains every enemy nearby for 4 seconds. Anything it drains to death bursts, splashing 18 damage on the enemies around it. |
 
 **Rework (2026-11-03):** healing cut (lifesteal 6% to 2.5%, bleeding enemies feed you 10% of the bleed instead of 50%). Blood Scythe, Blood Tether and Blood Orb became Crimson Fan, Exsanguinate and Crimson Mire: make them bleed, pile them up, rip them open. Blood moves no longer cost HP. Blood Moon now rises out of the ground into a pulsing halo over a sea of red light, with blood raining up into it.
 
@@ -314,7 +314,7 @@ Smoke and mirrors. Fool monsters into fighting phantoms, and each other.
 | RMB | 🪞 **Decoy** *(hold to aim, release to cast)* | 8 s | Conjure a phantom double of yourself at the target. Monsters within 12 m attack it instead of you for 5 s. Once it is struck 3 times, or time runs out, it shatters, damaging and beguiling everything around it. |
 | Q | 😵‍💫 **Mesmerize** | 10 s | A hypnotic pulse charms every monster in front of you for 4 s: they turn on each other and attack the nearest monster instead of you. Bosses resist it. |
 | E | 🔷 **Kaleidoscope** | 7 s | Fire a prism shard. The enemy it hits splinters into 3 glittering false images of itself that race off to the monsters nearest it and burst against them, 50 damage within 3 m each. With no other monster around, they turn back on the enemy itself. |
-| R | 🎪 **Phantasmagoria** | ultimate | Trap everything within 14 m in a hall of mirrors: monsters are charmed and fight each other for 5 s, then the mirrors shatter for 120 damage to every one of them. |
+| R | 🎪 **Phantasmagoria** | ultimate | Trap everything within 14 m in a hall of mirrors: monsters are charmed and fight each other for 5 s, then the mirrors shatter for 55 damage to every one of them. |
 
 ## 💀 Bone
 A necromancer. Bone spears, cackling skulls, skeletons that burst into shrapnel, and the slain rising to fight for you.
@@ -324,7 +324,7 @@ A necromancer. Bone spears, cackling skulls, skeletons that burst into shrapnel,
 | Key | Move | Cooldown | What it does |
 |---|---|---|---|
 | LMB | 🦴 **Bone Toss** | 0.5 s | Hurl a spinning bone that pierces 2 enemies and pins the last one it hits for a moment. |
-| RMB | ☠️ **Cackling Skull** | 4 s | Hurl a burning skull that bites an enemy, then leaps on to the next one, up to 5 times. |
+| RMB | ☠️ **Cackling Skull** | 3.5 s | Hurl a burning skull that bites an enemy, then leaps on to the next one, up to 5 times. |
 | Q | 💥 **Marrow Burst** | 12 s | Every skeleton you have explodes in a storm of bone shrapnel: 28 damage within 3.5 m of each. Monsters the blasts kill rise as new skeletons. With no skeletons, one rises beside you instead. |
 | E | ⛓️ **Bone Cage** *(hold to aim, release to cast)* | 9 s | Ribs of bone burst from the ground at the target for 4 s: a real cage. Monsters inside cannot get out, monsters outside cannot get in, and enemy shots cannot pass the bars. Anything that touches the bars is gashed. |
 | R | 🐉 **Bone Dragon** *(hold to aim, release to cast)* | ultimate | Raise a skeletal dragon that makes three low strafing runs across the target, criss-crossing it and breathing a line of ghostfire along each pass. Everything it burns turns Brittle, and monsters it kills rise as skeletons. |
@@ -340,7 +340,7 @@ Ancient script. A trapper: every spell but the bolt is a ward on the ground that
 | RMB | 🔯 **Glyph Trap** *(hold to aim, release to cast)* | 4 s | Inscribe a ward glyph at the target (up to 3 at once). It arms after a second, and the first enemy to step on it is blasted into the air and stunned. |
 | Q | 🪨 **Sigilfall** *(hold to aim, release to cast)* | 6 s | Inscribe a sigil ward (up to 2 at once). When an enemy steps on it, runic chains hold everything nearby and three runestones crash down, the last and largest stunning everything it hits. |
 | E | 🔘 **Binding Circle** *(hold to aim, release to cast)* | 12 s | Inscribe a binding ward. When an enemy steps on it, a great binding circle springs up for 6 s: enemies inside are slowed by 40%, take 25% more damage from everything, and are scorched by the runes every second. |
-| R | 📖 **Word of Ruin** *(hold to aim, release to cast)* | ultimate | Inscribe the word of ruin as a great ward. When an enemy steps on it, a great rune ignites over every enemy within 20 m of it (up to 12), then each one slams down for 90 damage and a 1.5 s stun. |
+| R | 📖 **Word of Ruin** *(hold to aim, release to cast)* | ultimate | Inscribe the word of ruin as a great ward. When an enemy steps on it, a great rune ignites over every enemy within 20 m of it (up to 12), then each one slams down for 90 damage and a 1.5 s stun (a lone boss takes 270). |
 
 ## ⚛️ Plasma
 Raw, unstable power. Every Plasma spell builds Heat that makes you hit harder, right up until you overheat.
@@ -358,14 +358,14 @@ Raw, unstable power. Every Plasma spell builds Heat that makes you hit harder, r
 ## 🪔 Soul
 A reaper. Harvest a soul from every kill to grow stronger, and cut down the weak in a single swing.
 
-**Passive.** Soulbound: every kill gives you a Soul (up to 15; elites give 2, bosses 5). Each Soul you hold makes your spells 4% stronger, and getting hit makes you drop 2. Reap and Soul Rend tear out extra Souls; Soulstorm and The Reaper spend them. Soulburned enemies burn.
+**Passive.** Soulbound: every kill gives you a Soul (up to 15; elites give 2, bosses 5). Each Soul you hold makes your spells 4% stronger, and getting hit makes you drop 1 (then none for 0.5 s). Reap and Soul Rend tear out extra Souls; Soulstorm and The Reaper spend them. Soulburned enemies burn.
 
 | Key | Move | Cooldown | What it does |
 |---|---|---|---|
 | LMB | 💙 **Soulfire** | 0.42 s | Fire bolts of pale soulfire that burn whatever they touch. |
 | RMB | 🌒 **Reap** | 5 s | Wind up and sweep a spectral scythe through everything in front of you (6.5 m), flinging them aside. Monsters left under 20% health are reaped outright (not bosses), and each one reaped gives you an extra Soul. |
-| Q | 🫀 **Soul Rend** | 8 s | A pale ghostly hand reaches into the first enemy it touches and rips a see-through copy of it out of its body: 35 damage, a 1 s stun, and 2 Souls for you. The enemy is left Hollowed for 4 s and takes 25% more damage from Soul. |
-| E | 🌀 **Soulstorm** | 10 s | Unleash your Souls as shrieking soul missiles that hunt down enemies: 2 for every Soul you hold (at least 4), 14 damage each. Spends your Souls. |
+| Q | 🫀 **Soul Rend** | 8 s | A pale ghostly hand reaches into the first enemy it touches and rips a see-through copy of it out of its body: 45 damage, a 1 s stun, and 2 Souls for you. The enemy is left Hollowed for 4 s and takes 25% more damage from Soul. |
+| E | 🌀 **Soulstorm** | 10 s | Unleash your Souls as shrieking soul missiles that hunt down enemies: 2 for every Soul you hold (at least 8), 14 damage each. Spends your Souls. |
 | R | 💀 **The Reaper** *(hold to aim, release to cast)* | ultimate | Summon the Reaper at the target. It spends your Souls: its scythe sweeps round three times, plus once more for every 3 Souls spent (up to 8 sweeps), cutting everything within 9 m for 50 and reaping any monster left under 25% health. |
 
 ## 🐙 Abyss
@@ -415,7 +415,7 @@ A sword saint. Summoned swords orbit you, guard you, and fly wherever you point.
 | Key | Move | Cooldown | What it does |
 |---|---|---|---|
 | LMB | 🔪 **Flying Daggers** | 0.35 s | Throw a pair of spectral daggers that curve toward enemies. Each hit has a 25% chance to forge a new orbiting sword. |
-| RMB | 🏹 **Sword Volley** | 2.5 s | Launch every orbiting sword at your crosshair. Each one pierces through enemies for 24 damage. With no swords ready, you conjure two. |
+| RMB | 🏹 **Sword Volley** | 2.5 s | Launch every orbiting sword at your crosshair. Each one pierces through enemies for 24 damage. With no swords ready, you conjure three. |
 | Q | 💃 **Blade Dance** | 8 s | Dash 9 m forward in a whirl of blades, cutting everything you pass through for 32 damage, and forge 2 new swords. |
 | E | ☔ **Rain of Blades** *(hold to aim, release to cast)* | 11 s | Twelve swords rain down in a ring around the target, 20 damage each, and stay stuck in the ground for 6 s, slowing enemies among them by 30%. Walk through a planted sword to pull it into your halo. |
 | R | ⚜️ **Colossal Blade** *(hold to aim, release to cast)* | ultimate | A colossal sword falls from the heavens onto the target: 160 damage and a huge launch. It stands for 5 s sending out shockwaves, and your halo fills with 6 swords. |
@@ -434,6 +434,11 @@ A calligrapher. Living ink: brush strokes that mire, koi that hunt, and a dragon
 | R | 🐉 **Ink Dragon** *(hold to aim, release to cast)* | ultimate | Paint a great ink dragon that bursts from the floor and coils around the target for 4 s. Its body is a cage: nothing caught inside can get out, and the coil tightens, squeezing everyone toward the centre while ink rains on them. Then it dives in: 90 damage and a 1.2 s stun. |
 
 ## Balance
+**After the 30-element playtest (2026-11-04):** ultimates no longer charge themselves, and the bench (`node playtest/bench.js`) now runs every element 3 times and reports damage per move, because a single 30 s crowd run swings by up to 2x. Three rounds of tuning brought nearly every element to 0.85–1.2x the median on crowds and bosses. Control and mobility kits (Frost, Wind, Gravity on bosses) sit lower. The main changes:
+- **Too strong:** Supernova 140 → 55 (bosses still take 140), Thunderstorm 38 → 16, Phantasmagoria 120 → 55 and charmed monsters hit each other ×1.2 (was ×1.6), Prism Nova 28 → 17, burns 7 → 4.5/s and the Conflagration eruption cut, Blood Moon drain 7 → 5 (pop 30 → 18, 8 targets), Carpet Bomb 130 → 50, Fusion Beam 15 → 5.5, Plasma Cannon −15%, Blade Storm 20 → 16, Meteor lava 8 → 6 for 4 s.
+- **Too strong on bosses:** Arcane Torrent missiles do 2.5 to a boss (16 to anything else), Barrage 12 → 8.5. Spirit summons do about half damage to bosses (Army 12/6, Wolf 34/18, Command 20/12). World Tree vines do 14 to bosses.
+- **Too weak:** Soul loses 1 Soul per hit with 0.5 s grace (it was 2 per hit, so Souls never built up), plus Soulfire 18, Reap 45, Soul Rend 45 and at least 8 Soulstorm missiles. Crystal: Prism Shard 17, turret 13, Resonant base 25, Geode shards 15 and spikes 9. Wind: Blades 26 with cd 0.36 s, Tornado ticks 9 with cd 10 s, and Downburst slams bosses for 120. Ink: Bolt 22, Brush 40, Pool 12, Dragon 20. Frost: Nova 7.5 m for 34, hail 12, freezes after 3 hits. Bone: Toss 21, Skull 22 with cd 3.5 s, raise chance 35%. Rune: Bolt 17, Glyph Trap 55; a big boss trips wards with its edge, and Word of Ruin hits a lone boss for 270. Abyss: Void Bolt 17, and Maw bites a boss for 70. Gravity: Crush +80 to bosses, and Levitate's +25% applies to bosses too. Cosmic: Star Shot 10/36, Moons 36. Light: Penance 70, Flash cd 8 s, Orbs 19, Judgment 14. Chrono: Rewind 55 base in a 100° cone. Shadow: Daggers 11.5, Blackout 24, Snare 18. Blades: Daggers 9.5, Volley at least 3 swords with pierce 5, Colossal Blade 160. Spirit: Wisps 30. Sonic: Sound Wave 13, Bass Drop 50/15.
+
 **After the move rework (2026-10-27):** the bench was rebuilt and run on the old and new builds side by side, comparing each element with itself. Elements whose moves did not change wander by up to about ±30% between runs, so only bigger shifts were tuned: Frost's Glacial Lance ice no longer slows (it kept monsters out of Frost Nova's reach; it makes them take 20% more damage instead), Chrono's Rewind is stronger and hits bosses harder to make up for losing Accelerate, Blood got a harder Blood Bolt and a heavier Blood Orb to replace Blood Pact against bosses, and Kaleidoscope and Downburst were buffed. Trimmed: Geode Bomb's spike field, Resonant Crystal, Penance (two smites per brand), Venom Spit puddle growth and Serpent, Thorn Volley and Parasite Seed, Spirit's Command, Bone's Marrow Burst and skeletons, Surf. Every element now lands within that noise band of its old score.
 
 **Original pass:** tuned with an automated bench (a bot plays every element through the same fights: 40 s against 8 respawning mixed monsters, 30 s against a boss, and each ultimate on its own). After the pass every element's core kit lands within about 0.85–1.2x of the median damage, the spread the bench's own run-to-run noise allows. Elements built for control, defence or bosses (Wind, Sonic, Soul, Gravity) sit lower against crowds or bosses on purpose; Blood sits higher because it pays for it in health. Fixed along the way: Graviton, Venom Spit and Magma Glob ignored their listed damage; Sticky Bomb could be thrown and detonated every 0.6 s (now it sticks and blows on its own).
@@ -445,6 +450,8 @@ A capture of every move in action, plus a count of each element's bespoke effect
 - **Crystal:** shards shatter into crystal fragments on hit; Geode Bomb and the Spire burst into crystals; Diamond Shell visibly forms around you out of shards.
 - **Gravity:** Graviton visibly drags matter into itself and collapses into a black core; Crush leaves a crater; Levitate lifts rubble with the enemies; Repulsor throws out a force dome.
 Every element that kicks up dust now gets real dust too.
+
+**Your own view (2026-11-04):** glow and particles fade out within about 2 m of the camera, light flashes are capped, and the white screen wash never goes above 35%. Beams, cones and waves start 1.5–5 m ahead of you (Solar Beam, Blinding Flash, Gale Force, Thermal Lance, Tsunami, Tornado, Boulder, Fissure). Pulls stop short of the camera (Water Whip 3.5 m, Magnetize 3 m). Summons appear ahead of you (Spirit Wolf, the Marrow and Command spirits), and orbiters fly above eye height (Moons, Familiar). Tentacle Ring leaves a gap straight ahead. Blade Dance keeps dashing until you're clear of the monster. Night Terror's shadows are solid dark figures. Ink's Dragon is built when the game loads.
 
 ## Element resources
 Some elements build up something you can see above your ability bar and around your wizard: Plasma's **Heat** (a bar that turns into OVERHEATED), Soul's **Souls** (pale flames circling you), Arcane's **charges** (orbs whirling round you), Blades' **swords** (orbiting your waist), Bone's armor **plates**, Rune's count toward the next **Empowered** spell and Laser's **Focus** pips.

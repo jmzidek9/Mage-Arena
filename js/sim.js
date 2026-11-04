@@ -54,13 +54,13 @@ const BOSS_SKY = new Set(['bonedragon', 'watcher', 'umbra', 'archdemon']); // th
 const S = { phase: 'lobby', mode: 'arena', actor: null, t: 0, wave: 0, isl: 0, ib: 1, brs: 0, br: null, players: {}, enemies: [], shots: [], ents: [], rings: [], timers: [], events: [], nid: 1,
   budget: 0, bossLeft: 0, eliteLeft: 0, spawnT: 0, restT: 0, hitstop: 0, slowmo: 0, tstop: 0, mod: null };
 const ev = e => S.events.push(e);
-function later(t, fn) { S.timers.push({ t, fn, a: S.actor, u: S.ultSrc }); } // remembers who scheduled it (see alive), and whether an ultimate did
+function later(t, fn) { S.timers.push({ t, fn, a: S.actor, u: S.ultSrc, m: S.mvSrc }); } // remembers who scheduled it (see alive), and whether an ultimate did
 function stepTimers(dt) {
   for (const tm of S.timers) tm.t -= dt;
   const due = S.timers.filter(tm => tm.t <= 0);
   S.timers = S.timers.filter(tm => tm.t > 0);
-  for (const tm of due) { S.actor = tm.a; S.ultSrc = tm.u; tm.fn(); }
-  S.actor = null; S.ultSrc = false;
+  for (const tm of due) { S.actor = tm.a; S.ultSrc = tm.u; S.mvSrc = tm.m; tm.fn(); }
+  S.actor = null; S.ultSrc = false; S.mvSrc = null;
 }
 
 // mid-game element menu: replace the active loadout with `el` (picking the other loadout just swaps to it)
@@ -364,6 +364,7 @@ function damage(e, amount, el, p, o = {}) {
     if (p.cur === 'light') { const m = mate(p); if (m && !m.down) m.hp = Math.min(m.max, m.hp + amount * .08); else if (!p.down) p.hp = Math.min(p.max, p.hp + amount * .04); }
     addUlt(p, amount / (900 * (1 + .1 * (S.wave - 1))));
     p.stats.dmg += amount;
+    if (S.dmgBy) { const k = S.mvSrc || 'status'; S.dmgBy[k] = (S.dmgBy[k] || 0) + amount; } // playtest bench: damage per move (S.mvSrc: the move whose cast/shot/entity/timer is running)
     if (!o.dot) { p.combo = (p.comboT > 0 ? p.combo : 0) + 1; p.comboT = 2.5; p.stats.best = Math.max(p.stats.best, p.combo); }
   }
   if (e.hp <= 0 && !e.pid) kill(e, el, p);
@@ -423,7 +424,7 @@ function hurt(p, n, src = null) {
   if (src && p.cur === 'magma' && !src.dead) applyStatus(src, 'magma', p);
   if (n <= 0) return true;
   p.hp -= n; ev({ k: 'hurt', id: p.id, n: Math.round(n) });
-  if (p.cur === 'soul' && p.bd.souls > 0) p.bd.souls = Math.max(0, p.bd.souls - 2);
+  if (p.cur === 'soul' && p.bd.souls > 0 && !(p.bd.soulSafe > S.t)) { p.bd.souls--; p.bd.soulSafe = S.t + .5; } // 1 per hit, then 0.5 s grace: at 2 per hit the Souls never built up in a crowd
   if (p.hp <= 0) { p.hp = 0; p.down = true; p.rev = 0; p.ch = null; p.chg = null; ev({ k: 'down', id: p.id }); }
   return true;
 }
@@ -456,7 +457,7 @@ function stepShots(dt) {
   for (const s of S.shots) {
     if (s.dead) continue;
     if (s.foe) { stepFoeShot(s, dt); continue; }
-    S.actor = s.own; S.ultSrc = !!s.ult;
+    S.actor = s.own; S.ultSrc = !!s.ult; S.mvSrc = s.mv;
     const H = MOVE[s.mv]?.shot || {};
     s.t += dt; s.life -= dt;
     if (s.stuck != null) {
@@ -508,7 +509,7 @@ function stepShots(dt) {
     }
     if (!s.dead && s.life <= 0) endShot(s, 'life');
   }
-  S.actor = null; S.ultSrc = false;
+  S.actor = null; S.ultSrc = false; S.mvSrc = null;
   S.shots = S.shots.filter(s => !s.dead);
 }
 function stepFoeShot(s, dt) {
@@ -540,13 +541,13 @@ function ready(n, e, cd) { if ((n.hit[e.id] || 0) > n.t) return false; n.hit[e.i
 function stepEnts(dt) {
   for (const n of S.ents) {
     if (n.dead) continue;
-    n.t += dt; n.life -= dt; S.actor = n.own; S.ultSrc = !!n.ult;
+    n.t += dt; n.life -= dt; S.actor = n.own; S.ultSrc = !!n.ult; S.mvSrc = n.mv;
     if (n.follow) { const p = own(n); if (p) { n.x = p.x; n.z = p.z; n.y = p.y; } }
     const H = MOVE[n.mv]?.ent;
     H?.tick?.(n, dt);
     if (n.life <= 0 && !n.dead) { n.dead = true; H?.end?.(n); }
   }
-  S.actor = null; S.ultSrc = false;
+  S.actor = null; S.ultSrc = false; S.mvSrc = null;
   S.ents = S.ents.filter(n => !n.dead);
 }
 const entsOf = (p, mv) => S.ents.filter(n => n.own === p.id && n.mv === mv);
@@ -634,7 +635,7 @@ function fire(p, m, k, host) {
     if ((m.slot === 2 || m.slot === 3) && Math.random() < c.st.echo) { cds[m.slot] = 0; ev({ k: 'echo', id: p.id }); }
     EL[m.el].onCast?.(p, m, c);
     ev(castEv(p, m, c));
-    S.ultSrc = m.slot === 4; m.cast?.(p, c); S.ultSrc = false;
+    S.ultSrc = m.slot === 4; S.mvSrc = m.key; m.cast?.(p, c); S.ultSrc = false; S.mvSrc = null;
   }
   if (!host || p.id === 'h') m.self?.(p, c);   // movement belongs to whoever owns the player
   if (!host) castFx(castEv(p, m, c));          // the guest draws its own cast at once (prediction)
@@ -903,7 +904,7 @@ function stepEnemies(dt) {
         const dx = o.x - e.x, dz = o.z - e.z, d = Math.hypot(dx, dz) || 1;
         e.yaw = Math.atan2(dx, dz);
         if (d > R + ET[o.type].r * o.sc + .5) { e.x += dx / d * spd * dt; e.z += dz / d * spd * dt; }
-        else if ((e.acd -= dt * rate) <= 0) { e.acd = t.cd; ev({ k: 'strike', id: e.id, a: t.atk }); damage(o, Math.max(10, t.dmg) * 1.6 * (e.elite ? 1.5 : 1), 'illusion', S.players[e.cc.src] || null); }
+        else if ((e.acd -= dt * rate) <= 0) { e.acd = t.cd; ev({ k: 'strike', id: e.id, a: t.atk }); damage(o, Math.max(10, t.dmg) * 1.2 * (e.elite ? 1.5 : 1), 'illusion', S.players[e.cc.src] || null); }
         continue;
       }
     }
