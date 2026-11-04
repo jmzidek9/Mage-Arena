@@ -267,7 +267,7 @@ Brutal damage that grows the lower your health gets. Make enemies bleed, pile th
 ## 👻 Spirit
 The summoner. The restless dead, a shrieking banshee, a spectral wolf and an army of ghost knights fight for you.
 
-**Passive.** Restless Dead: every monster you kill rises as a wandering spirit that fights for you for 8 s (up to 4 at once). Haunted enemies deal 25% less damage.
+**Passive.** Restless Dead: every monster you kill rises as a wandering spirit that fights for you for 8 s (up to 4 at once). Monsters fight back against all your summons: a spirit falls after 2 blows, a knight after 4, the wolf after 6. Haunted enemies deal 25% less damage.
 
 | Key | Move | Cooldown | What it does |
 |---|---|---|---|
@@ -452,6 +452,8 @@ A capture of every move in action, plus a count of each element's bespoke effect
 Every element that kicks up dust now gets real dust too.
 
 **Your own view (2026-11-04):** glow and particles fade out within about 2 m of the camera, light flashes are capped, and the white screen wash never goes above 35%. Beams, cones and waves start 1.5–5 m ahead of you (Solar Beam, Blinding Flash, Gale Force, Thermal Lance, Tsunami, Tornado, Boulder, Fissure). Pulls stop short of the camera (Water Whip 3.5 m, Magnetize 3 m). Summons appear ahead of you (Spirit Wolf, the Marrow and Command spirits), and orbiters fly above eye height (Moons, Familiar). Tentacle Ring leaves a gap straight ahead. Blade Dance keeps dashing until you're clear of the monster. Night Terror's shadows are solid dark figures. Ink's Dragon is built when the game loads.
+
+**Spirit rework (2026-11-04):** monsters now fight Spirit's summons. Any monster whose nearest target is a summon (or one about as close as you are) goes for it, and every blow it lands costs the summon a life: a spirit has 2, a knight 4, the wolf 6. Summons of the same kind spread out: each takes the nearest monster no ally is already fighting, keeps it until it dies, and keeps its distance from the others, so the six Army knights fan out over six monsters instead of piling onto one. All summons use a solid spectral look (a dark see-through body with a bright green rim, drawn with normal blending), so a group no longer adds up to a white blob, and they turn see-through when one is right beside you. Each knight rises from its own ring of light, the wolf trails mist as it runs, and a summon flashes white when it's hit. In the bench, damage taken in the crowd fight fell from about 507 to 184 HP; damage dealt is unchanged (crowd 0.84, boss 1.15).
 
 ## Element resources
 Some elements build up something you can see above your ability bar and around your wizard: Plasma's **Heat** (a bar that turns into OVERHEATED), Soul's **Souls** (pale flames circling you), Arcane's **charges** (orbs whirling round you), Blades' **swords** (orbiting your waist), Bone's armor **plates**, Rune's count toward the next **Empowered** spell and Laser's **Focus** pips.

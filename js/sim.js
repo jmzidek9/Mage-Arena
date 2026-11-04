@@ -716,7 +716,7 @@ function startAttack(e, tgt, al = null) {
     e.x = q.x; e.z = q.z;
     return startAttack(e, tgt, { atk: 'swipe', wind: al.wind, dmg: al.dmg });
   }
-  e.atk = { k, t: wind, max: wind, yaw, tx: tgt.x, tz: tgt.z, lure: tgt.lure, dmg: al?.dmg, chain: al?.chain || 0, al: al || t };
+  e.atk = { k, t: wind, max: wind, yaw, tx: tgt.x, tz: tgt.z, lure: tgt.lure, lid: tgt.lid, dmg: al?.dmg, chain: al?.chain || 0, al: al || t };
   e.yaw = yaw;
   let tele;
   switch (k) {
@@ -762,7 +762,7 @@ function resolveAttack(e) {
   const t = ET[e.type], a = e.atk, sc = 1 + .06 * (S.wave - 1), dmg = (a.dmg ?? t.dmg) * sc * (e.elite ? 1.5 : 1), ps = players().filter(p => !p.down);
   e.atk = null; e.acd = t.cd * rand(.85, 1.15) * (e.enraged ? .7 : 1);
   ev({ k: 'strike', id: e.id, a: a.k });
-  if (a.lure) for (const n of S.ents) if (n.lure && Math.hypot(n.x - a.tx, n.z - a.tz) < 1.5) n.hits = (n.hits || 0) + 1; // a decoy took the blow
+  if (a.lure) for (const n of S.ents) if (n.lure && (n.id === a.lid ? Math.hypot(n.x - e.x, n.z - e.z) < t.reach * e.sc + 2.5 : Math.hypot(n.x - a.tx, n.z - a.tz) < 1.5)) n.hits = (n.hits || 0) + 1; // a decoy or a summon took the blow
   switch (a.k) {
     case 'swipe': for (const p of ps) if (inCone(p, e.x, e.z, a.yaw, t.reach * e.sc + .5, 115) && p.y < 1.6) enemyHits(p, dmg, e); break;
     case 'slam': for (const p of ps) if (Math.hypot(p.x - e.x, p.z - e.z) < t.reach * e.sc + .3 && p.y < 1.2) enemyHits(p, dmg, e); break;
@@ -896,7 +896,7 @@ function stepEnemies(dt) {
     const slow = Math.min(.85, Math.max(e.m.slow, fieldSlow)), rate = (1 - slow) * haste * (e.rage > S.t ? 1.4 : 1); // rage: a Pyre Priest's war-chant
     let tgt = null, bd = 1e9;
     for (const p of ps) { const d = Math.hypot(p.x - e.x, p.z - e.z); if (d < bd) { bd = d; tgt = p; } }
-    for (const n of lures) { const d = Math.hypot(n.x - e.x, n.z - e.z); if (d < n.r && d * .5 < bd) { bd = d * .5; tgt = { x: n.x, y: 0, z: n.z, lure: 1 }; } } // Illusion decoys draw them in
+    for (const n of lures) { const d = Math.hypot(n.x - e.x, n.z - e.z), k = n.lureK ?? .5; if (d < (n.lureR ?? n.r) && d * k < bd) { bd = d * k; tgt = { x: n.x, y: 0, z: n.z, lure: 1, lid: n.id }; } } // Illusion decoys draw them in; Spirit's summons get fought when they're about as close as you are
     const spd = t.spd * rate;
     if (ctype === 'charm') { // turned against their own: hunt the nearest other monster and hit it
       const o = nearest(e.x, e.z, 30, [e.id]);

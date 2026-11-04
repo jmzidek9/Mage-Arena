@@ -64,7 +64,17 @@ const novaBeams = n => Array.from({ length: 8 }, (_, i) => { const a = n.t * 1.3
 // summon brain: chase the enemy nearest the owner, attack in reach every `period`
 function summonAI(n, dt, spd, reach, period, attack, leash = 20) {
   const p = own(n);
-  if ((n.rt = (n.rt || 0) - dt) <= 0) { n.rt = .4; const e = p && nearest(p.x, p.z, leash) || nearest(n.x, n.z, 10); n.tg = e ? e.id : 0; }
+  // a monster that fights back: every blow it lands (sim.js resolveAttack counts n.hits) costs one of n.hp lives
+  if (n.lure && (n.hits || 0) > (n.hh || 0)) { n.hh = n.hits; fxe(n.mv, 'hurt', { id: n.id, x: r2(n.x), z: r2(n.z) }); if (n.hits >= (n.hp || 3)) { n.life = 0; return; } }
+  if ((n.rt = (n.rt || 0) - dt) <= 0) { // keep the current prey while it lives and stays in reach; otherwise take the nearest one no ally of the same kind is already on
+    n.rt = .4; const cur = n.tg && S.enemies.find(x => x.id === n.tg && alive(x));
+    if (!cur || (p && Math.hypot(cur.x - p.x, cur.z - p.z) > leash)) {
+      const pool = p ? enemiesNear(p.x, p.z, leash) : enemiesNear(n.x, n.z, 10), dn = e => Math.hypot(e.x - n.x, e.z - n.z);
+      const taken = new Set(S.ents.filter(m => m !== n && m.own === n.own && m.mv === n.mv && m.tg).map(m => m.tg));
+      const e = pool.filter(e => !taken.has(e.id)).sort((a, b) => dn(a) - dn(b))[0] || pool.sort((a, b) => dn(a) - dn(b))[0];
+      n.tg = e ? e.id : 0;
+    }
+  }
   const e = n.tg && S.enemies.find(x => x.id === n.tg && alive(x));
   let tx, tz;
   if (e) { tx = e.x; tz = e.z; } else if (p) { tx = p.x + Math.cos(n.id) * 2; tz = p.z + Math.sin(n.id) * 2; } else return;
@@ -72,12 +82,18 @@ function summonAI(n, dt, spd, reach, period, attack, leash = 20) {
   n.v = 0;
   if (d > reach + R) { const st = Math.min(d - reach - R, spd * dt); n.x += dx / d * st; n.z += dz / d * st; n.v = spd; }
   if (d > .1) n.yaw = Math.atan2(dx, dz);
+  for (const m of S.ents) { // allies of the same kind keep apart, so a pack surrounds its prey instead of melting into one blob
+    if (m === n || m.own !== n.own || m.mv !== n.mv) continue;
+    const ax = n.x - m.x, az = n.z - m.z, ad = Math.hypot(ax, az), min = (n.r + m.r) * 1.6;
+    if (ad < min && ad > .01) { n.x += ax / ad * (min - ad) * .5; n.z += az / ad * (min - ad) * .5; }
+  }
   const q = { x: n.x, z: n.z }; collide(q, .4); n.x = q.x; n.z = q.z;
   if (e && d <= reach + R + .3 && pulse(n, dt, period, 'atk')) { n.s = (n.s || 0) + 1; attack(e); }
 }
 // Spirit's summons that Command can send (wandering spirits, the wolf, the knights)
 const SUMMONS = new Set(['spirit.0', 'spirit.3', 'spirit.4']);
-const raiseSpirit = (p, x, z, dmg) => ent(p, { p, el: 'spirit', m: MOVE['spirit.0'], dmg }, x, z, { life: 8, r: .5 });
+const SPIRIT_LURE = { lure: 1, lureR: 6, lureK: .9 }; // monsters fight a summon that's about as close to them as you are (sim.js)
+const raiseSpirit = (p, x, z, dmg) => ent(p, { p, el: 'spirit', m: MOVE['spirit.0'], dmg }, x, z, { life: 8, r: .5, ...SPIRIT_LURE, hp: 2 });
 // line zones (Glacial Lance's ice trail, Thermal Lance's burn): enemies within r of the segment (fx0, fz0)-(x, z)
 const nearSeg = (n, r) => enemiesNear((n.x + n.fx0) / 2, (n.z + n.fz0) / 2, Math.hypot(n.x - n.fx0, n.z - n.fz0) / 2 + r).filter(e => {
   const ax = n.x - n.fx0, az = n.z - n.fz0, L2 = ax * ax + az * az || 1, t = clamp(((e.x - n.fx0) * ax + (e.z - n.fz0) * az) / L2, 0, 1);
@@ -148,6 +164,33 @@ function laserFx(pts, color, w = .06, life = .16) {
   for (let i = 1; i < P.length; i++) { const { x, y, z } = P[i], end = i === P.length - 1; burst(x, y, z, end ? 8 : 5, color, 4, .12, .25); flash(x, y, z, color, end ? 10 : 6, .1); }
 }
 // a glowing see-through copy of the wizard (Illusion's decoy, Shadow's Night Terror)
+// Spirit's summons: a solid ghost instead of additive glow. A dark see-through body with a bright rim and slow wisps
+// running up it, drawn with normal blending, so six knights side by side read as six figures and not as one white blob.
+function spectralMat(color) {
+  return new THREE.ShaderMaterial({
+    transparent: true, depthWrite: true, side: THREE.FrontSide, fog: false,
+    uniforms: { uTime, uColor: { value: new THREE.Color(color) }, uA: { value: 1 }, uHurt: { value: 0 } },
+    vertexShader: `varying vec3 vN, vV, lp; void main(){ lp = position; vec4 mv = modelViewMatrix * vec4(position, 1.); vV = -mv.xyz; vN = normalMatrix * normal; gl_Position = projectionMatrix * mv; }`,
+    fragmentShader: `uniform float uTime, uA, uHurt; uniform vec3 uColor; varying vec3 vN, vV, lp; ${GLSL_NOISE}
+    void main(){
+      float f = pow(1. - abs(dot(normalize(vN), normalize(vV))), 2.2), n = noise3(lp * 3.5 + vec3(0., -uTime * 1.6, 0.));
+      float wisp = smoothstep(.55, .85, n);
+      vec3 body = mix(uColor * .12, uColor * .45, n), c = mix(body, uColor * 1.9 + .25, f) + uColor * wisp * .6;
+      c = mix(c, vec3(1.), uHurt * .7);
+      gl_FragColor = vec4(c, clamp((.55 + .45 * f + wisp * .2) * uA * smoothstep(.8, 2.6, length(vV)), 0., 1.)); }`, // see-through when one fights right beside you
+  });
+}
+// a model with its glowing body (and its brighter *_core parts: blade, shield, eyes) swapped for spectral ones
+function spectralModel(name, color) {
+  const o = model(name, color), [g, c] = o.userData.mats, sm = spectralMat(color), cm = spectralMat(new THREE.Color(color).lerp(new THREE.Color(1, 1, 1), .55));
+  o.traverse(m => { if (m.isMesh && m.material === g) m.material = sm; else if (m.isMesh && m.material === c) m.material = cm; }); // shields and blades too: additive they blew out to white
+  o.userData.mats[0] = sm; o.userData.mats[1] = cm; o.userData.sm = sm;
+  return o;
+}
+// a summon flinching from a monster's blow
+function spiritHurtFx(e) { burst(e.x, 1, e.z, 14, 0xc8fff0, 5, .2, .35); const v = views.n.get(e.id); if (v) v.o.userData.hurtT = 1; sfx('tink'); }
+// per frame: the white flinch fades back out
+function hurtTick(o, dt) { const u = o.userData; u.hurtT = Math.max(0, (u.hurtT || 0) - dt * 5); if (u.sm) u.sm.uniforms.uHurt.value = u.hurtT; }
 // Ink Dragon: a head and 30 tapering body segments, built once at game start (warmFx) and reused: building them on the first cast froze the game
 const inkPool = [];
 function inkDragonBuild() {
@@ -1416,7 +1459,7 @@ blood: {
 spirit: {
   name: 'Spirit', color: 0x5effc8, glyph: '👻', adj: 'HAUNTED', react: { name: 'POSSESSION', kind: 'stun' },
   blurb: 'The summoner. The restless dead, a shrieking banshee, a spectral wolf and an army of ghost knights fight for you.',
-  passive: 'Restless Dead: every monster you kill rises as a wandering spirit that fights for you for 8 s (up to 4 at once). Haunted enemies deal 25% less damage.',
+  passive: 'Restless Dead: every monster you kill rises as a wandering spirit that fights for you for 8 s (up to 4 at once). Monsters fight back against all your summons: a spirit falls after 2 blows, a knight after 4, the wolf after 6. Haunted enemies deal 25% less damage.',
   st: { slow: .15, weak: .25 },
   onKill(e, p) { if (!ET[e.type].boss && !e.pid && entsOf(p, 'spirit.0').length < 4) raiseSpirit(p, e.x, e.z, stats(p).dmgMul); },
   moves: [
@@ -1425,7 +1468,7 @@ spirit: {
       // the wandering spirits of the Restless Dead passive live on this move
       ent: { tick(n, dt) { summonAI(n, dt, 9, 1.3, .8, e => hitEnemy(e, 'spirit', 9 * n.mul, own(n), e.x - n.x, e.z - n.z, 2), 18); } },
       look: { m: 'spirit__wisp', trail: [0x8affd8, .18, .45, -1, 2], light: 4 },
-      view: { make(n) { const g = new THREE.Group(), o = model('spirit__wisp', 0x5effc8); g.add(o); g.userData.mats = o.userData.mats; Object.assign(g.userData, { w: o, s: n.s, lunge: 0 }); burst(n.x, .6, n.z, 26, 0x8affd8, 4, .25, .5, -2); sfx('spirit'); return g; },
+      view: { make(n) { const g = new THREE.Group(), o = spectralModel('spirit__wisp', 0x5effc8); g.add(o); g.userData.mats = o.userData.mats; Object.assign(g.userData, { w: o, s: n.s, lunge: 0, sm: o.userData.sm }); burst(n.x, .6, n.z, 26, 0x8affd8, 4, .25, .5, -2); sfx('spirit'); return g; },
         upd(o, n, dt, t) {
           const u = o.userData, k = easeOut(Math.min(1, n.t * 2));
           if (n.s !== u.s) { u.s = n.s; u.lunge = 1; }
@@ -1433,10 +1476,10 @@ spirit: {
           o.rotation.y = lerpAngle(o.rotation.y, n.yaw || 0, Math.min(1, dt * 10));
           o.position.y = .3 + 1.1 * k + Math.sin(t * 3 + n.id) * .15;
           u.w.position.z = Math.sin(u.lunge * Math.PI) * 1.1; u.w.rotation.x = -Math.PI / 2 + Math.sin(t * 5 + n.id) * .2; u.w.scale.setScalar(1.5 * k);
-          fade(o, Math.min(1, n.l * 4) * .5);
+          fade(o, Math.min(1, n.l * 4) * .9); hurtTick(o, dt);
           if (Math.random() < .4) emit(n.x + rand(-.3, .3), o.position.y + rand(-.2, .3), n.z + rand(-.3, .3), 0, rand(.2, .8), 0, 0x8affd8, rand(.12, .25), .6, -.4);
         }, drop(o, n) { burst(n.x, 1.2, n.z, 24, 0x8affd8, 4, .2, .5); dropFade(.3)(o); } },
-      fx: { det: e => boomFx(e.x, e.y, e.z, 2.5, 0x5effc8, .6), nova: e => boomFx(e.x, .5, e.z, 4.5, 0x5effc8, .8) } },
+      fx: { hurt: spiritHurtFx, det: e => boomFx(e.x, e.y, e.z, 2.5, 0x5effc8, .6), nova: e => boomFx(e.x, .5, e.z, 4.5, 0x5effc8, .8) } },
     { name: 'Command', icon: '👉', cd: 7, desc: 'Point at an enemy: every spirit, wolf and knight you have lunges at it, strikes for 20 and keeps attacking it. With no summons, a wandering spirit rises beside you instead.',
       cast(p, c) {
         const mine = S.ents.filter(n => n.own === p.id && SUMMONS.has(n.mv));
@@ -1465,31 +1508,35 @@ spirit: {
         },
         drop(o) { o.userData.circle.removeFromParent(); dropFade(.3)(o); } } },
     { name: 'Spirit Wolf', icon: '🐺', cd: 12, desc: 'Summon a spectral wolf for 16 seconds. It hunts the enemies closest to you and savages them.',
-      cast(p, c) { ent(p, c, p.x + c.flat.x * 2.5 + c.flat.z * 1.2, p.z + c.flat.z * 2.5 - c.flat.x * 1.2, { life: 16, r: .6, yaw: p.yaw + Math.PI }); }, // ahead and to one side, never on the camera
+      cast(p, c) { ent(p, c, p.x + c.flat.x * 2.5 + c.flat.z * 1.2, p.z + c.flat.z * 2.5 - c.flat.x * 1.2, { life: 16, r: .6, yaw: p.yaw + Math.PI, ...SPIRIT_LURE, hp: 6 }); }, // ahead and to one side, never on the camera
       ent: { tick(n, dt) { summonAI(n, dt, 11, 1.2, .7, e => hitEnemy(e, 'spirit', (ET[e.type].boss ? 13 : 34) * n.mul, own(n), e.x - n.x, e.z - n.z, 2), 18); } },
-      view: { make(n) { const o = model('spirit__wolf', 0x5effc8); o.scale.setScalar(1.15); o.userData.legs = [0, 1, 2, 3].map(i => o.getObjectByName('spirit__wolf_leg' + i)); o.userData.head = o.getObjectByName('spirit__wolf_head'); o.userData.tail = o.getObjectByName('spirit__wolf_tail'); o.userData.s = n.s; o.userData.bite = 0; burst(n.x, 1, n.z, 40, 0x8affd8, 5, .3, .6); sfx('spirit_big'); return o; },
+      view: { make(n) { const o = spectralModel('spirit__wolf', 0x5effc8); o.scale.setScalar(1.15); o.userData.legs = [0, 1, 2, 3].map(i => o.getObjectByName('spirit__wolf_leg' + i)); o.userData.head = o.getObjectByName('spirit__wolf_head'); o.userData.tail = o.getObjectByName('spirit__wolf_tail'); o.userData.s = n.s; o.userData.bite = 0; burst(n.x, 1, n.z, 40, 0x8affd8, 5, .3, .6); sfx('spirit_big'); return o; },
         upd(o, n, dt, t) {
           const u = o.userData; u.ph = (u.ph || 0) + dt * (n.v ? 14 : 2); o.rotation.y = lerpAngle(o.rotation.y, n.yaw || 0, Math.min(1, dt * 10));
           u.legs.forEach((l, i) => { if (l) l.rotation.x = Math.sin(u.ph + (i % 2 ? Math.PI : 0) + (i > 1 ? Math.PI / 2 : 0)) * (n.v ? .8 : .08); });
           if (n.s !== u.s) { u.s = n.s; u.bite = 1; sfx('spirit'); }
           u.bite = Math.max(0, u.bite - dt * 5);
           if (u.head) u.head.rotation.x = -u.bite * .6 + Math.sin(t * 3) * .05; if (u.tail) u.tail.rotation.y = Math.sin(t * 8) * .4;
-          o.position.y = Math.abs(Math.sin(u.ph)) * (n.v ? .15 : 0) + u.bite * .3; fade(o, Math.min(1, n.l * 8) * .7);
+          o.position.y = Math.abs(Math.sin(u.ph)) * (n.v ? .15 : 0) + u.bite * .3; fade(o, Math.min(1, n.l * 8) * .95); hurtTick(o, dt);
+          if (n.v && Math.random() < .5) emit(n.x + rand(-.3, .3), rand(.2, .7), n.z + rand(-.3, .3), -Math.sin(n.yaw || 0) * 2, rand(.2, .6), -Math.cos(n.yaw || 0) * 2, 0x8affd8, rand(.12, .22), .5, -.2); // ghost-mist streaming off it as it runs
           if (Math.random() < .3) emit(n.x + rand(-.4, .4), rand(.3, 1.2), n.z + rand(-.4, .4), 0, .5, 0, 0x8affd8, .2, .6, -.3);
-        }, drop(o, n) { burst(n.x, 1, n.z, 30, 0x8affd8, 4, .3, .5); dropFade(.3)(o); } } },
+        }, drop(o, n) { burst(n.x, 1, n.z, 30, 0x8affd8, 4, .3, .5); dropFade(.3)(o); } },
+      fx: { hurt: spiritHurtFx } },
     { name: 'Army of the Dead', icon: '⚔️', desc: 'ULTIMATE. Six spectral knights rise around you and cut down your enemies for 9 seconds.',
-      cast(p, c) { const f = c.flat, yaw = Math.atan2(f.x, f.z); for (let i = 0; i < 6; i++) { const a = yaw + (i - 2.5) * .38, d = 4 + (i % 2) * 1.5; ent(p, c, p.x + Math.sin(a) * d, p.z + Math.cos(a) * d, { life: 9, r: .6, i, yaw }); } fxe(c.m.key, 'rise', { x: p.x + f.x * 4.5, z: p.z + f.z * 4.5 }); },
+      cast(p, c) { const f = c.flat, yaw = Math.atan2(f.x, f.z); for (let i = 0; i < 6; i++) { const a = yaw + (i - 2.5) * .38, d = 4 + (i % 2) * 1.5; ent(p, c, p.x + Math.sin(a) * d, p.z + Math.cos(a) * d, { life: 9, r: .6, i, yaw, ...SPIRIT_LURE, hp: 4 }); } fxe(c.m.key, 'rise', { x: p.x + f.x * 4.5, z: p.z + f.z * 4.5 }); },
       ent: { tick(n, dt) { summonAI(n, dt, 6.5, 1.6, .9, () => { const fx2 = Math.sin(n.yaw), fz = Math.cos(n.yaw); for (const e of enemiesNear(n.x + fx2, n.z + fz, 2)) hitEnemy(e, 'spirit', (ET[e.type].boss ? 4.5 : 12) * n.mul, own(n), fx2, fz, 5, { aoe: true }); }, 22); } }, /* summons all pile onto a lone boss */
-      view: { make(n) { const o = model('spirit__knight', 0x5effc8); o.userData.sword = o.getObjectByName('spirit__knight_sword'); o.userData.s = n.s; o.userData.sw = 0; return o; },
+      view: { make(n) { // each knight claws its own way up out of a crack of light (staggered), rather than one big flash in the middle
+          const o = spectralModel('spirit__knight', 0x5effc8); o.userData.sword = o.getObjectByName('spirit__knight_sword'); o.userData.s = n.s; o.userData.sw = 0;
+          ringFx(n.x, .08, n.z, 1.3, 0x5effc8, .6); burst(n.x, .2, n.z, 12, 0x8affd8, 3, .25, .7, -3); return o; },
         upd(o, n, dt, t) {
           const u = o.userData; o.rotation.y = lerpAngle(o.rotation.y, n.yaw || 0, Math.min(1, dt * 8));
           o.position.y = .3 + Math.sin(t * 2 + n.id) * .15 - 2.5 * (1 - easeOut(Math.min(1, n.t * 2)));
           if (n.s !== u.s) { u.s = n.s; u.sw = 1; if (Math.random() < .4) sfx('steel'); }
           u.sw = Math.max(0, u.sw - dt * 3); if (u.sword) u.sword.rotation.x = u.sw > 0 ? -1.6 + (1 - u.sw) * 2.6 : Math.sin(t * 2) * .1;
-          fade(o, Math.min(1, n.l * 8, n.t * 2) * .4);
+          fade(o, Math.min(1, n.l * 8, n.t * 2) * .9); hurtTick(o, dt);
           if (Math.random() < .25) emit(n.x + rand(-.3, .3), rand(.1, .8), n.z + rand(-.3, .3), 0, .4, 0, 0x8affd8, .25, .6, -.3);
         }, drop(o, n) { burst(n.x, 1, n.z, 30, 0x8affd8, 4, .3, .5); dropFade(.4)(o); } },
-      fx: { rise(e) { circleFx('spirit', V(e.x, .08, e.z), 4, { life: 1.4 }); burst(e.x, .5, e.z, 40, 0x8affd8, 6, .3, 1, -2); sfx('ult'); sfx('spirit_big'); } } },
+      fx: { rise(e) { circleFx('spirit', V(e.x, .08, e.z), 4, { life: 1.4 }); sfx('ult'); sfx('spirit_big'); }, hurt: spiritHurtFx } },
   ],
 },
 // ================================================================== COSMIC
