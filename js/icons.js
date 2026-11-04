@@ -120,8 +120,9 @@ SPELL_ART.frost = [
 SPELL_ART.storm = [
   // Chain Lightning: a bolt leaping from one target to the next
   k => k.bolt([[6, 56], [14, 44], [10, 40], [22, 30], [26, 34], [36, 22], [34, 18], [46, 14], [50, 18], [58, 6]], 2.4) + k.orb(22, 30, 4.5, false) + k.orb(46, 14, 4.5, false) + k.orb(6, 56, 3.5, false) + k.sparks([[30, 40, 1], [52, 26, 1]]),
-  // Ball Lightning: a crackling orb of lightning
-  k => k.halo(32, 32, 30) + [[[32, 32], [44, 22], [42, 16], [54, 8]], [[32, 32], [20, 44], [24, 48], [10, 56]], [[32, 32], [46, 40], [52, 38], [58, 48]], [[32, 32], [18, 22], [20, 16], [8, 12]]].map(p => k.bolt(p, 1.3)).join('') + k.orb(32, 32, 12) + `<path d="M34 23l-6 10h5l-2 8 7-11h-5z" fill="#fff" opacity=".9"/>`,
+  // Lightning Dash: the caster streaking forward as a bolt, a fading afterimage left where they stood
+  k => `<g opacity=".35">${k.figure(12, 40, 1.15, k.M, k.D)}</g>` + k.streak(10, 44, 50, 30, 10, .35) + k.bolt([[10, 44], [20, 36], [24, 42], [34, 32], [38, 37], [50, 28]], 2.6)
+    + k.glow(52, 28, 10, .6) + `<g>${k.figure(52, 30, 1.15, k.W, k.M)}</g>` + k.sparks([[30, 50, 1.2], [42, 46, 1], [20, 28, 1], [58, 40, 1.3]]),
   // Thunderclap: a huge bolt slamming into the ground
   k => k.ring(30, 52, 24, 6, 2, .8) + k.burst(30, 50, 12, 10, .3) + k.bolt([[38, 0], [30, 16], [38, 20], [28, 36], [34, 38], [30, 50]], 4) + k.rock(12, 44, .5, 20) + k.rock(50, 42, .45, -30) + k.sparks([[8, 30, 1.2], [56, 28, 1], [44, 54, 1]]),
   // Tesla Coil: a coil tower crackling with arcs

@@ -134,6 +134,20 @@ function skyFx(x, y, z, color) {
   pts.push([x, y, z]);
   boltFx(pts, color); burst(x, y, z, 18, color, 7, .2, .3); flash(x, y + 1, z, color, 40, .2);
 }
+// a heavy lightning strike from the sky at (x, z): a branching bolt with a white-hot core, a shockwave, a scorched crater and arcs crawling over the floor
+function bigBoltFx(x, z, r = 3, top = 16) {
+  const pts = [[x + rand(-1.5, 1.5), top, z + rand(-1.5, 1.5)]];
+  for (let i = 1; i < 8; i++) { const f = 1 - i / 8; pts.push([x + rand(-1.1, 1.1) * f, top * f, z + rand(-1.1, 1.1) * f]); }
+  pts.push([x, 0, z]);
+  const near = Math.hypot(x - camera.position.x, z - camera.position.z) < 6; // right beside you: no white core or forks, so it can't white out the view
+  boltFx(pts, 0xb08cff); boltFx(pts.map(p => [p[0] + rand(-.25, .25), p[1], p[2] + rand(-.25, .25)]), 0xe8dcff);
+  if (!near) { boltFx(pts.map(p => [p[0] + rand(-.4, .4), p[1], p[2] + rand(-.4, .4)]), 0xb08cff); beamFx(V(...pts[0]), V(x, 0, z), 0xffffff, .14 * Math.min(1.8, r / 2), .25); pillarFx(x, 0, z, Math.max(.6, r * .3), top, 0xb08cff, .45); } // a glowing column lingers where it struck
+  if (!near) for (let b = 0; b < 2; b++) { const p0 = pts[2 + Math.floor(rand(0, 4))], br = [p0]; for (let i = 1; i < 4; i++) br.push([p0[0] + rand(-2.5, 2.5) * i / 3, p0[1] - i * rand(1, 2), p0[2] + rand(-2.5, 2.5) * i / 3]); boltFx(br, 0xb08cff); } // forks off the main bolt
+  for (let i = 0; i < Math.round(3 + r); i++) { const a = rand(0, TAU), d = r * rand(.6, 1.1); boltFx([[x, .1, z], [x + Math.cos(a) * d * .5 + rand(-.4, .4), rand(.2, .6), z + Math.sin(a) * d * .5 + rand(-.4, .4)], [x + Math.cos(a) * d, .05, z + Math.sin(a) * d]], 0xc8b0ff); } // arcs crawling over the floor
+  ringFx(x, .1, z, r, 0xb08cff, .45); ringFx(x, .15, z, r * .55, 0xe8dcff, .3); scarFx(x, z, r * .5, 0x8a5cff, 2.5);
+  burst(x, .3, z, Math.round(14 + r * 6), 0xd8c8ff, 8, .2, .4, 4); dustFx(x, z, r * .4, 0x6a6078);
+  flash(x, 2, z, 0xc8b0ff, near ? 15 : 40, .2);
+}
 // dust kicked up off the floor: real (normal-blended) puffs, plus a little bright grit
 function dustFx(x, z, r, color = 0x9a8a78) {
   smokeFx(x, .3, z, r, color, 1.3, Math.round(4 + 2 * Math.min(r, 4)), .8);
@@ -214,10 +228,10 @@ function iceSpikeFx(x, z, a, d, delay, s) {
     if (t > .85) { if (!broke) { broke = true; burst(px, s * .9, pz, 10, 0xeaf8ff, 5, .15, .4, 9); } o.position.y = -(t - .85) * 6 * s; mats.forEach(m => m.opacity = 1 - (t - .85) / .3); }
   });
 }
-// Blade Dance: 9 m, or on until you are clear of the monster you would stop inside (up to 14 m)
-function danceLen(p, f) {
-  let L = 9; const inside = L => S.enemies.some(e => alive(e) && Math.hypot(e.x - p.x - f.x * L, e.z - p.z - f.z * L) < ET[e.type].r * e.sc + .8);
-  while (L < 14 && inside(L)) L += .5;
+// a dash (Blade Dance 9 m, Lightning Dash 8 m) runs on until you are clear of the monster you would stop inside (up to 5 m more)
+function danceLen(p, f, L0 = 9) { const inside = L => S.enemies.some(e => alive(e) && Math.hypot(e.x - p.x - f.x * L, e.z - p.z - f.z * L) < ET[e.type].r * e.sc + 1.5); // 1.5: the camera clear of the body, not just its centre
+  let L = L0; while (L < L0 + 8 && inside(L)) L += .5; // run on through it...
+  if (inside(L)) { L = L0; while (L > 1 && inside(L)) L -= .5; } // ...or, if it's too big to clear, stop short of it
   return L;
 }
 function ghostWizard(color, dark = false) { // dark: a solid shadow (additive black would add nothing and leave only a pale rim)
@@ -531,25 +545,42 @@ storm: {
     { name: 'Chain Lightning', icon: '⚡', cd: .36, desc: 'An instant bolt that chains to 2 more enemies.',
       cast(p, c) { chainBolt(p, c, 6 * c.dmg, c.st.chain + (c.mega ? 3 : 0)); },
       fx: { det: e => boomFx(e.x, e.y, e.z, 2.5, 0xb08cff, .6), nova: e => boomFx(e.x, .5, e.z, 4.5, 0xb08cff, .8) } },
-    { name: 'Ball Lightning', icon: '🔮', cd: 6, desc: 'A slow orb of lightning that zaps nearby enemies as it drifts, then bursts.',
-      cast(p, c) { shoot(p, c, 9, { r: .7, life: 2.4, pierce: 99, dmg: 6 * c.dmg, kb: .5 }); },
-      shot: {
-        tick(s, dt) { if (!pulse(s, dt, .25, 'z')) return; const p = own(s); for (const e of enemiesNear(s.x, s.z, 6).slice(0, 2)) { const q = center(e); if (!s.zv) ev({ k: 'bolt', el: 'storm', pts: [[s.x, s.y, s.z], [q.x, q.y, q.z]].map(a => a.map(r2)), q: 1 }); s.zv = !s.zv; hitEnemy(e, 'storm', 5 * s.mul, p, 0, 0, 0); } }, // one zap drawn per pulse (both still hit): 2 bolts every .25 s was the storm kit's worst fx load
-        ground(s) { s.vy = Math.abs(s.vy); },
-        end(s) { boomAt(ctxS(s), s.x, s.y, s.z, 3, 20 * s.mul, { kb: 6 }); },
+    { name: 'Lightning Dash', icon: '⚡', cd: 5, desc: 'Become a bolt of lightning and streak 8 m forward (further, if a monster is in the way): everything you pass through takes 40 and is stunned for 0.4 s. You leave a crackling trail for 2 s that shocks anything crossing it for 12.',
+      self(p) { const f = flatAim(p), L = danceLen(p, f, 8); p.mo = { t: 0, T: L / 50, vx: f.x * 50, vz: f.z * 50, trail: 0xd8c8ff }; },
+      cast(p, c) {
+        const f = c.flat, x0 = p.x, z0 = p.z, L = danceLen(p, f, 8); buff(p, 'inv', .25); // never ends inside a monster
+        for (const e of S.enemies) { if (!alive(e)) continue; const dx = e.x - x0, dz = e.z - z0, along = dx * f.x + dz * f.z, side = dx * f.z - dz * f.x, lat = Math.abs(side); if (along > -.5 && along < L + 1 && lat < 1.6 + ET[e.type].r * e.sc) { const sg = side > 0 ? 1 : -1; hitEnemy(e, 'storm', 40 * c.dmg, p, f.z * sg, -f.x * sg, 5, { src: p }); cc(e, 'stun', .4, p); } } // flung aside as you tear through
+        ent(p, c, x0 + f.x * L, z0 + f.z * L, { life: 2, r: .8, fx0: x0, fz0: z0 });
+        fxe(c.m.key, 'dash', { id: p.id, x: r2(x0), y: r2(p.y), z: r2(z0), x2: r2(x0 + f.x * L), z2: r2(z0 + f.z * L) });
       },
-      look: { m: 'storm__orb', spin: [2, 3, 1.5], trail: [0xd8c8ff, .2, .25, 0, 2], light: 8, flick: 1 },
-      fx: { boom: e => { boomFx(e.x, e.y, e.z, e.r, 0xb08cff); boltFx([[e.x, e.y, e.z], [e.x + rand(-2, 2), e.y + 2, e.z + rand(-2, 2)]], 0xb08cff); } } },
+      ent: { tick(n, dt) { if (pulse(n, dt, .3)) for (const e of nearSeg(n, n.r)) hitEnemy(e, 'storm', 12 * n.mul, own(n), 0, 0, 0, { aoe: true, noCombo: true }); } },
+      view: { make: () => Object.assign(new THREE.Group(), { userData: { mats: [] } }),
+        upd(o, n) { const k = Math.min(1, n.l * 3); // the trail crackles: short arcs hopping along it
+          if (Math.random() < .5 * k) { const t = Math.random(), x = n.fx0 + (n.x - n.fx0) * t, z = n.fz0 + (n.z - n.fz0) * t; boltFx([[x, .15, z], [x + rand(-.8, .8), rand(.3, .9), z + rand(-.8, .8)], [x + rand(-1.2, 1.2), .1, z + rand(-1.2, 1.2)]], 0xc8b0ff); }
+          for (let i = 0; i < 2; i++) { if (Math.random() > k) continue; const t = Math.random(); emit(n.fx0 + (n.x - n.fx0) * t + rand(-.3, .3), .12, n.fz0 + (n.z - n.fz0) * t + rand(-.3, .3), 0, rand(.5, 1.5), 0, Math.random() < .5 ? 0xffffff : 0xb08cff, rand(.05, .1), .3); } },
+        drop: o => o.removeFromParent() },
+      fx: { dash(e) { // a jagged bolt along the path with a white core, a crackling scorch where you land, an afterimage where you stood
+          const a = V(e.x, e.y + 1.1, e.z), b = V(e.x2, e.y + 1.1, e.z2), pts = [];
+          for (let i = 0; i <= 8; i++) { const q = a.clone().lerp(b, i / 8), j = i % 8 ? 1 : 0; pts.push([q.x + rand(-.5, .5) * j, q.y + rand(-.4, .4) * j, q.z + rand(-.5, .5) * j]); }
+          boltFx(pts, 0xb08cff); boltFx(pts.map(p => [p[0] + rand(-.2, .2), p[1] + rand(-.2, .2), p[2] + rand(-.2, .2)]), 0xe0d0ff); beamFx(a, b, 0xffffff, .07, .18);
+          scarFx(e.x2, e.z2, 1.2, 0xb08cff, 2); burst(e.x2, 1, e.z2, 30, 0xd8c8ff, 9, .2, .35); ringFx(e.x2, .1, e.z2, 2.2, 0xb08cff, .35); flash(e.x2, 1.2, e.z2, 0xb08cff, 30, .2);
+          const g = ghostWizard(0xb08cff); g.position.set(e.x, e.y, e.z); g.rotation.y = Math.atan2(e.x2 - e.x, e.z2 - e.z) + Math.PI; addFx(g, .4, (o, k) => fade(o, (1 - k) * .7));
+          if (isMe(e.id)) { fovKick = 1.3; shake(.1); } sfx('storm_big'); } } },
     { name: 'Thunderclap', icon: '🌩️', cd: 7, mode: 'aim', range: 22, aimR: 3.5, desc: 'Mark a spot: a moment later a huge bolt slams it, stunning everything there, then jumps to up to 3 enemies nearby.',
       cast(p, c) {
         const t = c.tgt.clone(); fxe(c.m.key, 'mark', { x: t.x, z: t.z, r: 3.5 * c.st.aoe });
         later(.45, () => {
-          boomAt(c, t.x, 0, t.z, 3.5, 38 * c.dmg, { kb: 6, cc: ['stun', .8] }, 'strike');
-          enemiesNear(t.x, t.z, 8).slice(0, 3).forEach((e, i) => later(.15 + i * .12, () => { if (alive(e)) boomAt(c, e.x, 0, e.z, 1.6, 20 * c.dmg, { kb: 2 }, 'strike'); }));
+          boomAt(c, t.x, 0, t.z, 3.5, 50 * c.dmg, { kb: 6, cc: ['stun', .8] }, 'strike');
+          enemiesNear(t.x, t.z, 8).slice(0, 3).forEach((e, i) => later(.15 + i * .12, () => { if (alive(e)) { fxe(c.m.key, 'arc', { x: r2(t.x), z: r2(t.z), x2: r2(e.x), z2: r2(e.z) }); boomAt(c, e.x, 0, e.z, 1.6, 20 * c.dmg, { kb: 2 }, 'strike'); } })); // an arc jumps to each one
         });
       },
-      fx: { mark(e) { ringFx(e.x, .1, e.z, e.r, 0xb08cff, .5); burst(e.x, .2, e.z, 16, 0xc0a0ff, 3, .15, .5, 4); sfx('storm'); },
-        strike(e) { skyFx(e.x, 0, e.z, 0xc0a0ff); ringFx(e.x, .1, e.z, e.r, 0xb08cff); sfx('storm_big'); shake(.12); } } },
+      fx: { mark(e) { // the warning: a storm sigil on the ground, static crawling up off it, flickers gathering overhead
+          circleFx('storm', V(e.x, .08, e.z), e.r, { life: .55 });
+          for (let i = 0; i < 24; i++) { const a = rand(0, TAU), d = rand(0, e.r); emit(e.x + Math.cos(a) * d, .1, e.z + Math.sin(a) * d, 0, rand(2, 5), 0, Math.random() < .5 ? 0xffffff : 0xc0a0ff, rand(.05, .1), .45); }
+          addFx(new THREE.Group(), .45, (o, k) => { if (Math.random() < .35) flash(e.x, 12, e.z, 0xb08cff, 20 * k, .08); if (Math.random() < .25) boltFx([[e.x + rand(-3, 3), 13, e.z + rand(-3, 3)], [e.x + rand(-3, 3), 12, e.z + rand(-3, 3)]], 0xd8c8ff); });
+          sfx('storm'); },
+        strike(e) { bigBoltFx(e.x, e.z, e.r); sfx('storm_big'); shake(e.r > 2 ? .3 : .12); },
+        arc(e) { const a = V(e.x, 1.4, e.z), b = V(e.x2, 1.2, e.z2), pts = []; for (let i = 0; i <= 6; i++) { const q = a.clone().lerp(b, i / 6), j = i % 6 ? 1 : 0; q.y += Math.sin(i / 6 * Math.PI) * 1.6; pts.push([q.x + rand(-.4, .4) * j, q.y, q.z + rand(-.4, .4) * j]); } boltFx(pts, 0xd8c8ff); } } },
     { name: 'Tesla Coil', icon: '🗼', cd: 13, mode: 'aim', range: 16, aimR: 9, desc: 'Plant a tesla coil that zaps up to 3 enemies every half second. Two of your coils within 12 m of each other link up with a crackling fence that shocks anything crossing it.',
       cast(p, c) { ent(p, c, c.tgt.x, c.tgt.z, { life: 9, r: 9, solid: [{ x: c.tgt.x, z: c.tgt.z, r: .6 }], h: 2.5 }); },
       ent: { tick(n, dt) {
@@ -572,13 +603,23 @@ storm: {
         if (!pulse(n, dt, .24)) return;
         const es = enemiesNear(n.x, n.z, n.r); if (!es.length) return;
         const e = pick(es), q = center(e);
-        ev({ k: 'bolt', el: 'storm', sky: 1, pts: [[q.x, q.y + 14, q.z], [q.x, q.y, q.z]].map(a => a.map(r2)) });
+        fxe(n.mv, 'bolt', { x: r2(e.x), z: r2(e.z) }); // from the cloud: a heavy branching bolt (bigBoltFx)
         blast(e.x, e.z, 1.6, 16 * n.mul, ctxN(n), { raw: true, kb: 1, cc: ['stun', .25] });
       } },
-      view: { make() { const o = model('storm__cloud', 0xb08cff); o.scale.setScalar(1.6); return o; },
-        upd(o, n, dt, t) { o.position.y = 9; o.rotation.y += dt * .4; fade(o, Math.min(1, n.t * 3, n.l * 5)); if (Math.random() < dt * 8) flash(n.x, 8, n.z, 0xb08cff, 25, .1);
-          for (let k = 0; k < 2; k++) emit(n.x + rand(-6, 6), rand(4, 8), n.z + rand(-6, 6), 1, -14, 0, 0x9fb8ff, .06, .5, 0, 0); },
-        drop: dropFade() } },
+      view: { make() { // a wide, dark, churning storm front overhead (normal-blended puffs, so it reads as cloud, not glow), lit from inside
+          const g = new THREE.Group(), u = g.userData; u.mats = []; u.puffs = [];
+          const core = model('storm__cloud', 0xb08cff); core.scale.setScalar(1.6); core.position.y = 9; g.add(core); u.core = core; u.mats.push(...core.userData.mats);
+          for (let i = 0; i < 22; i++) { const a = TAU * i / 22 + rand(-.2, .2), d = i < 6 ? rand(0, 5) : rand(6, 16), m = new THREE.SpriteMaterial({ map: puffTex(), color: new THREE.Color(0x2a2440), transparent: true, opacity: 0, depthWrite: false, fog: false, rotation: rand(0, TAU) });
+            const sp = new THREE.Sprite(m); sp.position.set(Math.cos(a) * d, rand(7.5, 9.5), Math.sin(a) * d); sp.scale.setScalar(rand(7, 11)); /* low and wide enough to fill the top of your view */ g.add(sp); u.puffs.push({ sp, m, a, d, s: rand(.05, .15) * (Math.random() < .5 ? 1 : -1), lit: 0 }); }
+          sfx('storm_big'); return g; },
+        upd(o, n, dt, t) {
+          const u = o.userData, a = Math.min(1, n.t * 2, n.l * 4); u.core.rotation.y += dt * .4; fade(u.core, a);
+          if (Math.random() < dt * 5) { const q = pick(u.puffs); q.lit = 1; flash(n.x + q.sp.position.x, 8.5, n.z + q.sp.position.z, 0xb08cff, 25, .12); } // lightning flickering inside the cloud
+          for (const q of u.puffs) { q.a += q.s * dt; q.sp.position.x = Math.cos(q.a) * q.d; q.sp.position.z = Math.sin(q.a) * q.d; q.lit = Math.max(0, q.lit - dt * 6); q.m.opacity = .82 * a; q.m.color.setRGB(.34 + q.lit * .5, .3 + q.lit * .45, .48 + q.lit * .5); /* storm grey with a violet cast: a near-black cloud vanished against the night sky */ }
+          for (let k = 0; k < 3; k++) emit(n.x + rand(-11, 11), rand(5, 10), n.z + rand(-11, 11), 1.5, -18, 0, 0xb8c8ff, .07, .55, 0, 0); // driving rain
+        },
+        drop: dropFade() },
+      fx: { bolt(e) { bigBoltFx(e.x, e.z, 1.4, 9); shake(.06); if (Math.random() < .5) sfx('storm'); } } },
   ],
 },
 // ================================================================== WATER

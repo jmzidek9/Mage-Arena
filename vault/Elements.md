@@ -78,10 +78,12 @@ Speed and chaos. Lightning that leaps from foe to foe.
 | Key | Move | Cooldown | What it does |
 |---|---|---|---|
 | LMB | ⚡ **Chain Lightning** | 0.36 s | An instant bolt that chains to 2 more enemies. |
-| RMB | 🔮 **Ball Lightning** | 6 s | A slow orb of lightning that zaps nearby enemies as it drifts, then bursts. |
+| RMB | ⚡ **Lightning Dash** | 5 s | Become a bolt of lightning and streak 8 m forward (further, if a monster is in the way): everything you pass through takes 40 and is stunned for 0.4 s. You leave a crackling trail for 2 s that shocks anything crossing it for 12. |
 | Q | 🌩️ **Thunderclap** *(hold to aim, release to cast)* | 7 s | Mark a spot: a moment later a huge bolt slams it, stunning everything there, then jumps to up to 3 enemies nearby. |
 | E | 🗼 **Tesla Coil** *(hold to aim, release to cast)* | 13 s | Plant a tesla coil that zaps up to 3 enemies every half second. Two of your coils within 12 m of each other link up with a crackling fence that shocks anything crossing it. |
 | R | ⛈️ **Thunderstorm** | ultimate | A storm cloud follows you, hurling a lightning bolt at a nearby enemy four times a second. |
+
+*Storm rework (2026-11-04):* Ball Lightning is replaced by **Lightning Dash**: you streak forward as a jagged bolt with a white core, leaving a fading afterimage where you stood and a crackling trail. A dash never ends inside a monster: it runs on past it, or stops short if the monster is too big (the same rule as Blade Dance). **Thunderclap** now warns with a storm sigil, static crawling up off it and flickers overhead, then lands as a heavy branching bolt (`bigBoltFx`): a white-hot core, forks, a glowing column that lingers, shockwave rings, a scorched crater, arcs over the floor, and arcs that visibly jump to each chained monster. **Thunderstorm** spreads a wide, low storm front of grey-violet cloud overhead, lit by flickers inside it, with driving rain, and every strike is a heavy branching bolt; strikes within 6 m of you are drawn without the white core so they can't white out your view. Bench: crowd 1.10, boss 1.16.
 
 ## 🌊 Water
 Push and pull. Wash enemies off the island, trap them, and surf straight through the crowd.
