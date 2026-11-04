@@ -3,7 +3,7 @@
 //        node playtest/run.js --median          (median damage across every playtest/out/*/metrics.json)
 // moves: each move cast alone into the showcase pack (rendered: screenshots, frame cost, draw calls, particles)
 // kit / boss: 30 s of the whole kit against a respawning wave-5 crowd / the Tyrant (simulated without rendering, fast)
-const { chromium } = require('playwright');
+const { browser } = require('./browser');
 const fs = require('fs'), path = require('path');
 
 const args = process.argv.slice(2), flag = k => { const i = args.indexOf(k); return i < 0 ? null : args.splice(i, 2)[1]; };
@@ -95,7 +95,7 @@ const HELPERS = () => {
 };
 
 async function open() {
-  const b = await chromium.launch({ channel: process.env.PT_BROWSER || 'msedge', args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog', '--disable-renderer-backgrounding'] });
+  const b = await browser();
   const p = await b.newPage({ viewport: { width: 960, height: 540 } });
   p.on('pageerror', e => console.log('page error:', e.message));
   await p.addInitScript(() => { localStorage.setItem('magepact_gfx', 'high'); window.requestAnimationFrame = () => 0; });

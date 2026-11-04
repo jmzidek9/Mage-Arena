@@ -1,7 +1,7 @@
 // Runs index.html#test in headless Edge and prints the results (run `python pack.py` first). Exit 1 on any FAIL.
-const { chromium } = require('playwright'), path = require('path');
+const { browser } = require('./browser'), path = require('path');
 (async () => {
-  const b = await chromium.launch({ channel: process.env.PT_BROWSER || 'msedge', args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
+  const b = await browser();
   const p = await b.newPage();
   await p.goto('file://' + path.resolve(__dirname, '../index.html') + '#test', { waitUntil: 'commit' });
   await p.waitForFunction(() => window.MP, null, { timeout: 180000 });
