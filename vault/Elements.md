@@ -138,7 +138,7 @@ Patient and resilient. Root enemies in place, wall them off with brambles and sl
 | R | 🌳 **World Tree** *(hold to aim, release to cast)* | ultimate | Grow a great tree that roots every enemy around it and lashes them with vines. |
 
 ## 🌑 Shadow
-An assassin. Pin enemies down, blind them, swap places with them and strike from the dark.
+An assassin. Blind enemies, snare them, ambush them from every side and strike from the dark.
 
 **Passive.** Assassin: hits on an enemy's back deal 50% more damage. Cursed enemies take 15% more damage.
 
@@ -146,9 +146,9 @@ An assassin. Pin enemies down, blind them, swap places with them and strike from
 |---|---|---|---|
 | LMB | 🗡️ **Shadow Daggers** | 0.45 s | Throw a fan of three shadow daggers. |
 | RMB | 🌑 **Blackout** *(hold to aim, release to cast)* | 6 s | Hurl an orb of darkness that bursts into a choking cloud for 3 s. Every enemy it catches, or that walks in, is blinded: hit for 16, stunned for 1.5 s and spun round, its back wide open to your Assassin bonus. |
-| Q | 🕸️ **Shadow Snare** *(hold to aim, release to cast)* | 7 s | Shadow tendrils burst from the ground, pinning every enemy in the area and dragging them together. While held they take 40% more damage. |
-| E | 🔄 **Shadow Swap** | 9 s | Throw a shadow bolt. You trade places with the first enemy it hits, which is stunned for 1.5 s facing away from you, its back wide open to your Assassin bonus. Bosses are only stunned. |
-| R | 👤 **Night Terror** | ultimate | Every enemy within 18 m (up to 12) is haunted by its own shadow for 5 s. They flee from it in terror while it strikes them twice a second, then every shadow bursts for 50. |
+| Q | 🕸️ **Shadow Snare** *(hold to aim, release to cast)* | 7 s | A pool of darkness opens at the target and shadow tendrils burst out of it, seizing every enemy in the area: 18 damage, held in place for 1.5 s and dragged into the middle. While held they take 40% more damage. |
+| E | 🥷 **Shade Ambush** *(hold to aim, release to cast)* | 9 s | Three shadow assassins rise from the ground around the target, then one after another dash straight through it from three sides: each dash cuts every enemy in its path for 30 and stuns it for 0.5 s. |
+| R | 🌑 **Eclipse** | ultimate | A black sun rises and night falls for 5 s. Every enemy within 20 m (up to 14) is blinded, unable to attack, and shadows slash it for 22 every 0.6 s. When the light returns, every one of them is cut down for 60 more. |
 
 ## ☀️ Light
 Holy power. Burn enemies with beams of sunlight and smite anything that dares to attack.
@@ -160,11 +160,11 @@ Holy power. Burn enemies with beams of sunlight and smite anything that dares to
 | LMB | ✨ **Radiant Orbs** | 0.4 s | Fast, dead-straight bolts of light. No homing, but a headshot hits 75% harder. |
 | RMB | 🔆 **Solar Beam** *(hold)* | 6 s | Hold to fire a piercing beam of sunlight. It starts wide and soft, then focuses the longer you hold it: narrower, but much stronger. |
 | Q | 💥 **Blinding Flash** | 8 s | A searing flash in front of you. Enemies caught in it are blinded for 1 s and left Illuminated for 5 s: they glow, and take 20% more damage from everything. |
-| E | ⚖️ **Penance** | 12 s | Brand every enemy in front of you (14 m) with a halo for 8 s. The first 2 times a branded enemy tries to attack, a spear of light smites it for 70 and stuns it for 0.6 s before the attack lands. |
-| R | 🌞 **Divine Judgment** | ultimate | Call down a colossal pillar of light that follows your crosshair for 4.5 seconds, searing everything beneath it. |
+| E | ⚖️ **Penance** | 12 s | Brand every enemy in front of you (14 m) for 8 s: a halo appears over each one, with 2 spears of light hanging above it. Whenever a branded enemy starts an attack, a spear drops on it first: 70 damage and a 0.6 s stun, so the attack never lands. |
+| R | 🌞 **Divine Judgment** | ultimate | Press once to call down a colossal pillar of light for 5 s. It follows your crosshair on its own, sliding onto whatever monster you look at, and sears everything beneath it. |
 
 ## ☠️ Venom
-A slow, nasty death. Stack poison on everything, then make it erupt and spread.
+A slow, nasty death. Stack poison on everything with gas, acid and fangs, and let it spread.
 
 **Passive.** Virulence: poison stacks up to 8 times, and poisoned enemies spread their poison when they die.
 
@@ -172,9 +172,9 @@ A slow, nasty death. Stack poison on everything, then make it erupt and spread.
 |---|---|---|---|
 | LMB | 🤮 **Venom Spit** | 0.55 s | Lob a glob of venom that splashes and leaves a toxic puddle. Every monster that dies in a puddle makes it grow and last longer. |
 | RMB | ☁️ **Toxic Cloud** *(hold to aim, release to cast)* | 7 s | Release a drifting cloud of poison gas that stacks poison on everything inside it. |
-| Q | 🐍 **Serpent** | 7 s | Send a venom serpent slithering across the ground. It weaves toward the nearest enemy ahead of it and bites every enemy in its path, poisoning them 3 times. |
-| E | 🧪 **Contagion** | 10 s | Every poisoned enemy nearby erupts, taking damage per poison stack and spreading half its stacks to its neighbours. |
-| R | 🐝 **Plague Swarm** | ultimate | Release a swarm of eight venom wasps that hunt down enemies and sting them over and over. |
+| Q | 🐍 **Serpent** | 7 s | Send a venom serpent slithering across the ground for 4.5 s. It hunts one enemy after another, biting each for 9 and poisoning it 3 times; it can bite the same enemy again after 1.5 s. |
+| E | 🌧️ **Acid Rain** *(hold to aim, release to cast)* | 10 s | A sick green storm cloud gathers over the target and pours acid on it for 4 s. Every 0.5 s everything under it takes 6, gains a poison stack and is left Melting: 20% more damage taken while the rain lasts. |
+| R | 🐉 **Hydra** *(hold to aim, release to cast)* | ultimate | A three-headed venom hydra bursts out of the ground at the target for 7 s. Each head spits venom at a different enemy within 16 m every 0.4 s: 8 damage and a poison stack around the hit, and a small toxic puddle. Then it dives back into the ground in a poison eruption: 60 to everything within 6 m. |
 
 ## ⚔️ Steel
 A blade master. Boomerang saws, railguns and a storm of swords. Shields mean nothing to you.
@@ -440,6 +440,8 @@ A calligrapher. Living ink: brush strokes that mire, koi that hunt, and a dragon
 
 ## Balance
 **Ability rework, part 1 (2026-11-04):** Water Whip became Riptide Ring and Surf became Waterfall; Gale Force became Jet Stream; Parasite Seed became Vine Slam and Snaptrap became Bramble Wall. Tsunami, Tectonic Quake, Entangle and World Tree got new looks (a curling crest and spray, racing molten cracks and rings of spikes, roots tearing up round the area, vines whipping out of the tree). Bench after: Water 1.07 / 0.88, Earth 0.85 / 0.99, Nature 0.83 / 0.90 (then Vine Slam 25 + 15 raised to 30 + 20), Wind 0.74 / 1.00 (control kit). Riptide Ring bursts on a boss instead of passing through it.
+
+**Ability rework, part 2 (2026-11-04):** Shadow Swap became Shade Ambush and Night Terror became Eclipse (the sky goes dark under a black sun); Shadow Snare now shows its tendrils and a +40% mark on everyone it holds. Blinding Flash got rays and a fan of light, Penance shows the two spears hanging over each branded enemy, and Divine Judgment locks onto the monster under your crosshair (before, it only followed the floor point, so aiming at a body sent it far behind). Toxic Cloud is real billowing gas; Serpent lives 4.5 s instead of 1.6 s, hunts from enemy to enemy and has a body; Contagion became Acid Rain and Plague Swarm became Hydra. Bench after: Shadow 1.02 / 1.10, Light 0.86 / 1.18 (Divine Judgment hits bosses for 30%, since it now actually stays on them; 16 per tick instead of 14), Venom 1.16 / 0.92 (Hydra spits 8 and 1 stack, puddles 1.5 s; Hydra puddles count as Venom Spit in the per-move numbers). The move showcase (`run.js moves`) now aims aimed moves at the monsters' feet instead of over their heads; the bench still aims the old way, so its numbers stay comparable.
 
 **After the 30-element playtest (2026-11-04):** ultimates no longer charge themselves, and the bench (`node playtest/bench.js`) now runs every element 3 times and reports damage per move, because a single 30 s crowd run swings by up to 2x. Five rounds of tuning brought every element to 0.85–1.2x the median on crowds and bosses. Control and mobility kits (Frost, Wind, Gravity on bosses) sit lower, and so do Sonic, Rune and Abyss against a lone boss (about 0.65–0.75x): they are built for crowds. The main changes:
 - **Too strong:** Supernova 140 → 55 (bosses still take 140), Thunderstorm 38 → 16, Phantasmagoria 120 → 55 and charmed monsters hit each other ×1.2 (was ×1.6), Prism Nova 28 → 17, burns 7 → 3/s, burning-death blasts 20 → 12, Fireball 18 → 16, and the Conflagration eruption cut to 12 + 8 per burn, Blood Moon drain 7 → 5 (pop 30 → 18, 8 targets), Carpet Bomb 130 → 50, Grenade 21 → 17, Fusion Beam 15 → 5.5, Plasma Cannon −25%, Blade Storm 20 → 16, Meteor lava 8 → 6 for 4 s.

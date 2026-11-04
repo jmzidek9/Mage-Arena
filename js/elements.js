@@ -377,8 +377,9 @@ function quakeCracks(x, z, r, n, life = 1.3, hue = .08) {
 }
 // Nature: a living vine drawn as a chain of short segments, re-laid every frame along a sagging curve from a to b (Vine Slam, World Tree)
 const VINE_GEO = new THREE.CylinderGeometry(.09, .12, 1, 6, 1, true).rotateX(Math.PI / 2).translate(0, 0, .5);
+const shadowVineMat = () => new THREE.MeshStandardMaterial({ color: 0x14081f, emissive: 0x7a3ae0, emissiveIntensity: 1.1, roughness: .5, transparent: true }); // Shadow Snare's tendrils
 const vineMat = () => new THREE.MeshStandardMaterial({ color: 0x4f9a2a, emissive: 0x5ae03a, emissiveIntensity: .9, roughness: .7, transparent: true });
-function vineChain(n = 14, w = 1) { const g = new THREE.Group(), m = vineMat(); g.userData.mats = [m]; g.userData.segs = Array.from({ length: n }, (_, i) => { const s = new THREE.Mesh(VINE_GEO, m); s.scale.x = s.scale.y = w * (1.4 - i / n * .8); g.add(s); return s; }); return g; }
+function vineChain(n = 14, w = 1, m = vineMat()) { const g = new THREE.Group(); g.userData.mats = [m]; g.userData.segs = Array.from({ length: n }, (_, i) => { const s = new THREE.Mesh(VINE_GEO, m); s.scale.x = s.scale.y = w * (1.4 - i / n * .8); g.add(s); return s; }); return g; }
 // lay the vine from a to b, arching `lift` m up in the middle and writhing by `wr`; k (0-1) is how far it has grown out
 function layVine(g, a, b, lift = 1, wr = .3, k = 1, t = 0) {
   const segs = g.userData.segs, n = segs.length, pt = s => { const q = a.clone().lerp(b, s * k); q.y += Math.sin(s * k * Math.PI) * lift + Math.sin(s * 9 - t * 8) * wr * s; q.x += Math.cos(s * 7 + t * 6) * wr * s; return q; };
@@ -386,7 +387,27 @@ function layVine(g, a, b, lift = 1, wr = .3, k = 1, t = 0) {
 }
 // Nature: n clumps of roots tearing up out of the floor round a circle of radius r
 function entangleRing(x, z, r, n, s = 1) { for (let i = 0; i < n; i++) { const a = TAU * i / n + rand(-.25, .25), d = r * rand(.75, 1); riseFx('nature__roots', 0x4ee04a, x + Math.cos(a) * d, z + Math.sin(a) * d, rand(.5, .75) * s, 1.3); burst(x + Math.cos(a) * d, .3, z + Math.sin(a) * d, 5, 0x9aff80, 4, .15, .35, 6, 2); } }
+// Light: Penance's brands on the client, by enemy id (their hanging spears drop one by one)
+const PEN = new Map();
+// where you are looking: the first monster under your crosshair, else the floor (Divine Judgment); groundAt alone overshot anything you aimed at chest-high
+function lookPoint(p, max = 40) { const h = rayHits(eyeOf(p), aimOf(p), max, .8)[0]; return h ? V(h.e.x, 0, h.e.z) : groundAt(p, max); }
+// Venom: the Hydra's scaly necks, its live views by entity id (spit events find their head there), and where head i sits at time t
+const hydraMat = () => new THREE.MeshStandardMaterial({ color: 0x3a6a14, emissive: 0x4a9a18, emissiveIntensity: .3, roughness: .45, metalness: .1, transparent: true });
+const HYDRA = new Map();
+// a scaly snake head (Serpent, Hydra): skull, hinged jaw, red eyes, white fangs and a cobra hood, looking down +z
+const SNAKE = { skull: new THREE.SphereGeometry(1, 14, 10).scale(.5, .36, .95).translate(0, .05, .55), jaw: new THREE.SphereGeometry(1, 12, 6, 0, TAU, Math.PI / 2, Math.PI / 2).scale(.44, .22, .85).translate(0, -.02, .5),
+  hood: new THREE.CircleGeometry(1, 16).scale(1.05, .8, 1), eye: new THREE.SphereGeometry(.14, 8, 6), fang: new THREE.ConeGeometry(.055, .32, 6).rotateX(Math.PI), seg: new THREE.SphereGeometry(1, 12, 8) };
+function snakeHead(s = 1, hood = false) {
+  const g = new THREE.Group(), m = hydraMat(), em = new THREE.MeshBasicMaterial({ color: 0xffd040, transparent: true }), fm = new THREE.MeshStandardMaterial({ color: 0xf4f0d8, roughness: .4, transparent: true });
+  const sk = new THREE.Mesh(SNAKE.skull, m), jw = new THREE.Mesh(SNAKE.jaw, m); g.add(sk, jw);
+  if (hood) { const h = new THREE.Mesh(SNAKE.hood, m); h.position.set(0, -.05, .05); h.material.side = THREE.DoubleSide; g.add(h); }
+  for (const x of [-.26, .26]) { const e = new THREE.Mesh(SNAKE.eye, em); e.position.set(x, .2, .8); g.add(e); const f = new THREE.Mesh(SNAKE.fang, fm); f.position.set(x * .55, -.12, .98); g.add(f); }
+  g.scale.setScalar(s); Object.assign(g.userData, { mats: [m, fm, em], jaw: jw }); return g;
+}
+
+function hydraHead(n, i, t, k = 1) { const an = TAU * i / 3 + .5, sw = t * 1.3 + i * 2.1; return V(n.x + Math.cos(an) * (3 + Math.sin(sw) * .6), (5.2 + i * .7 + Math.sin(sw * 1.3) * .5) * k, n.z + Math.sin(an) * (2.4 + Math.cos(sw) * .6)); }
 const WARM = []; // client: extra meshes and shaders compiled at game start (warmFx), so their first cast does not hitch
+WARM.push(() => snakeHead(1, true));
 WARM.push(() => vineChain(2));
 // Water: flowing water (Riptide Ring, Waterfall): streaks scrolling along the uv by uS per second, foam on the bright bits; normal-blended, so it reads as water and not as glow
 const waterMat = (sx, sy, a0 = .7) => Object.assign(addShader(`uniform float uA, uA0; uniform vec2 uS; void main(){
@@ -1049,7 +1070,7 @@ nature: {
 // ================================================================== SHADOW
 shadow: {
   name: 'Shadow', color: 0x9a4cff, glyph: '🌑', adj: 'CURSED', react: { name: 'NIGHTFALL', kind: 'drain' },
-  blurb: 'An assassin. Pin enemies down, blind them, swap places with them and strike from the dark.',
+  blurb: 'An assassin. Blind enemies, snare them, ambush them from every side and strike from the dark.',
   passive: 'Assassin: hits on an enemy\'s back deal 50% more damage. Cursed enemies take 15% more damage.',
   st: { vuln: .15 },
   moves: [
@@ -1074,50 +1095,87 @@ shadow: {
           sfx('shadow');
         },
         burst(e) { burst(e.x, 1, e.z, 70, 0x140a24, 5, .7, 1, -.5); burst(e.x, 1, e.z, 25, 0xc090ff, 7, .2, .4); ringFx(e.x, .1, e.z, e.r, 0x5a2a9c, .5); flash(e.x, 1, e.z, 0x9a4cff, 20, .2); sfx('shadow_big'); } } },
-    { name: 'Shadow Snare', icon: '🕸️', cd: 7, mode: 'aim', range: 20, aimR: 3.5, desc: 'Shadow tendrils burst from the ground, pinning every enemy in the area and dragging them together. While held they take 40% more damage.',
+    { name: 'Shadow Snare', icon: '🕸️', cd: 7, mode: 'aim', range: 20, aimR: 3.5, desc: 'A pool of darkness opens at the target and shadow tendrils burst out of it, seizing every enemy in the area: 18 damage, held in place for 1.5 s and dragged into the middle. While held they take 40% more damage.',
       cast(p, c) {
-        const R = 3.5 * c.st.aoe; fxe(c.m.key, 'snare', { x: c.tgt.x, z: c.tgt.z, r: R });
-        for (const e of enemiesNear(c.tgt.x, c.tgt.z, R)) { hitEnemy(e, 'shadow', 18 * c.dmg, p, 0, 0, 0); pull(e, c.tgt.x, c.tgt.z, 6); cc(e, 'root', 1.5, p); e.fv = .4; e.fvU = S.t + 1.5; }
+        const R = 3.5 * c.st.aoe, es = enemiesNear(c.tgt.x, c.tgt.z, R);
+        for (const e of es) { hitEnemy(e, 'shadow', 18 * c.dmg, p, 0, 0, 0); cc(e, 'root', 1.5, p); e.fv = .4; e.fvU = S.t + 1.5; }
+        ent(p, c, c.tgt.x, c.tgt.z, { life: 1.5, r: R, s: es.map(e => e.id) });
       },
-      fx: { snare(e) {
-        ringFx(e.x, .1, e.z, e.r, 0x5a2a9c, .6);
-        for (let i = 0; i < 10; i++) { const a = TAU * i / 10, d = e.r * rand(.3, .95); burst(e.x + Math.cos(a) * d, .1, e.z + Math.sin(a) * d, 8, i % 2 ? 0x5a2a9c : 0xc090ff, 2, .3, .6, 6); }
-        sfx('shadow_big');
-      } } },
-    { name: 'Shadow Swap', icon: '🔄', cd: 9, desc: 'Throw a shadow bolt. You trade places with the first enemy it hits, which is stunned for 1.5 s facing away from you, its back wide open to your Assassin bonus. Bosses are only stunned.',
-      cast(p, c) { shoot(p, c, 46, { r: .4, life: .7, dmg: 14 * c.dmg }); },
-      shot: { hit(s, e) {
-        const p = own(s); hitEnemy(e, 'shadow', s.dmg, p, 0, 0, 0);
-        if (p && !p.down && !ET[e.type].boss && !e.pid) {
-          const px = p.x, pz = p.z, ex = e.x, ez = e.z;
-          p.tp = { x: ex, z: ez, n: (p.tp?.n || 0) + 1 }; // the owner moves itself there (see stepMove)
-          e.x = px; e.z = pz; e.kx = e.kz = 0; e.yaw = Math.atan2(px - ex, pz - ez);
-          fxe(s.mv, 'swap', { x: px, z: pz, x2: ex, z2: ez, id: p.id });
-        }
-        cc(e, 'stun', 1.5, p); return 'end';
-      } },
-      look: { m: 'shadow__orb', s: .35, trail: [0x5a2a9c, .18, .3, 0, 1], light: 3 },
-      fx: { swap(e) { for (const [x, z] of [[e.x, e.z], [e.x2, e.z2]]) { burst(x, 1, z, 40, 0x3a1a6c, 4, .5, .8, -.5); burst(x, 1, z, 16, 0xc090ff, 6, .15, .3); ringFx(x, .1, z, 1.4, 0x9a4cff, .35); }
-          beamFx(V(e.x, 1, e.z), V(e.x2, 1, e.z2), 0x5a2a9c, .08, .3); sfx('shadow_big'); if (isMe(e.id)) fovKick = 1.2; } } },
-    { name: 'Night Terror', icon: '👤', desc: 'ULTIMATE. Every enemy within 18 m (up to 12) is haunted by its own shadow for 5 s. They flee from it in terror while it strikes them twice a second, then every shadow bursts for 50.',
-      cast(p, c) { const es = enemiesNear(p.x, p.z, 18 * c.st.aoe).slice(0, 12); ent(p, c, p.x, p.z, { life: 5, r: 18, s: es.map(e => e.id) }); for (const e of es) cc(e, 'fear', 5, p); },
-      ent: { tick(n, dt) { if (!pulse(n, dt, .5)) return; for (const id of n.s) { const e = S.enemies.find(x => x.id === id && alive(x)); if (e) hitEnemy(e, 'shadow', 18 * n.mul, own(n), 0, 0, 0, { aoe: true }); } },
-        end(n) { const p = own(n); for (const id of n.s) { const e = S.enemies.find(x => x.id === id && alive(x)); if (!e) continue; const q = center(e); fxe(n.mv, 'pop', { x: q.x, y: q.y, z: q.z }); hitEnemy(e, 'shadow', 50 * n.mul, p, 0, 0, 0, { aoe: true }); } } },
-      // a dark copy of a wizard stalks each victim, lunging at it
-      view: { make() { const g = new THREE.Group(); g.userData.mats = []; g.userData.figs = new Map(); sfx('ult'); return g; },
+      ent: { tick(n, dt) { for (const id of n.s) { const e = S.enemies.find(x => x.id === id && alive(x)); if (!e || ET[e.type].boss) continue; // dragged in, not knocked: they end up huddled in the middle
+          const dx = n.x - e.x, dz = n.z - e.z, d = Math.hypot(dx, dz), st = Math.min(Math.max(0, d - .9), 7 * dt); if (st > 0) { e.x += dx / d * st; e.z += dz / d * st; } } } },
+      view: { make(n) { // a black pool, a tendril from it wrapped round every victim, and a mark over each one showing it takes extra damage
+          const g = new THREE.Group(), u = g.userData, pool = model('ink__pool', 0x9a4cff, { flat: true }); pool.scale.set(n.r * 1.1, 1, n.r * 1.1); pool.position.y = INK_Y; g.add(pool);
+          Object.assign(u, { pool, mats: [...pool.userData.mats], ten: new Map(), marks: new Map() });
+          ringFx(n.x, .1, n.z, n.r, 0x5a2a9c, .6); burst(n.x, .3, n.z, 30, 0x2a1250, 4, .5, .7, -1, 2); burst(n.x, .3, n.z, 16, 0xc090ff, 6, .15, .4, 4); sfx('shadow_big'); return g; },
         upd(o, n, dt, t) {
-          const u = o.userData, a = Math.min(1, n.t * 3, n.l * 6);
+          const u = o.userData, a = Math.min(1, n.t * 6, n.l * 6); u.pool.scale.setScalar(1); u.pool.scale.set(n.r * 1.1 * Math.min(1, .3 + n.t * 5), 1, n.r * 1.1 * Math.min(1, .3 + n.t * 5)); u.pool.rotation.y += dt * .5;
           for (const id of n.s || []) {
-            const v = views.e.get(id); let f = u.figs.get(id);
-            if (!f && v) { f = ghostWizard(0x14051f, true); scene.add(f); u.figs.set(id, f); burst(v.g.position.x, .5, v.g.position.z, 20, 0x3a1a6c, 3, .5, .7, -.5); }
-            if (!f) continue; f.visible = !!v; if (!v) continue;
-            const ang = t * 1.5 + id, lunge = Math.max(0, Math.sin(t * TAU * 2 + id)) * .9, d = 1.8 - lunge;
-            f.position.set(v.g.position.x + Math.sin(ang) * d, v.g.position.y, v.g.position.z + Math.cos(ang) * d); f.lookAt(v.g.position.x, f.position.y, v.g.position.z); fade(f, a * .75);
-            if (Math.random() < .3) emit(f.position.x, f.position.y + rand(.3, 1.6), f.position.z, 0, .5, 0, 0x3a1a6c, rand(.2, .35), .6, -.3);
+            const v = views.e.get(id); if (!v) continue;
+            let tn = u.ten.get(id); if (!tn) { tn = [0, 1].map(() => { const c = vineChain(12, 1.9, shadowVineMat()); scene.add(c); return c; }); u.ten.set(id, tn); }
+            let mk = u.marks.get(id); if (!mk) { mk = model('shadow__ring_outer', 0x9a4cff, { flat: true }); scene.add(mk); u.marks.set(id, mk); const q = v.g.position; popNum(q.x, q.y + 2.4, q.z, '+40%', '#c090ff', 'tag'); }
+            const e = v.g.position, h = (ET[v.type]?.h || 1.6) * (v.sc || 1);
+            tn.forEach((c, i) => { const ang = Math.atan2(e.z - n.z, e.x - n.x) + (i ? .6 : -.6), base = V(n.x + Math.cos(ang) * n.r * .5, 0, n.z + Math.sin(ang) * n.r * .5); // rising out of the pool, curling up round the body
+              layVine(c, base, V(e.x, e.y + h * (i ? .75 : .4), e.z), .8 + i * .5, .35, Math.min(1, n.t * 6), t + i * 2 + id); fade(c, a); });
+            mk.position.set(e.x, e.y + h + .5, e.z); mk.rotation.y += dt * 3; mk.scale.setScalar(.5 + .05 * Math.sin(t * 8)); fade(mk, a);
+            if (Math.random() < .4) emit(e.x + rand(-.5, .5), e.y + rand(0, h), e.z + rand(-.5, .5), 0, rand(.3, 1), 0, Math.random() < .5 ? 0x3a1a6c : 0xc090ff, rand(.1, .2), .5, -.3);
           }
-        },
-        drop(o) { for (const f of o.userData.figs.values()) dropFade(.3)(f); o.removeFromParent(); } },
-      fx: { pop(e) { burst(e.x, e.y, e.z, 40, 0x140a24, 6, .6, .8, -.5); burst(e.x, e.y, e.z, 20, 0xc090ff, 8, .2, .4); flash(e.x, e.y, e.z, 0x9a4cff, 20, .2); sfx('shadow_big'); } } },
+          if (Math.random() < .5) { const an = rand(0, TAU), d = rand(0, n.r); emit(n.x + Math.cos(an) * d, .1, n.z + Math.sin(an) * d, 0, rand(.5, 1.5), 0, 0x5a2a9c, rand(.15, .3), .6, -.5); } },
+        drop(o) { const u = o.userData; for (const c of [...[...u.ten.values()].flat(), ...u.marks.values()]) addFx(c, .25, (c, k) => fade(c, 1 - k)); dropFade(.25)(o); } } },
+    { name: 'Shade Ambush', icon: '🥷', cd: 9, mode: 'aim', range: 18, aimR: 3, desc: 'Three shadow assassins rise from the ground around the target, then one after another dash straight through it from three sides: each dash cuts every enemy in its path for 30 and stuns it for 0.5 s.',
+      cast(p, c) {
+        const t = c.tgt.clone(), R = 5, a0 = rand(0, TAU);
+        fxe(c.m.key, 'rise', { x: t.x, z: t.z, a: a0, R });
+        for (let i = 0; i < 3; i++) later(.45 + i * .16, () => {
+          const a = a0 + TAU * i / 3, x0 = t.x + Math.cos(a) * R, z0 = t.z + Math.sin(a) * R, x1 = t.x - Math.cos(a) * R, z1 = t.z - Math.sin(a) * R;
+          for (const e of nearSeg({ x: x1, z: z1, fx0: x0, fz0: z0 }, 1.3)) { hitEnemy(e, 'shadow', 30 * c.dmg, p, x1 - x0, z1 - z0, 3, { aoe: true }); cc(e, 'stun', .5, p); }
+          fxe(c.m.key, 'dash', { x0, z0, x1, z1 });
+        });
+      },
+      fx: { rise(e) { // three dark figures climb out of pools of shadow round the target, eyes burning, facing in
+          for (let i = 0; i < 3; i++) {
+            const a = e.a + TAU * i / 3, x = e.x + Math.cos(a) * e.R, z = e.z + Math.sin(a) * e.R, L = .45 + i * .16, g = ghostWizard(0x14051f, true);
+            g.position.set(x, -1.8, z); g.rotation.y = Math.atan2(e.x - x, e.z - z) + Math.PI; scarFx(x, z, 1, 0x9a4cff, L + .4); burst(x, .2, z, 16, 0x3a1a6c, 3, .4, .6, -1, 2);
+            addFx(g, L, (o, k, dt) => { o.position.y = -1.8 * (1 - easeOut(Math.min(1, k * L / .25))); fade(o, .9); if (Math.random() < .5) emit(x + rand(-.3, .3), 1.55 + o.position.y, z + rand(-.3, .3), 0, .3, 0, 0xc090ff, .08, .25); }); // violet eyes glinting
+          }
+          circleFx('shadow', V(e.x, .08, e.z), 3, { life: .9 }); sfx('shadow'); },
+        dash(e) { // one assassin streaks across in a blur, a violet slash left hanging where it cut through
+          const a = V(e.x0, 1.1, e.z0), b = V(e.x1, 1.1, e.z1), yaw = Math.atan2(e.x1 - e.x0, e.z1 - e.z0), g = ghostWizard(0x14051f, true); g.rotation.y = yaw + Math.PI;
+          addFx(g, .4, (o, k) => { const u = Math.min(1, k / .3); o.position.lerpVectors(a, b, easeOut(u)).setY(0); fade(o, k < .3 ? .9 : (1 - k) / .7 * .9); });
+          for (let i = 1; i <= 3; i++) { const q = ghostWizard(0x2a1250, true); q.rotation.y = yaw + Math.PI; q.position.lerpVectors(a, b, i / 4).setY(0); addFx(q, .3, (o, k) => fade(o, (1 - k) * .35)); } // afterimages along the dash
+          beamFx(a, b, 0x5a2a9c, .12, .35);
+          const m = new THREE.Mesh(REAP_ARC, new THREE.MeshBasicMaterial({ color: 0xc090ff, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false })), c = a.clone().lerp(b, .5);
+          m.position.copy(c); m.rotation.set(Math.PI / 2 - .4, 0, yaw); m.scale.setScalar(.35); addFx(m, .35, (o, k) => { o.material.opacity = 1 - k; o.scale.setScalar(.35 + .15 * k); });
+          burst(c.x, 1.1, c.z, 24, 0xc090ff, 7, .15, .35); burst(c.x, 1, c.z, 20, 0x2a1250, 4, .4, .6, -1); flash(c.x, 1, c.z, 0x9a4cff, 18, .15); sfx('shadow_big'); sfx('swing'); } } },
+    { name: 'Eclipse', icon: '🌑', desc: 'ULTIMATE. A black sun rises and night falls for 5 s. Every enemy within 20 m (up to 14) is blinded, unable to attack, and shadows slash it for 22 every 0.6 s. When the light returns, every one of them is cut down for 60 more.',
+      cast(p, c) { const es = enemiesNear(p.x, p.z, 20 * c.st.aoe).slice(0, 14), f = c.flat; for (const e of es) cc(e, 'blind', 5, p); ent(p, c, p.x, p.z, { life: 5, r: 20, s: es.map(e => e.id), yaw: Math.atan2(f.x, f.z) }); },
+      ent: { tick(n, dt) { if (!pulse(n, dt, .6)) return; for (const id of n.s) { const e = S.enemies.find(x => x.id === id && alive(x)); if (!e) continue; const q = center(e); hitEnemy(e, 'shadow', 22 * n.mul, own(n), 0, 0, 0, { aoe: true }); fxe(n.mv, 'cut', { x: q.x, y: q.y, z: q.z }); } },
+        end(n) { for (const id of n.s) { const e = S.enemies.find(x => x.id === id && alive(x)); if (!e) continue; const q = center(e); fxe(n.mv, 'exec', { x: q.x, y: q.y, z: q.z }); hitEnemy(e, 'shadow', 60 * n.mul, own(n), 0, 0, 0, { aoe: true }); } } },
+      view: { make(n) { // the black sun: a disc of nothing with a violet corona, high in the sky ahead of where you cast it; the sky itself goes dark (core.js uEclipse)
+          const g = new THREE.Group(), u = g.userData, sun = new THREE.Mesh(new THREE.SphereGeometry(1, 32, 16), new THREE.MeshBasicMaterial({ color: 0x000000, fog: false })), glow = c => new THREE.SpriteMaterial({ map: puffTex(), color: c, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }), cm = glow(0x9a4cff), cm2 = glow(0xe8d0ff), cor = new THREE.Sprite(cm), cor2 = new THREE.Sprite(cm2);
+          const piv = new THREE.Group(); piv.add(cor, cor2, sun); g.add(piv); sun.renderOrder = 2;
+          Object.assign(u, { piv, sun, cor, cor2, mats: [cm, cm2], marks: new Map() }); sfx('ult'); sfx('shadow_big'); shake(.3); return g; },
+        upd(o, n, dt, t) {
+          const u = o.userData, a = Math.min(1, n.t * 1.5, n.l * 4), rise = easeOut(Math.min(1, n.t * 1.2)), R = 3.2;
+          o.position.set(n.x + Math.sin(n.yaw) * 26, 1 + 9 * rise, n.z + Math.cos(n.yaw) * 26); // low enough over the horizon ahead that you see it while you fight u.piv.lookAt(camera.position);
+          u.sun.scale.setScalar(R); u.cor.scale.setScalar(R * (4.6 + .3 * Math.sin(t * 3))); u.cor2.scale.setScalar(R * 2.6);
+          u.mats[0].opacity = a; u.mats[1].opacity = a * (.75 + .25 * Math.sin(t * 7)); // a blazing violet corona round the black disc
+          if (Math.random() < .6) { const an = rand(0, TAU), p = o.position; emit(p.x + Math.cos(an) * R * 1.1, p.y + Math.sin(an) * R * 1.1, p.z, Math.cos(an) * 3, Math.sin(an) * 3, 0, 0xc090ff, rand(.3, .6), .8, 0, .5); } // flares licking off the corona
+          for (const id of n.s || []) { // a violet eye opens over every victim
+            const v = views.e.get(id); let mk = u.marks.get(id);
+            if (!mk && v) { mk = model('shadow__ring_outer', 0xc090ff, { flat: true }); scene.add(mk); u.marks.set(id, mk); }
+            if (!mk) continue; mk.visible = !!v; if (!v) continue; const h = (ET[v.type]?.h || 1.6) * (v.sc || 1);
+            mk.position.set(v.g.position.x, v.g.position.y + h + .6, v.g.position.z); mk.scale.setScalar(.45 + .08 * Math.sin(t * 6 + id)); mk.rotation.y += dt * 4; fade(mk, a);
+          }
+          if (Math.random() < .8) { const an = rand(0, TAU), d = rand(2, n.r); emit(n.x + Math.cos(an) * d, rand(3, 9), n.z + Math.sin(an) * d, 0, -rand(1, 2), 0, 0x3a1a6c, rand(.2, .4), 1.5, 0, .3); } }, // ash of darkness falling
+        drop(o) { for (const m of o.userData.marks.values()) addFx(m, .3, (m, k) => fade(m, 1 - k)); addFx(o, .5, (o, k) => { o.position.y -= k * .5; fade(o, 1 - k); }); } },
+      fx: { cut(e) { // a shadow blade flickers out of the dark and slashes the victim
+          const yaw = rand(0, TAU), m = new THREE.Mesh(REAP_ARC, new THREE.MeshBasicMaterial({ color: Math.random() < .5 ? 0xc090ff : 0x9a4cff, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false }));
+          m.position.set(e.x, e.y, e.z); m.rotation.set(rand(-1, 1), yaw, rand(-1, 1)); m.scale.setScalar(.22);
+          addFx(m, .22, (o, k) => { o.material.opacity = 1 - k; o.rotation.y += .25; });
+          burst(e.x, e.y, e.z, 10, 0xc090ff, 6, .12, .25); burst(e.x, e.y, e.z, 8, 0x2a1250, 3, .3, .4); if (Math.random() < .35) sfx('shadow'); },
+        exec(e) { // the light comes back: every victim is split by a cross of violet and a column of darkness erupts out of it
+          for (const r of [.7, -.7]) { const m = new THREE.Mesh(REAP_ARC, new THREE.MeshBasicMaterial({ color: 0xe0c0ff, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false })); m.position.set(e.x, e.y, e.z); m.rotation.set(Math.PI / 2, 0, r); m.lookAt(camera.position); m.rotateZ(r); m.scale.setScalar(.4); addFx(m, .45, (o, k) => { o.material.opacity = 1 - k; o.scale.setScalar(.4 + .2 * k); }); }
+          pillarFx(e.x, 0, e.z, .9, 7, 0x5a2a9c, .6); burst(e.x, e.y, e.z, 30, 0x140a24, 6, .6, .8, -.5); burst(e.x, e.y, e.z, 22, 0xe0c0ff, 9, .2, .4); flash(e.x, e.y, e.z, 0x9a4cff, 25, .2); sfx('shadow_big'); shake(.12); } } },
   ],
 },
 // ================================================================== LIGHT
@@ -1144,35 +1202,58 @@ light: {
         } } },
     { name: 'Blinding Flash', icon: '💥', cd: 8, desc: 'A searing flash in front of you. Enemies caught in it are blinded for 1 s and left Illuminated for 5 s: they glow, and take 20% more damage from everything.',
       cast(p, c) { for (const e of coneHits(p, 12, 100)) { cc(e, 'blind', 1, p); hitEnemy(e, 'light', 12 * c.dmg, p, e.x - p.x, e.z - p.z, 2, { src: p }); e.fv = Math.max(e.fvU > S.t ? e.fv : 0, .2); e.fvU = S.t + 5; fxe(c.m.key, 'lit', { id: e.id }); } },
-      fx: { cast(e) { const a = V(...e.o), d = V(...e.d); flash(a.x + d.x * 3, a.y, a.z + d.z * 3, 0xffffff, 80, .3); burst(a.x + d.x * 2, a.y, a.z + d.z * 2, 50, 0xfff8e0, 14, .3, .4);
-        const o = model('gen__cone', 0xfff0b0); o.position.copy(a).addScaledVector(d, 2); o.lookAt(a.clone().addScaledVector(d, 3)); addFx(o, .3, (o, k) => { o.scale.set(14 * k + .5, 14 * k + .5, 12 * k + .5); fade(o, (1 - k) * .6); }); },
-        lit(e) { // an Illuminated enemy glows from inside for 5 s
+      fx: { cast(e) { // a small sun flares 3 m ahead of your hand: rays of light lance out across the cone, and a golden fan sweeps over the floor
+          const a = V(...e.o), d = V(...e.d), f = V(d.x, 0, d.z).normalize(), c = a.clone().addScaledVector(d, 3), mine = isMe(e.id), yaw = Math.atan2(f.x, f.z);
+          flash(c.x, c.y, c.z, 0xfff0b0, 40, .3);
+          const sun = model('light__orb', 0xfff0b0); sun.position.copy(c); addFx(sun, .35, (o, k) => { o.scale.setScalar((mine ? .5 : 1.4) * (1 + 2 * easeOut(k))); fade(o, (1 - k) * (mine ? .4 : 1)); });
+          for (let i = 0; i < 9; i++) { const an = yaw + (i / 8 - .5) * 1.75, dir = V(Math.sin(an), rand(-.05, .25), Math.cos(an)).normalize(), s = c.clone().addScaledVector(dir, .5); // the rays: spears of light flung outward through the cone
+            modelFx('light__spear', 0xffe08a, s, .32, (o, k) => { o.position.copy(s).addScaledVector(dir, 11 * easeOut(k)); o.lookAt(o.position.clone().add(dir)); o.rotateX(Math.PI / 2); o.scale.set(.6, 1.4 * (1 - k * .5), .6); fade(o, 1 - k); }); }
+          const fan = new THREE.Mesh(new THREE.RingGeometry(.5, 1, 40, 1, -.875, 1.75).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xffd060, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false }));
+          fan.position.set(a.x, .08, a.z); fan.rotation.y = yaw - Math.PI / 2; addFx(fan, .45, (o, k) => { const s = 2 + 10 * easeOut(k); o.scale.set(s, 1, s); o.material.opacity = (1 - k) * .7; }); // the flash racing out across the ground
+          burst(c.x, c.y, c.z, mine ? 12 : 30, 0xfff8e0, 12, .2, .35); for (let i = 0; i < 20; i++) { const an = yaw + rand(-.9, .9), sp = rand(8, 16); emit(c.x, c.y, c.z, Math.sin(an) * sp, rand(-1, 3), Math.cos(an) * sp, Math.random() < .5 ? 0xffe08a : 0xffffff, rand(.06, .12), .5, 2); }
+          if (mine) whiteFx = Math.max(whiteFx, .35); sfx('light_big'); },
+        lit(e) { // an Illuminated enemy glows from inside for 5 s, a little sun burning in its chest
           const v = views.e.get(e.id); if (!v) return;
-          modelFx('light__orb', 0xfff0b0, v.g.position.clone(), 5, (o, k) => { const w = views.e.get(e.id); if (!w) { fade(o, 0); return; } o.position.copy(w.g.position).add(V(0, 1.1, 0)); o.scale.setScalar(1.6 + .2 * Math.sin(k * 60)); fade(o, (k > .9 ? (1 - k) * 10 : 1) * .35); if (Math.random() < .2) emit(o.position.x + rand(-.4, .4), o.position.y + rand(-.6, .6), o.position.z + rand(-.4, .4), 0, .6, 0, 0xfff0b0, .08, .4); }); } } },
-    { name: 'Penance', icon: '⚖️', cd: 12, desc: 'Brand every enemy in front of you (14 m) with a halo for 8 s. The first 2 times a branded enemy tries to attack, a spear of light smites it for 70 and stuns it for 0.6 s before the attack lands.',
+          const q = v.g.position; popNum(q.x, q.y + 2.2, q.z, 'BLINDED', '#ffe08a', 'tag'); burst(q.x, q.y + 1.2, q.z, 18, 0xfff0b0, 5, .2, .4);
+          modelFx('light__orb', 0xfff0b0, v.g.position.clone(), 5, (o, k) => { const w = views.e.get(e.id); if (!w) { fade(o, 0); return; } o.position.copy(w.g.position).add(V(0, 1.1, 0)); o.scale.setScalar(1.6 + .2 * Math.sin(k * 60)); fade(o, (k > .9 ? (1 - k) * 10 : 1) * .35); if (Math.random() < .3) emit(o.position.x + rand(-.4, .4), o.position.y + rand(-.6, .6), o.position.z + rand(-.4, .4), 0, .6, 0, 0xfff0b0, .08, .4); }); } } },
+    { name: 'Penance', icon: '⚖️', cd: 12, desc: 'Brand every enemy in front of you (14 m) for 8 s: a halo appears over each one, with 2 spears of light hanging above it. Whenever a branded enemy starts an attack, a spear drops on it first: 70 damage and a 0.6 s stun, so the attack never lands.',
       cast(p, c) { for (const e of coneHits(p, 14, 100)) { e.pen = S.t + 8; e.penBy = p.id; e.penN = 2; hitEnemy(e, 'light', 8 * c.dmg, p, 0, 0, 0, { src: p }); fxe(c.m.key, 'brand', { id: e.id }); } },
       smite(e) { // called by the sim when a branded enemy starts an attack
         const p = S.players[e.penBy], q = center(e);
         if (--e.penN <= 0) e.pen = 0; // two smites per brand
-        fxe('light.3', 'smite', { x: q.x, y: q.y, z: q.z });
+        fxe('light.3', 'smite', { id: e.id, x: q.x, y: q.y, z: q.z });
         damage(e, 70 * (p ? stats(p).dmgMul : 1), 'light', p); cc(e, 'stun', .6, p);
       },
-      fx: { brand(e) { // a halo hovers over the branded enemy until the brand runs out
+      fx: { cast(e) { // a wave of golden light sweeps out in front of you, scales of judgment hanging in it
+          const a = V(...e.o), d = V(...e.d), yaw = Math.atan2(d.x, d.z);
+          const fan = new THREE.Mesh(new THREE.RingGeometry(.85, 1, 40, 1, -.875, 1.75).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xffe08a, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false }));
+          fan.position.set(e.x, .1, e.z); fan.rotation.y = yaw - Math.PI / 2; addFx(fan, .6, (o, k) => { const s = 1 + 13 * easeOut(k); o.scale.set(s, 1, s); o.material.opacity = (1 - k) * .8; });
+          sfx('light_big'); },
+        brand(e) { // the halo and its two hanging spears stay over the enemy until both spears have fallen or the brand runs out
           const v = views.e.get(e.id); if (!v) return;
-          modelFx('light__halo', 0xffe08a, v.g.position.clone(), 8, (o, k) => { const w = views.e.get(e.id); if (!w) { fade(o, 0); return; } o.position.copy(w.g.position).add(V(0, 2.6, 0)); o.rotation.y += .03; o.scale.setScalar(.45); fade(o, k > .9 ? (1 - k) * 10 : .9); }, { flat: true });
-          burst(v.g.position.x, 2.4, v.g.position.z, 12, 0xfff0b0, 3, .15, .4); },
-        smite(e) { modelFx('light__spear', 0xffe08a, V(e.x, e.y + 9, e.z), .3, (o, k) => { o.position.y = e.y + 9 - 9 * easeOut(Math.min(1, k * 2)); o.rotation.x = Math.PI / 2; fade(o, 1 - k * k); });
-          flash(e.x, e.y + 1, e.z, 0xfff0b0, 40, .25); burst(e.x, e.y, e.z, 36, 0xfff8e0, 8, .25, .4); ringFx(e.x, .1, e.z, 2, 0xffe08a, .35); popNum(e.x, e.y + 1.5, e.z, 'SMITE', '#ffe08a', 'tag'); sfx('light_big'); } } },
-    { name: 'Divine Judgment', icon: '🌞', desc: 'ULTIMATE. Call down a colossal pillar of light that follows your crosshair for 4.5 seconds, searing everything beneath it.',
-      cast(p, c) { const q = groundAt(p, 30); ent(p, c, q.x, q.z, { life: 4.5, r: 3 * c.st.aoe }); },
+          const g = new THREE.Group(), h = model('light__halo', 0xffe08a, { flat: true }), sp = [0, 1].map(() => { const s = model('light__spear', 0xfff0b0); s.rotation.x = Math.PI; s.scale.setScalar(.55); g.add(s); return s; });
+          h.scale.setScalar(.75); g.add(h); g.userData.mats = [...h.userData.mats, ...sp.flatMap(s => s.userData.mats)]; PEN.set(e.id, { sp, g });
+          const q = v.g.position; popNum(q.x, q.y + 2.8, q.z, 'BRANDED', '#ffe08a', 'tag'); burst(q.x, q.y + 2.6, q.z, 20, 0xfff0b0, 4, .2, .45); pillarFx(q.x, 0, q.z, .5, 4, 0xffe08a, .4);
+          addFx(g, 8, (o, k, dt) => { const w = views.e.get(e.id); if (k > .99) PEN.delete(e.id); if (!w || !sp.some(s => s.visible)) { fade(o, 0); return; } // gone, or both spears have fallen
+            const hh = (ET[w.type]?.h || 1.6) * (w.sc || 1); o.position.copy(w.g.position).add(V(0, hh + .7, 0)); h.rotation.y += dt * 1.5;
+            sp.forEach((s, i) => { const an = k * 30 + i * Math.PI; s.position.set(Math.cos(an) * .55, 1.1 + .1 * Math.sin(k * 40 + i), Math.sin(an) * .55); });
+            fade(o, k > .93 ? (1 - k) / .07 : 1); if (Math.random() < .15) emit(o.position.x + rand(-.5, .5), o.position.y + 1, o.position.z + rand(-.5, .5), 0, -.5, 0, 0xfff0b0, .07, .5); });
+          },
+        smite(e) { // one hanging spear drops like lightning onto the enemy
+          const b = PEN.get(e.id), s = b?.sp.find(s => s.visible); if (s) s.visible = false;
+          modelFx('light__spear', 0xffe08a, V(e.x, e.y + 9, e.z), .3, (o, k) => { o.position.y = e.y + 9 - 9 * easeOut(Math.min(1, k * 2)); o.rotation.x = Math.PI; o.scale.setScalar(1.4); fade(o, 1 - k * k); });
+          pillarFx(e.x, 0, e.z, .7, 9, 0xfff0b0, .35); flash(e.x, e.y + 1, e.z, 0xfff0b0, 40, .25); burst(e.x, e.y, e.z, 36, 0xfff8e0, 8, .25, .4); ringFx(e.x, .1, e.z, 2, 0xffe08a, .35); scarFx(e.x, e.z, .9, 0xffd060, 2);
+          popNum(e.x, e.y + 1.5, e.z, 'SMITE', '#ffe08a', 'tag'); sfx('light_big'); shake(clamp(.2 - distTo(e.x, e.z) * .01, .03, .15)); } } },
+    { name: 'Divine Judgment', icon: '🌞', desc: 'ULTIMATE. Press once to call down a colossal pillar of light for 5 s. It follows your crosshair on its own, sliding onto whatever monster you look at, and sears everything beneath it.',
+      cast(p, c) { const q = lookPoint(p, 40); ent(p, c, q.x, q.z, { life: 5, r: 3 * c.st.aoe }); },
       ent: { tick(n, dt) {
         const p = own(n);
-        if (p) { const q = groundAt(p, 30), dx = q.x - n.x, dz = q.z - n.z, d = Math.hypot(dx, dz), st = Math.min(d, 14 * dt); if (d > .01) { n.x += dx / d * st; n.z += dz / d * st; } }
-        if (pulse(n, dt, .1)) blast(n.x, n.z, n.r, 14 * n.mul, ctxN(n), { raw: true, kb: 1 });
+        if (p && !p.down) { const q = lookPoint(p, 40), dx = q.x - n.x, dz = q.z - n.z, d = Math.hypot(dx, dz), st = Math.min(d, (8 + d * 3) * dt); if (d > .01) { n.x += dx / d * st; n.z += dz / d * st; } } // fast when far off, gentle up close
+        if (pulse(n, dt, .1)) for (const e of enemiesNear(n.x, n.z, n.r)) hitEnemy(e, 'light', 16 * n.mul * (ET[e.type].boss ? .3 : 1), own(n), e.x - n.x, e.z - n.z, 1, { aoe: true }); // now that it sticks to what you look at, a boss under it takes 30%
       } },
       view: { make(n) { const g = new THREE.Group(), bm = beamMat(0xffe08a), b = T.beam.clone(), h = model('light__halo', 0xffe08a, { flat: true }); b.material = bm; b.castShadow = false; b.scale.set(n.r, 45, n.r);
           h.scale.setScalar(n.r / 1.1); h.position.y = .15; g.add(b, h); g.userData.mats = h.userData.mats.slice(); g.userData.bm = bm; g.userData.h = h; sfx('ult'); return g; },
-        upd(o, n, dt) { const a = Math.min(1, n.t * 4, n.l * 6); o.userData.bm.uniforms.uA.value = a * 1.3; o.userData.h.rotation.y += dt * 2; fade(o.userData.h, a);
+        upd(o, n, dt) { const a = Math.min(1, n.t * 4, n.l * 6); o.userData.bm.uniforms.uA.value = a * (.45 + .85 * clamp((distTo(n.x, n.z) - 6) / 10, 0, 1)); // see-through when it's close, so you can still watch what it burns o.userData.h.rotation.y += dt * 2; fade(o.userData.h, a);
           burst(n.x, .3, n.z, 4, 0xfff0b0, 6, .3, .4, -3); if (Math.random() < .5) flash(n.x, 2, n.z, 0xffe08a, 30, .1);
           if (Math.random() < dt * 5) { const x = n.x + rand(-2, 2), z = n.z + rand(-2, 2); modelFx('light__spear', 0xfff0b0, V(x, 20, z), .3, (s, k) => { s.position.y = 20 * (1 - k); s.rotation.x = Math.PI; if (k > .95) burst(x, .2, z, 12, 0xfff0b0, 5, .2, .3); }); }
           shake(.02); },
@@ -1182,7 +1263,7 @@ light: {
 // ================================================================== VENOM
 venom: {
   name: 'Venom', color: 0x9eff1e, glyph: '☠️', adj: 'POISONED', react: { name: 'CONTAGION', kind: 'spread' },
-  blurb: 'A slow, nasty death. Stack poison on everything, then make it erupt and spread.',
+  blurb: 'A slow, nasty death. Stack poison on everything with gas, acid and fangs, and let it spread.',
   passive: 'Virulence: poison stacks up to 8 times, and poisoned enemies spread their poison when they die.',
   st: { dot: 2.5, stacks: 8, dotStacks: 1 },
   onKill(e, p) { const n = Math.ceil((e.stk.venom || 0) / 2); if (!n) return; for (const o of enemiesNear(e.x, e.z, 4.5)) for (let i = 0; i < n; i++) applyStatus(o, 'venom', p); fxe('venom.3', 'pop', { x: e.x, y: e.y + 1, z: e.z }); },
@@ -1202,46 +1283,89 @@ venom: {
     { name: 'Toxic Cloud', icon: '☁️', cd: 7, mode: 'aim', range: 18, aimR: 4, desc: 'Release a drifting cloud of poison gas that stacks poison on everything inside it.',
       cast(p, c) { ent(p, c, c.tgt.x, c.tgt.z, { life: 6, r: 4 * c.st.aoe, dx: c.flat.x, dz: c.flat.z }); },
       ent: { tick(n, dt) { n.x += n.dx * dt; n.z += n.dz * dt; if (pulse(n, dt, .5)) for (const e of enemiesNear(n.x, n.z, n.r)) hitEnemy(e, 'venom', 4 * n.mul, own(n), 0, 0, 0, { aoe: true }); } },
-      view: { make(n) { const o = model('gen__cloud', 0x9eff1e); o.scale.set(n.r / 1.1, n.r / 2, n.r / 1.1); sfx('venom_big'); return o; },
-        upd(o, n, dt, t) { o.position.y = .6 + Math.sin(t * 2) * .1; o.rotation.y += dt * .3; fade(o, Math.min(1, n.t * 2, n.l * 4) * .55);
-          if (Math.random() < .6) emit(n.x + rand(-n.r, n.r) * .7, rand(.2, 2), n.z + rand(-n.r, n.r) * .7, 0, rand(.3, 1), 0, Math.random() < .5 ? 0x9eff1e : 0x5aa010, rand(.4, .8), 1, -.2, .3); },
+      view: { make(n) { // a real billowing cloud of sickly gas (normal-blended, so it reads as smoke, not glow), lit green from inside, over a bubbling stain on the floor
+          const g = smokeCloud(20, n.r, 0x6aa018), u = g.userData; u.circle = zoneCircle('venom', n.r, .45); g.add(u.circle);
+          const glow = T.disc.clone(), gm = discMat(0x9eff1e); glow.material = gm; glow.scale.setScalar(n.r * 1.1); glow.position.y = .07; g.add(glow); u.gm = gm; u.mats = [];
+          burst(n.x, 1, n.z, 30, 0x9eff1e, 5, .4, .7, -1, 2); sfx('venom_big'); return g; },
+        upd(o, n, dt, t) {
+          const u = o.userData, a = Math.min(1, n.t * 2, n.l * 4), grow = .55 + .45 * easeOut(Math.min(1, n.t * 2)); spinCircle(u.circle, dt, .4); setOpacity(u.circle.userData.mats, .45 * a);
+          u.puffMat.opacity = .8 * a; u.gm.uniforms.uA.value = .5 * a * (.8 + .2 * Math.sin(t * 5));
+          for (const s of u.puffs) { s.scale.setScalar(s.userData.s * grow * 1.15); s.position.y += Math.sin(t * .9 + s.userData.ph) * dt * .2; }
+          if (Math.random() < .7) { const an = rand(0, TAU), d = rand(0, n.r * .9); emit(n.x + Math.cos(an) * d, .1, n.z + Math.sin(an) * d, 0, rand(.4, 1.2), 0, Math.random() < .6 ? 0x9eff1e : 0xd8ff80, rand(.08, .18), .9, -.6); } // bubbles rising off the stain
+          if (Math.random() < dt * 6) { const an = rand(0, TAU), d = rand(0, n.r * .8); ringFx(n.x + Math.cos(an) * d, .1, n.z + Math.sin(an) * d, rand(.3, .6), 0xb8ff40, .3, .05); } }, // and popping on the floor
         drop: dropFade(.5) } },
-    { name: 'Serpent', icon: '🐍', cd: 7, desc: 'Send a venom serpent slithering across the ground. It weaves toward the nearest enemy ahead of it and bites every enemy in its path, poisoning them 3 times.',
-      cast(p, c) { const f = c.flat; ent(p, c, p.x + f.x * 2.5, p.z + f.z * 2.5, { life: 1.6, r: 1.5, y: .4, dx: f.x * 14, dz: f.z * 14, yaw: Math.atan2(f.x, f.z) }); },
+    { name: 'Serpent', icon: '🐍', cd: 7, desc: 'Send a venom serpent slithering across the ground for 4.5 s. It hunts one enemy after another, biting each for 9 and poisoning it 3 times; it can bite the same enemy again after 1.5 s.',
+      cast(p, c) { const f = c.flat; ent(p, c, p.x + f.x * 2.5, p.z + f.z * 2.5, { life: 4.5, r: 1.4, y: .4, dx: f.x * 11, dz: f.z * 11, yaw: Math.atan2(f.x, f.z) }); },
       ent: { tick(n, dt) {
-        const tg = enemiesNear(n.x, n.z, 8).filter(e => !n.hit[e.id] && (e.x - n.x) * n.dx + (e.z - n.z) * n.dz > 0).sort((a, b) => Math.hypot(a.x - n.x, a.z - n.z) - Math.hypot(b.x - n.x, b.z - n.z))[0];
-        if (tg) { const a = Math.atan2(n.dx, n.dz), want = Math.atan2(tg.x - n.x, tg.z - n.z), na = lerpAngle(a, want, Math.min(1, dt * 5)); n.dx = Math.sin(na) * 14; n.dz = Math.cos(na) * 14; } // turns toward fresh prey ahead
-        n.x += n.dx * dt; n.z += n.dz * dt; n.yaw = Math.atan2(n.dx, n.dz) + Math.sin(n.t * 14) * .4;
-        if (offMap(n.x, n.z)) n.life = 0;
-        for (const e of enemiesNear(n.x, n.z, n.r)) if (ready(n, e, 99)) { hitEnemy(e, 'venom', 11 * n.mul, own(n), n.dx, n.dz, 2); applyStatus(e, 'venom', own(n)); applyStatus(e, 'venom', own(n)); }
+        const fresh = e => !(n.hit[e.id] > n.t), tg = enemiesNear(n.x, n.z, 12).filter(fresh).sort((a, b) => Math.hypot(a.x - n.x, a.z - n.z) - Math.hypot(b.x - n.x, b.z - n.z))[0];
+        if (tg) { const a = Math.atan2(n.dx, n.dz), want = Math.atan2(tg.x - n.x, tg.z - n.z), na = lerpAngle(a, want, Math.min(1, dt * 4)); n.dx = Math.sin(na) * 11; n.dz = Math.cos(na) * 11; } // turns toward fresh prey
+        n.x += n.dx * dt; n.z += n.dz * dt; n.yaw = Math.atan2(n.dx, n.dz);
+        if (offMap(n.x, n.z)) { n.dx = -n.dx; n.dz = -n.dz; n.x += n.dx * dt * 2; n.z += n.dz * dt * 2; } // turns back at the edge instead of slithering off
+        for (const e of enemiesNear(n.x, n.z, n.r)) if (ready(n, e, 1.5)) { const p = own(n); hitEnemy(e, 'venom', 9 * n.mul, p, n.dx, n.dz, 2); applyStatus(e, 'venom', p); applyStatus(e, 'venom', p); fxe(n.mv, 'bite', { x: e.x, y: e.y + 1, z: e.z }); }
       } },
-      view: { make() { const o = model('venom__fang', 0x9eff1e); o.scale.setScalar(1.5); sfx('venom_big'); return o; },
-        upd(o, n, dt, t) { o.rotation.y = n.yaw; o.position.y = .4 + Math.abs(Math.sin(t * 14)) * .2; for (let k = 0; k < 2; k++) emit(n.x + rand(-.3, .3), .15, n.z + rand(-.3, .3), 0, rand(.3, 1), 0, Math.random() < .5 ? 0x9eff1e : 0x5aa010, rand(.2, .35), .7, -.2); },
-        drop: dropFade(.25) } },
-    { name: 'Contagion', icon: '🧪', cd: 10, desc: 'Every poisoned enemy nearby erupts, taking damage per poison stack and spreading half its stacks to its neighbours.',
-      cast(p, c) {
-        const list = enemiesNear(p.x, p.z, 16).filter(e => e.stk.venom > 0), pts = [];
-        for (const e of list) {
-          const n = e.stk.venom; pts.push([e.x, e.y + 1, e.z].map(r2));
-          damage(e, n * 7 * c.dmg, 'venom', p);
-          for (const o of enemiesNear(e.x, e.z, 4)) if (o !== e) for (let i = 0; i < Math.ceil(n / 2); i++) applyStatus(o, 'venom', p);
-        }
-        fxe(c.m.key, 'erupt', { pts });
-      },
-      fx: { erupt(e) { for (const [x, y, z] of e.pts) { burst(x, y, z, 30, 0x9eff1e, 7, .35, .5, 5); ringFx(x, .08, z, 4, 0x9eff1e, .4); } if (e.pts.length) sfx('venom_big'); },
-        pop(e) { burst(e.x, e.y, e.z, 24, 0x9eff1e, 5, .3, .5, 4); } } },
-    { name: 'Plague Swarm', icon: '🐝', desc: 'ULTIMATE. Release a swarm of eight venom wasps that hunt down enemies and sting them over and over.',
-      cast(p, c) { const f = c.flat; for (let i = 0; i < 8; i++) { const a = TAU * i / 8; ent(p, c, p.x + f.x * 3.5 + Math.cos(a) * 1.2, p.z + f.z * 3.5 + Math.sin(a) * 1.2, { life: 9, r: .4, y: 1.8, i }); } fxe(c.m.key, 'swarm', { x: p.x + f.x * 3.5, z: p.z + f.z * 3.5 }); },
+      view: { make() { // a fanged head with a long body slithering after it along the path it took
+          const g = new THREE.Group(), u = g.userData, head = snakeHead(.9), bm = head.userData.mats[0]; g.add(head);
+          u.body = Array.from({ length: 18 }, (_, i) => { const s = new THREE.Mesh(SNAKE.seg, bm); s.scale.setScalar(.36 * (1 - i / 24)); s.castShadow = true; scene.add(s); s.userData.mats = [bm]; return s; });
+          u.head = head; u.hist = []; u.mats = [...head.userData.mats]; sfx('venom_big'); return g; },
+        upd(o, n, dt, t) {
+          const u = o.userData, p = o.position; u.head.rotation.y = n.yaw + Math.sin(t * 10) * .25; u.head.position.y = .35 + Math.abs(Math.sin(t * 10)) * .1 - p.y; u.head.userData.jaw.rotation.x = .25 + .25 * Math.sin(t * 6);
+          u.hist.unshift([p.x, p.z]); if (u.hist.length > 80) u.hist.pop();
+          const a = Math.min(1, n.l * 6); fade(u.head, a);
+          u.body.forEach((s, i) => { const h = u.hist[Math.min(u.hist.length - 1, (i + 1) * 3)]; const w = Math.sin(t * 10 - i * .7) * .25 * Math.min(1, i / 3); // the body follows the head's path, swaying side to side
+            s.position.set(h[0] + Math.cos(n.yaw) * w, .28 + .04 * Math.sin(t * 8 - i), h[1] - Math.sin(n.yaw) * w); }); fade(u.body[0], a);
+          if (Math.random() < .6) { const h = u.hist[Math.min(u.hist.length - 1, 20)]; emit(h[0] + rand(-.2, .2), .12, h[1] + rand(-.2, .2), 0, rand(.2, .6), 0, Math.random() < .5 ? 0x9eff1e : 0x5aa010, rand(.12, .22), .8, -.2); } }, // a trail of venom dripping off it
+        drop(o) { const u = o.userData; for (const s of u.body) addFx(s, .3, (s, k) => s.scale.multiplyScalar(.9)); dropFade(.25)(o); } },
+      fx: { bite(e) { burst(e.x, e.y, e.z, 20, 0x9eff1e, 6, .2, .4, 5); popNum(e.x, e.y + .8, e.z, 'BITE', '#b8ff40', 'tag'); sfx('venom'); } } },
+    { name: 'Acid Rain', icon: '🌧️', cd: 10, mode: 'aim', range: 18, aimR: 4.5, desc: 'A sick green storm cloud gathers over the target and pours acid on it for 4 s. Every 0.5 s everything under it takes 6, gains a poison stack and is left Melting: 20% more damage taken while the rain lasts.',
+      cast(p, c) { ent(p, c, c.tgt.x, c.tgt.z, { life: 4, r: 4.5 * c.st.aoe }); },
+      ent: { tick(n, dt) { if (n.t < .4 || !pulse(n, dt, .5)) return; const p = own(n);
+        for (const e of enemiesNear(n.x, n.z, n.r)) { hitEnemy(e, 'venom', 6 * n.mul, p, 0, 0, 0, { aoe: true }); applyStatus(e, 'venom', p); e.fv = Math.max(e.fvU > S.t ? e.fv : 0, .2); e.fvU = S.t + .6; } } },
+      view: { make(n) { // a churning green-black cloud low over the target, acid streaking down out of it, the floor hissing
+          const g = smokeCloud(18, n.r, 0x34501a), u = g.userData; for (const s of u.puffs) s.position.y += 4;
+          u.circle = zoneCircle('venom', n.r, .55); g.add(u.circle); u.steam = 0; sfx('venom_big'); smokeFx(n.x, 4.5, n.z, n.r, 0x34501a, 1, 6, -.2); return g; },
+        upd(o, n, dt, t) {
+          const u = o.userData, a = Math.min(1, n.t * 2.5, n.l * 5); u.puffMat.opacity = .9 * a; spinCircle(u.circle, dt, -.5); setOpacity(u.circle.userData.mats, .55 * a);
+          for (const s of u.puffs) { s.scale.setScalar(s.userData.s * 1.3); s.position.y += Math.sin(t + s.userData.ph) * dt * .2; }
+          if (Math.random() < dt * 3) flash(n.x + rand(-2, 2), 4.5, n.z + rand(-2, 2), 0x9eff1e, 18, .12); // sickly light flickering inside the cloud
+          if (n.t < .4) return;
+          for (let i = 0; i < 12; i++) { const an = rand(0, TAU), d = Math.sqrt(Math.random()) * n.r; emit(n.x + Math.cos(an) * d, 4.2, n.z + Math.sin(an) * d, 0, -18, 0, Math.random() < .7 ? 0x9eff1e : 0xd8ff80, rand(.1, .16), .25, 0, 0); } // streaks of acid falling
+          for (let i = 0; i < 3; i++) { const an = rand(0, TAU), d = Math.sqrt(Math.random()) * n.r; emit(n.x + Math.cos(an) * d, .1, n.z + Math.sin(an) * d, rand(-1.5, 1.5), rand(1, 3), rand(-1.5, 1.5), 0xb8ff40, rand(.06, .12), .3, 8); } // splashing where it lands
+          if ((u.steam -= dt) <= 0) { u.steam = .25; const an = rand(0, TAU), d = rand(0, n.r); smokeFx(n.x + Math.cos(an) * d, .3, n.z + Math.sin(an) * d, .8, 0xc8e8a0, .9, 1, 1.2); } }, // acid hissing off the floor
+        drop: dropFade(.4) },
+      fx: { pop(e) { burst(e.x, e.y, e.z, 24, 0x9eff1e, 5, .3, .5, 4); } } }, // Venom's passive: a poisoned enemy bursts as it dies
+    { name: 'Hydra', icon: '🐉', mode: 'aim', range: 20, aimR: 6, desc: 'ULTIMATE. A three-headed venom hydra bursts out of the ground at the target for 7 s. Each head spits venom at a different enemy within 16 m every 0.4 s: 8 damage and a poison stack around the hit, and a small toxic puddle. Then it dives back into the ground in a poison eruption: 60 to everything within 6 m.',
+      cast(p, c) { ent(p, c, c.tgt.x, c.tgt.z, { life: 7, r: 16, solid: [{ x: c.tgt.x, z: c.tgt.z, r: 1.4 }], h: 6 }); },
       ent: { tick(n, dt) {
-        summonAI(n, dt, 10, .6, .6, e => { hitEnemy(e, 'venom', 6 * n.mul, own(n), 0, 0, .5, { aoe: true }); applyStatus(e, 'venom', own(n)); }, 25);
-        const e = n.tg && S.enemies.find(x => x.id === n.tg && alive(x));
-        if (e && Math.hypot(e.x - n.x, e.z - n.z) < 2.5) { const a = n.t * 9 + n.i * TAU / 8, R = ET[e.type].r * e.sc + .5; n.x = e.x + Math.cos(a) * R; n.z = e.z + Math.sin(a) * R; n.y = e.y + .8 + Math.sin(n.t * 11 + n.i) * .6; } // clinging: a buzzing cloud tight round its victim
-        else { n.x += Math.sin(n.t * 7 + n.i) * dt * 2; n.z += Math.cos(n.t * 6 + n.i * 2) * dt * 2; n.y = 1.6 + Math.sin(n.t * 5 + n.i) * .5; }
-      } },
-      fx: { swarm(e) { burst(e.x, 1.8, e.z, 40, 0x9eff1e, 5, .3, .6); sfx('venom_big'); } },
-      view: { make() { const o = model('venom__wasp', 0x9eff1e); o.scale.setScalar(.85); o.userData.wl = o.getObjectByName('venom__wasp_wingL'); o.userData.wr = o.getObjectByName('venom__wasp_wingR'); return o; },
-        upd(o, n, dt, t) { o.rotation.y = lerpAngle(o.rotation.y, n.yaw || 0, Math.min(1, dt * 10)); const f = Math.sin(t * 60 + n.id) * .7; if (o.userData.wl) o.userData.wl.rotation.y = f; if (o.userData.wr) o.userData.wr.rotation.y = -f; },
-        drop: dropFade(.3) } },
+          if (n.t < .6 || !pulse(n, dt, .4)) return;
+          const es = enemiesNear(n.x, n.z, n.r).sort((a, b) => Math.hypot(a.x - n.x, a.z - n.z) - Math.hypot(b.x - n.x, b.z - n.z)).slice(0, 3); if (!es.length) return;
+          const c = ctxN(n);
+          for (let i = 0; i < 3; i++) { const e = es[i % es.length], x = e.x, z = e.z; fxe(n.mv, 'spit', { id: n.id, i, x, y: e.y + 1, z });
+            later(.25, () => { blast(x, z, 1.8, 8 * n.mul, c, { raw: true, kb: 1 }); if (c.p) ent(c.p, { p: c.p, el: 'venom', m: MOVE['venom.0'], dmg: n.mul }, x, z, { r: 1.2, life: 1.5 }); }); }
+        },
+        end(n) { boomAt(ctxN(n), n.x, 0, n.z, 6, 60 * n.mul, { kb: 6, lift: 6 }, 'dive'); } },
+      view: { make(n) { // three long scaly necks heave out of a poison pool, sway and strike; the heads are huge fanged skulls of venom
+          const g = new THREE.Group(), u = g.userData, pool = model('ink__pool', 0x9eff1e, { flat: true }); pool.scale.set(3, 1, 3); pool.position.y = INK_Y; g.add(pool); u.mats = [...pool.userData.mats];
+          u.necks = [0, 1, 2].map(i => { const neck = vineChain(18, 4.2, hydraMat()), head = snakeHead(2.4); scene.add(neck, head); return { neck, head, strike: 0 }; });
+          HYDRA.set(n.id, u); quakeCracks(n.x, n.z, 6, 10, 1.6, .22); debrisFx(n.x, .5, n.z, 12, 'earth__pebble', 0x5a6a2a, .45, 10); burst(n.x, 1, n.z, 60, 0x9eff1e, 10, .4, .7, 8, 4); dustFx(n.x, n.z, 3, 0x4a5a2a);
+          sfx('ult'); sfx('venom_big'); shake(.4); return g; },
+        upd(o, n, dt, t) {
+          const u = o.userData, rise = easeOutBack(Math.min(1, n.t * 1.6)), a = Math.min(1, n.l * 8), sink = n.l < .08 ? n.l / .08 : 1;
+          u.necks.forEach((h, i) => { const an = TAU * i / 3 + .5, base = V(n.x + Math.cos(an) * 1.1, -.3, n.z + Math.sin(an) * 1.1);
+            h.strike = Math.max(0, h.strike - dt * 3); const sw = t * 1.3 + i * 2.1, top = hydraHead(n, i, t, rise * sink); // swaying necks, each head lunging when it spits
+            if (h.to) top.lerp(h.to, Math.sin(Math.min(1, h.strike) * Math.PI) * .35);
+            layVine(h.neck, base, top, .3, .5, 1, sw); fade(h.neck, a); // a rearing S-curve, not an arch
+            h.head.position.copy(top); h.head.lookAt(h.to && h.strike > 0 ? h.to : V(camera.position.x + Math.cos(an) * 3, top.y - 1.5, camera.position.z + Math.sin(an) * 3)); // glaring at you, eyes and fangs showing, until it strikes h.head.userData.jaw.rotation.x = .15 + Math.sin(Math.min(1, h.strike) * Math.PI) * .7; fade(h.head, a); // the jaw gapes as it spits
+            if (Math.random() < .3) emit(top.x, top.y - .4, top.z, rand(-.5, .5), -1, rand(-.5, .5), 0x9eff1e, rand(.12, .22), .8, 6); }); // venom drooling from the jaws
+          if (Math.random() < .6) { const an = rand(0, TAU), d = rand(0, 2.5); emit(n.x + Math.cos(an) * d, .1, n.z + Math.sin(an) * d, 0, rand(.5, 1.5), 0, 0x9eff1e, rand(.12, .25), .7, -.4); } },
+        drop(o, n) { const u = o.userData; for (const h of u.necks) for (const m of [h.neck, h.head]) addFx(m, .3, (m, k) => fade(m, 1 - k)); HYDRA.delete(n?.id); dropFade(.3)(o); } },
+      fx: { spit(e) { // a head rears and spits a glob of venom in a high arc at its victim
+          const u = HYDRA.get(e.id), h = u?.necks[e.i]; if (!h) return; h.strike = 1; h.to = V(e.x, e.y, e.z);
+          const a = h.head.position.clone(), b = V(e.x, e.y, e.z), arc = 2 + a.distanceTo(b) * .15;
+          modelFx('venom__glob', 0x9eff1e, a, .25, (o, k) => { o.position.lerpVectors(a, b, k); o.position.y += Math.sin(k * Math.PI) * arc; o.scale.setScalar(.9); emit(o.position.x, o.position.y, o.position.z, 0, 0, 0, 0x9eff1e, .3, .3); if (k > .97 && !o.userData.done) { o.userData.done = 1; burst(b.x, b.y, b.z, 22, 0x9eff1e, 6, .3, .45, 6); ringFx(b.x, .1, b.z, 1.8, 0x9eff1e, .3); } });
+          if (Math.random() < .5) sfx('venom'); },
+        dive(e) { // the hydra plunges back into the ground and the pool erupts
+          burst(e.x, 1, e.z, 80, 0x9eff1e, 14, .5, .8, 10, 6); ringFx(e.x, .1, e.z, e.r, 0x9eff1e, .6, 1); ringFx(e.x, .2, e.z, e.r * 1.4, 0xd8ff80, .5, 2); pillarFx(e.x, 0, e.z, 2.4, 12, 0x9eff1e, .7);
+          smokeFx(e.x, 1, e.z, e.r * .6, 0x5a8a18, 1.8, 8, 1.5); debrisFx(e.x, .5, e.z, 10, 'venom__glob', 0x9eff1e, .5, 12); flash(e.x, 2, e.z, 0x9eff1e, 40, .3); shake(.45); sfx('venom_big'); sfx('explosion_big'); } } },
   ],
 },
 // ================================================================== STEEL

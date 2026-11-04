@@ -42,11 +42,11 @@ const HELPERS = () => {
     kit() { return EL[PTX.el].moves.map((m, i) => ({ slot: i, name: m.name, key: m.key, mode: m.mode || 'tap', cd: m.cd ?? null, hold: holdOf(m) })); },
     // one move alone into the showcase pack, rendered frame by frame
     move(slot, frames, shots) {
-      MP.setup(PTX.el); const p = S.players.h, m = EL[PTX.el].moves[slot], hold = holdOf(m); MP.aim();
+      MP.setup(PTX.el); const p = S.players.h, m = EL[PTX.el].moves[slot], hold = holdOf(m); MP.aim(m.mode === 'aim');
       const h0 = pool(), n0 = S.enemies.length, stat = { frameMs: [], calls: 0, tris: 0, particles: 0, fx: 0, shots: 0, ents: 0 }, pics = {};
       for (let f = 0; f < frames; f++) {
         if (f < hold) press(slot, true); else release();
-        if (f < hold && m.mode === 'aim') MP.aim();
+        if (f < hold && m.mode === 'aim') MP.aim(true);
         const t0 = performance.now(); MP.frames(1); stat.frameMs.push(performance.now() - t0);
         const g = MP.gl(); stat.calls = Math.max(stat.calls, g.calls); stat.tris = Math.max(stat.tris, g.triangles);
         stat.particles = Math.max(stat.particles, alive()); stat.fx = Math.max(stat.fx, fx.length);

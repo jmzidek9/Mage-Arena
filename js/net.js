@@ -494,6 +494,7 @@ function frame(now, manual = false) {
   skyU.uFlare.value += (flare - skyU.uFlare.value) * Math.min(1, dt * 3);
   const storm = src?.ents?.some(n => n.mv === 'storm.4') ? 1 : 0; // Thunderstorm turns the whole sky into a storm for as long as it lasts
   skyU.uStorm.value += (storm - skyU.uStorm.value) * Math.min(1, dt * (storm ? 1.8 : 1.2));
+  const ecl = src?.ents?.some(n => n.mv === 'shadow.4') ? 1 : 0; skyU.uEclipse.value += (ecl - skyU.uEclipse.value) * Math.min(1, dt * (ecl ? 2.5 : 1.2)); // Eclipse: the sky goes dark while the black sun is up
   if (skyU.uStorm.value > .5 && Math.random() < dt * 1.4) skyU.uBolt.value = Math.max(skyU.uBolt.value, rand(.5, 1)); // distant lightning across the sky
   skyU.uBolt.value = Math.max(0, skyU.uBolt.value - dt * 4.5);
   stepParticles(dt); stepFx(dt); stepFlashes(dt); stepNums(dt); cityFrame(dt, t);
@@ -515,10 +516,10 @@ renderer.setAnimationLoop(now => { lastRaf = performance.now(); lastBg = 0; try 
 window.MP.frames = (n, dt = 1 / 60) => { for (let i = 0; i < n; i++) frame(last + dt * 1000, true); };
 window.MP.hold = on => { hold = on; };
 // test driver: aim at the nearest enemy and hold the given inputs (p, s, KeyQ, KeyE, KeyR) for n frames
-window.MP.aim = () => {
+window.MP.aim = (feet = false) => { // feet: aim at the ground under it (aimed moves land where the crosshair meets the floor)
   const p = S.players.h; let b = null, bd = 1e9;
   for (const e of S.enemies) { const d = Math.hypot(e.x - p.x, e.z - p.z); if (d < bd && e.rise <= 0) { bd = d; b = e; } }
-  if (b) { inp.yaw = Math.atan2(-(b.x - p.x), -(b.z - p.z)); inp.pitch = Math.atan2(b.y + 1 - 1.65 - p.y, bd); }
+  if (b) { inp.yaw = Math.atan2(-(b.x - p.x), -(b.z - p.z)); inp.pitch = Math.atan2((feet ? b.y : b.y + 1) - 1.65 - p.y, bd); }
   return b;
 };
 // showcase: freeze the sim, give you element `el` with a lineup of enemies ahead, then MP.cast(slot) a move

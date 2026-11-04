@@ -194,10 +194,13 @@ SPELL_ART.shadow = [
   k => k.smoke(16, 38, 1.4, '#2a1a3a', .85) + k.smoke(46, 40, 1.3, '#2a1a3a', .85) + k.smoke(32, 50, 1.2, '#1a1028', .9) + k.glow(32, 28, 16, .7) + `<circle cx="32" cy="28" r="13" fill="#0c0614"/><circle cx="32" cy="28" r="13" fill="none" stroke="${k.L}" stroke-width="1.6"/><path d="M24 22a10 10 0 0 1 6-4" stroke="${k.L}" stroke-width="1.6" fill="none" opacity=".7" stroke-linecap="round"/>`,
   // Shadow Snare: shadow tendrils bursting from a dark pool and pinning a monster
   k => `<ellipse cx="32" cy="54" rx="26" ry="6" fill="#0c0614"/>` + k.glow(32, 54, 18, .4) + k.foe(32, 38, 1.1) + k.tentacle('M12 54C8 42 18 36 26 40', 4.5) + k.tentacle('M52 54C56 42 46 34 38 40', 4.5) + k.tentacle('M22 56C20 46 32 46 30 30', 4) + k.tentacle('M42 56C44 46 34 46 36 32', 3.5),
-  // Shadow Swap: caster and monster trading places through the shadows
-  k => k.figure(14, 40, 1.1) + k.foe(50, 40, 1.1) + `<path d="M18 26C24 12 40 12 46 24" fill="none" stroke="${k.L}" stroke-width="2.6" stroke-linecap="round"/><path d="M46 24l1-7M46 24l-7-1" stroke="${k.L}" stroke-width="2.6" stroke-linecap="round"/><path d="M46 54C40 64 24 64 18 54" fill="none" stroke="${k.M}" stroke-width="2.6" stroke-linecap="round"/><path d="M18 54l-1 7M18 54l7 1" stroke="${k.M}" stroke-width="2.6" stroke-linecap="round"/>` + k.smoke(14, 52, .6, '#2a1a3a', .7) + k.smoke(50, 52, .6, '#2a1a3a', .7),
-  // Night Terror: each monster haunted by a looming shadow of itself
-  k => k.glow(32, 26, 22, .45) + `<path d="M10 58V26C10 12 20 4 32 4S54 12 54 26V58L48 52 42 58 36 52 30 58 24 52 18 58 12 52z" fill="url(#${k.id}dk)"/><path d="M20 24l8 4M44 24l-8 4" stroke="${k.L}" stroke-width="2" stroke-linecap="round"/>` + k.glow(25, 30, 3, 1, k.L) + k.glow(39, 30, 3, 1, k.L) + `<circle cx="25" cy="30" r="2" fill="#fff"/><circle cx="39" cy="30" r="2" fill="#fff"/><path d="M24 40c4 4 12 4 16 0" fill="none" stroke="${k.L}" stroke-width="1.6"/>` + k.foe(32, 54, .6),
+  // Shade Ambush: three shadow assassins dashing through a monster from three sides, violet slashes crossing on it
+  k => k.foe(32, 36, .9) + [[8, 20, 56, 52], [56, 18, 10, 54], [32, 62, 32, 6]].map(([x1, y1, x2, y2]) => k.streak(x1, y1, x2, y2, 4, .45, k.D) + k.beam(x1 + (x2 - x1) * .25, y1 + (y2 - y1) * .25, x1 + (x2 - x1) * .75, y1 + (y2 - y1) * .75, 1.6, .9)).join('')
+    + `<g opacity=".8">${k.figure(10, 22, .65, '#1a0a2a', '#0a0414')}</g><g opacity=".8">${k.figure(54, 20, .65, '#1a0a2a', '#0a0414')}</g><g opacity=".8">${k.figure(32, 58, .65, '#1a0a2a', '#0a0414')}</g>` + k.sparks([[24, 30, 1.2], [40, 42, 1.1], [30, 46, 1]]),
+  // Eclipse: a black sun with a blazing violet corona over a darkened land, a monster below cut by a shadow slash
+  k => `<rect x="0" y="0" width="64" height="64" rx="10" fill="#0a0414" opacity=".55"/>` + k.glow(32, 22, 22, .8) + k.ring(32, 22, 16, 16, 2.4) + `<circle cx="32" cy="22" r="13" fill="#000"/><path d="M22 14a13 13 0 0 1 8-4" stroke="${k.W}" stroke-width="1.6" fill="none" opacity=".8"/>`
+    + [0, 45, 90, 135, 180, 225, 270, 315].map(a => { const r = a * Math.PI / 180; return k.streak(32 + Math.cos(r) * 17, 22 + Math.sin(r) * 17, 32 + Math.cos(r) * 24, 22 + Math.sin(r) * 24, 2.4, .7); }).join('')
+    + k.foe(32, 52, .7) + `<path d="M18 58C26 44 40 44 48 40" stroke="${k.L}" stroke-width="2.4" fill="none" stroke-linecap="round"/>` + k.sparks([[10, 46, 1], [54, 50, 1.1]]),
 ];
 // ---- Light ----
 SPELL_ART.light = [
@@ -205,10 +208,10 @@ SPELL_ART.light = [
   k => [[40, 18, 6], [26, 38, 5], [48, 42, 4]].map(([x, y, r]) => k.streak(x - 30, y + 14, x - r * .6, y + r * .3, r * 1.5, .5) + k.orb(x, y, r)).join('') + k.twinkle(14, 14, 3),
   // Solar Beam: a piercing beam of sunlight
   k => k.burst(14, 30, 12, 12, .55) + k.orb(14, 30, 7) + k.beam(18, 30, 62, 30, 8) + k.sparks([[40, 20, 1.2], [52, 42, 1], [30, 44, .9]]),
-  // Blinding Flash: a searing flash of light
-  k => k.halo(32, 32, 31) + k.burst(32, 32, 28, 8, .14, -90) + k.burst(32, 32, 20, 8, .2, -67.5) + k.orb(32, 32, 7) + k.twinkle(10, 10, 3) + k.twinkle(54, 52, 3),
-  // Penance: a judging halo branded over a monster
-  k => k.glow(32, 16, 16, .45) + k.ring(32, 16, 15, 5, 2.4) + k.foe(32, 42, 1.4) + `<path d="M32 22v8" stroke="${k.L}" stroke-width="1.4" opacity=".6"/>` + k.twinkle(12, 30, 3) + k.twinkle(54, 26, 2.5),
+  // Blinding Flash: a small sun flaring ahead of the caster's hand, rays of light lancing out across a cone, a golden fan on the floor
+  k => `<path d="M32 60L2 14A40 40 0 0 1 62 14Z" fill="${k.u('fd')}"/>` + [-50, -30, -10, 10, 30, 50].map(a => { const r = (a - 90) * Math.PI / 180; return k.streak(32 + Math.cos(r) * 10, 46 + Math.sin(r) * 10, 32 + Math.cos(r) * 40, 46 + Math.sin(r) * 40, 4, .8); }).join('') + k.orb(32, 46, 8) + k.twinkle(32, 46, 6) + k.twinkle(10, 12, 2.6) + k.twinkle(54, 10, 2.6),
+  // Penance: a monster branded with a halo, two spears of light hanging over it, one already falling
+  k => k.foe(32, 46, 1.1) + k.glow(32, 26, 12, .45) + k.ring(32, 26, 12, 4, 2.2) + `<g transform="translate(18 4) rotate(180) scale(.8)" opacity=".9">${k.dagger(-4, 0, 18, 0)}</g>` + `<g transform="translate(46 4) rotate(180) scale(.8)" opacity=".9">${k.dagger(4, 0, 18, 0)}</g>` + k.beam(32, 2, 32, 34, 3, .9) + k.burst(32, 36, 7, 8, .3) + k.twinkle(10, 30, 2.6) + k.twinkle(56, 34, 2.4),
   // Divine Judgment: a colossal pillar of light crashing down from the heavens
   k => k.glow(32, 30, 22, .5) + `<path d="M20 0H44L40 54H24z" fill="${k.u('fd')}"/>` + k.beam(32, 0, 32, 52, 10) + k.ring(32, 54, 22, 6, 2.4) + k.burst(32, 52, 9, 8, .3) + k.twinkle(10, 20, 2.6) + k.twinkle(54, 14, 3),
 ];
@@ -220,10 +223,11 @@ SPELL_ART.venom = [
   k => k.cloud(32, 30, 1.45, k.u('v')) + `<g opacity=".7"><circle cx="20" cy="50" r="2.2" fill="none" stroke="${k.L}" stroke-width="1.2"/><circle cx="34" cy="54" r="1.6" fill="none" stroke="${k.L}" stroke-width="1"/><circle cx="46" cy="50" r="2.6" fill="none" stroke="${k.L}" stroke-width="1.2"/></g>` + k.skull(32, 26, .5, k.D),
   // Serpent: a venom serpent slithering toward its prey
   k => { const d = 'M6 54C16 54 18 42 28 42S40 54 50 50 54 36 46 30'; return `<path d="${d}" fill="none" stroke="${k.D}" stroke-width="9" stroke-linecap="round"/><path d="${d}" fill="none" stroke="${k.M}" stroke-width="6" stroke-linecap="round"/><path d="${d}" fill="none" stroke="${k.L}" stroke-width="2" stroke-linecap="round" stroke-dasharray="2 4"/><g transform="translate(44 26) rotate(-30)"><path d="M-6 4C-7 -4 -3 -8 2 -8S9 -4 8 2 2 8 -6 4z" fill="${k.u('v')}"/><circle cx="1" cy="-3" r="1.6" fill="#ffda3a"/><path d="M7 -1l6 -2M10 -2l2 2" stroke="#e02a3a" stroke-width="1.2" stroke-linecap="round"/></g>`; },
-  // Contagion: poisoned monsters erupting, spreading the venom on
-  k => k.burst(32, 32, 16, 10, .35) + k.foe(32, 34, .9) + k.foe(10, 52, .6) + k.foe(54, 50, .6) + k.drop(20, 16, .4, -40) + k.drop(46, 14, .4, 40) + k.drop(14, 34, .35, -80) + k.drop(52, 32, .35, 80),
-  // Plague Swarm: a swarm of venom wasps hunting
-  k => [[20, 22, 1, -20], [42, 16, .8, 15], [44, 40, .9, 25], [18, 46, .7, -35], [32, 32, .6, 0]].map(([x, y, s, r]) => `<g transform="translate(${x} ${y}) rotate(${r}) scale(${s})">${k.glow(0, 0, 7, .4)}<ellipse cx="-5" cy="-6" rx="5" ry="3" fill="#e8fff8" opacity=".6" transform="rotate(-30 -5 -6)"/><ellipse cx="5" cy="-6" rx="5" ry="3" fill="#e8fff8" opacity=".6" transform="rotate(30 5 -6)"/><ellipse cx="0" cy="2" rx="4" ry="7" fill="${k.M}"/><path d="M-4 1h8M-3.6 5h7.2" stroke="#1a2a08" stroke-width="1.6"/><circle cx="0" cy="-6" r="3" fill="#1a2a08"/><path d="M0 9l0 4" stroke="#1a2a08" stroke-width="1.4"/></g>`).join(''),
+  // Acid Rain: a sick green storm cloud pouring acid down on a monster, the floor hissing
+  k => k.cloud(32, 16, 1.25, k.u('dk')) + [[14, 28], [24, 32], [34, 28], [44, 32], [52, 26], [20, 44], [30, 46], [42, 44]].map(([x, y]) => k.streak(x + 2, y - 8, x, y, 2.4, .9)).join('') + `<ellipse cx="32" cy="58" rx="24" ry="4" fill="${k.M}" opacity=".45"/>` + k.foe(32, 52, .55) + k.sparks([[12, 56, 1.2], [52, 56, 1.1], [24, 60, .9], [44, 60, .9]], k.L),
+  // Hydra: three venom serpent heads rising out of a poison pool, one spitting
+  k => `<ellipse cx="32" cy="58" rx="24" ry="5" fill="${k.D}"/>` + k.tentacle('M18 58C12 44 22 34 14 20', 7) + k.tentacle('M32 58C30 40 38 30 32 12', 7) + k.tentacle('M46 58C52 44 42 34 50 22', 7)
+    + [[14, 18, -20], [32, 10, 0], [50, 20, 20]].map(([x, y, r]) => `<g transform="translate(${x} ${y}) rotate(${r})"><path d="M-6 4C-7 -3 -3 -7 0 -7S7 -3 6 4L0 2Z" fill="${k.M}" stroke="${k.D}" stroke-width="1.2"/><circle cx="-2.4" cy="-2" r="1.1" fill="#ff3a3a"/><circle cx="2.4" cy="-2" r="1.1" fill="#ff3a3a"/><path d="M-2 3l-1 3M2 3l1 3" stroke="#fff" stroke-width="1"/></g>`).join('') + k.drop(58, 36, .4, 140) + k.sparks([[60, 44, 1], [6, 40, 1]]),
 ];
 // ---- Steel ----
 SPELL_ART.steel = [
