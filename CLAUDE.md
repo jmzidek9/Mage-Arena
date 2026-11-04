@@ -13,29 +13,40 @@ Do every step, in order, whenever a move or element is added, changed, renamed o
 - Write the move in its element's `moves` list: `cast`, plus `shot` / `ent` / `view` / `fx` as needed. The `desc` must match what the move really does, with its real numbers.
 - New element only: also add its entries in `BLOCK` and `BLOCK_LOOK` (`js/blocks.js`), `ELMETA` (`js/view.js`), its sounds (`js/core.js`), its models (`blender/build_elements.py`, then the glb), and a `passive`, `react` and `st`.
 
-**2. Your own view** (first person must stay readable)
+**2. Make it look and feel cool**
+- Every move should feel powerful and satisfying, not just work. Give it:
+  - a clear wind-up or cast (cast circle, hand glow)
+  - a readable projectile or effect in the element's own colours and models
+  - a punchy impact (burst, ring, debris, scorch or decal that fits the element)
+  - its own sound (`<el>` for light moves, `<el>_big` for heavy ones)
+- Heavier moves earn more: screen shake, a short `fovKick`, hit-stop, launches and knockback, and lingering aftermath (lava, ice, ink, spikes). An ultimate should be the most spectacular thing in the kit.
+- It must look like its element and different from the element's other moves and from other elements' moves. Avoid generic white flashes and plain spheres.
+- Make it readable at a glance: you should see where it hits, who it hit, and what state it left them in (frozen, burning, marked, charmed).
+- Check the `run.js` screenshots and ask: does this look cool and clearly like this element? If it reads as plain or as another element, improve it before moving on.
+
+**3. Your own view** (first person must stay readable, so cool must never mean blinding)
 - Beams, cones, waves and blasts start 1.5–4 m in front of you, not at your eyes.
 - Pulled monsters stop about 3 m away. Summons and orbiters appear ahead of you or above eye height, never on the camera.
 - No white-outs: `flash()` is capped at 40; only use `whiteFx` with `Math.max(whiteFx, ≤ .6)`.
 - Anything attached to the camera uses `nearOff()`, so the near-camera fade doesn't hide it.
 
-**3. Performance**
+**4. Performance**
 - Keep a move under about 500 particles at its peak (the pool holds 4000). Build models when the game loads (`warmFx` in `js/view.js`), not on the first cast.
 
-**4. Icon** (`js/icons.js`)
+**5. Icon** (`js/icons.js`)
 - Draw or redraw the move's icon so it shows what the move does, and preview it next to the element's other 4 icons.
 
-**5. Balance**
+**6. Balance**
 - `python pack.py`, then `node playtest/bench.js <outDir> <el>[,<el>]`. It runs 3 fights each and shows damage per move. Put `<outDir>` in the scratchpad or `playtest/out/`.
 - Compare with the median from a full bench (all elements). Aim for 0.85–1.2× on both crowd and boss. Control elements may sit lower.
 - Single runs swing ±0.15, so only act on bigger gaps. Check the per-move numbers to find the move to change.
 - Ultimates never charge themselves (`S.ultSrc`). Keep that intact for anything an ultimate spawns.
 
-**6. Check it**
-- `python pack.py`, `node playtest/selftest.js` (must pass), and `node playtest/run.js <el> moves --out <scratchpad dir>`. Look at the screenshots for anything covering the view, and the log for console errors.
+**7. Check it**
+- `python pack.py`, `node playtest/selftest.js` (must pass), and `node playtest/run.js <el> moves --out <scratchpad dir>`. Look at the screenshots for anything covering the view, whether it looks cool and like its element, and the log for console errors.
 - Afterwards, make sure no headless Edge or `playtest/*.js` process is left running.
 
-**7. Notes and save**
+**8. Notes and save**
 - Update the move or element in `vault/Elements.md` (move table, passive, and a line in Balance if numbers changed).
 - Commit and push. Then run `graphify update .` once and copy `GRAPH_REPORT.md` to `vault/Graph Report.md`.
 
