@@ -13,3 +13,6 @@ blender/renders/
 *.blend
 *.blend1
 vault/Graph Report.md
+playtest/node_modules/
+playtest/out/
+node_modules/
