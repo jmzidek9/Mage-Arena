@@ -199,6 +199,21 @@ function inkDragonBuild() {
   u.segs = Array.from({ length: SEGS }, (_, k) => { const s = model('ink__dragon_seg', 0x3a52ff, { shadow: true }); s.scale.setScalar(2.2 * (1 - .7 * (k / SEGS) ** 1.5)); u.body.add(s); u.mats.push(...s.userData.mats); return s; });
   return o;
 }
+// Frost Nova: one ice spike bursting up at angle a, distance d from (x, z) after `delay` s, leaning outward; it holds, then shatters
+function iceSpikeFx(x, z, a, d, delay, s) {
+  const o = T.spike.clone(), mats = [], px = x + Math.cos(a) * d, pz = z + Math.sin(a) * d;
+  o.traverse(c => { if (c.isMesh) { c.material = c.material.clone(); c.material.transparent = true; c.material.depthWrite = true; if (c.material.emissive) { c.material.emissive.set(0x2a9cff); c.material.emissiveIntensity = 1.1; } c.material.color?.set(0x7cd0ff); mats.push(c.material); } });
+  o.position.set(px, 0, pz); o.rotation.order = 'YXZ'; o.rotation.y = Math.atan2(Math.cos(a), Math.sin(a)) + rand(-.3, .3); o.rotation.x = rand(.25, .55); o.scale.setScalar(.001);
+  let popped = false, broke = false;
+  addFx(o, 1.15 + delay, (o, k, dt) => {
+    const t = k * (1.15 + delay) - delay;
+    if (t < 0) return;
+    if (!popped) { popped = true; burst(px, .2, pz, 6, 0xcff4ff, 4, .15, .35, 6); if (Math.random() < .3) sfx('tink'); }
+    const up = easeOutBack(Math.min(1, t / .14));
+    o.scale.set(s * up * .9, s * up * (1.4 + .3 * Math.sin(a * 7)), s * up * .9); // tall and jagged
+    if (t > .85) { if (!broke) { broke = true; burst(px, s * .9, pz, 10, 0xeaf8ff, 5, .15, .4, 9); } o.position.y = -(t - .85) * 6 * s; mats.forEach(m => m.opacity = 1 - (t - .85) / .3); }
+  });
+}
 // Blade Dance: 9 m, or on until you are clear of the monster you would stop inside (up to 14 m)
 function danceLen(p, f) {
   let L = 9; const inside = L => S.enemies.some(e => alive(e) && Math.hypot(e.x - p.x - f.x * L, e.z - p.z - f.z * L) < ET[e.type].r * e.sc + .8);
@@ -457,22 +472,36 @@ frost: {
       view: segView(0xaef0ff, .5),
       look: { m: 'frost__lance', trail: [0xaef0ff, .18, .4, -1, 3], light: 7 },
       fx: { shatter(e) { meshFx(T.shatter, V(e.x, e.y, e.z), .7, .5, 2.2, 4); burst(e.x, e.y, e.z, 50, 0x9feaff, 10, .25, .6, 8); sfx('tink'); shake(.15); } } },
-    { name: 'Ice Wall', icon: '🧱', cd: 10, mode: 'aim', range: 14, aimR: 3, desc: 'Raise a wall of ice that blocks enemies and their shots, chilling anything that touches it.',
-      cast(p, c) {
-        const yaw = Math.atan2(c.flat.x, c.flat.z), px = Math.cos(yaw), pz = -Math.sin(yaw), solid = [];
-        for (let i = -3; i <= 3; i++) solid.push({ x: c.tgt.x + px * i, z: c.tgt.z + pz * i, r: .6 });
-        ent(p, c, c.tgt.x, c.tgt.z, { life: 7, yaw, solid, h: 3, r: 3.5 });
-      },
-      ent: { tick(n, dt) { if (pulse(n, dt, .5)) for (const e of enemiesNear(n.x, n.z, 4)) if (n.solid.some(q => Math.hypot(e.x - q.x, e.z - q.z) < q.r + ET[e.type].r * e.sc + .35)) hitEnemy(e, 'frost', 4 * n.mul, own(n), 0, 0, 0, { aoe: true }); } },
-      view: { make(n) { const o = model('frost__wall', 0x4cc8ff, { shadow: true }); o.rotation.y = n.yaw; dustFx(n.x, n.z, 3, 0xcff4ff); sfx('frost_big'); return o; },
-        upd(o, n) { o.position.y = -3 * (1 - easeOut(Math.min(1, n.t * 5))); if (n.l < .1) o.position.y = -3 * (1 - n.l * 10) ** 2; },
-        drop(o, n) { burst(n.x, 1.2, n.z, 50, 0xbff4ff, 7, .3, .6, 8); addFx(o, .3, (o, k) => { o.position.y -= .1; fade(o, 1 - k); }); } } },
+    { name: 'Frost Orb', icon: '🔮', cd: 8, desc: 'Loose a slow orb of ice that drifts 15 m ahead, spraying ice shards in a spinning spiral (8 each, chilling what they hit), then bursts in a ring of 16 shards for 12 each.',
+      cast(p, c) { const f = c.flat; ent(p, c, p.x + f.x * 2, p.z + f.z * 2, { life: 2.2, r: .8, y: 1.3, dx: f.x, dz: f.z }); }, // leaves 2 m ahead of you
+      ent: { tick(n, dt) {
+          n.x += n.dx * 6.5 * dt; n.z += n.dz * 6.5 * dt; if (offMap(n.x, n.z)) n.life = 0;
+          if (!pulse(n, dt, .09)) return; const c = ctxN(n), o = V(n.x, 1.3, n.z);
+          for (const k of [0, Math.PI]) { const a = n.t * 7 + k; shoot(c.p, c, 22, { o, d: V(Math.sin(a), 0, Math.cos(a)), r: .3, life: .5, dmg: 8 * n.mul, kb: 1.5, sc: .7 }); } // two arms of a spinning spiral
+        },
+        end(n) { const c = ctxN(n), o = V(n.x, 1.3, n.z); fxe(n.mv, 'burst', { x: r2(n.x), z: r2(n.z) }); for (let i = 0; i < 16; i++) { const a = TAU * i / 16; shoot(c.p, c, 26, { o, d: V(Math.sin(a), 0, Math.cos(a)), r: .35, life: .6, dmg: 12 * n.mul, kb: 3, sc: 1 }); } } },
+      look: { m: 'T.shard', s: .8, trail: [0xaef0ff, .12, .25, -1, 1], light: 2 },
+      view: { make(n) { // a churning ball of ice with a ring of shards orbiting it
+          const g = new THREE.Group(), orb = model('gen__orb', 0x7ad8ff), u = g.userData; orb.scale.setScalar(.75); g.add(orb); u.orb = orb; u.mats = orb.userData.mats.slice(); u.sh = [];
+          for (let i = 0; i < 6; i++) { const sh = T.shard.clone(); sh.scale.setScalar(.9); g.add(sh); u.sh.push(sh); }
+          u.l = new THREE.PointLight(0x7ad8ff, 10, 7, 2); g.add(u.l); sfx('frost_big'); return g; },
+        upd(o, n, dt, t) {
+          const u = o.userData; u.orb.rotation.y += dt * 4; u.orb.rotation.x += dt * 2.5; u.orb.scale.setScalar(.75 + .06 * Math.sin(t * 12));
+          u.sh.forEach((sh, i) => { const a = t * 6 + TAU * i / 6; sh.position.set(Math.cos(a) * 1, Math.sin(a * 2) * .2, Math.sin(a) * 1); sh.lookAt(o.position.clone().add(V(Math.cos(a + 1.6) * 3, 0, Math.sin(a + 1.6) * 3))); });
+          fade(o, Math.min(1, n.t * 6, n.l * 8));
+          for (let k = 0; k < 2; k++) emit(n.x + rand(-.5, .5), 1.3 + rand(-.5, .5), n.z + rand(-.5, .5), rand(-.6, .6), rand(-.4, .4), rand(-.6, .6), Math.random() < .5 ? 0xeaf8ff : 0x9fe6ff, rand(.1, .2), .5, .5); // frost mist
+          if (Math.random() < .5) emit(n.x, .1, n.z, rand(-1, 1), .2, rand(-1, 1), 0xcff4ff, rand(.2, .35), .8, 0, 1); // frosting the floor it passes over
+        },
+        drop: o => o.removeFromParent() },
+      fx: { burst(e) { meshFx(T.shatter, V(e.x, 1.3, e.z), .6, .6, 2.6, 4); burst(e.x, 1.3, e.z, 40, 0xcff4ff, 9, .25, .5, 4); ringFx(e.x, .1, e.z, 4, 0x9fe6ff, .45); flash(e.x, 1.5, e.z, 0x7ad8ff, 30, .25); sfx('frost_big'); sfx('tink'); shake(.12); } } },
     { name: 'Frost Nova', icon: '💠', cd: 11, desc: 'Blast frost in every direction, freezing nearby enemies solid.',
       cast(p, c) { boomAt(c, p.x, .5, p.z, 7.5, 34 * c.dmg, { kb: 2, cc: ['freeze', 2] }, 'nova'); },
-      fx: { nova(e) {
-        ringFx(e.x, .1, e.z, e.r, 0x4cc8ff, .55); ringFx(e.x, .3, e.z, e.r * .7, 0xbff4ff, .4);
-        for (let i = 0; i < 14; i++) { const a = TAU * i / 14; meshFx(T.spike, V(e.x + Math.cos(a) * e.r * .75, 0, e.z + Math.sin(a) * e.r * .75), .9, .5, .9); }
-        burst(e.x, 1, e.z, 70, 0xaef0ff, 12, .3, .6); flash(e.x, 1, e.z, 0x4cc8ff, 40, .3); sfx('frost_big'); shake(.25);
+      fx: { nova(e) { // ice erupts from the ground: three waves of tall spikes racing outward, frost spreading underneath, cold mist rolling off
+        ringFx(e.x, .1, e.z, e.r, 0x4cc8ff, .5); scarFx(e.x, e.z, e.r * .95, 0x7ad8ff, 3); // frost spreading over the floor
+        [[.32, 7], [.62, 12], [.92, 18]].forEach(([f, cnt], w) => { for (let i = 0; i < cnt; i++) /* none within 2.4 m of you, the nearest kept short */ { const d = Math.max(2.4 + w * 1.6, e.r * f) * rand(.94, 1.06); iceSpikeFx(e.x, e.z, TAU * (i + w * .37) / cnt + rand(-.1, .1), d, w * .07, rand(.75, 1.1) * Math.min(1.15, .35 + d * .14)); } });
+        for (let i = 0; i < 10; i++) { const a = TAU * i / 10; smokeFx(e.x + Math.cos(a) * e.r * .8, .35, e.z + Math.sin(a) * e.r * .8, 1, 0xdff4ff, 1.4, 1, .5); } // cold mist round the edge
+        for (let i = 0; i < 60; i++) { const a = rand(0, TAU), sp = rand(6, 14); emit(e.x, .3, e.z, Math.cos(a) * sp, rand(.5, 3), Math.sin(a) * sp, Math.random() < .5 ? 0xeaf8ff : 0x9fe6ff, rand(.15, .3), .55, 2, 1.5); } // snow blasted along the ground
+        flash(e.x, 1, e.z, 0x4cc8ff, 40, .3); sfx('frost_big'); shake(.3);
       }, freeze(e) { burst(e.x, 1, e.z, 24, 0xcff4ff, 4, .25, .5, 3); sfx('tink'); } } },
     { name: 'Blizzard', icon: '🌨️', mode: 'aim', range: 22, aimR: 9, desc: 'ULTIMATE. Summon a raging blizzard. Hail pounds everything inside, freezing enemies over and over.',
       cast(p, c) { ent(p, c, c.tgt.x, c.tgt.z, { r: 9 * c.st.aoe, life: 7 }); },

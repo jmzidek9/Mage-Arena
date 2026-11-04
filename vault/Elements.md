@@ -64,10 +64,12 @@ Control the battlefield. Slow everything down, freeze it solid, then shatter it.
 |---|---|---|---|
 | LMB | 🧊 **Ice Shard** | 0.28 s | Rapid crystal shards that pierce one enemy. |
 | RMB | 🗡️ **Glacial Lance** *(hold to charge)* | 3 s | Hold to charge a lance that pierces a line of enemies and leaves a strip of slick ice along its path for 4 s: anything standing on it slips and takes 20% more damage. Fully charged, it freezes them. Frozen targets shatter for double damage. |
-| Q | 🧱 **Ice Wall** *(hold to aim, release to cast)* | 10 s | Raise a wall of ice that blocks enemies and their shots, chilling anything that touches it. |
+| Q | 🔮 **Frost Orb** | 8 s | Loose a slow orb of ice that drifts 15 m ahead, spraying ice shards in a spinning spiral (8 each, chilling what they hit), then bursts in a ring of 16 shards for 12 each. |
 | E | 💠 **Frost Nova** | 11 s | Blast frost in every direction, freezing nearby enemies solid. |
 | R | 🌨️ **Blizzard** *(hold to aim, release to cast)* | ultimate | Summon a raging blizzard. Hail pounds everything inside, freezing enemies over and over. |
 
+
+*Frost rework (2026-11-04):* Ice Wall is replaced by **Frost Orb**, a churning ball of ice with orbiting shards that drifts forward from 2 m ahead of you, sprays shards in a two-armed spiral and bursts into a ring of 16. **Frost Nova** now looks like ice erupting from the ground: three waves of tall blue ice spikes race outward (none closer than 2.4 m, the nearest kept short so your view stays open), frost spreads over the floor, cold mist rolls off the edge and snow blasts along the ground; each spike holds for a moment and then shatters. Bench: crowd 0.89, boss 1.00 (was 0.77 / 0.78).
 ## ⚡ Storm
 Speed and chaos. Lightning that leaps from foe to foe.
 

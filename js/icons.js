@@ -106,10 +106,13 @@ SPELL_ART.frost = [
   k => k.streak(4, 62, 24, 40, 8, .5) + k.shard(34, 30, 17, 45) + k.streak(30, 18, 42, 8, 4, .5) + k.shard(48, 6, 6, 45, false) + k.streak(44, 60, 54, 48, 4, .5) + k.shard(57, 45, 6, 45, false) + k.twinkle(14, 20, 3) + k.sparks([[20, 50, 1], [50, 30, .9]]),
   // Glacial Lance: a long spear of ice punching through, frost trailing off it
   k => k.streak(2, 62, 20, 44, 10, .45) + `<g transform="translate(34 30) rotate(45) scale(.42 1)">${k.shard(0, 0, 32, 0)}</g>` + k.shard(16, 48, 5, -20, false) + k.shard(22, 54, 4, 70, false) + k.twinkle(54, 10, 3.5) + k.sparks([[10, 40, 1], [40, 52, 1.1], [50, 26, .8]]),
-  // Ice Wall: a jagged wall of ice crystals rising from frosted ground
-  k => k.ground(55, 30, .6) + k.glow(32, 40, 24, .35) + [[9, 15, -8], [19, 20, -3], [31, 24, 0], [43, 19, 4], [54, 14, 9]].map(([x, s, r]) => k.shard(x, 55 - s * .95, s, r, false)).join('') + k.twinkle(31, 12, 3) + k.sparks([[14, 30, 1], [50, 28, .9]]),
-  // Frost Nova: a blast of frost in every direction, a snowflake at its heart
-  k => k.halo(32, 32, 31) + k.ring(32, 32, 24, 24, 1.6, .8) + [0, 60, 120, 180, 240, 300].map(a => k.shard(32 + Math.cos((a - 90) * Math.PI / 180) * 21, 32 + Math.sin((a - 90) * Math.PI / 180) * 21, 7, a, false)).join('') + [0, 60, 120].map(a => { const c = Math.cos(a * Math.PI / 180) * 13, s = Math.sin(a * Math.PI / 180) * 13; return k.beam(32 - c, 32 - s, 32 + c, 32 + s, 2.4); }).join('') + k.orb(32, 32, 5),
+  // Frost Orb: a churning ball of ice spraying shards out in a spinning spiral
+  k => [0, 1, 2, 3, 4, 5, 6, 7].map(i => { const a = i * 45 + 20, r1 = 13 + i * .8, r2 = 24 + i * 1.2, c = Math.cos(a * Math.PI / 180), s = Math.sin(a * Math.PI / 180); return k.streak(32 + c * r1, 32 + s * r1, 32 + c * r2, 32 + s * r2, 3, .45) + k.shard(32 + c * r2, 32 + s * r2, 4.5, a + 90, false); }).join('')
+    + k.orb(32, 32, 11) + `<path d="M24 30l6 2-4 5M40 28l-5 4 5 4M31 23l1 6 5-3" stroke="${k.W}" stroke-width="1.3" fill="none" opacity=".75" stroke-linecap="round"/>`,
+  // Frost Nova: ice spikes erupting from frosted ground in a ring all round the caster, cold mist rolling off
+  k => k.halo(32, 44, 30) + `<ellipse cx="32" cy="46" rx="29" ry="11" fill="${k.L}" opacity=".35" filter="${k.u('g2')}"/><ellipse cx="32" cy="46" rx="22" ry="8" fill="none" stroke="${k.W}" stroke-width="1.2" opacity=".7"/>`
+    + [[200, 12, .7], [235, 15, .8], [270, 17, .85], [305, 15, .8], [340, 12, .7], [160, 13, .9], [125, 17, 1], [90, 20, 1.1], [55, 17, 1], [20, 13, .9]].map(([a, h, o]) => { const x = 32 + Math.cos(a * Math.PI / 180) * 24, y = 46 + Math.sin(a * Math.PI / 180) * 9; return `<g opacity="${o}">${k.shard(x, y - h * .7, h * .75, (x - 32) * .9, false)}</g>`; }).join('')
+    + k.smoke(10, 50, .55, '#dff4ff', .5) + k.smoke(54, 51, .55, '#dff4ff', .5) + k.sparks([[20, 20, 1.2], [44, 16, 1], [32, 12, 1.4], [52, 26, 1]]),
   // Blizzard: a storm cloud driving hail and snow down at a slant
   k => k.cloud(32, 21, 1.2) + [[14, 34], [24, 38], [34, 34], [44, 38], [52, 32], [20, 50], [32, 52], [44, 50]].map(([x, y]) => k.streak(x + 5, y - 9, x, y, 2.6, .8)).join('') + k.twinkle(10, 50, 2.6) + k.twinkle(56, 54, 2.2) + k.twinkle(38, 60, 2),
 ];
