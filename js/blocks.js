@@ -104,7 +104,7 @@ function guardFrame(src, dt, t) {
     const wobble = hp < .3 ? .6 + .4 * Math.sin(t * 40) : 1; // about to break: it flickers
     const base = (mine ? (v.omni ? .16 : .32) : .75) * k * wobble * (.55 + .45 * hp);
     const op = Math.min(1, base * (1 + v.hit * 1.5));
-    for (const m of v.mats) { if (m.uniforms?.uA) m.uniforms.uA.value = op; else m.opacity = op; } // the glowing parts are energy shaders: they ignore .opacity, so they used to draw at full strength and blow out to white
+    for (const m of v.mats) { if (m.uniforms?.uA) m.uniforms.uA.value = Math.min(1, op * 2.2); else m.opacity = op; } // the glowing parts are energy shaders: they ignore .opacity (they drew at full strength and blew out to white); x2.2 keeps them bright but not blinding
     guardParticles(v, p, t, mine, k);
   }
   for (const [id, v] of GV) if (!live.has(id)) { v.g.removeFromParent(); GV.delete(id); }
