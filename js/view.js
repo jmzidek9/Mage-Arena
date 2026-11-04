@@ -1060,7 +1060,7 @@ function renderAuras(src, dt, t) {
     so.forEach((o, i) => { const a = -t * .8 + TAU * i / so.length, rr = mine ? 1.1 : .9, y = pos.y + (mine ? .45 : 1.6) + Math.sin(t * 3 + i * 1.7) * .15; o.position.set(pos.x + Math.cos(a) * rr, y, pos.z + Math.sin(a) * rr); o.lookAt(o.position.x + Math.sin(a), y + .4, o.position.z - Math.cos(a)); o.scale.setScalar(.55); });
     // arcane charges whirl round you, quick and small
     const ac = pool(v.arc, R[2] || 0, () => model('arcane__orb', EL.arcane.color));
-    ac.forEach((o, i) => { const a = t * 3.2 + TAU * i / 4, rr = mine ? .9 : .7; o.position.set(pos.x + Math.cos(a) * rr, pos.y + (mine ? .9 : 1.3) + Math.sin(t * 4 + i) * .06, pos.z + Math.sin(a) * rr); o.rotation.z += dt * 6; o.scale.setScalar(.35); });
+    ac.forEach((o, i) => { const a = t * 3.2 + TAU * i / 4, rr = mine ? 1.3 : .7; o.position.set(pos.x + Math.cos(a) * rr, pos.y + (mine ? .7 : 1.3) + Math.sin(t * 4 + i) * .06, pos.z + Math.sin(a) * rr); o.rotation.z += dt * 6; o.scale.setScalar(.35); });
     // Plasma: sparks off your hand as Heat builds, smoke while overheated
     if (!down && ((R[0] || 0) > 35 || bf.overheat > 0) && Math.random() < (bf.overheat > 0 ? .6 : (R[0] - 35) / 80)) {
       const h = handPos(p.id), hot = bf.overheat > 0;
@@ -1083,8 +1083,8 @@ function renderAim(mp, dt) {
   $('charge').classList.toggle('hidden', !charging);
   if (charging) { $('chargeBar').style.width = k * 100 + '%'; $('charge').classList.toggle('full', k >= 1); }
   if (charging) {
-    if (!chargeCircle || chargeCircle.userData.el !== m.el) { chargeCircle?.removeFromParent(); chargeCircle = makeCircle(m.el); chargeCircle.userData.el = m.el; chargeCircle.quaternion.copy(Q_FACE); chargeCircle.position.set(-.26, -.17, -.85); camera.add(chargeCircle); }
-    chargeCircle.visible = true; chargeCircle.scale.setScalar(.05 + .14 * k); spinCircle(chargeCircle, dt, 2 + k * 6);
+    if (!chargeCircle || chargeCircle.userData.el !== m.el) { chargeCircle?.removeFromParent(); chargeCircle = makeCircle(m.el); nearOff(chargeCircle); chargeCircle.userData.el = m.el; chargeCircle.quaternion.copy(Q_FACE); chargeCircle.position.set(-.26, -.17, -.85); camera.add(chargeCircle); }
+    chargeCircle.visible = true; chargeCircle.scale.setScalar(.05 + .09 * k); spinCircle(chargeCircle, dt, 2 + k * 6);
   } else if (chargeCircle) chargeCircle.visible = false;
   return k;
 }

@@ -488,7 +488,7 @@ function frame(now, manual = false) {
   timeFx = Math.max(0, timeFx - dt); whiteFx = Math.max(0, whiteFx - dt * 2.5); dodgeFx = Math.max(0, dodgeFx - dt);
   const tsOn = src?.ts ? 1 : 0;
   filmPass.uniforms.uGray.value += (Math.max(tsOn, dodgeFx > 0 ? .5 : 0) - filmPass.uniforms.uGray.value) * Math.min(1, dt * 6);
-  filmPass.uniforms.uWhite.value = whiteFx * .8;
+  filmPass.uniforms.uWhite.value = Math.min(whiteFx, .5) * .7; // never more than a 35% wash: a full white-out hid the fight
   // the sky's black hole flares while a Singularity is open, and burns brighter through boss waves
   const flare = src?.ents?.some(n => n.mv === 'gravity.4') ? 1 : src?.enemies?.some(e => e.type === 'boss') ? .45 : 0;
   skyU.uFlare.value += (flare - skyU.uFlare.value) * Math.min(1, dt * 3);

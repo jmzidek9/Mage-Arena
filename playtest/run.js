@@ -98,6 +98,7 @@ async function open() {
   const b = await browser();
   const p = await b.newPage({ viewport: { width: 960, height: 540 } });
   p.on('pageerror', e => console.log('page error:', e.message));
+  p.on('console', m => { if (m.type() === 'error') console.log('console error:', m.text().slice(0, 300)); });
   await p.addInitScript(() => { localStorage.setItem('magepact_gfx', 'high'); window.requestAnimationFrame = () => 0; });
   await p.goto('file://' + path.resolve(__dirname, '../index.html'), { waitUntil: 'commit' });
   await p.waitForFunction(() => window.MP && window.MP.setup, null, { timeout: 240000, polling: 500 });

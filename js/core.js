@@ -334,9 +334,22 @@ function tintRig(el) {
 let vmKick = 0, vmBob = 0;
 
 // ===================== VFX =====================
+// additive glow fades out inside ~2 m of the camera, so a blast or beam at your own eyes doesn't white out the view.
+// Things fixed to the camera (cast/charge circles, your own shield) opt out with nearOff().
+const NEAR_GLSL = 'a *= mix(1., smoothstep(.5, 2.2, vDepth), uNear);';
+function nearFade(m) {
+  m.userData.uNear = { value: 1 };
+  m.onBeforeCompile = s => {
+    s.uniforms.uNear = m.userData.uNear;
+    s.vertexShader = 'varying float vDepth;\n' + s.vertexShader.replace('#include <project_vertex>', '#include <project_vertex>\nvDepth = -mvPosition.z;');
+    s.fragmentShader = 'varying float vDepth; uniform float uNear;\n' + s.fragmentShader.replace('#include <dithering_fragment>', '#include <dithering_fragment>\n{ float a = 1.; ' + NEAR_GLSL + ' gl_FragColor.a *= a; }');
+  };
+  return m;
+}
+const nearOff = o => o.traverse(c => [c.material].flat().forEach(m => { if (m?.userData.uNear) m.userData.uNear.value = 0; if (m?.uniforms?.uNear) m.uniforms.uNear.value = 0; }));
 function glowMats(color) {
   const c = new THREE.Color(color);
-  const mk = (col, mul) => new THREE.MeshBasicMaterial({ color: col.multiplyScalar(mul), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false });
+  const mk = (col, mul) => nearFade(new THREE.MeshBasicMaterial({ color: col.multiplyScalar(mul), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false }));
   return [mk(c.clone(), 2.2), mk(c.clone().lerp(new THREE.Color(1, 1, 1), .6), 3)];
 }
 function glowify(obj, mats) { obj.traverse(o => { if (o.isMesh) { o.material = /core/.test(o.material.name) ? mats[1] : mats[0]; o.castShadow = o.receiveShadow = false; } }); return obj; }
@@ -354,14 +367,14 @@ const spinCircle = (c, dt, s = 1) => c.children.forEach((ch, i) => ch.rotation.y
 function energyMat(color, core = false, flat = false) {
   return new THREE.ShaderMaterial({
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false,
-    uniforms: { uTime, uColor: { value: new THREE.Color(color) }, uA: { value: 1 }, uCore: { value: core ? 1 : 0 }, uFlat: { value: flat ? 1 : 0 } },
+    uniforms: { uTime, uColor: { value: new THREE.Color(color) }, uA: { value: 1 }, uCore: { value: core ? 1 : 0 }, uFlat: { value: flat ? 1 : 0 }, uNear: { value: 1 } },
     vertexShader: `varying vec3 vN, vV, lp; void main(){ lp = position; vec4 mv = modelViewMatrix * vec4(position, 1.); vV = -mv.xyz; vN = normalMatrix * normal; gl_Position = projectionMatrix * mv; }`,
-    fragmentShader: `uniform float uTime, uA, uCore, uFlat; uniform vec3 uColor; varying vec3 vN, vV, lp; ${GLSL_NOISE}
+    fragmentShader: `uniform float uTime, uA, uCore, uFlat, uNear; uniform vec3 uColor; varying vec3 vN, vV, lp; ${GLSL_NOISE}
     void main(){
       float f = mix(pow(1. - abs(dot(normalize(vN), normalize(vV))), 1.6), .75, uFlat);
       float n = noise3(lp * 4.5 + vec3(0., -uTime * 2.2, uTime * .7)), band = .5 + .5 * sin(lp.y * 14. - uTime * 6. + n * 4.);
       vec3 c = mix(uColor * 1.7 + vec3(.25) * f, mix(uColor, vec3(1.), .65) * 2.4, uCore);
-      float a = mix((.1 + .9 * f) * (.75 + .25 * band), .95, uCore) * (.65 + .6 * n) * uA;
+      float a = mix((.1 + .9 * f) * (.75 + .25 * band), .95, uCore) * (.65 + .6 * n) * uA, vDepth = length(vV); ${NEAR_GLSL}
       gl_FragColor = vec4(c, clamp(a, 0., 1.)); }`,
   });
 }
@@ -402,6 +415,7 @@ function stepFx(dt) {
 // the Elemental-Battlegrounds-style cast circle: pops in, counter-rotates its rings, fades
 function circleFx(el, pos, radius, { parent = scene, quat = null, life = .75, color } = {}) {
   const c = makeCircle(el, color); c.position.copy(pos); if (quat) c.quaternion.copy(quat);
+  if (parent === camera) nearOff(c);
   return addFx(c, life, (o, k, dt) => {
     o.scale.setScalar(Math.max(.001, radius * easeOutBack(Math.min(1, k * 4))));
     spinCircle(o, dt, 2.2);
@@ -450,7 +464,7 @@ for (const [n, a, s] of [['position', pPos, 3], ['pcolor', pCol, 3], ['psize', p
 const pts = new THREE.Points(pGeo, new THREE.ShaderMaterial({
   transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
   vertexShader: `attribute vec3 pcolor; attribute float psize; attribute float palpha; varying vec3 vC; varying float vA;
-    void main(){ vC = pcolor; vA = palpha; vec4 mv = modelViewMatrix * vec4(position, 1.0); gl_PointSize = min(psize * (420.0 / -mv.z), 48.0); gl_Position = projectionMatrix * mv; }`,
+    void main(){ vC = pcolor; vec4 mv = modelViewMatrix * vec4(position, 1.0); vA = palpha * smoothstep(.4, 1.8, -mv.z); /* sparks fade right at your eyes */ gl_PointSize = min(psize * (420.0 / -mv.z), 48.0); gl_Position = projectionMatrix * mv; }`,
   fragmentShader: `varying vec3 vC; varying float vA;
     void main(){ float d = length(gl_PointCoord - .5); if (d > .5 || vA <= 0.) discard; float f = 1. - d * 2., a = pow(f, 1.6) * vA;
       gl_FragColor = vec4(mix(vC, vec3(1.), pow(f, 6.) * .35) * a * 2.2, 1.); }`,
@@ -480,7 +494,12 @@ function stepParticles(dt) {
 // light flashes
 const flashes = Array.from({ length: 6 }, () => { const l = new THREE.PointLight(0xffffff, 0, 16, 2); scene.add(l); return { l, t: 0, d: 1, i: 0 }; });
 let flashHead = 0;
-function flash(x, y, z, color, i = 40, d = .25) { const f = flashes[flashHead++ % flashes.length]; f.l.position.set(x, y, z); f.l.color.set(color); Object.assign(f, { i, t: d, d }); }
+// capped at 40, and dimmer still within 6 m of the camera: the big ones (150+) used to white out your own view
+function flash(x, y, z, color, i = 40, d = .25) {
+  const f = flashes[flashHead++ % flashes.length], near = Math.hypot(x - camera.position.x, y - camera.position.y, z - camera.position.z);
+  i = Math.min(i, 40) * (near < 6 ? .35 + near * .11 : 1);
+  f.l.position.set(x, y, z); f.l.color.set(color); Object.assign(f, { i, t: d, d });
+}
 function stepFlashes(dt) { for (const f of flashes) { f.t -= dt; f.l.intensity = f.t > 0 ? f.i * f.t / f.d : 0; } }
 
 // floating damage numbers
