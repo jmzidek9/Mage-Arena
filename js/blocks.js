@@ -73,7 +73,7 @@ function guardMake(el) {
   const core = part(L.m, col, (omni ? 2.7 : 1.45) * (L.s ?? 1));
   if (core && L.f) core.scale.multiply(V(...L.f));
   if (core) core.position.y = L.y || 0;
-  const mats = []; g.traverse(o => { if (o.material) for (const m of [].concat(o.material)) { m.transparent = true; m.depthWrite = false; m.side = THREE.DoubleSide; mats.push(m); } });
+  const mats = []; g.traverse(o => { if (o.material) for (const m of [].concat(o.material)) { m.transparent = true; m.depthWrite = false; m.side = THREE.DoubleSide; if (m.uniforms?.uCore) m.uniforms.uCore.value = 0; mats.push(m); } }); // uCore 0: the element's own colour, not white-hot (held at your face, the hot cores bloomed into a white blob)
   return { g, outer, inner, sig, core, mats, L, col, el, omni, a: 0, hit: 0, brk: 0, kp: 0, kv: 0, tilt: 0 };
 }
 // every frame: shields up for whoever is blocking (src: the state being drawn, me: my own player)
@@ -103,7 +103,8 @@ function guardFrame(src, dt, t) {
     if (v.core && L.spin) v.core.rotation.y += dt * L.spin * TAU;
     const wobble = hp < .3 ? .6 + .4 * Math.sin(t * 40) : 1; // about to break: it flickers
     const base = (mine ? (v.omni ? .16 : .32) : .75) * k * wobble * (.55 + .45 * hp);
-    for (const m of v.mats) m.opacity = Math.min(1, base * (1 + v.hit * 1.5));
+    const op = Math.min(1, base * (1 + v.hit * 1.5));
+    for (const m of v.mats) { if (m.uniforms?.uA) m.uniforms.uA.value = op; else m.opacity = op; } // the glowing parts are energy shaders: they ignore .opacity, so they used to draw at full strength and blow out to white
     guardParticles(v, p, t, mine, k);
   }
   for (const [id, v] of GV) if (!live.has(id)) { v.g.removeFromParent(); GV.delete(id); }
