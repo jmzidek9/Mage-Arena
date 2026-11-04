@@ -1459,13 +1459,12 @@ blood: {
 spirit: {
   name: 'Spirit', color: 0x5effc8, glyph: '👻', adj: 'HAUNTED', react: { name: 'POSSESSION', kind: 'stun' },
   blurb: 'The summoner. The restless dead, a shrieking banshee, a spectral wolf and an army of ghost knights fight for you.',
-  passive: 'Restless Dead: every monster you kill rises as a wandering spirit that fights for you for 8 s (up to 4 at once). Monsters fight back against all your summons: a spirit falls after 2 blows, a knight after 4, the wolf after 6. Haunted enemies deal 25% less damage.',
+  passive: 'Spectral Host: monsters fight back against your summons (a spirit falls after 2 blows, a knight after 4, the wolf after 6), drawing them away from you. Haunted enemies deal 25% less damage.',
   st: { slow: .15, weak: .25 },
-  onKill(e, p) { if (!ET[e.type].boss && !e.pid && entsOf(p, 'spirit.0').length < 4) raiseSpirit(p, e.x, e.z, stats(p).dmgMul); },
   moves: [
     { name: 'Soul Wisps', icon: '🕯️', cd: .45, desc: 'Release wisps that hunt down enemies on their own.',
       cast(p, c) { for (let k = 0; k < c.multi; k++) shoot(p, c, 22, { d: spread(c.d, k, c.multi, .2), r: .35, life: 2.2, dmg: 30 * c.dmg, home: 6, sc: c.mega ? 1.8 : 1 }); },
-      // the wandering spirits of the Restless Dead passive live on this move
+      // the wandering spirits Command raises when you have no summons live on this move
       ent: { tick(n, dt) { summonAI(n, dt, 9, 1.3, .8, e => hitEnemy(e, 'spirit', 9 * n.mul, own(n), e.x - n.x, e.z - n.z, 2), 18); } },
       look: { m: 'spirit__wisp', trail: [0x8affd8, .18, .45, -1, 2], light: 4 },
       view: { make(n) { const g = new THREE.Group(), o = spectralModel('spirit__wisp', 0x5effc8); g.add(o); g.userData.mats = o.userData.mats; Object.assign(g.userData, { w: o, s: n.s, lunge: 0, sm: o.userData.sm }); burst(n.x, .6, n.z, 26, 0x8affd8, 4, .25, .5, -2); sfx('spirit'); return g; },
