@@ -139,7 +139,7 @@ function bigBoltFx(x, z, r = 3, top = 16, epic = false) {
   const pts = [[x + rand(-1.5, 1.5), top, z + rand(-1.5, 1.5)]];
   for (let i = 1; i < 8; i++) { const f = 1 - i / 8; pts.push([x + rand(-1.1, 1.1) * f, top * f, z + rand(-1.1, 1.1) * f]); }
   pts.push([x, 0, z]);
-  const near = Math.hypot(x - camera.position.x, z - camera.position.z) < 6; // right beside you: no white core or forks, so it can't white out the view
+  const near = Math.hypot(x - camera.position.x, z - camera.position.z) < 9; // close to you: no white core, forks or crown, so it can't white out the view
   boltFx(pts, 0xb08cff); boltFx(pts.map(p => [p[0] + rand(-.25, .25), p[1], p[2] + rand(-.25, .25)]), 0xe8dcff);
   if (!near) { boltFx(pts.map(p => [p[0] + rand(-.4, .4), p[1], p[2] + rand(-.4, .4)]), 0xb08cff); beamFx(V(...pts[0]), V(x, 0, z), 0xffffff, .14 * Math.min(1.8, r / 2), .25); pillarFx(x, 0, z, Math.max(.6, r * .3), top, 0xb08cff, .45); } // a glowing column lingers where it struck
   if (!near) for (let b = 0; b < 2; b++) { const p0 = pts[2 + Math.floor(rand(0, 4))], br = [p0]; for (let i = 1; i < 4; i++) br.push([p0[0] + rand(-2.5, 2.5) * i / 3, p0[1] - i * rand(1, 2), p0[2] + rand(-2.5, 2.5) * i / 3]); boltFx(br, 0xb08cff); } // forks off the main bolt
@@ -148,6 +148,9 @@ function bigBoltFx(x, z, r = 3, top = 16, epic = false) {
   burst(x, .3, z, Math.round(14 + r * 6), 0xd8c8ff, 8, .2, .4, 4); dustFx(x, z, r * .4, 0x6a6078);
   flash(x, 2, z, 0xc8b0ff, near ? 15 : 40, .2);
   if (!epic) return;
+  skyU.uBolt.value = 1; // the whole sky lights up
+  if (!near) for (let i = 0; i < 7; i++) { const a = TAU * i / 7 + rand(-.3, .3), d = r * rand(1.1, 1.6), m = [x + Math.cos(a) * d * .5, rand(2.5, 4.5), z + Math.sin(a) * d * .5]; boltFx([[x, rand(3, 6), z], [(x + m[0]) / 2 + rand(-.5, .5), m[1] + 1, (z + m[2]) / 2 + rand(-.5, .5)], m, [x + Math.cos(a) * d, 0, z + Math.sin(a) * d]], i % 2 ? 0xe8dcff : 0xb08cff); } // a crown of bolts arcing out of the strike
+  if (!near) { ringFx(x, .2, z, r * 1.9, 0xe8dcff, .55, r * .5); fovKick = Math.max(fovKick, .6); }
   // epic: an electric dome bursting outward, rubble thrown up, and the ground left crackling for a moment
   modelFx('gen__dome', 0xb08cff, V(x, 0, z), .45, (o, k) => { o.scale.setScalar(r * (.25 + 1.1 * easeOut(k))); fade(o, (1 - k) * (near ? .2 : .55)); });
   debrisFx(x, .3, z, Math.round(4 + r * 2), 'earth__pebble', 0x8a5cff, .3, 9);
@@ -582,6 +585,8 @@ storm: {
       },
       fx: { mark(e) { // the warning: a storm sigil on the ground, static crawling up off it, flickers gathering overhead
           circleFx('storm', V(e.x, .08, e.z), e.r, { life: .55 });
+          smokeFx(e.x, 11, e.z, e.r * 1.4, 0x3a3258, 1.2, 6, -.3); // a knot of storm cloud gathering over the target
+          skyU.uBolt.value = Math.max(skyU.uBolt.value, .35);
           for (let i = 0; i < 24; i++) { const a = rand(0, TAU), d = rand(0, e.r); emit(e.x + Math.cos(a) * d, .1, e.z + Math.sin(a) * d, 0, rand(2, 5), 0, Math.random() < .5 ? 0xffffff : 0xc0a0ff, rand(.05, .1), .45); }
           let stab = 0; // three thinner bolts stab down round the sigil's edge as the strike builds
           addFx(new THREE.Group(), .45, (o, k) => { if (Math.random() < .35) flash(e.x, 12, e.z, 0xb08cff, 20 * k, .08); if (Math.random() < .25) boltFx([[e.x + rand(-3, 3), 13, e.z + rand(-3, 3)], [e.x + rand(-3, 3), 12, e.z + rand(-3, 3)]], 0xd8c8ff);
@@ -629,7 +634,7 @@ storm: {
           for (let k = 0; k < 3; k++) emit(n.x + rand(-11, 11), rand(5, 10), n.z + rand(-11, 11), 1.5, -18, 0, 0xb8c8ff, .07, .55, 0, 0); // driving rain
         },
         drop: dropFade() },
-      fx: { bolt(e) { const epic = Math.random() < .25; bigBoltFx(e.x, e.z, epic ? 2.4 : 1.4, 9, epic); shake(epic ? .18 : .06); if (epic || Math.random() < .5) sfx(epic ? 'storm_big' : 'storm'); } } }, // about one strike in four is an extra-heavy one
+      fx: { bolt(e) { const epic = Math.random() < .38; bigBoltFx(e.x, e.z, epic ? 2.6 : 1.5, 9, epic);  shake(epic ? .18 : .06); if (epic || Math.random() < .5) sfx(epic ? 'storm_big' : 'storm'); } } }, // about one strike in three is an extra-heavy one (those light the whole sky, via bigBoltFx)
   ],
 },
 // ================================================================== WATER

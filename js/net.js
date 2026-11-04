@@ -492,6 +492,10 @@ function frame(now, manual = false) {
   // the sky's black hole flares while a Singularity is open, and burns brighter through boss waves
   const flare = src?.ents?.some(n => n.mv === 'gravity.4') ? 1 : src?.enemies?.some(e => e.type === 'boss') ? .45 : 0;
   skyU.uFlare.value += (flare - skyU.uFlare.value) * Math.min(1, dt * 3);
+  const storm = src?.ents?.some(n => n.mv === 'storm.4') ? 1 : 0; // Thunderstorm turns the whole sky into a storm for as long as it lasts
+  skyU.uStorm.value += (storm - skyU.uStorm.value) * Math.min(1, dt * (storm ? 1.8 : 1.2));
+  if (skyU.uStorm.value > .5 && Math.random() < dt * 1.4) skyU.uBolt.value = Math.max(skyU.uBolt.value, rand(.5, 1)); // distant lightning across the sky
+  skyU.uBolt.value = Math.max(0, skyU.uBolt.value - dt * 4.5);
   stepParticles(dt); stepFx(dt); stepFlashes(dt); stepNums(dt); cityFrame(dt, t);
   composer.render();
 }

@@ -52,11 +52,12 @@ const BH = V(.75, .46, -.57).normalize(), BH_R = .085; // BH_R: shadow radius in
 const BH_L = V().crossVectors(V(0, 1, 0), BH).normalize(); // screen-left of the black hole
 const PLANET = BH.clone().multiplyScalar(Math.cos(1.05)).addScaledVector(BH_L, Math.sin(1.05)).add(V(0, -.45, 0)).normalize(), PLANET_R = .78;
 const RINGN = V(-.41, .849, .334).normalize(); // ring plane normal: rings sweep under the black hole to the right horizon
-const skyU = { uTime, uFlare: { value: 0 }, uBH: { value: BH }, uP: { value: PLANET }, uPR: { value: PLANET_R }, uRingN: { value: RINGN } };
+const skyU = { uTime, uFlare: { value: 0 }, uStorm: { value: 0 }, uBolt: { value: 0 }, // uStorm: Thunderstorm's overcast (0-1), uBolt: a sky-wide lightning flash
+  uBH: { value: BH }, uP: { value: PLANET }, uPR: { value: PLANET_R }, uRingN: { value: RINGN } };
 const sky = new THREE.Mesh(new THREE.SphereGeometry(1500, 48, 24), new THREE.ShaderMaterial({
   side: THREE.BackSide, depthWrite: false, fog: false, uniforms: skyU,
   vertexShader: `varying vec3 vp; void main(){ vp = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
-  fragmentShader: `uniform float uTime, uPR, uFlare; uniform vec3 uBH, uP, uRingN; varying vec3 vp; ${GLSL_NOISE}
+  fragmentShader: `uniform float uTime, uPR, uFlare, uStorm, uBolt; uniform vec3 uBH, uP, uRingN; varying vec3 vp; ${GLSL_NOISE}
   vec3 space(vec3 d){
     float h = d.y;
     vec3 col = mix(vec3(.07,.07,.075), vec3(.012,.014,.02), smoothstep(-.05,.5,h));
@@ -112,7 +113,18 @@ const sky = new THREE.Mesh(new THREE.SphereGeometry(1500, 48, 24), new THREE.Sha
       vec3 dc = mix(white, mix(amber, dust, smoothstep(3.,7.,ax)), smoothstep(1.2,3.5,ax) * right);
       col += disk * dc * (.7 + .5 * fbm(vec3(ax * 2. - uTime * .5, y0 * 10., 1.))) * mix(2., 1.1, smoothstep(1.,4.,ax));
       col += dust * exp(-abs(y0) * 2.5) * smoothstep(10.,2.,ax) * right * .14;         // dusty haze round the tail
-    }    gl_FragColor = vec4(col, 1.); }`,
+    }
+    if (uStorm > .001) { // Thunderstorm: the whole sky churns into a dark storm front, lit from inside by the lightning
+      vec3 w = d * vec3(2.2, 4.5, 2.2) + vec3(uTime * .08, 0., uTime * .05);
+      float cl = fbm(w), cl2 = fbm(d * 7. + vec3(uTime * .2, uTime * .05, 0.));
+      vec3 st = mix(vec3(.035, .03, .06), vec3(.15, .13, .23), smoothstep(.25, .75, cl)) * (.75 + .5 * cl2);
+      st += vec3(.5, .42, .9) * uBolt * (.25 + 1.1 * smoothstep(.3, .8, cl));                       // the flash lights the cloud from inside
+      float vein = 1. - abs(fbm(d * vec3(5., 9., 5.) + vec3(floor(uTime * 3.) * 7.3)) * 2. - 1.);   // forked lightning running across the sky
+      st += vec3(.85, .78, 1.) * pow(vein, 22.) * uBolt * 4. * smoothstep(-.05, .25, d.y);
+      col = mix(col, st, uStorm * mix(.75, .95, smoothstep(-.1, .35, d.y)));
+    }
+    col += vec3(.25, .2, .45) * uBolt * .25;
+    gl_FragColor = vec4(col, 1.); }`,
 }));
 scene.add(sky);
 const skyBits = [sky]; // the open-sky scenery the dungeon hides
@@ -127,8 +139,8 @@ const skyBits = [sky]; // the open-sky scenery the dungeon hides
   g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('sz', new THREE.BufferAttribute(sz, 1)); g.setAttribute('ph', new THREE.BufferAttribute(ph, 1));
   const stars = new THREE.Points(g, new THREE.ShaderMaterial({
     uniforms: skyU, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false,
-    vertexShader: `attribute float sz; attribute float ph; uniform float uTime, uPR; uniform vec3 uBH, uP; varying float vA;
-      void main(){ vec3 n = normalize(position); vA = .55 + .45 * sin(uTime * (1.3 + ph * 2.) + ph * 40.);
+    vertexShader: `attribute float sz; attribute float ph; uniform float uTime, uPR, uStorm; uniform vec3 uBH, uP; varying float vA;
+      void main(){ vec3 n = normalize(position); vA = (.55 + .45 * sin(uTime * (1.3 + ph * 2.) + ph * 40.)) * (1. - uStorm); // hidden behind the storm
         gl_PointSize = dot(n, uBH) > ${Math.cos(BH_R * 1.4).toFixed(6)} || dot(n, uP) > cos(uPR) ? 0. : sz; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }`,
     fragmentShader: `varying float vA; void main(){ float d = length(gl_PointCoord - .5); if (d > .5) discard; gl_FragColor = vec4(vec3(.9,.9,1.) * vA * smoothstep(.5,0.,d) * 1.3, 1.); }`,
   }));
