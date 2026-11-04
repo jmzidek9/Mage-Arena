@@ -45,8 +45,8 @@ const myGuard = p => !!(keys[BIND.block] || virt.b) && !p.down && !(p.gk > 0) &&
 // The block is cast like a spell: the element's own casting circle (outer and inner rings, sigil) spins up in front of the
 // raised hand, with its signature piece (a frost wall, a bone cage, a spirit knight...) inside it. Others see it in front of
 // your wizard; a block that covers every side is a bubble round you.
-const BLOCK_LOOK = { // m: the signature model inside the circle, s: its size (1 = the circle's), f: a squash, y: lift, spin: turns a second, k: its particles
-  fire: { m: 'fire__flame', s: .9, k: 'flames' }, frost: { m: 'frost__wall', s: 1.1 }, storm: { m: 'storm__coil', s: .8, spin: 2, k: 'sparks' },
+const BLOCK_LOOK = { // m: the signature model inside the circle, s: its size (1 = the circle's), f: a squash, y: lift, spin: turns a second, k: its particles, tint: recolour a solid (non-glow) piece
+  fire: { m: 'fire__flame', s: .9, k: 'flames' }, frost: { m: 'frost__wall', s: 1.1, tint: 0x3aa8ff }, storm: { m: 'storm__coil', s: .8, spin: 2, k: 'sparks' },
   water: { m: 'gen__orb', k: 'bubble' }, earth: { m: 'earth__pillar', s: 1.2, f: [1.2, .8, .3], k: 'slab' }, wind: { m: 'wind__tornado', s: .9, spin: 4, k: 'swirl' },
   nature: { m: 'nature__roots', k: 'leaves' }, shadow: { m: 'gen__cloud', s: 1.1, k: 'smoke' }, light: { m: 'light__halo', spin: .6, k: 'rays' },
   venom: { m: 'venom__glob', s: .8, k: 'drip' }, steel: { m: 'steel__saw', s: 1.05 }, magma: { m: 'magma__glob', s: .85, k: 'embers' },
@@ -73,6 +73,7 @@ function guardMake(el) {
   const core = part(L.m, col, (omni ? 2.7 : 1.45) * (L.s ?? 1));
   if (core && L.f) core.scale.multiply(V(...L.f));
   if (core) core.position.y = L.y || 0;
+  if (core && L.tint) core.traverse(o => { const m = o.material; if (o.isMesh && m?.emissive && !m.uniforms) { m.color.set(L.tint); m.emissive.set(L.tint); m.emissiveIntensity *= .45; } }); // a solid piece (Frost's ice) in the element's colour: pale and glowing it bloomed into a white slab
   const mats = []; g.traverse(o => { if (o.material) for (const m of [].concat(o.material)) { m.transparent = true; m.depthWrite = false; m.side = THREE.DoubleSide; if (m.uniforms?.uCore) m.uniforms.uCore.value = 0; mats.push(m); } }); // uCore 0: the element's own colour, not white-hot (held at your face, the hot cores bloomed into a white blob)
   return { g, outer, inner, sig, core, mats, L, col, el, omni, a: 0, hit: 0, brk: 0, kp: 0, kv: 0, tilt: 0 };
 }
