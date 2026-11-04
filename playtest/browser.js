@@ -4,7 +4,14 @@ const { chromium } = require('playwright');
 const KEEP = ['--disable-gpu-watchdog', '--disable-renderer-backgrounding'];
 const GPU = ['--use-angle=d3d11', '--ignore-gpu-blocklist', '--enable-gpu-rasterization', ...KEEP];
 const SOFT = ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', ...KEEP];
-const launch = args => chromium.launch({ channel: process.env.PT_BROWSER || 'msedge', args });
+// No pointer lock in test pages: on Windows even headless Edge locks it by grabbing the real OS cursor,
+// which teleported the user's mouse to the middle of the screen and held it there during playtests.
+const NO_LOCK = () => { Element.prototype.requestPointerLock = function () { return Promise.resolve(); }; };
+const launch = async args => {
+  const b = await chromium.launch({ channel: process.env.PT_BROWSER || 'msedge', args }), np = b.newPage.bind(b);
+  b.newPage = async (...a) => { const p = await np(...a); await p.addInitScript(NO_LOCK); return p; };
+  return b;
+};
 
 async function gpuWorks(b) {
   const p = await b.newPage();
