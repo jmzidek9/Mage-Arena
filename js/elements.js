@@ -494,7 +494,7 @@ frost: {
         },
         drop: o => o.removeFromParent() },
       fx: { burst(e) { meshFx(T.shatter, V(e.x, 1.3, e.z), .6, .6, 2.6, 4); burst(e.x, 1.3, e.z, 40, 0xcff4ff, 9, .25, .5, 4); ringFx(e.x, .1, e.z, 4, 0x9fe6ff, .45); flash(e.x, 1.5, e.z, 0x7ad8ff, 30, .25); sfx('frost_big'); sfx('tink'); shake(.12); } } },
-    { name: 'Frost Nova', icon: '💠', cd: 11, desc: 'Blast frost in every direction, freezing nearby enemies solid.',
+    { name: 'Frost Nova', icon: '💠', cd: 11, desc: 'Ice erupts from the ground all around you in three racing waves of spikes, freezing nearby enemies solid.',
       cast(p, c) { boomAt(c, p.x, .5, p.z, 7.5, 34 * c.dmg, { kb: 2, cc: ['freeze', 2] }, 'nova'); },
       fx: { nova(e) { // ice erupts from the ground: three waves of tall spikes racing outward, frost spreading underneath, cold mist rolling off
         ringFx(e.x, .1, e.z, e.r, 0x4cc8ff, .5); scarFx(e.x, e.z, e.r * .95, 0x7ad8ff, 3); // frost spreading over the floor
