@@ -6,6 +6,39 @@ Browser first-person magic game (Arena / 1v1 Duel / Dungeon). Edit `src/index.ht
 - Every move has its own painted icon in `js/icons.js`, keyed by element and slot (`fire` slot 0 = Fireball). The icon must show what the move actually does.
 - **Whenever a move is added, removed, reordered, renamed or changed in what it does or how it looks, update or redraw its icon to match in the same change.** Preview it next to the other icons of that element (they should each look clearly different) before committing.
 
+## Checklist: adding or changing a move or an element
+Do every step, in order, whenever a move or element is added, changed, renamed or removed.
+
+**1. Build it** (`js/elements.js`)
+- Write the move in its element's `moves` list: `cast`, plus `shot` / `ent` / `view` / `fx` as needed. The `desc` must match what the move really does, with its real numbers.
+- New element only: also add its entries in `BLOCK` and `BLOCK_LOOK` (`js/blocks.js`), `ELMETA` (`js/view.js`), its sounds (`js/core.js`), its models (`blender/build_elements.py`, then the glb), and a `passive`, `react` and `st`.
+
+**2. Your own view** (first person must stay readable)
+- Beams, cones, waves and blasts start 1.5–4 m in front of you, not at your eyes.
+- Pulled monsters stop about 3 m away. Summons and orbiters appear ahead of you or above eye height, never on the camera.
+- No white-outs: `flash()` is capped at 40; only use `whiteFx` with `Math.max(whiteFx, ≤ .6)`.
+- Anything attached to the camera uses `nearOff()`, so the near-camera fade doesn't hide it.
+
+**3. Performance**
+- Keep a move under about 500 particles at its peak (the pool holds 4000). Build models when the game loads (`warmFx` in `js/view.js`), not on the first cast.
+
+**4. Icon** (`js/icons.js`)
+- Draw or redraw the move's icon so it shows what the move does, and preview it next to the element's other 4 icons.
+
+**5. Balance**
+- `python pack.py`, then `node playtest/bench.js <outDir> <el>[,<el>]`. It runs 3 fights each and shows damage per move. Put `<outDir>` in the scratchpad or `playtest/out/`.
+- Compare with the median from a full bench (all elements). Aim for 0.85–1.2× on both crowd and boss. Control elements may sit lower.
+- Single runs swing ±0.15, so only act on bigger gaps. Check the per-move numbers to find the move to change.
+- Ultimates never charge themselves (`S.ultSrc`). Keep that intact for anything an ultimate spawns.
+
+**6. Check it**
+- `python pack.py`, `node playtest/selftest.js` (must pass), and `node playtest/run.js <el> moves --out <scratchpad dir>`. Look at the screenshots for anything covering the view, and the log for console errors.
+- Afterwards, make sure no headless Edge or `playtest/*.js` process is left running.
+
+**7. Notes and save**
+- Update the move or element in `vault/Elements.md` (move table, passive, and a line in Balance if numbers changed).
+- Commit and push. Then run `graphify update .` once and copy `GRAPH_REPORT.md` to `vault/Graph Report.md`.
+
 ## Knowledge
 - `vault/` is the Obsidian vault of hand-written design notes. Keep it to real notes only.
 - `graphify-out/graph.json` is the graphify knowledge graph of the code + vault notes. For questions about how things connect, run `graphify query "<question>"` first.
