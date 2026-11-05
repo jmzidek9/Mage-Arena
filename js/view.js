@@ -1380,7 +1380,7 @@ $('unlockAll').onclick = () => { PROG.unl = ELIST.slice(); PROG.keys = 0; savePr
 $('talReset').onclick = () => { PROG.tal = cleanTal({}); saveProg(); renderTalents(); renderProg(); };
 $('talClose').onclick = () => $('talents').classList.add('hidden');
 
-// ===================== lobby: 30 elements =====================
+// ===================== lobby: 29 elements =====================
 // picker info per element: playstyle tags, difficulty (1-3) and the model its preview shows
 const ELMETA = {
   fire: ['Burst', 'Area', 1, 'fire__phoenix'], frost: ['Control', 'Burst', 1, 'frost__lance'], storm: ['Chain', 'Burst', 2, 'storm__coil'],

@@ -1,6 +1,6 @@
 # Elements
 
-30 elements, each with its own passive and 5 moves on **LMB, RMB, Q, E** and **R** (the ultimate, which charges as you deal damage and kill).
+29 elements, each with its own passive and 5 moves on **LMB, RMB, Q, E** and **R** (the ultimate, which charges as you deal damage and kill).
 Each element applies its own status on hit. Element combos were removed on 2026-11-04: an enemy can carry several elements' statuses at once and nothing reacts (see [[Combos]] for what they used to do). The reaction column below is historical.
 Everything here is generated from `js/elements.js` (the `ELEMENTS` table), so it matches the game.
 
@@ -18,7 +18,7 @@ Move modes: **tap** casts on press (LMB repeats while held), **hold to aim** sho
 | 🌑 Shadow | cursed | NIGHTFALL (drain) |
 | ☀️ Light | radiant | SMITE (heal) |
 | ☠️ Venom | poisoned | CONTAGION (spread) |
-| 🧲 Steel | rended | SHRAPNEL (shatter) |
+| 🧲 Steel (removed) | rended | SHRAPNEL (shatter) |
 | 🌋 Magma | molten | ERUPTION (blast) |
 | 💎 Crystal | refracted | PRISM (shatter) |
 | 🔊 Sonic | resonant | FEEDBACK (stun) |
@@ -176,18 +176,8 @@ A slow, nasty death. Stack poison on everything with gas, acid and fangs, and le
 | E | 🦂 **Scorpion Sting** *(hold to aim, release to cast)* | 9 s | A giant scorpion tail bursts out of the ground at the target and stings the enemy nearest it 3 times: 20 damage and 2 poison stacks per sting, and the last sting flings it into the air. The tail lashes everything within 2.5 m of where it strikes for 8. |
 | R | 🐉 **Hydra** *(hold to aim, release to cast)* | ultimate | A three-headed venom hydra bursts out of the ground at the target for 6 s. Each head spits venom at a different enemy within 16 m every 0.4 s: 7 damage and a poison stack around the hit, and a small toxic puddle. Then it dives back into the ground in a poison eruption: 60 to everything within 6 m. |
 
-## 🧲 Steel
-Heavy metal and magnetism. Boomerang saws, railguns, magnets that slam enemies together and a wrecking ball. Shields mean nothing to you.
-
-**Passive.** Armor Breaker: Rend stacks 3 times (+6% damage taken each). At 3 stacks your hits go straight through shields.
-
-| Key | Move | Cooldown | What it does |
-|---|---|---|---|
-| LMB | 🪚 **Saw Blade** | 0.6 s | Throw a spinning saw that slices through enemies, then comes back and slices them again. |
-| RMB | 🔫 **Railgun** *(hold to charge)* | 4 s | Hold to charge a hypersonic rail spike that pierces every enemy in a line and blasts them far back. The recoil shoves you backward too. Full charge adds 2 Rend stacks. |
-| Q | 🧲 **Magnetize** | 8 s | Magnetize every enemy in front of you and drag them right to your feet, stunned. |
-| E | 🧲 **Polarity** | 10 s | Charge up to 8 enemies in front of you (14 m), alternating red (+) and blue (−). A moment later every opposite pair is yanked into each other and crashes together: 35 damage to both and a 1.2 s stun. A charge with no partner is pulled to you for 20. Bosses only take the damage. |
-| R | ⚫ **Wrecking Ball** | ultimate | Swing a colossal spiked iron ball on a magnetic chain round yourself for 4 s, paying the chain out to 9.5 m and reeling it back: everything it sweeps through takes 30 and is flung far away (a boss, too heavy to fling, takes 60). Then it smashes down wherever you are looking: 110 damage and a 1 s stun to everything within 5 m. |
+## 🧲 Steel (removed)
+Removed from the game on 2026-11-04 at the player's request. Its code and icons are in `archive/steel-2026-11-04/` (paste back into `js/elements.js` and `js/icons.js` to restore).
 
 ## 🌋 Magma
 Slow and devastating. Flood the island with lava and drop a meteor on anything left standing.
@@ -440,6 +430,8 @@ A calligrapher. Living ink: brush strokes that mire, koi that hunt, and a dragon
 
 ## Balance
 **Ability rework, part 1 (2026-11-04):** Water Whip became Riptide Ring and Surf became Waterfall; Gale Force became Jet Stream; Parasite Seed became Vine Slam and Snaptrap became Bramble Wall. Tsunami, Tectonic Quake, Entangle and World Tree got new looks (a curling crest and spray, racing molten cracks and rings of spikes, roots tearing up round the area, vines whipping out of the tree). Bench after: Water 1.07 / 0.88, Earth 0.85 / 0.99, Nature 0.83 / 0.90 (then Vine Slam 25 + 15 raised to 30 + 20), Wind 0.74 / 1.00 (control kit). Riptide Ring bursts on a boss instead of passing through it.
+
+**After removing combos and Steel (2026-11-04):** full bench, median crowd 175.8 / boss 138.7. Tuned the outliers: Meteor 135 → 110 (Magma 1.30 → 1.08 crowd), The Reaper 70 → 85 a sweep (Soul 0.74 → 0.85), Arcane Torrent missiles 16 → 22 (Arcane 0.73 → 0.83 crowd, 1.31 boss), Rain of Blades 28 → 36 (Blades 0.76 → 0.81). Gravity (0.61) and Sonic (0.65) stay low on bosses, as before: they are crowd-control kits.
 
 **Visual pass (2026-11-04):** every move of Magma, Crystal, Sonic, Gravity, Chrono, Blood, Spirit, Cosmic, Explosion, Illusion, Bone, Rune, Plasma, Soul, Abyss, Laser, Arcane, Blades and Ink got stronger looks (no number changes), built on shared helpers in `js/elements.js`: lavaSplash, prismFx/prismRays, eqBars, clockFx, bloodSplat, starPop, deepSplash, plasmaArcs, runeLetters, bladeCut, quakeCracks, plus a per-projectile `look.upd` hook (`js/view.js`). The Blood Moon turns the sky red (`uRed`), the Eclipse turns it dark (`uEclipse`). Fixed on the way: Heat Wave's wall never showed (its width wasn't sent to clients), and Supernova, Singularity, Phantasmagoria, Word of Ruin and Kraken flashed far above the 40 cap; Vent and Fusion Beam no longer white out your own view.
 
