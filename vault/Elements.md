@@ -1,7 +1,7 @@
 # Elements
 
 30 elements, each with its own passive and 5 moves on **LMB, RMB, Q, E** and **R** (the ultimate, which charges as you deal damage and kill).
-Each element applies its own status on hit; hitting an enemy that carries a *different* element's status triggers a reaction (see [[Combos]]).
+Each element applies its own status on hit. Element combos were removed on 2026-11-04: an enemy can carry several elements' statuses at once and nothing reacts (see [[Combos]] for what they used to do). The reaction column below is historical.
 Everything here is generated from `js/elements.js` (the `ELEMENTS` table), so it matches the game.
 
 Move modes: **tap** casts on press (LMB repeats while held), **hold to aim** shows a ground reticle and casts on release, **hold to charge** powers up the longer you hold, **hold** channels while held.

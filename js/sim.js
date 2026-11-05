@@ -323,10 +323,7 @@ function hitEnemy(e, el, amount, p, kx = 0, kz = 0, kb = 3, o = {}) {
       return damage(e, amount * .15, el, p, { blocked: true });
     }
   }
-  if (!o.noCombo) {
-    const other = Object.keys(e.st).find(k => e.st[k] > 0 && k !== el);
-    if (other) { delete e.st[other]; delete e.stk[other]; react(other, el, e, p); if (e.dead) return 0; }
-  }
+  // no element combos (removed 2026-11-04 at the player's request): two elements on one enemy simply both apply; the reaction code below is kept, unused, in case they come back
   if (!o.noStatus) applyStatus(e, el, p);
   let mul = o.crit || 1;
   if (p && (p.cur === 'shadow')) { const sx = p.x - e.x, sz = p.z - e.z, d = Math.hypot(sx, sz) || 1; if ((sx * Math.sin(e.yaw) + sz * Math.cos(e.yaw)) / d < -.3) mul *= 1.5; }

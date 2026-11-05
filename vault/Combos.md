@@ -1,3 +1,5 @@
+> **Removed (2026-11-04).** Element combos no longer happen: two elements on one enemy simply both apply. This note records how they worked; the code (`react`, `reactionOf` in `js/sim.js`) is kept but never called.
+
 # Combos (reactions)
 
 Every element applies its own status on hit. A reaction triggers when an enemy already has a status from one element and gets hit by a **different** element: the status is consumed, the game freezes for a frame (hit-stop), and the reaction name pops up on screen. With one element you can only react with your partner, or with your second element (Tab).

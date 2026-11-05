@@ -320,10 +320,7 @@ function selfTest() {
   t('every element has a cast sound for basic attacks and for its other moves', ELIST.every(k => SFX[k] && SFX[k + '_big']));
   t('every move has its own painted icon (js/icons.js)', Object.values(MOVE).filter(m => m.el).every(m => SPELL_ART[m.el]?.[m.slot]) && Object.keys(SPELL_ART).every(el => EL[el] && SPELL_ART[el].length === EL[el].moves.length));
   t('every model a move asks for exists', Object.values(MOVE).filter(m => m.look).every(m => m.look.m === 'T.shard' || NODE[m.look.m]));
-  t('burn + frost = STEAM', reactionOf('fire', 'frost').name === 'STEAM');
-  t('frost + storm = SHATTER', reactionOf('frost', 'storm').name === 'SHATTER');
-  t('storm + fire = OVERLOAD', reactionOf('storm', 'fire').name === 'OVERLOAD');
-  t('every element pair reacts', ELIST.every(a => ELIST.every(b => a === b || reactionOf(a, b).name)));
+  t('two different elements on one enemy never set off a combo', !hitEnemy.toString().includes('react('));
   t('wave budget 16 + 7w', waveBudget(1) === 23 && waveBudget(10) === 86);
   // dungeon: monsters can path between any two places, the stairwells sit clear of every room and hall, the stairs are in the
   // farthest room, boss rooms come every 5th floor, and each floor's arrival stairwell lands exactly on the floor above's departure one
