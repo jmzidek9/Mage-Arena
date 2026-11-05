@@ -94,9 +94,9 @@ Push and pull. Wash enemies off the island, scoop them up, trap them and pound t
 |---|---|---|---|
 | LMB | 💧 **Aqua Bullets** | 0.14 s | Rapid-fire water bullets with heavy knockback. |
 | RMB | 🌀 **Riptide Ring** | 4.5 s | Hurl a spinning ring of water 15 m ahead. It scoops up the enemies it touches (up to 5), hits them for 16 and carries them along inside it, then bursts at the end of its run: 30 damage to everything within 4 m, flinging them away. A boss is too heavy to carry: the ring bursts on it. |
-| Q | 🫧 **Bubble Prison** | 9 s | Trap an enemy in a floating bubble. It is helpless and takes 30% more damage. |
+| Q | 💦 **Water Cannon** | 7 s | Blast a thick jet of pressurised water 14 m straight ahead for 0.8 s. Everything caught in it takes 6 every 0.1 s and is driven back along the jet, then shoved off the end of it. Bosses only budge a little. |
 | E | 🚿 **Waterfall** *(hold to aim, release to cast)* | 10 s | A waterfall crashes down on the target for 3 s. Enemies under it (3 m) are pinned and pounded for 8 every 0.25 s. When it stops, the pool it leaves surges outward: 35 damage to everything within 6 m, sweeping them away. |
-| R | 🌊 **Tsunami** | ultimate | Unleash a towering wave that sweeps across the island, carrying enemies with it, often right off the edge. |
+| R | 🌊 **Tsunami** | ultimate | Unleash a towering wave that rolls 46 m across the island, carrying enemies with it, often right off the edge. |
 
 ## 🪨 Earth
 Heavy and unstoppable. Launch enemies into the air and stagger even the biggest brutes.
@@ -133,21 +133,21 @@ Patient and resilient. Root enemies in place, wall them off with brambles and sl
 |---|---|---|---|
 | LMB | 🌵 **Thorn Volley** | 0.5 s | Fire a quick burst of three barbed thorns. They stick in the enemy, and every 6th thorn in the same enemy makes them all burst out for 12. |
 | RMB | 🪴 **Entangle** *(hold to aim, release to cast)* | 6 s | Roots burst from the ground and hold every enemy in the area in place. As long as they have something to hold, the roots keep spreading: 1 m wider every second, up to 7 m, catching anyone nearby. |
-| Q | 🌿 **Vine Slam** | 8 s | Lash a vine at the first enemy in your sights (16 m). It is hoisted up and slammed into the ground 3 times, side to side: 30 damage per slam, plus 20 to every enemy within 2.5 m of where it lands. Then it is flung away. Bosses are too heavy to lift: they are rooted and take the slams where they stand. |
+| Q | 🍄 **Sleepcaps** | 9 s | Toss three glowing mushrooms ahead of you. They take root and grow for 1 s, then wait up to 10 s. When a monster comes within 3 m of one, it bursts in a cloud of sleep spores: 28 damage and 2.5 s of deep sleep to every enemy within 3.5 m. |
 | E | 🌵 **Bramble Wall** *(hold to aim, release to cast)* | 12 s | Raise a 10 m hedge of thorny brambles across the target for 5 s, side-on to you. Monsters cannot walk through it and enemy shots stop dead in it. Anything touching it is slowed and takes 12 every 0.5 s. When it withers it bursts into a hail of thorns: 25 to everything within 2.5 m of it. |
 | R | 🌳 **World Tree** *(hold to aim, release to cast)* | ultimate | Grow a great tree that roots every enemy around it and lashes them with vines. |
 
 ## 🌑 Shadow
-An assassin. Blind enemies, snare them, ambush them from every side and strike from the dark.
+An assassin. Drag enemies into the dark, snare them, ambush them from every side and strike from behind.
 
 **Passive.** Assassin: hits on an enemy's back deal 50% more damage. Cursed enemies take 15% more damage.
 
 | Key | Move | Cooldown | What it does |
 |---|---|---|---|
 | LMB | 🗡️ **Shadow Daggers** | 0.45 s | Throw a fan of three shadow daggers. |
-| RMB | 🌑 **Blackout** *(hold to aim, release to cast)* | 6 s | Hurl an orb of darkness that bursts into a choking cloud for 3 s. Every enemy it catches, or that walks in, is blinded: hit for 16, stunned for 1.5 s and spun round, its back wide open to your Assassin bonus. |
+| RMB | 🕳️ **Nightmare Pit** *(hold to aim, release to cast)* | 6 s | Tear open a pit of living darkness at the target for 2 s. Every enemy in it is dragged down into the floor, helpless, taking 10 every 0.25 s. Then shadow spikes burst out of the pit and hurl them back up for 30 more. Bosses are too big to swallow: they only take the damage. |
 | Q | 🕸️ **Shadow Snare** *(hold to aim, release to cast)* | 7 s | A pool of darkness opens at the target and shadow tendrils burst out of it, seizing every enemy in the area: 18 damage, held in place for 1.5 s and dragged into the middle. While held they take 40% more damage. |
-| E | 🥷 **Shade Ambush** *(hold to aim, release to cast)* | 9 s | Three shadow assassins rise from the ground around the target, then one after another dash straight through it from three sides: each dash cuts every enemy in its path for 30 and stuns it for 0.5 s. |
+| E | 🥷 **Shade Ambush** *(hold to aim, release to cast)* | 9 s | Three shadow assassins climb out of the ground around the target, daggers drawn, then one after another dash straight through it from three sides: each dash cuts every enemy in its path for 30 and stuns it for 0.5 s. |
 | R | 🌑 **Eclipse** | ultimate | A black sun rises and night falls for 5 s. Every enemy within 20 m (up to 14) is blinded, unable to attack, and shadows slash it for 22 every 0.6 s. When the light returns, every one of them is cut down for 60 more. |
 
 ## ☀️ Light
@@ -172,9 +172,9 @@ A slow, nasty death. Stack poison on everything with gas, acid and fangs, and le
 |---|---|---|---|
 | LMB | 🤮 **Venom Spit** | 0.55 s | Lob a glob of venom that splashes and leaves a toxic puddle. Every monster that dies in a puddle makes it grow and last longer. |
 | RMB | ☁️ **Toxic Cloud** *(hold to aim, release to cast)* | 7 s | Release a drifting cloud of poison gas that stacks poison on everything inside it. |
-| Q | 🐍 **Serpent** | 7 s | Send a venom serpent slithering across the ground for 4.5 s. It hunts one enemy after another, biting each for 9 and poisoning it 3 times; it can bite the same enemy again after 1.5 s. |
-| E | 🌧️ **Acid Rain** *(hold to aim, release to cast)* | 10 s | A sick green storm cloud gathers over the target and pours acid on it for 4 s. Every 0.5 s everything under it takes 6, gains a poison stack and is left Melting: 20% more damage taken while the rain lasts. |
-| R | 🐉 **Hydra** *(hold to aim, release to cast)* | ultimate | A three-headed venom hydra bursts out of the ground at the target for 7 s. Each head spits venom at a different enemy within 16 m every 0.4 s: 8 damage and a poison stack around the hit, and a small toxic puddle. Then it dives back into the ground in a poison eruption: 60 to everything within 6 m. |
+| Q | 🐍 **Serpent** | 7 s | Send a venom serpent racing across the ground for 4.5 s. It locks onto the nearest enemy within 18 m, lunges at it, bites it for 9 and poisons it twice, then darts to the next one; it can bite the same enemy again after 1.5 s. |
+| E | 🦂 **Scorpion Sting** *(hold to aim, release to cast)* | 9 s | A giant scorpion tail bursts out of the ground at the target and stings the enemy nearest it 3 times: 20 damage and 2 poison stacks per sting, and the last sting flings it into the air. The tail lashes everything within 2.5 m of where it strikes for 8. |
+| R | 🐉 **Hydra** *(hold to aim, release to cast)* | ultimate | A three-headed venom hydra bursts out of the ground at the target for 6 s. Each head spits venom at a different enemy within 16 m every 0.4 s: 7 damage and a poison stack around the hit, and a small toxic puddle. Then it dives back into the ground in a poison eruption: 60 to everything within 6 m. |
 
 ## ⚔️ Steel
 A blade master. Boomerang saws, railguns and a storm of swords. Shields mean nothing to you.
@@ -440,6 +440,8 @@ A calligrapher. Living ink: brush strokes that mire, koi that hunt, and a dragon
 
 ## Balance
 **Ability rework, part 1 (2026-11-04):** Water Whip became Riptide Ring and Surf became Waterfall; Gale Force became Jet Stream; Parasite Seed became Vine Slam and Snaptrap became Bramble Wall. Tsunami, Tectonic Quake, Entangle and World Tree got new looks (a curling crest and spray, racing molten cracks and rings of spikes, roots tearing up round the area, vines whipping out of the tree). Bench after: Water 1.07 / 0.88, Earth 0.85 / 0.99, Nature 0.83 / 0.90 (then Vine Slam 25 + 15 raised to 30 + 20), Wind 0.74 / 1.00 (control kit). Riptide Ring bursts on a boss instead of passing through it.
+
+**Ability rework, part 3 (2026-11-04):** Bubble Prison became Water Cannon and Tsunami now rolls 46 m (life 2.6 → 4.2 s); Vine Slam became Sleepcaps; Blackout became Nightmare Pit and Shade Ambush is slower (assassins rise over 0.9 s, dashes 0.38 s apart) with daggers, afterimages and a triple-slash mark; Penance shows a shaft of light, a bigger halo and spears, and a sigil under each branded enemy; Serpent moves 16 m/s (lunging at 26), turns hard and looks 18 m ahead; Acid Rain became Scorpion Sting so Venom's E is no longer a second cloud; Hydra got spines, horns, a bubbling pool and mist. Bench after: Water 0.88 / 0.91, Nature 0.81 / 0.89 (Sleepcaps 28, World Tree vines 30), Shadow 1.09 / 1.11, Light 0.96 / 1.15, Venom 1.20 / 0.86 (Serpent poisons twice per bite, Hydra 6 s and 7 per spit). Nature's Q and E icons were still the old Parasite Seed and Snaptrap pictures; fixed.
 
 **Ability rework, part 2 (2026-11-04):** Shadow Swap became Shade Ambush and Night Terror became Eclipse (the sky goes dark under a black sun); Shadow Snare now shows its tendrils and a +40% mark on everyone it holds. Blinding Flash got rays and a fan of light, Penance shows the two spears hanging over each branded enemy, and Divine Judgment locks onto the monster under your crosshair (before, it only followed the floor point, so aiming at a body sent it far behind). Toxic Cloud is real billowing gas; Serpent lives 4.5 s instead of 1.6 s, hunts from enemy to enemy and has a body; Contagion became Acid Rain and Plague Swarm became Hydra. Bench after: Shadow 1.02 / 1.10, Light 0.86 / 1.18 (Divine Judgment hits bosses for 30%, since it now actually stays on them; 16 per tick instead of 14), Venom 1.16 / 0.92 (Hydra spits 8 and 1 stack, puddles 1.5 s; Hydra puddles count as Venom Spit in the per-move numbers). The move showcase (`run.js moves`) now aims aimed moves at the monsters' feet instead of over their heads; the bench still aims the old way, so its numbers stay comparable.
 

@@ -393,19 +393,28 @@ const PEN = new Map();
 function lookPoint(p, max = 40) { const h = rayHits(eyeOf(p), aimOf(p), max, .8)[0]; return h ? V(h.e.x, 0, h.e.z) : groundAt(p, max); }
 // Venom: the Hydra's scaly necks, its live views by entity id (spit events find their head there), and where head i sits at time t
 const hydraMat = () => new THREE.MeshStandardMaterial({ color: 0x3a6a14, emissive: 0x4a9a18, emissiveIntensity: .3, roughness: .45, metalness: .1, transparent: true });
-const HYDRA = new Map();
+const HYDRA = new Map(), STING = new Map(); // live views by entity id, so their events find them
 // a scaly snake head (Serpent, Hydra): skull, hinged jaw, red eyes, white fangs and a cobra hood, looking down +z
 const SNAKE = { skull: new THREE.SphereGeometry(1, 14, 10).scale(.5, .36, .95).translate(0, .05, .55), jaw: new THREE.SphereGeometry(1, 12, 6, 0, TAU, Math.PI / 2, Math.PI / 2).scale(.44, .22, .85).translate(0, -.02, .5),
   hood: new THREE.CircleGeometry(1, 16).scale(1.05, .8, 1), eye: new THREE.SphereGeometry(.14, 8, 6), fang: new THREE.ConeGeometry(.055, .32, 6).rotateX(Math.PI), seg: new THREE.SphereGeometry(1, 12, 8) };
-function snakeHead(s = 1, hood = false) {
+function snakeHead(s = 1, hood = false, horns = false) {
   const g = new THREE.Group(), m = hydraMat(), em = new THREE.MeshBasicMaterial({ color: 0xffd040, transparent: true }), fm = new THREE.MeshStandardMaterial({ color: 0xf4f0d8, roughness: .4, transparent: true });
   const sk = new THREE.Mesh(SNAKE.skull, m), jw = new THREE.Mesh(SNAKE.jaw, m); g.add(sk, jw);
   if (hood) { const h = new THREE.Mesh(SNAKE.hood, m); h.position.set(0, -.05, .05); h.material.side = THREE.DoubleSide; g.add(h); }
   for (const x of [-.26, .26]) { const e = new THREE.Mesh(SNAKE.eye, em); e.position.set(x, .2, .8); g.add(e); const f = new THREE.Mesh(SNAKE.fang, fm); f.position.set(x * .55, -.12, .98); g.add(f); }
+  if (horns) for (const [x, r] of [[-.22, -.5], [0, 0], [.22, .5]]) { const h = new THREE.Mesh(SNAKE.fang, fm); h.scale.set(1.4, 1.6, 1.4); h.position.set(x, .4, .25); h.rotation.set(-2.4, 0, r); g.add(h); } // a crest of horns sweeping back
   g.scale.setScalar(s); Object.assign(g.userData, { mats: [m, fm, em], jaw: jw }); return g;
 }
 
 function hydraHead(n, i, t, k = 1) { const an = TAU * i / 3 + .5, sw = t * 1.3 + i * 2.1; return V(n.x + Math.cos(an) * (3 + Math.sin(sw) * .6), (5.2 + i * .7 + Math.sin(sw * 1.3) * .5) * k, n.z + Math.sin(an) * (2.4 + Math.cos(sw) * .6)); }
+// Nature: a glowing toadstool (Sleepcaps): a pale stem, a domed cap that glows teal underneath, pale spots
+const MUSH = { stem: new THREE.CylinderGeometry(.12, .18, .7, 10).translate(0, .35, 0), cap: new THREE.SphereGeometry(.55, 16, 8, 0, TAU, 0, Math.PI / 2).scale(1, .7, 1).translate(0, .62, 0), gill: new THREE.CircleGeometry(.54, 16).rotateX(Math.PI / 2).translate(0, .62, 0), spot: new THREE.SphereGeometry(.07, 6, 4) };
+function mushroom() {
+  const g = new THREE.Group(), sm = new THREE.MeshStandardMaterial({ color: 0xe8e0c8, roughness: .8, transparent: true }), cm = new THREE.MeshStandardMaterial({ color: 0x2a8a6a, emissive: 0x2affb0, emissiveIntensity: .35, roughness: .5, transparent: true }), gm = energyMat(0x7affd0, true, true);
+  g.add(new THREE.Mesh(MUSH.stem, sm), new THREE.Mesh(MUSH.cap, cm), new THREE.Mesh(MUSH.gill, gm));
+  for (let i = 0; i < 7; i++) { const a = rand(0, TAU), r = rand(.15, .45), s = new THREE.Mesh(MUSH.spot, sm); s.position.set(Math.cos(a) * r, .62 + Math.sqrt(Math.max(0, .55 * .55 - r * r)) * .7, Math.sin(a) * r); g.add(s); }
+  g.userData.mats = [sm, cm, gm]; g.scale.setScalar(.01); return g;
+}
 const WARM = []; // client: extra meshes and shaders compiled at game start (warmFx), so their first cast does not hitch
 WARM.push(() => snakeHead(1, true));
 WARM.push(() => vineChain(2));
@@ -744,10 +753,24 @@ water: {
         drop: o => o.removeFromParent() },
       fx: { catch(e) { burst(e.x, e.y, e.z, 16, 0xbfe8ff, 6, .15, .35, 8); ringFx(e.x, e.y, e.z, 1.2, 0x9fd8ff, .2); popNum(e.x, e.y + .8, e.z, 'CAUGHT', '#9fd8ff', 'tag'); sfx('water'); },
         burst(e) { splashFx(e.x, e.z, e.r, 1); } } },
-    { name: 'Bubble Prison', icon: '🫧', cd: 9, desc: 'Trap an enemy in a floating bubble. It is helpless and takes 30% more damage.',
-      cast(p, c) { shoot(p, c, 26, { r: .5, life: 1.5, dmg: 10 * c.dmg }); },
-      shot: { hit(s, e) { const p = own(s); hitEnemy(e, 'water', s.dmg, p, 0, 0, 0); if (!cc(e, 'bubble', 3, p)) damage(e, 30 * s.mul, 'water', p); return 'end'; } },
-      look: { m: 'gen__orb', s: .45, trail: [0xbfe8ff, .15, .3, 0, 1], light: 4 },
+    { name: 'Water Cannon', icon: '💦', cd: 7, desc: 'Blast a thick jet of pressurised water 14 m straight ahead for 0.8 s. Everything caught in it takes 6 every 0.1 s and is driven back along the jet, then shoved off the end of it. Bosses only budge a little.',
+      cast(p, c) { const f = c.flat; ent(p, c, p.x + f.x * 15.5, p.z + f.z * 15.5, { life: .8, r: 1.3, fx0: p.x + f.x * 1.5, fz0: p.z + f.z * 1.5, dx: f.x, dz: f.z, y: p.y }); },
+      ent: { tick(n, dt) { const hit = pulse(n, dt, .1), p = own(n);
+          for (const e of nearSeg(n, n.r)) { if (hit) hitEnemy(e, 'water', 6 * n.mul, p, 0, 0, 0, { aoe: true }); const k = (ET[e.type].boss ? 2 : 15) * ET[e.type].kb ** .3; e.x += n.dx * k * dt; e.z += n.dz * k * dt; e.atk = null; } },
+        end(n) { for (const e of nearSeg(n, n.r + .5)) { const k = ET[e.type].kb * (ET[e.type].boss ? 1 : 12); e.kx += n.dx * k; e.kz += n.dz * k; } } },
+      view: { make(n) { // a roaring tube of water from just ahead of your hand to 14 m out, a thinner faster core inside it, spray boiling off the far end
+          const g = new THREE.Group(), u = g.userData, a = new THREE.Mesh(_bgeo, waterMat(0, -3.5, .55)), b = new THREE.Mesh(_bgeo, waterMat(.3, -6, .7)); g.add(a, b);
+          Object.assign(u, { a, b, mats: [a.material, b.material], mist: 0 }); sfx('water_big'); return g; },
+        upd(o, n, dt, t) {
+          const u = o.userData, mine = n.own === myId, y = (n.y || 0) + (mine ? .8 : 1.2), off = mine ? 2 : 0, L = Math.hypot(n.x - n.fx0, n.z - n.fz0) - off, k = Math.min(1, n.t * 10), R = (mine ? .3 : .6) * (1 + .1 * Math.sin(t * 40));
+          o.position.set(n.fx0 + n.dx * off, y, n.fz0 + n.dz * off); o.lookAt(n.x, y, n.z); // your own jet starts further out and thinner: seen end-on it filled the view
+          u.a.scale.set(R, R, L * k); u.b.scale.set(R * .45, R * .45, L * k); fade(o, Math.min(1, n.l * 6));
+          const ex = n.fx0 + (n.x - n.fx0) * k, ez = n.fz0 + (n.z - n.fz0) * k;
+          for (let i = 0; i < 6; i++) emit(ex, y, ez, n.dx * rand(4, 9) + rand(-4, 4), rand(1, 5), n.dz * rand(4, 9) + rand(-4, 4), Math.random() < .5 ? 0xffffff : 0x7fc8ff, rand(.12, .25), .5, 12); // spray off the end
+          for (let i = 0; i < 2; i++) { const s = rand(.15, 1) * k; emit(n.fx0 + (n.x - n.fx0) * s + rand(-.4, .4), y + rand(-.3, .3), n.fz0 + (n.z - n.fz0) * s + rand(-.4, .4), n.dx * 14, rand(-1, 1), n.dz * 14, 0xbfe8ff, rand(.06, .12), .3, 2); } // droplets streaming along it
+          if ((u.mist -= dt) <= 0) { u.mist = .12; if (distTo(ex, ez) > 6) smokeFx(ex, y, ez, 1.2, 0xd8ecff, .8, 1, .6); wetFx(ex + rand(-1, 1), ez + rand(-1, 1), 1.6, 2); }
+          if (mine && n.t < .1) { fovKick = Math.max(fovKick, .6); shake(.08); } },
+        drop: dropFade(.2) },
       fx: { pop(e) { burst(e.x, e.y, e.z, 30, 0xbfe8ff, 6, .25, .4, 6); sfx('tink'); } } },
     { name: 'Waterfall', icon: '🚿', cd: 10, mode: 'aim', range: 18, aimR: 3, desc: 'A waterfall crashes down on the target for 3 s. Enemies under it (3 m) are pinned and pounded for 8 every 0.25 s. When it stops, the pool it leaves surges outward: 35 damage to everything within 6 m, sweeping them away.',
       cast(p, c) { ent(p, c, c.tgt.x, c.tgt.z, { life: 3, r: 3 }); },
@@ -776,8 +799,8 @@ water: {
           splashFx(e.x, e.z, e.r, 1.2);
           const o = new THREE.Mesh(RING_GEO, waterMat(1, 0, .7)); o.position.set(e.x, .3, e.z);
           addFx(o, .5, (o, k) => { const s = e.r * (.2 + .9 * easeOut(k)); o.scale.set(s, 1 + 2 * (1 - k), s); o.material.uniforms.uA.value = 1 - k; }); } } },
-    { name: 'Tsunami', icon: '🌊', desc: 'ULTIMATE. Unleash a towering wave that sweeps across the island, carrying enemies with it, often right off the edge.',
-      cast(p, c) { const f = c.flat; ent(p, c, p.x + f.x * 4, p.z + f.z * 4, { life: 2.6, dx: f.x, dz: f.z, w: 9, yaw: Math.atan2(f.x, f.z), r: 7 }); }, // rises 4 m out, so the wave isn't a wall over your eyes
+    { name: 'Tsunami', icon: '🌊', desc: 'ULTIMATE. Unleash a towering wave that rolls 46 m across the island, carrying enemies with it, often right off the edge.',
+      cast(p, c) { const f = c.flat; ent(p, c, p.x + f.x * 4, p.z + f.z * 4, { life: 4.2, dx: f.x, dz: f.z, w: 9, yaw: Math.atan2(f.x, f.z), r: 7 }); }, // rises 4 m out, so the wave isn't a wall over your eyes
       ent: {
         tick(n, dt) {
           n.x += n.dx * 11 * dt; n.z += n.dz * 11 * dt;
@@ -989,41 +1012,25 @@ nature: {
           if (n.r > u.lastR + .5) { u.lastR = n.r; entangleRing(n.x, n.z, n.r, 7); ringFx(n.x, .1, n.z, n.r, 0x9aff80, .4); sfx('nature'); } // fed: the roots surge out to the new edge
           for (let i = 0; i < 2; i++) { const a = rand(0, TAU), d = rand(.3, 1) * s; emit(n.x + Math.cos(a) * d, .1, n.z + Math.sin(a) * d, -Math.sin(a) * 1.5, rand(.6, 1.6), Math.cos(a) * 1.5, Math.random() < .3 ? 0xffe080 : 0x6ef04a, rand(.1, .2), .7, -.5); } }, // pollen and leaves drifting up off the roots
         drop: dropFade() } },
-    { name: 'Vine Slam', icon: '🌿', cd: 8, desc: 'Lash a vine at the first enemy in your sights (16 m). It is hoisted up and slammed into the ground 3 times, side to side: 30 damage per slam, plus 20 to every enemy within 2.5 m of where it lands. Then it is flung away. Bosses are too heavy to lift: they are rooted and take the slams where they stand.',
-      cast(p, c) {
-        const e = rayHits(c.eye, c.aim, 16, .9)[0]?.e;
-        if (!e) { const q = c.eye.clone().addScaledVector(c.aim, 12); fxe(c.m.key, 'miss', { id: p.id, x: q.x, y: Math.max(.2, q.y), z: q.z }); return; }
-        const dx = e.x - p.x, dz = e.z - p.z, d = Math.hypot(dx, dz) || 1;
-        ent(p, c, e.x, e.z, { life: 1.6, r: 2.5, s: e.id, x0: e.x, z0: e.z, sx: -dz / d, sz: dx / d, dx: dx / d, dz: dz / d, n: 0 });
-        cc(e, ET[e.type].boss ? 'root' : 'stun', 1.6, p);
-      },
+    { name: 'Sleepcaps', icon: '🍄', cd: 9, desc: 'Toss three glowing mushrooms ahead of you. They take root and grow for 1 s, then wait up to 10 s. When a monster comes within 3 m of one, it bursts in a cloud of sleep spores: 28 damage and 2.5 s of deep sleep to every enemy within 3.5 m.',
+      cast(p, c) { const f = c.flat; for (let i = 0; i < 3; i++) { const a = Math.atan2(f.x, f.z) + (i - 1) * .45, d = 9 + (i % 2) * 2.5, x = p.x + Math.sin(a) * d, z = p.z + Math.cos(a) * d;
+          fxe(c.m.key, 'toss', { id: p.id, x, z }); later(.4, () => { const q = clampArena({ x, z }, 1); ent(p, c, q.x, q.z, { life: 11, r: 3 }); }); } },
       ent: { tick(n) {
-          const e = S.enemies.find(x => x.id === n.s && alive(x)); if (!e) { n.life = 0; return; }
-          const T = [.35, .8, 1.25], i = n.n, boss = ET[e.type].boss;
-          if (!boss && i < 3) { // swung up and over between slam spots on either side of where it stood
-            const t0 = i ? T[i - 1] : 0, u = clamp((n.t - t0) / (T[i] - t0), 0, 1), side = i % 2 ? -1 : 1, from = i ? -side : 0;
-            const fx = n.x0 + n.sx * from * 2.2, fz = n.z0 + n.sz * from * 2.2, tx = n.x0 + n.sx * side * 2.2, tz = n.z0 + n.sz * side * 2.2;
-            e.x = fx + (tx - fx) * u; e.z = fz + (tz - fz) * u; e.y = Math.sin(u * Math.PI) * 3.4; e.vy = 0; e.kx = e.kz = 0; e.atk = null;
-          }
-          if (i < 3 && n.t >= T[i]) { n.n++; const p = own(n); if (!boss) e.y = 0;
-            hitEnemy(e, 'nature', 30 * n.mul, p, 0, 0, 0, { aoe: true }); blast(e.x, e.z, 2.5, 20 * n.mul, ctxN(n), { raw: true, kb: 5, skip: [e.id] });
-            fxe(n.mv, 'slam', { x: e.x, z: e.z, k: n.n }); }
-          n.x = e.x; n.z = e.z;
-        },
-        end(n) { const e = S.enemies.find(x => x.id === n.s && alive(x)); if (e && !ET[e.type].boss) { e.kx += n.dx * 16 * ET[e.type].kb; e.kz += n.dz * 16 * ET[e.type].kb; launch(e, 6); } } },
-      view: { make(n) { const o = vineChain(16, n.own === myId ? .55 : 1.3); sfx('nature_big'); return o; }, // your own vine runs straight away from you: thin, or it reads as a green wall
-        upd(o, n, dt, t) { // the vine runs from your hand to the monster, whipping as it swings
-          const v = views.e.get(n.s); if (!v) return; o.position.set(0, 0, 0);
-          const h = handPos(n.own), b = v.g.position.clone(); b.y += 1; const a = n.own === myId ? h.clone().lerp(b, .3) : h; // your own vine starts well out: right by the camera its segments filled the view
-          layVine(o, a, b, 1.2, .25, Math.min(1, n.t * 8), t); fade(o, Math.min(1, n.l * 8));
-          if (Math.random() < .5) { const q = a.clone().lerp(b, rand(.2, 1)); emit(q.x, q.y, q.z, rand(-1, 1), rand(-.5, 1), rand(-1, 1), Math.random() < .7 ? 0x6ef04a : 0xffe080, rand(.08, .16), .6, 3); } },
+          if (n.t < 1 || n.s) return;
+          if (enemiesNear(n.x, n.z, n.r).length) { n.s = 1; n.life = .4; const p = own(n);
+            for (const e of enemiesNear(n.x, n.z, 3.5)) { hitEnemy(e, 'nature', 28 * n.mul, p, 0, 0, 0, { aoe: true }); cc(e, 'stun', 2.5, p); fxe(n.mv, 'zzz', { x: e.x, y: e.y + 2, z: e.z }); }
+            fxe(n.mv, 'puff', { x: n.x, z: n.z }); }
+        } },
+      view: { make(n) { const o = mushroom(); dustFx(n.x, n.z, .8, 0x5a4a30); burst(n.x, .3, n.z, 12, 0x9aff80, 3, .15, .4, 4); sfx('nature'); return o; },
+        upd(o, n, dt, t) { const grow = easeOutBack(Math.min(1, n.t)), pulse = n.t > 1 ? 1 + .06 * Math.sin(t * 4 + n.id) : 1; o.scale.setScalar(1.1 * grow * pulse); o.rotation.y += dt * .3;
+          if (n.s) o.scale.multiplyScalar(1 + (1 - n.l) * .6); // swells as it bursts
+          if (n.t > 1 && Math.random() < .25) emit(n.x + rand(-.5, .5), rand(.6, 1.3), n.z + rand(-.5, .5), 0, rand(.2, .5), 0, Math.random() < .5 ? 0x7affd0 : 0xd0ffa0, rand(.06, .12), 1, -.2); }, // spores drifting off the cap
         drop: dropFade(.2) },
-      fx: { slam(e) { // a crater of torn earth, roots bursting up round it, leaves everywhere
-          dustFx(e.x, e.z, 1.8, 0x6a5a3a); ringFx(e.x, .1, e.z, 2.5, 0x9aff80, .4); scarFx(e.x, e.z, 1.2, 0x4ee04a, 2.5); debrisFx(e.x, .3, e.z, 6, 'earth__pebble', 0x8a6a3a, .3, 8);
-          for (let i = 0; i < 5; i++) { const a = TAU * i / 5 + rand(-.3, .3); riseFx('nature__roots', 0x4ee04a, e.x + Math.cos(a) * 1.4, e.z + Math.sin(a) * 1.4, rand(.4, .6), .7); }
-          burst(e.x, .6, e.z, 26, 0x9aff80, 7, .2, .45, 8, 2); flash(e.x, 1, e.z, 0x6ef04a, 20, .2); popNum(e.x, 2.2, e.z, e.k === 3 ? 'SLAM!' : 'SLAM', '#9aff80', 'tag');
-          shake(clamp(.3 - distTo(e.x, e.z) * .015, .05, .25)); sfx('smash'); sfx('nature_big'); },
-        miss(e) { const o = vineChain(16, 1.3); addFx(o, .4, (o, k) => { const h = handPos(e.id); layVine(o, isMe(e.id) ? h.clone().lerp(V(e.x, e.y, e.z), .3) : h, V(e.x, e.y - k * 2, e.z), .8, .3, k < .4 ? k / .4 : 1, k * 3); fade(o, 1 - k); }); } } },
+      fx: { toss(e) { const a = handPos(e.id), b = V(e.x, .3, e.z), arc = 3; modelFx('nature__flower', 0x7affd0, a, .4, (o, k) => { o.position.lerpVectors(a, b, k); o.position.y += Math.sin(k * Math.PI) * arc; o.scale.setScalar(.3); o.rotation.x += .3; }); },
+        puff(e) { // a soft cloud of glowing spores billows out, and everything in it nods off
+          smokeFx(e.x, .8, e.z, 3, 0x7ac8a0, 2, 10, .8); burst(e.x, 1, e.z, 50, 0x9affd0, 5, .3, 1, -1, 2); burst(e.x, 1, e.z, 20, 0xffffff, 3, .15, .8, -1);
+          ringFx(e.x, .1, e.z, 3.5, 0x7affd0, .6); sfx('nature_big'); sfx('heal'); },
+        zzz(e) { popNum(e.x, e.y, e.z, 'Zzz', '#9affd0', 'tag'); for (let i = 0; i < 3; i++) emit(e.x + rand(-.3, .3), e.y, e.z + rand(-.3, .3), rand(-.3, .3), rand(.5, 1), rand(-.3, .3), 0xc0ffe0, .15, 1.6, -.1); } } },
     { name: 'Bramble Wall', icon: '🌵', cd: 12, mode: 'aim', range: 16, aimR: 1.5, desc: 'Raise a 10 m hedge of thorny brambles across the target for 5 s, side-on to you. Monsters cannot walk through it and enemy shots stop dead in it. Anything touching it is slowed and takes 12 every 0.5 s. When it withers it bursts into a hail of thorns: 25 to everything within 2.5 m of it.',
       cast(p, c) { const f = c.flat, sx = -f.z, sz = f.x, q = c.tgt, solid = [];
         for (let i = -5; i <= 5; i++) solid.push({ x: q.x + sx * i, z: q.z + sz * i, r: .65 });
@@ -1049,7 +1056,7 @@ nature: {
     { name: 'World Tree', icon: '🌳', mode: 'aim', range: 18, aimR: 10, desc: 'ULTIMATE. Grow a great tree that roots every enemy around it and lashes them with vines.',
       cast(p, c) { const t = c.tgt, r = 10 * c.st.aoe; ent(p, c, t.x, t.z, { life: 9, r, solid: [{ x: t.x, z: t.z, r: 1.3 }], h: 8 }); blast(t.x, t.z, r, 40 * c.dmg, c, { raw: true, kb: 0, cc: ['root', 3] }); },
       ent: { tick(n, dt) {
-        if (pulse(n, dt, .4, 'v')) { const es = enemiesNear(n.x, n.z, n.r); if (es.length) { const e = pick(es), q = center(e); fxe(n.mv, 'vine', { x: n.x, z: n.z, ex: q.x, ey: q.y, ez: q.z }); hitEnemy(e, 'nature', (ET[e.type].boss ? 14 : 25) * n.mul, own(n), e.x - n.x, e.z - n.z, 3, { aoe: true }); } }
+        if (pulse(n, dt, .4, 'v')) { const es = enemiesNear(n.x, n.z, n.r); if (es.length) { const e = pick(es), q = center(e); fxe(n.mv, 'vine', { x: n.x, z: n.z, ex: q.x, ey: q.y, ez: q.z }); hitEnemy(e, 'nature', (ET[e.type].boss ? 14 : 30) * n.mul, own(n), e.x - n.x, e.z - n.z, 3, { aoe: true }); } }
       } },
       view: { make(n) { // the earth splits in green fire, a ring of great roots tears up, and the tree bursts out of the middle in a column of light
           const g = new THREE.Group(), m = model('nature__tree', 0x4ee04a, { shadow: true }); g.add(m); g.userData.mats = m.userData.mats.slice(); g.userData.circle = zoneCircle('nature', n.r, .55); g.add(g.userData.circle);
@@ -1070,7 +1077,7 @@ nature: {
 // ================================================================== SHADOW
 shadow: {
   name: 'Shadow', color: 0x9a4cff, glyph: '🌑', adj: 'CURSED', react: { name: 'NIGHTFALL', kind: 'drain' },
-  blurb: 'An assassin. Blind enemies, snare them, ambush them from every side and strike from the dark.',
+  blurb: 'An assassin. Drag enemies into the dark, snare them, ambush them from every side and strike from behind.',
   passive: 'Assassin: hits on an enemy\'s back deal 50% more damage. Cursed enemies take 15% more damage.',
   st: { vuln: .15 },
   moves: [
@@ -1078,23 +1085,34 @@ shadow: {
       cast(p, c) { const n = 3 + 2 * (c.multi - 1); for (let k = 0; k < n; k++) shoot(p, c, 48, { d: spread(c.d, k, n, .07), r: .22, dmg: 11.5 * c.dmg, kb: 1.5, sc: c.mega ? 1.8 : 1 }); },
       look: { m: 'shadow__dagger', trail: [0x7a3acc, .14, .25, 0, 1], blink: 1 }, // the daggers flicker in and out of sight as they fly
       fx: { det: e => boomFx(e.x, e.y, e.z, 2.5, 0x9a4cff, .6), nova: e => boomFx(e.x, .5, e.z, 4.5, 0x9a4cff, .8) } },
-    { name: 'Blackout', icon: '🌑', cd: 6, mode: 'aim', range: 20, aimR: 3, desc: 'Hurl an orb of darkness that bursts into a choking cloud for 3 s. Every enemy it catches, or that walks in, is blinded: hit for 16, stunned for 1.5 s and spun round, its back wide open to your Assassin bonus.',
-      cast(p, c) { const t = c.tgt.clone(), T = clamp(Math.hypot(t.x - p.x, t.z - p.z) / 40, .12, .45); fxe(c.m.key, 'throw', { id: p.id, x: t.x, z: t.z, T }); later(T, () => { fxe(c.m.key, 'burst', { x: t.x, z: t.z, r: 3 * c.st.aoe }); ent(p, c, t.x, t.z, { life: 3, r: 3 * c.st.aoe }); }); },
-      ent: { tick(n) { const p = own(n); for (const e of enemiesNear(n.x, n.z, n.r)) if (ready(n, e, 99)) { hitEnemy(e, 'shadow', 24 * n.mul, p, 0, 0, 0, { aoe: true }); if (cc(e, 'stun', 1.5, p) && p) e.yaw = Math.atan2(e.x - p.x, e.z - p.z); } } }, // turned to face away from you
-      view: { make(n) { const g = smokeCloud(16, n.r, 0x2a1250); /* deep violet: pure black vanishes against the night sky */ g.userData.circle = zoneCircle('shadow', n.r, .5); g.add(g.userData.circle); return g; },
+    { name: 'Nightmare Pit', icon: '🕳️', cd: 6, mode: 'aim', range: 20, aimR: 3, desc: 'Tear open a pit of living darkness at the target for 2 s. Every enemy in it is dragged down into the floor, helpless, taking 10 every 0.25 s. Then shadow spikes burst out of the pit and hurl them back up for 30 more. Bosses are too big to swallow: they only take the damage.',
+      cast(p, c) { ent(p, c, c.tgt.x, c.tgt.z, { life: 2, r: 3 * c.st.aoe, s: [] }); },
+      ent: { tick(n, dt) { const p = own(n), hit = pulse(n, dt, .25);
+          for (const e of enemiesNear(n.x, n.z, n.r)) {
+            if (!n.s.includes(e.id)) n.s.push(e.id);
+            if (hit) hitEnemy(e, 'shadow', 10 * n.mul, p, 0, 0, 0, { aoe: true });
+            if (ET[e.type].boss) continue;
+            cc(e, 'stun', .3, p); const dx = n.x - e.x, dz = n.z - e.z, d = Math.hypot(dx, dz); if (d > .6) { e.x += dx / d * Math.min(d - .6, 2 * dt); e.z += dz / d * Math.min(d - .6, 2 * dt); }
+            e.y = Math.max(-ET[e.type].h * e.sc * .6, Math.min(0, e.y) - 1.3 * dt); e.vy = 0; e.kx = e.kz = 0; e.atk = null; // sinking into the floor
+          } },
+        end(n) { const p = own(n); for (const id of n.s) { const e = S.enemies.find(x => x.id === id && alive(x)); if (!e) continue; if (e.y < 0) e.y = 0; hitEnemy(e, 'shadow', 30 * n.mul, p, 0, 0, 2, { aoe: true }); launch(e, 9); }
+          fxe(n.mv, 'spikes', { x: n.x, z: n.z, r: n.r }); } },
+      view: { make(n) { // a hole of pure black in the floor, a violet rim, and shadowy hands clawing up out of it
+          const g = new THREE.Group(), u = g.userData, pool = model('ink__pool', 0x9a4cff, { flat: true }); pool.position.y = INK_Y; g.add(pool); u.pool = pool; u.mats = [...pool.userData.mats];
+          u.circle = zoneCircle('shadow', n.r, .7); g.add(u.circle);
+          u.hands = Array.from({ length: 6 }, (_, i) => { const c = vineChain(10, 1.6, shadowVineMat()); g.add(c); u.mats.push(...c.userData.mats); return { c, a: TAU * i / 6 + rand(-.3, .3) }; });
+          ringFx(n.x, .1, n.z, n.r, 0x9a4cff, .5); burst(n.x, .2, n.z, 30, 0x2a1250, 5, .5, .7, -1, 2); sfx('shadow_big'); return g; },
         upd(o, n, dt, t) {
-          const u = o.userData, grow = .5 + .5 * easeOut(Math.min(1, n.t * 4)); spinCircle(u.circle, dt, -.4); setOpacity(u.circle.userData.mats, Math.min(.5, n.l * 3));
-          u.puffMat.opacity = Math.min(.85, n.t * 6, n.l * 3);
-          for (const s of u.puffs) { s.scale.setScalar(s.userData.s * grow); s.position.y += Math.sin(t * .8 + s.userData.ph) * dt * .15; }
-          if (Math.random() < .5) { const a = rand(0, TAU), d = rand(0, n.r); emit(n.x + Math.cos(a) * d, rand(.2, 2), n.z + Math.sin(a) * d, 0, rand(.2, .6), 0, 0x7a3acc, rand(.1, .2), .8, -.2); } // violet wisps in the smoke
-        },
-        drop: dropFade(.4) },
-      fx: { throw(e) {
-          const a = handPos(e.id), b = V(e.x, .8, e.z), arc = Math.min(3, a.distanceTo(b) * .15);
-          modelFx('shadow__orb', 0x9a4cff, a, e.T, (o, k) => { o.position.lerpVectors(a, b, k); o.position.y += Math.sin(k * Math.PI) * arc; o.scale.setScalar(.25); o.lookAt(camera.position); emit(o.position.x, o.position.y, o.position.z, 0, .2, 0, 0x3a1a6c, .3, .4); });
-          sfx('shadow');
-        },
-        burst(e) { burst(e.x, 1, e.z, 70, 0x140a24, 5, .7, 1, -.5); burst(e.x, 1, e.z, 25, 0xc090ff, 7, .2, .4); ringFx(e.x, .1, e.z, e.r, 0x5a2a9c, .5); flash(e.x, 1, e.z, 0x9a4cff, 20, .2); sfx('shadow_big'); } } },
+          const u = o.userData, k = easeOut(Math.min(1, n.t * 4)), a = Math.min(1, n.l * 6); u.pool.scale.set(n.r * 1.15 * k, 1, n.r * 1.15 * k); u.pool.rotation.y -= dt * 1.2; spinCircle(u.circle, dt, -2); setOpacity(u.circle.userData.mats, .7 * a);
+          for (const h of u.hands) { const b = V(Math.cos(h.a) * n.r * .8, 0, Math.sin(h.a) * n.r * .8), top = V(Math.cos(h.a + .4) * n.r * .35, 1.6 + .4 * Math.sin(t * 3 + h.a), Math.sin(h.a + .4) * n.r * .35); // reaching up and in, grasping
+            layVine(h.c, b, top, .6, .3, k, t * 1.5 + h.a); }
+          fade(o, a);
+          for (let i = 0; i < 3; i++) { const an = rand(0, TAU), d = n.r * rand(.6, 1.1); emit(n.x + Math.cos(an) * d, rand(.2, 1.5), n.z + Math.sin(an) * d, -Math.cos(an) * 3 - Math.sin(an) * 2, -rand(.5, 1.5), -Math.sin(an) * 3 + Math.cos(an) * 2, Math.random() < .6 ? 0x3a1a6c : 0xc090ff, rand(.12, .25), .6, 0, .3); } }, // darkness spiralling down into the hole
+        drop: dropFade(.25) },
+      fx: { spikes(e) { // the pit spits them out: a crown of shadow spikes
+          for (let i = 0; i < 12; i++) { const a = TAU * i / 12 + rand(-.2, .2), d = e.r * rand(.2, .9); riseFx('earth__spike', 0x9a4cff, e.x + Math.cos(a) * d, e.z + Math.sin(a) * d, rand(.7, 1.1), .7); }
+          burst(e.x, .5, e.z, 40, 0x140a24, 7, .6, .8, -1, 3); burst(e.x, 1, e.z, 24, 0xc090ff, 9, .2, .4); flash(e.x, 1, e.z, 0x9a4cff, 30, .2); ringFx(e.x, .1, e.z, e.r * 1.4, 0xc090ff, .4);
+          shake(clamp(.3 - distTo(e.x, e.z) * .015, .05, .25)); sfx('shadow_big'); sfx('smash'); } } },
     { name: 'Shadow Snare', icon: '🕸️', cd: 7, mode: 'aim', range: 20, aimR: 3.5, desc: 'A pool of darkness opens at the target and shadow tendrils burst out of it, seizing every enemy in the area: 18 damage, held in place for 1.5 s and dragged into the middle. While held they take 40% more damage.',
       cast(p, c) {
         const R = 3.5 * c.st.aoe, es = enemiesNear(c.tgt.x, c.tgt.z, R);
@@ -1121,31 +1139,43 @@ shadow: {
           }
           if (Math.random() < .5) { const an = rand(0, TAU), d = rand(0, n.r); emit(n.x + Math.cos(an) * d, .1, n.z + Math.sin(an) * d, 0, rand(.5, 1.5), 0, 0x5a2a9c, rand(.15, .3), .6, -.5); } },
         drop(o) { const u = o.userData; for (const c of [...[...u.ten.values()].flat(), ...u.marks.values()]) addFx(c, .25, (c, k) => fade(c, 1 - k)); dropFade(.25)(o); } } },
-    { name: 'Shade Ambush', icon: '🥷', cd: 9, mode: 'aim', range: 18, aimR: 3, desc: 'Three shadow assassins rise from the ground around the target, then one after another dash straight through it from three sides: each dash cuts every enemy in its path for 30 and stuns it for 0.5 s.',
+    { name: 'Shade Ambush', icon: '🥷', cd: 9, mode: 'aim', range: 18, aimR: 3, desc: 'Three shadow assassins climb out of the ground around the target, daggers drawn, then one after another dash straight through it from three sides: each dash cuts every enemy in its path for 30 and stuns it for 0.5 s.',
       cast(p, c) {
         const t = c.tgt.clone(), R = 5, a0 = rand(0, TAU);
         fxe(c.m.key, 'rise', { x: t.x, z: t.z, a: a0, R });
-        for (let i = 0; i < 3; i++) later(.45 + i * .16, () => {
+        for (let i = 0; i < 3; i++) later(.9 + i * .38, () => {
           const a = a0 + TAU * i / 3, x0 = t.x + Math.cos(a) * R, z0 = t.z + Math.sin(a) * R, x1 = t.x - Math.cos(a) * R, z1 = t.z - Math.sin(a) * R;
-          for (const e of nearSeg({ x: x1, z: z1, fx0: x0, fz0: z0 }, 1.3)) { hitEnemy(e, 'shadow', 30 * c.dmg, p, x1 - x0, z1 - z0, 3, { aoe: true }); cc(e, 'stun', .5, p); }
-          fxe(c.m.key, 'dash', { x0, z0, x1, z1 });
+          fxe(c.m.key, 'dash', { x0, z0, x1, z1, i });
+          later(.16, () => { for (const e of nearSeg({ x: x1, z: z1, fx0: x0, fz0: z0 }, 1.3)) { hitEnemy(e, 'shadow', 30 * c.dmg, p, x1 - x0, z1 - z0, 3, { aoe: true }); cc(e, 'stun', .5, p); } });
         });
+        later(1.9, () => fxe(c.m.key, 'mark', { x: t.x, z: t.z, a: a0 }));
       },
-      fx: { rise(e) { // three dark figures climb out of pools of shadow round the target, eyes burning, facing in
+      fx: { rise(e) { // three dark figures climb slowly out of pools of shadow round the target, violet daggers glowing, eyes burning, then crouch to spring
+          circleFx('shadow', V(e.x, .08, e.z), 3, { life: 1.9 });
           for (let i = 0; i < 3; i++) {
-            const a = e.a + TAU * i / 3, x = e.x + Math.cos(a) * e.R, z = e.z + Math.sin(a) * e.R, L = .45 + i * .16, g = ghostWizard(0x14051f, true);
-            g.position.set(x, -1.8, z); g.rotation.y = Math.atan2(e.x - x, e.z - z) + Math.PI; scarFx(x, z, 1, 0x9a4cff, L + .4); burst(x, .2, z, 16, 0x3a1a6c, 3, .4, .6, -1, 2);
-            addFx(g, L, (o, k, dt) => { o.position.y = -1.8 * (1 - easeOut(Math.min(1, k * L / .25))); fade(o, .9); if (Math.random() < .5) emit(x + rand(-.3, .3), 1.55 + o.position.y, z + rand(-.3, .3), 0, .3, 0, 0xc090ff, .08, .25); }); // violet eyes glinting
+            const a = e.a + TAU * i / 3, x = e.x + Math.cos(a) * e.R, z = e.z + Math.sin(a) * e.R, L = .9 + i * .38, g = ghostWizard(0x14051f, true), d = model('shadow__dagger', 0xc090ff);
+            d.position.set(.35, 1.1, .3); d.rotation.x = -.8; g.add(d); g.userData.mats.push(...d.userData.mats);
+            g.position.set(x, -1.8, z); g.rotation.y = Math.atan2(e.x - x, e.z - z) + Math.PI;
+            const pool = model('ink__pool', 0x9a4cff, { flat: true }); pool.position.set(x, INK_Y, z); addFx(pool, L + .3, (o, k) => { o.scale.set(1.3 * Math.min(1, k * 6), 1, 1.3 * Math.min(1, k * 6)); fade(o, k > .8 ? (1 - k) * 5 : 1); });
+            burst(x, .2, z, 16, 0x3a1a6c, 3, .4, .6, -1, 2);
+            addFx(g, L, (o, k) => { const tt = k * L; o.position.y = -1.8 * (1 - easeOut(Math.min(1, tt / .55))); o.scale.y = tt > L - .2 ? .85 : 1; fade(o, .95); // the crouch just before it springs
+              if (Math.random() < .5) emit(x + rand(-.3, .3), 1.55 + o.position.y, z + rand(-.3, .3), 0, .3, 0, 0xc090ff, .08, .25);
+              if (Math.random() < .4) emit(x + rand(-.5, .5), .1, z + rand(-.5, .5), 0, rand(.5, 1.5), 0, 0x2a1250, rand(.15, .3), .6, -.3); });
           }
-          circleFx('shadow', V(e.x, .08, e.z), 3, { life: .9 }); sfx('shadow'); },
-        dash(e) { // one assassin streaks across in a blur, a violet slash left hanging where it cut through
+          sfx('shadow'); },
+        dash(e) { // one assassin streaks across in a blur of shadow, a trail of afterimages and a hanging violet slash where it cut through
           const a = V(e.x0, 1.1, e.z0), b = V(e.x1, 1.1, e.z1), yaw = Math.atan2(e.x1 - e.x0, e.z1 - e.z0), g = ghostWizard(0x14051f, true); g.rotation.y = yaw + Math.PI;
-          addFx(g, .4, (o, k) => { const u = Math.min(1, k / .3); o.position.lerpVectors(a, b, easeOut(u)).setY(0); fade(o, k < .3 ? .9 : (1 - k) / .7 * .9); });
-          for (let i = 1; i <= 3; i++) { const q = ghostWizard(0x2a1250, true); q.rotation.y = yaw + Math.PI; q.position.lerpVectors(a, b, i / 4).setY(0); addFx(q, .3, (o, k) => fade(o, (1 - k) * .35)); } // afterimages along the dash
-          beamFx(a, b, 0x5a2a9c, .12, .35);
+          let ai = 1; addFx(g, .6, (o, k) => { const u = Math.min(1, k / .55); o.position.lerpVectors(a, b, u * u * (3 - 2 * u)).setY(0); fade(o, k < .55 ? .95 : (1 - k) / .45 * .95);
+            while (ai <= 5 && u >= ai / 6) { const q = ghostWizard(0x2a1250, true); q.rotation.y = yaw + Math.PI; q.position.copy(o.position); addFx(q, .4, (q, k) => fade(q, (1 - k) * .4)); ai++; } // afterimages dropped along the path
+            if (Math.random() < .8) { const q = o.position; emit(q.x + rand(-.3, .3), rand(.3, 1.6), q.z + rand(-.3, .3), 0, 0, 0, Math.random() < .5 ? 0x2a1250 : 0x9a4cff, rand(.2, .35), .45, 0); } });
+          for (let i = 0; i <= 4; i++) { const q = a.clone().lerp(b, i / 4); scarFx(q.x, q.z, .5, 0x9a4cff, 2); }
           const m = new THREE.Mesh(REAP_ARC, new THREE.MeshBasicMaterial({ color: 0xc090ff, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false })), c = a.clone().lerp(b, .5);
-          m.position.copy(c); m.rotation.set(Math.PI / 2 - .4, 0, yaw); m.scale.setScalar(.35); addFx(m, .35, (o, k) => { o.material.opacity = 1 - k; o.scale.setScalar(.35 + .15 * k); });
-          burst(c.x, 1.1, c.z, 24, 0xc090ff, 7, .15, .35); burst(c.x, 1, c.z, 20, 0x2a1250, 4, .4, .6, -1); flash(c.x, 1, c.z, 0x9a4cff, 18, .15); sfx('shadow_big'); sfx('swing'); } } },
+          m.position.copy(c); m.rotation.set(Math.PI / 2 - .5, 0, yaw); m.scale.setScalar(.45); addFx(m, .7, (o, k) => { o.material.opacity = k < .2 ? 1 : 1 - (k - .2) / .8; o.scale.setScalar(.45 + .15 * k); });
+          burst(c.x, 1.1, c.z, 30, 0xc090ff, 8, .18, .4); burst(c.x, 1, c.z, 24, 0x2a1250, 4, .45, .7, -1); flash(c.x, 1, c.z, 0x9a4cff, 22, .2); shake(clamp(.15 - distTo(c.x, c.z) * .008, .02, .12)); sfx('shadow_big'); sfx('swing'); },
+        mark(e) { // all three cuts cross over the target: a burning three-pointed star scorched into the floor
+          for (let i = 0; i < 3; i++) { const a = e.a + TAU * i / 3, m = new THREE.Mesh(new THREE.PlaneGeometry(10, .35).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xc090ff, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
+            m.position.set(e.x, .09, e.z); m.rotation.y = -a; addFx(m, 1.2, (o, k) => { o.material.opacity = (1 - k) * .9; o.scale.z = 1 + k; }); }
+          ringFx(e.x, .1, e.z, 3, 0xc090ff, .5); burst(e.x, 1, e.z, 30, 0xe0c0ff, 7, .2, .5); sfx('shadow_big'); } } },
     { name: 'Eclipse', icon: '🌑', desc: 'ULTIMATE. A black sun rises and night falls for 5 s. Every enemy within 20 m (up to 14) is blinded, unable to attack, and shadows slash it for 22 every 0.6 s. When the light returns, every one of them is cut down for 60 more.',
       cast(p, c) { const es = enemiesNear(p.x, p.z, 20 * c.st.aoe).slice(0, 14), f = c.flat; for (const e of es) cc(e, 'blind', 5, p); ent(p, c, p.x, p.z, { life: 5, r: 20, s: es.map(e => e.id), yaw: Math.atan2(f.x, f.z) }); },
       ent: { tick(n, dt) { if (!pulse(n, dt, .6)) return; for (const id of n.s) { const e = S.enemies.find(x => x.id === id && alive(x)); if (!e) continue; const q = center(e); hitEnemy(e, 'shadow', 22 * n.mul, own(n), 0, 0, 0, { aoe: true }); fxe(n.mv, 'cut', { x: q.x, y: q.y, z: q.z }); } },
@@ -1231,12 +1261,12 @@ light: {
           sfx('light_big'); },
         brand(e) { // the halo and its two hanging spears stay over the enemy until both spears have fallen or the brand runs out
           const v = views.e.get(e.id); if (!v) return;
-          const g = new THREE.Group(), h = model('light__halo', 0xffe08a, { flat: true }), sp = [0, 1].map(() => { const s = model('light__spear', 0xfff0b0); s.rotation.x = Math.PI; s.scale.setScalar(.55); g.add(s); return s; });
-          h.scale.setScalar(.75); g.add(h); g.userData.mats = [...h.userData.mats, ...sp.flatMap(s => s.userData.mats)]; PEN.set(e.id, { sp, g });
-          const q = v.g.position; popNum(q.x, q.y + 2.8, q.z, 'BRANDED', '#ffe08a', 'tag'); burst(q.x, q.y + 2.6, q.z, 20, 0xfff0b0, 4, .2, .45); pillarFx(q.x, 0, q.z, .5, 4, 0xffe08a, .4);
-          addFx(g, 8, (o, k, dt) => { const w = views.e.get(e.id); if (k > .99) PEN.delete(e.id); if (!w || !sp.some(s => s.visible)) { fade(o, 0); return; } // gone, or both spears have fallen
-            const hh = (ET[w.type]?.h || 1.6) * (w.sc || 1); o.position.copy(w.g.position).add(V(0, hh + .7, 0)); h.rotation.y += dt * 1.5;
-            sp.forEach((s, i) => { const an = k * 30 + i * Math.PI; s.position.set(Math.cos(an) * .55, 1.1 + .1 * Math.sin(k * 40 + i), Math.sin(an) * .55); });
+          const g = new THREE.Group(), h = model('light__halo', 0xffe08a, { flat: true }), sp = [0, 1].map(() => { const s = model('light__spear', 0xfff0b0); s.rotation.x = Math.PI; s.scale.setScalar(.85); g.add(s); return s; }), sig = makeCircle('light');
+          h.scale.setScalar(1.05); sig.scale.setScalar(1.3); scene.add(sig); setOpacity(sig.userData.mats, .6); g.add(h); g.userData.mats = [...h.userData.mats, ...sp.flatMap(s => s.userData.mats)]; PEN.set(e.id, { sp, g });
+          const q = v.g.position; popNum(q.x, q.y + 2.8, q.z, 'BRANDED', '#ffe08a', 'tag'); burst(q.x, q.y + 2.6, q.z, 30, 0xfff0b0, 5, .2, .5); pillarFx(q.x, 0, q.z, .9, 14, 0xffe08a, .7); flash(q.x, 3, q.z, 0xffe08a, 25, .25); // a shaft of light from the sky marks it
+          addFx(g, 8, (o, k, dt) => { const w = views.e.get(e.id); if (k > .99) PEN.delete(e.id); if (!w || !sp.some(s => s.visible)) { fade(o, 0); sig.removeFromParent(); return; } // gone, or both spears have fallen
+            const hh = (ET[w.type]?.h || 1.6) * (w.sc || 1); o.position.copy(w.g.position).add(V(0, hh + .7, 0)); h.rotation.y += dt * 1.5; sig.position.set(w.g.position.x, .08, w.g.position.z); spinCircle(sig, dt, 1); setOpacity(sig.userData.mats, .55 * (k > .93 ? (1 - k) / .07 : 1)); if (k > .99) sig.removeFromParent();
+            sp.forEach((s, i) => { const an = k * 30 + i * Math.PI; s.position.set(Math.cos(an) * .7, 1.4 + .12 * Math.sin(k * 40 + i), Math.sin(an) * .7); if (s.visible && Math.random() < .3) emit(o.position.x + s.position.x, o.position.y + s.position.y - .8, o.position.z + s.position.z, 0, -.5, 0, 0xfff0b0, .08, .4); });
             fade(o, k > .93 ? (1 - k) / .07 : 1); if (Math.random() < .15) emit(o.position.x + rand(-.5, .5), o.position.y + 1, o.position.z + rand(-.5, .5), 0, -.5, 0, 0xfff0b0, .07, .5); });
           },
         smite(e) { // one hanging spear drops like lightning onto the enemy
@@ -1294,14 +1324,16 @@ venom: {
           if (Math.random() < .7) { const an = rand(0, TAU), d = rand(0, n.r * .9); emit(n.x + Math.cos(an) * d, .1, n.z + Math.sin(an) * d, 0, rand(.4, 1.2), 0, Math.random() < .6 ? 0x9eff1e : 0xd8ff80, rand(.08, .18), .9, -.6); } // bubbles rising off the stain
           if (Math.random() < dt * 6) { const an = rand(0, TAU), d = rand(0, n.r * .8); ringFx(n.x + Math.cos(an) * d, .1, n.z + Math.sin(an) * d, rand(.3, .6), 0xb8ff40, .3, .05); } }, // and popping on the floor
         drop: dropFade(.5) } },
-    { name: 'Serpent', icon: '🐍', cd: 7, desc: 'Send a venom serpent slithering across the ground for 4.5 s. It hunts one enemy after another, biting each for 9 and poisoning it 3 times; it can bite the same enemy again after 1.5 s.',
-      cast(p, c) { const f = c.flat; ent(p, c, p.x + f.x * 2.5, p.z + f.z * 2.5, { life: 4.5, r: 1.4, y: .4, dx: f.x * 11, dz: f.z * 11, yaw: Math.atan2(f.x, f.z) }); },
+    { name: 'Serpent', icon: '🐍', cd: 7, desc: 'Send a venom serpent racing across the ground for 4.5 s. It locks onto the nearest enemy within 18 m, lunges at it, bites it for 9 and poisons it twice, then darts to the next one; it can bite the same enemy again after 1.5 s.',
+      cast(p, c) { const f = c.flat; ent(p, c, p.x + f.x * 2.5, p.z + f.z * 2.5, { life: 4.5, r: 1.5, y: .4, dx: f.x * 16, dz: f.z * 16, yaw: Math.atan2(f.x, f.z) }); },
       ent: { tick(n, dt) {
-        const fresh = e => !(n.hit[e.id] > n.t), tg = enemiesNear(n.x, n.z, 12).filter(fresh).sort((a, b) => Math.hypot(a.x - n.x, a.z - n.z) - Math.hypot(b.x - n.x, b.z - n.z))[0];
-        if (tg) { const a = Math.atan2(n.dx, n.dz), want = Math.atan2(tg.x - n.x, tg.z - n.z), na = lerpAngle(a, want, Math.min(1, dt * 4)); n.dx = Math.sin(na) * 11; n.dz = Math.cos(na) * 11; } // turns toward fresh prey
+        const fresh = e => !(n.hit[e.id] > n.t), tg = enemiesNear(n.x, n.z, 18).filter(fresh).sort((a, b) => Math.hypot(a.x - n.x, a.z - n.z) - Math.hypot(b.x - n.x, b.z - n.z))[0];
+        const sp = tg && Math.hypot(tg.x - n.x, tg.z - n.z) < 4 ? 26 : 16; // lunges the last few metres
+        if (tg) { const a = Math.atan2(n.dx, n.dz), want = Math.atan2(tg.x - n.x, tg.z - n.z), na = lerpAngle(a, want, Math.min(1, dt * 10)); n.dx = Math.sin(na) * sp; n.dz = Math.cos(na) * sp; } // whips round toward fresh prey
+        else { const L = Math.hypot(n.dx, n.dz) || 1; n.dx *= 16 / L; n.dz *= 16 / L; }
         n.x += n.dx * dt; n.z += n.dz * dt; n.yaw = Math.atan2(n.dx, n.dz);
         if (offMap(n.x, n.z)) { n.dx = -n.dx; n.dz = -n.dz; n.x += n.dx * dt * 2; n.z += n.dz * dt * 2; } // turns back at the edge instead of slithering off
-        for (const e of enemiesNear(n.x, n.z, n.r)) if (ready(n, e, 1.5)) { const p = own(n); hitEnemy(e, 'venom', 9 * n.mul, p, n.dx, n.dz, 2); applyStatus(e, 'venom', p); applyStatus(e, 'venom', p); fxe(n.mv, 'bite', { x: e.x, y: e.y + 1, z: e.z }); }
+        for (const e of enemiesNear(n.x, n.z, n.r)) if (ready(n, e, 1.5)) { const p = own(n); hitEnemy(e, 'venom', 9 * n.mul, p, n.dx, n.dz, 2); applyStatus(e, 'venom', p); fxe(n.mv, 'bite', { x: e.x, y: e.y + 1, z: e.z }); }
       } },
       view: { make() { // a fanged head with a long body slithering after it along the path it took
           const g = new THREE.Group(), u = g.userData, head = snakeHead(.9), bm = head.userData.mats[0]; g.add(head);
@@ -1316,37 +1348,48 @@ venom: {
           if (Math.random() < .6) { const h = u.hist[Math.min(u.hist.length - 1, 20)]; emit(h[0] + rand(-.2, .2), .12, h[1] + rand(-.2, .2), 0, rand(.2, .6), 0, Math.random() < .5 ? 0x9eff1e : 0x5aa010, rand(.12, .22), .8, -.2); } }, // a trail of venom dripping off it
         drop(o) { const u = o.userData; for (const s of u.body) addFx(s, .3, (s, k) => s.scale.multiplyScalar(.9)); dropFade(.25)(o); } },
       fx: { bite(e) { burst(e.x, e.y, e.z, 20, 0x9eff1e, 6, .2, .4, 5); popNum(e.x, e.y + .8, e.z, 'BITE', '#b8ff40', 'tag'); sfx('venom'); } } },
-    { name: 'Acid Rain', icon: '🌧️', cd: 10, mode: 'aim', range: 18, aimR: 4.5, desc: 'A sick green storm cloud gathers over the target and pours acid on it for 4 s. Every 0.5 s everything under it takes 6, gains a poison stack and is left Melting: 20% more damage taken while the rain lasts.',
-      cast(p, c) { ent(p, c, c.tgt.x, c.tgt.z, { life: 4, r: 4.5 * c.st.aoe }); },
-      ent: { tick(n, dt) { if (n.t < .4 || !pulse(n, dt, .5)) return; const p = own(n);
-        for (const e of enemiesNear(n.x, n.z, n.r)) { hitEnemy(e, 'venom', 6 * n.mul, p, 0, 0, 0, { aoe: true }); applyStatus(e, 'venom', p); e.fv = Math.max(e.fvU > S.t ? e.fv : 0, .2); e.fvU = S.t + .6; } } },
-      view: { make(n) { // a churning green-black cloud low over the target, acid streaking down out of it, the floor hissing
-          const g = smokeCloud(18, n.r, 0x34501a), u = g.userData; for (const s of u.puffs) s.position.y += 4;
-          u.circle = zoneCircle('venom', n.r, .55); g.add(u.circle); u.steam = 0; sfx('venom_big'); smokeFx(n.x, 4.5, n.z, n.r, 0x34501a, 1, 6, -.2); return g; },
+    { name: 'Scorpion Sting', icon: '🦂', cd: 9, mode: 'aim', range: 18, aimR: 2.5, desc: 'A giant scorpion tail bursts out of the ground at the target and stings the enemy nearest it 3 times: 20 damage and 2 poison stacks per sting, and the last sting flings it into the air. The tail lashes everything within 2.5 m of where it strikes for 8.',
+      cast(p, c) { ent(p, c, c.tgt.x, c.tgt.z, { life: 1.8, r: 4, s: 0, n: 0 }); },
+      ent: { tick(n) {
+          const T = [.5, .9, 1.3]; if (n.n >= 3 || n.t < T[n.n]) return;
+          const e = nearest(n.x, n.z, n.r), p = own(n); n.n++; if (!e) { fxe(n.mv, 'sting', { id: n.id, x: n.x, y: .3, z: n.z, k: n.n }); return; }
+          n.s = e.id; const q = center(e); fxe(n.mv, 'sting', { id: n.id, x: q.x, y: q.y, z: q.z, k: n.n });
+          hitEnemy(e, 'venom', 20 * n.mul, p, e.x - n.x, e.z - n.z, 2, { aoe: true }); applyStatus(e, 'venom', p);
+          blast(e.x, e.z, 2.5, 8 * n.mul, ctxN(n), { raw: true, kb: 3, skip: [e.id] });
+          if (n.n === 3) launch(e, 9);
+        } },
+      view: { make(n) { // a segmented tail of dark green chitin with a glowing stinger, curling over and striking down
+          const g = new THREE.Group(), u = g.userData, m = new THREE.MeshStandardMaterial({ color: 0x1e3010, emissive: 0x3a7a10, emissiveIntensity: .35, roughness: .35, metalness: .3, transparent: true });
+          u.segs = Array.from({ length: 11 }, (_, i) => { const s = new THREE.Mesh(SNAKE.seg, m); s.scale.set(.5 - i * .025, .42 - i * .02, .55 - i * .025); s.castShadow = true; g.add(s); return s; });
+          u.sting = model('venom__fang', 0x9eff1e); u.sting.scale.setScalar(1.6); g.add(u.sting); u.mats = [m, ...u.sting.userData.mats]; u.hit = null; u.k = 0;
+          quakeCracks(n.x, n.z, 2.5, 7, 1.2, .22); debrisFx(n.x, .4, n.z, 8, 'earth__pebble', 0x5a6a2a, .35, 8); dustFx(n.x, n.z, 1.5, 0x4a5a2a); STING.set(n.id, u); sfx('venom_big'); return g; },
         upd(o, n, dt, t) {
-          const u = o.userData, a = Math.min(1, n.t * 2.5, n.l * 5); u.puffMat.opacity = .9 * a; spinCircle(u.circle, dt, -.5); setOpacity(u.circle.userData.mats, .55 * a);
-          for (const s of u.puffs) { s.scale.setScalar(s.userData.s * 1.3); s.position.y += Math.sin(t + s.userData.ph) * dt * .2; }
-          if (Math.random() < dt * 3) flash(n.x + rand(-2, 2), 4.5, n.z + rand(-2, 2), 0x9eff1e, 18, .12); // sickly light flickering inside the cloud
-          if (n.t < .4) return;
-          for (let i = 0; i < 12; i++) { const an = rand(0, TAU), d = Math.sqrt(Math.random()) * n.r; emit(n.x + Math.cos(an) * d, 4.2, n.z + Math.sin(an) * d, 0, -18, 0, Math.random() < .7 ? 0x9eff1e : 0xd8ff80, rand(.1, .16), .25, 0, 0); } // streaks of acid falling
-          for (let i = 0; i < 3; i++) { const an = rand(0, TAU), d = Math.sqrt(Math.random()) * n.r; emit(n.x + Math.cos(an) * d, .1, n.z + Math.sin(an) * d, rand(-1.5, 1.5), rand(1, 3), rand(-1.5, 1.5), 0xb8ff40, rand(.06, .12), .3, 8); } // splashing where it lands
-          if ((u.steam -= dt) <= 0) { u.steam = .25; const an = rand(0, TAU), d = rand(0, n.r); smokeFx(n.x + Math.cos(an) * d, .3, n.z + Math.sin(an) * d, .8, 0xc8e8a0, .9, 1, 1.2); } }, // acid hissing off the floor
-        drop: dropFade(.4) },
-      fx: { pop(e) { burst(e.x, e.y, e.z, 24, 0x9eff1e, 5, .3, .5, 4); } } }, // Venom's passive: a poisoned enemy bursts as it dies
-    { name: 'Hydra', icon: '🐉', mode: 'aim', range: 20, aimR: 6, desc: 'ULTIMATE. A three-headed venom hydra bursts out of the ground at the target for 7 s. Each head spits venom at a different enemy within 16 m every 0.4 s: 8 damage and a poison stack around the hit, and a small toxic puddle. Then it dives back into the ground in a poison eruption: 60 to everything within 6 m.',
-      cast(p, c) { ent(p, c, c.tgt.x, c.tgt.z, { life: 7, r: 16, solid: [{ x: c.tgt.x, z: c.tgt.z, r: 1.4 }], h: 6 }); },
+          const u = o.userData, rise = easeOutBack(Math.min(1, n.t * 3)), a = Math.min(1, n.l * 6); u.k = Math.max(0, u.k - dt * 5); // u.k: 1 at the moment of a sting, falling back
+          const tip = u.hit ? V(u.hit.x - n.x, u.hit.y, u.hit.z - n.z) : V(0, 1, 2), rest = V(0, 4.6, 1.2), st = rest.clone().lerp(tip, Math.sin(Math.min(1, u.k) * Math.PI / 2)); // coiled high over the hole, then stabbing down
+          const B = V(0, (rise - 1) * 3, 0), C = V(0, 4.2 * rise, -1.6), P = i => { const s = i / 10; return B.clone().multiplyScalar((1 - s) ** 2).addScaledVector(C, 2 * (1 - s) * s).addScaledVector(st, s * s); }; // a curve from the hole, arching back, to the stinger
+          u.segs.forEach((m, i) => { const q = P(i), nx = P(i + 1); m.position.copy(q); m.lookAt(nx.add(o.position)); });
+          const end = P(10), pre = P(9); u.sting.position.copy(end); u.sting.lookAt(end.clone().add(end.clone().sub(pre)).add(o.position)); u.sting.rotateX(Math.PI / 2);
+          fade(o, a); if (Math.random() < .4) emit(o.position.x + end.x, end.y, o.position.z + end.z, 0, -1, 0, 0x9eff1e, rand(.1, .2), .6, 6); }, // venom beading off the stinger
+        drop(o, n) { STING.delete(n?.id); addFx(o, .35, (o, k) => { o.position.y -= .15; fade(o, 1 - k); }); } },
+      fx: { sting(e) { const u = STING.get(e.id); if (u) { u.hit = { x: e.x, y: e.y, z: e.z }; u.k = 1; }
+          burst(e.x, e.y, e.z, 26, 0x9eff1e, 7, .25, .45, 6); ringFx(e.x, .1, e.z, 2.5, 0x9eff1e, .3); flash(e.x, e.y, e.z, 0x9eff1e, 20, .15);
+          popNum(e.x, e.y + 1, e.z, e.k === 3 ? 'STING!' : 'STING', '#b8ff40', 'tag'); shake(clamp(.18 - distTo(e.x, e.z) * .008, .03, .14)); sfx('venom_big'); },
+        pop(e) { burst(e.x, e.y, e.z, 24, 0x9eff1e, 5, .3, .5, 4); } } }, // Venom's passive: a poisoned enemy bursts as it dies
+    { name: 'Hydra', icon: '🐉', mode: 'aim', range: 20, aimR: 6, desc: 'ULTIMATE. A three-headed venom hydra bursts out of the ground at the target for 6 s. Each head spits venom at a different enemy within 16 m every 0.4 s: 7 damage and a poison stack around the hit, and a small toxic puddle. Then it dives back into the ground in a poison eruption: 60 to everything within 6 m.',
+      cast(p, c) { ent(p, c, c.tgt.x, c.tgt.z, { life: 6, r: 16, solid: [{ x: c.tgt.x, z: c.tgt.z, r: 1.4 }], h: 6 }); },
       ent: { tick(n, dt) {
           if (n.t < .6 || !pulse(n, dt, .4)) return;
           const es = enemiesNear(n.x, n.z, n.r).sort((a, b) => Math.hypot(a.x - n.x, a.z - n.z) - Math.hypot(b.x - n.x, b.z - n.z)).slice(0, 3); if (!es.length) return;
           const c = ctxN(n);
           for (let i = 0; i < 3; i++) { const e = es[i % es.length], x = e.x, z = e.z; fxe(n.mv, 'spit', { id: n.id, i, x, y: e.y + 1, z });
-            later(.25, () => { blast(x, z, 1.8, 8 * n.mul, c, { raw: true, kb: 1 }); if (c.p) ent(c.p, { p: c.p, el: 'venom', m: MOVE['venom.0'], dmg: n.mul }, x, z, { r: 1.2, life: 1.5 }); }); }
+            later(.25, () => { blast(x, z, 1.8, 7 * n.mul, c, { raw: true, kb: 1 }); if (c.p) ent(c.p, { p: c.p, el: 'venom', m: MOVE['venom.0'], dmg: n.mul }, x, z, { r: 1.2, life: 1.5 }); }); }
         },
         end(n) { boomAt(ctxN(n), n.x, 0, n.z, 6, 60 * n.mul, { kb: 6, lift: 6 }, 'dive'); } },
       view: { make(n) { // three long scaly necks heave out of a poison pool, sway and strike; the heads are huge fanged skulls of venom
           const g = new THREE.Group(), u = g.userData, pool = model('ink__pool', 0x9eff1e, { flat: true }); pool.scale.set(3, 1, 3); pool.position.y = INK_Y; g.add(pool); u.mats = [...pool.userData.mats];
-          u.necks = [0, 1, 2].map(i => { const neck = vineChain(18, 4.2, hydraMat()), head = snakeHead(2.4); scene.add(neck, head); return { neck, head, strike: 0 }; });
-          HYDRA.set(n.id, u); quakeCracks(n.x, n.z, 6, 10, 1.6, .22); debrisFx(n.x, .5, n.z, 12, 'earth__pebble', 0x5a6a2a, .45, 10); burst(n.x, 1, n.z, 60, 0x9eff1e, 10, .4, .7, 8, 4); dustFx(n.x, n.z, 3, 0x4a5a2a);
+          u.necks = [0, 1, 2].map(i => { const neck = vineChain(18, 4.2, hydraMat()), head = snakeHead(2.4, false, true), sm = new THREE.MeshStandardMaterial({ color: 0x9eff1e, emissive: 0x6ac020, emissiveIntensity: .6, transparent: true });
+            neck.userData.segs.forEach((s, j) => { if (j % 2 || j > 15) return; const sp = new THREE.Mesh(SNAKE.fang, sm); sp.rotation.x = Math.PI; sp.position.set(0, .1, .5); sp.scale.set(1.6 / s.scale.x, 1.8 / s.scale.y, 1); s.add(sp); }); neck.userData.mats.push(sm); scene.add(neck, head); return { neck, head, strike: 0 }; }); // a ridge of glowing spines down each neck
+          u.mist = 0; u.bub = makeCircle('venom'); u.bub.scale.setScalar(3.4); u.bub.position.y = .08; g.add(u.bub); HYDRA.set(n.id, u); quakeCracks(n.x, n.z, 6, 10, 1.6, .22); pillarFx(n.x, 0, n.z, 3, 10, 0x9eff1e, .6); debrisFx(n.x, .5, n.z, 12, 'earth__pebble', 0x5a6a2a, .45, 10); burst(n.x, 1, n.z, 60, 0x9eff1e, 10, .4, .7, 8, 4); dustFx(n.x, n.z, 3, 0x4a5a2a);
           sfx('ult'); sfx('venom_big'); shake(.4); return g; },
         upd(o, n, dt, t) {
           const u = o.userData, rise = easeOutBack(Math.min(1, n.t * 1.6)), a = Math.min(1, n.l * 8), sink = n.l < .08 ? n.l / .08 : 1;
@@ -1356,7 +1399,9 @@ venom: {
             layVine(h.neck, base, top, .3, .5, 1, sw); fade(h.neck, a); // a rearing S-curve, not an arch
             h.head.position.copy(top); h.head.lookAt(h.to && h.strike > 0 ? h.to : V(camera.position.x + Math.cos(an) * 3, top.y - 1.5, camera.position.z + Math.sin(an) * 3)); // glaring at you, eyes and fangs showing, until it strikes h.head.userData.jaw.rotation.x = .15 + Math.sin(Math.min(1, h.strike) * Math.PI) * .7; fade(h.head, a); // the jaw gapes as it spits
             if (Math.random() < .3) emit(top.x, top.y - .4, top.z, rand(-.5, .5), -1, rand(-.5, .5), 0x9eff1e, rand(.12, .22), .8, 6); }); // venom drooling from the jaws
-          if (Math.random() < .6) { const an = rand(0, TAU), d = rand(0, 2.5); emit(n.x + Math.cos(an) * d, .1, n.z + Math.sin(an) * d, 0, rand(.5, 1.5), 0, 0x9eff1e, rand(.12, .25), .7, -.4); } },
+          if (Math.random() < .6) { const an = rand(0, TAU), d = rand(0, 2.5); emit(n.x + Math.cos(an) * d, .1, n.z + Math.sin(an) * d, 0, rand(.5, 1.5), 0, 0x9eff1e, rand(.12, .25), .7, -.4); }
+          spinCircle(u.bub, dt, .6); setOpacity(u.bub.userData.mats, .6 * a); if (Math.random() < dt * 8) ringFx(n.x + rand(-2, 2), .1, n.z + rand(-2, 2), rand(.3, .7), 0xb8ff40, .3, .05); // the pool bubbling
+          if ((u.mist -= dt) <= 0) { u.mist = .3; if (distTo(n.x, n.z) > 7) smokeFx(n.x + rand(-1.5, 1.5), .5, n.z + rand(-1.5, 1.5), 1.6, 0x4a7a14, 1.6, 2, .8); } }, // toxic mist rolling off it
         drop(o, n) { const u = o.userData; for (const h of u.necks) for (const m of [h.neck, h.head]) addFx(m, .3, (m, k) => fade(m, 1 - k)); HYDRA.delete(n?.id); dropFade(.3)(o); } },
       fx: { spit(e) { // a head rears and spits a glob of venom in a high arc at its victim
           const u = HYDRA.get(e.id), h = u?.necks[e.i]; if (!h) return; h.strike = 1; h.to = V(e.x, e.y, e.z);
