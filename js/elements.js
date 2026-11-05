@@ -424,6 +424,26 @@ function wreckBall() {
   for (let i = 0; i < 14; i++) { const d = new THREE.Vector3().randomDirection(), s = new THREE.Mesh(SNAKE.fang, sm); s.scale.set(3, 2.4, 3); s.position.copy(d).multiplyScalar(1.05); s.quaternion.setFromUnitVectors(new THREE.Vector3(0, -1, 0), d); g.add(s); }
   g.userData.mats = [m, sm]; return g;
 }
+// Magma: a heavy molten splash: a burst of lava, globs flung out in arcs that drip back down, chunks of black rock, a scorch, dark smoke
+function lavaSplash(x, y, z, r, k = 1) {
+  burst(x, y, z, Math.round(28 * k), 0xff5a10, 7 * Math.sqrt(r / 2), .3, .5, 8, 3); burst(x, y, z, Math.round(10 * k), 0xffd27a, 5, .2, .3);
+  for (let i = 0; i < Math.round(14 * k); i++) { const a = rand(0, TAU), s = rand(3, 7) * Math.sqrt(r / 2); emit(x, y, z, Math.cos(a) * s, rand(4, 9), Math.sin(a) * s, Math.random() < .5 ? 0xff6a1a : 0xffa040, rand(.15, .3), rand(.7, 1.1), 16, .4); }
+  debrisFx(x, y, z, Math.round(3 + 3 * k), 'earth__pebble', 0x2a1410, .3, 8); ringFx(x, .1, z, r, 0xff5a10, .4); scarFx(x, z, r * .6, 0xff3a10, 3.5);
+  if (distTo(x, z) > r + 3) smokeFx(x, y + .4, z, r * .4, 0x2e2420, 1.4, Math.round(2 + 2 * k), 1.6);
+  flash(x, y + .5, z, 0xff5a10, 30 * k, .25); shake(clamp((.4 - distTo(x, z) * .02) * k, .03, .4)); sfx(k > 1 ? 'magma_big' : 'magma'); cityPush(x, y, z, r + 2, 6 * k);
+}
+// Crystal: sparkles in every colour of the spectrum, and short rays of split light fanning out from a point
+function prismFx(x, y, z, n, sp) { for (let i = 0; i < n; i++) { const a = rand(0, TAU), b = rand(-1, 1), s = rand(.4, 1) * sp; emit(x, y, z, Math.cos(a) * s, b * s * .6 + 1, Math.sin(a) * s, new THREE.Color().setHSL(i / n, .85, .7).getHex(), rand(.06, .14), rand(.3, .6), 3); } }
+function prismRays(x, y, z, n, L, life = .3) { const a0 = rand(0, TAU), o = V(x, y, z); for (let i = 0; i < n; i++) { const a = a0 + TAU * i / n, d = V(Math.cos(a), rand(-.2, .5), Math.sin(a)).normalize(); beamFx(o, o.clone().addScaledVector(d, L * rand(.7, 1.2)), new THREE.Color().setHSL(i / n, .9, .65).getHex(), .06, life); } }
+// Sonic: a ring of glowing equalizer bars round (x, z) that leap up and bounce down like a music visualizer
+const EQ_GEO = new THREE.BoxGeometry(.22, 1, .22).translate(0, .5, 0);
+function eqBars(x, z, r, n, life = .6, h = 2) {
+  const g = new THREE.Group(), bars = [];
+  for (let i = 0; i < n; i++) { const a = TAU * i / n, m = new THREE.MeshBasicMaterial({ color: new THREE.Color(0x3ee8ff).lerp(new THREE.Color(0xff6ae8), (Math.sin(a * 3) + 1) / 2), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }), b = new THREE.Mesh(EQ_GEO, m);
+    b.position.set(x + Math.cos(a) * r, 0, z + Math.sin(a) * r); b.rotation.y = -a; g.add(b); bars.push({ b, m, ph: rand(0, TAU), hh: h * rand(.5, 1.2) }); }
+  addFx(g, life, (o, k) => { for (const q of bars) { q.b.scale.y = Math.max(.02, q.hh * Math.sin(Math.min(1, k * 1.6) * Math.PI) * (.7 + .3 * Math.sin(k * 40 + q.ph))); q.m.opacity = 1 - k * k; } });
+}
+const W = n => n.r * .9; // Heat Wave: its half-width on the client (only r reaches the client, not w)
 const WARM = [];
 WARM.push(() => wreckBall()); // client: extra meshes and shaders compiled at game start (warmFx), so their first cast does not hitch
 WARM.push(() => snakeHead(1, true));
@@ -1543,20 +1563,23 @@ magma: {
       look: { m: 'magma__glob', spin: [4, 3, 0], trail: [0xff5a10, .3, .45, -1, 3], light: 8 },
       view: { make(n) {
           if (n.kind === 'rock') { const o = model('magma__glob', 0x2a1410, { shadow: true }); o.scale.set(2.2, 1.6, 2.2); o.rotation.y = rand(0, TAU); dustFx(n.x, n.z, .8, 0x3a2a22); smokeFx(n.x, .8, n.z, .8, 0x4a3a32, 1.2, 4, .6); return o; }
-          const g = new THREE.Group(), d = T.disc.clone(), m = discMat(0xff3a10); d.material = m; d.scale.setScalar(n.r); d.position.y = .06; g.add(d); g.userData.mats = []; g.userData.m = m; return g; },
+          const g = new THREE.Group(), d = T.disc.clone(), m = discMat(0xff3a10); d.material = m; d.scale.setScalar(n.r); d.position.y = .06; g.add(d); g.userData.mats = []; g.userData.m = m; quakeCracks(n.x, n.z, n.r * 1.1, 6, 3, .05); scarFx(n.x, n.z, n.r * .8, 0xff3a10, 3.5); return g; },
         upd(o, n, dt, t) {
-          if (n.kind === 'rock') { if (Math.random() < .05) emit(n.x + rand(-.5, .5), 1.2, n.z + rand(-.5, .5), 0, .6, 0, 0x5a4a42, rand(.15, .3), 1.2, -.2); return; }
-          o.userData.m.uniforms.uA.value = Math.min(1, n.l * 4) * (1 + .2 * Math.sin(t * 6)); if (Math.random() < .3) emit(n.x + rand(-1.2, 1.2), .1, n.z + rand(-1.2, 1.2), 0, rand(1, 3), 0, 0xff8a3a, rand(.1, .25), .7, -1); },
+          if (n.kind === 'rock') { if (Math.random() < .05) emit(n.x + rand(-.5, .5), 1.2, n.z + rand(-.5, .5), 0, .6, 0, 0x5a4a42, rand(.15, .3), 1.2, -.2); if (n.t < 1.5 && Math.random() < .3) emit(n.x + rand(-.6, .6), rand(.3, 1), n.z + rand(-.6, .6), 0, rand(.3, .8), 0, 0xff6a2a, rand(.06, .12), .5, -.5); return; } // still glowing as it cools
+          o.userData.m.uniforms.uA.value = Math.min(1, n.l * 4) * (1 + .2 * Math.sin(t * 6)); if (Math.random() < .3) emit(n.x + rand(-1.2, 1.2), .1, n.z + rand(-1.2, 1.2), 0, rand(1, 3), 0, 0xff8a3a, rand(.1, .25), .7, -1);
+          if (Math.random() < dt * 5) { const a = rand(0, TAU), d = rand(0, n.r * .8), x = n.x + Math.cos(a) * d, z = n.z + Math.sin(a) * d; ringFx(x, .1, z, rand(.2, .45), 0xffa040, .3, .05); burst(x, .15, z, 4, 0xffb040, 2, .1, .3, 8, 1.5); } }, // the lava bubbling and popping
         drop: (o, n) => n?.kind === 'rock' ? addFx(o, .5, (o, k) => { o.position.y = -1.2 * k; }) : addFx(o, .3, (o, k) => { o.userData.m.uniforms.uA.value = 1 - k; }) },
       fx: { thud: e => { burst(e.x, .2, e.z, 16, 0xff5a10, 5, .25, .4, 6); dustFx(e.x, e.z, .8, 0x3a2a22); },
-        boom: e => { boomFx(e.x, e.y, e.z, e.r, 0xff3a10, .8); burst(e.x, e.y, e.z, 20, 0x1a0a08, 5, .4, .7, 6); }, det: e => boomFx(e.x, e.y, e.z, 2.5, 0xff3a10, .6), nova: e => boomFx(e.x, .5, e.z, 4.5, 0xff3a10, .8) } },
+        boom: e => { lavaSplash(e.x, Math.max(e.y, .2), e.z, e.r, .8); }, det: e => boomFx(e.x, e.y, e.z, 2.5, 0xff3a10, .6), nova: e => boomFx(e.x, .5, e.z, 4.5, 0xff3a10, .8) } },
     { name: 'Eruption', icon: '♨️', cd: 5, mode: 'aim', range: 20, aimR: 3, desc: 'The ground at your target glows, then erupts in a geyser of lava that launches enemies. They come down into the lava pool it leaves behind, which burns for 3 s and then cools into rock.',
       cast(p, c) { ent(p, c, c.tgt.x, c.tgt.z, { life: .7, r: 3 * c.st.aoe }); },
       ent: { end(n) { const c = ctxN(n); boomAt(c, n.x, 0, n.z, n.r, 50 * n.mul, { lift: 13, kb: 2, raw: true }, 'erupt'); if (c.p) ent(c.p, { ...c, m: MOVE['magma.0'] }, n.x, n.z, { r: n.r, life: 3 }); } },
-      view: { make(n) { const c = zoneCircle('magma', n.r, .9); return Object.assign(new THREE.Group().add(c), { userData: { mats: [], circle: c } }); },
-        upd(o, n, dt) { spinCircle(o.userData.circle, dt, 3); o.userData.circle.scale.setScalar(n.r * (.3 + .7 * easeOut(Math.min(1, n.t * 1.6)))); for (let k = 0; k < 3; k++) emit(n.x + rand(-n.r, n.r) * .6, .1, n.z + rand(-n.r, n.r) * .6, 0, rand(2, 5), 0, 0xff6a2a, .2, .4, -1); },
+      view: { make(n) { const c = zoneCircle('magma', n.r, .9); quakeCracks(n.x, n.z, n.r, 8, .9, .06); sfx('magma'); return Object.assign(new THREE.Group().add(c), { userData: { mats: [], circle: c } }); },
+        upd(o, n, dt) { spinCircle(o.userData.circle, dt, 3); if (Math.random() < .25) smokeFx(n.x + rand(-1, 1), .3, n.z + rand(-1, 1), .7, 0x3a2a24, 1, 1, .8); if (distTo(n.x, n.z) < 16) shake(.03); o.userData.circle.scale.setScalar(n.r * (.3 + .7 * easeOut(Math.min(1, n.t * 1.6)))); for (let k = 0; k < 3; k++) emit(n.x + rand(-n.r, n.r) * .6, .1, n.z + rand(-n.r, n.r) * .6, 0, rand(2, 5), 0, 0xff6a2a, .2, .4, -1); },
         drop: (o) => o.removeFromParent() },
-      fx: { erupt(e) { riseFx('magma__geyser', 0xff3a10, e.x, e.z, e.r / 2.4, 1.2); boomFx(e.x, 1, e.z, e.r, 0xff3a10); for (let i = 0; i < 40; i++) emit(e.x, .5, e.z, rand(-4, 4), rand(8, 18), rand(-4, 4), Math.random() < .5 ? 0xff5a10 : 0xffb040, rand(.25, .5), 1.2, 14, .5); sfx('magma_big'); } } },
+      fx: { erupt(e) { riseFx('magma__geyser', 0xff3a10, e.x, e.z, e.r / 2.4, 1.2); lavaSplash(e.x, 1, e.z, e.r, 1.3); pillarFx(e.x, 0, e.z, e.r * .45, 10, 0xff6a20, .6);
+          for (let i = 0; i < 40; i++) emit(e.x, .5, e.z, rand(-4, 4), rand(8, 18), rand(-4, 4), Math.random() < .5 ? 0xff5a10 : 0xffb040, rand(.25, .5), 1.2, 14, .5); // lava thrown high, raining back down
+          debrisFx(e.x, 1, e.z, 6, 'magma__glob', 0x2a1410, .5, 11); smokeFx(e.x, 3, e.z, e.r * .6, 0x2e2420, 2.2, 6, 2.2); sfx('magma_big'); } } },
     { name: 'Heat Wave', icon: '🌡️', cd: 10, desc: 'Send a slow, 9 m wide wall of shimmering heat rolling 10 m forward. Enemies caught in it are slowed and heat up with every scorch, and any that heat up 5 times melt for 70.',
       cast(p, c) { const f = c.flat; ent(p, c, p.x + f.x * 1.5, p.z + f.z * 1.5, { life: 3, dx: f.x, dz: f.z, w: 4.5 * c.st.aoe, yaw: Math.atan2(f.x, f.z), r: 5 }); },
       ent: { tick(n, dt) {
@@ -1572,10 +1595,12 @@ magma: {
         }
       } },
       // a line of molten globs wobbling along the ground, with heat rising off it
-      view: { make(n) { const g = new THREE.Group(); g.userData.mats = []; const N = 7; for (let i = 0; i < N; i++) { const o = model('magma__glob', 0xff3a10); o.position.x = (i / (N - 1) - .5) * 2 * n.w; o.scale.setScalar(.9); g.add(o); g.userData.mats.push(...o.userData.mats); } sfx('magma_big'); return g; },
-        upd(o, n, dt, t) { o.rotation.y = n.yaw; o.children.forEach((c, i) => { c.position.y = .2 + Math.abs(Math.sin(t * 6 + i)) * .3; c.scale.set(.9, .5 + .25 * Math.sin(t * 5 + i * 2), .9); }); fade(o, Math.min(1, n.t * 4, n.l * 5) * .85);
+      view: { make(n) { const g = new THREE.Group(); g.userData.mats = []; const N = 7; for (let i = 0; i < N; i++) { const o = model('magma__glob', 0xff3a10); o.position.x = (i / (N - 1) - .5) * 2 * W(n); o.scale.setScalar(.9); g.add(o); g.userData.mats.push(...o.userData.mats); }
+          g.userData.fl = Array.from({ length: 9 }, (_, i) => { const f = model('fire__flame', 0xff5a1a, { flame: true }); f.position.x = (i / 8 - .5) * 2 * W(n); f.scale.set(1.4, 2.2, 1.4); g.add(f); g.userData.mats.push(...f.userData.mats); return f; }); g.userData.sc = 0; sfx('magma_big'); sfx('fire_roar'); return g; }, // tongues of flame along the wall
+        upd(o, n, dt, t) { o.rotation.y = n.yaw; o.children.forEach((c, i) => { if (o.userData.fl.includes(c)) { c.scale.y = 2 + .6 * Math.sin(t * 7 + i * 1.7); return; } c.position.y = .2 + Math.abs(Math.sin(t * 6 + i)) * .3; c.scale.set(.9, .5 + .25 * Math.sin(t * 5 + i * 2), .9); }); fade(o, Math.min(1, n.t * 4, n.l * 5) * .85);
+          if ((o.userData.sc -= dt) <= 0) { o.userData.sc = .2; const l = rand(-W(n), W(n)); scarFx(n.x + Math.cos(n.yaw) * l, n.z - Math.sin(n.yaw) * l, rand(.8, 1.3), 0xff4a10, 2.5); if (distTo(n.x, n.z) > 6) smokeFx(n.x + Math.cos(n.yaw) * l, 2, n.z - Math.sin(n.yaw) * l, 1, 0x3a2a24, 1.2, 1, 1.5); } // the floor scorched behind it
           const sx = Math.cos(n.yaw), sz = -Math.sin(n.yaw);
-          for (let k = 0; k < 6; k++) { const l = rand(-n.w, n.w); emit(n.x + sx * l, rand(.1, .6), n.z + sz * l, 0, rand(2, 5), 0, Math.random() < .5 ? 0xff5a10 : 0xffb040, rand(.15, .35), .6, -1.5); } },
+          for (let k = 0; k < 6; k++) { const l = rand(-W(n), W(n)); emit(n.x + sx * l, rand(.1, .6), n.z + sz * l, 0, rand(2, 5), 0, Math.random() < .5 ? 0xff5a10 : 0xffb040, rand(.15, .35), .6, -1.5); } },
         drop: dropFade(.3) },
       fx: { melt(e) { burst(e.x, e.y, e.z, 40, 0xff5a10, 7, .3, .5, 6); flash(e.x, e.y, e.z, 0xff6a2a, 30, .2); scarFx(e.x, e.z, 1.4, 0xff3a10, 3); popNum(e.x, e.y + 1.4, e.z, 'MELT', '#ff6a2a', 'tag'); sfx('magma_big'); } } },
     { name: 'Volcano', icon: '🗻', cd: 15, mode: 'aim', range: 14, aimR: 2, desc: 'Raise a small volcano that keeps lobbing magma bombs at enemies.',
@@ -1589,10 +1614,12 @@ magma: {
       } },
       shot: { hit: () => 'end', end(s) { boomAt(ctxS(s), s.x, Math.max(s.y, .1), s.z, 2.2, s.dmg, { kb: 3 }); } },
       look: { m: 'magma__glob', spin: [4, 3, 0], trail: [0xff5a10, .35, .5, -1, 3], light: 6 },
-      view: { make(n) { const o = model('magma__volcano', 0xff3a10, { shadow: true }); dustFx(n.x, n.z, 2, 0x3a2a20); sfx('magma_big'); return o; },
-        upd(o, n) { o.position.y = -2.2 * (1 - easeOut(Math.min(1, n.t * 3))); if (Math.random() < .4) emit(n.x + rand(-.3, .3), 2.1, n.z + rand(-.3, .3), rand(-.3, .3), rand(1, 2), rand(-.3, .3), 0x3a3030, rand(.4, .7), 1.5, -.5, .3); },
+      view: { make(n) { const o = model('magma__volcano', 0xff3a10, { shadow: true }); dustFx(n.x, n.z, 2, 0x3a2a20); quakeCracks(n.x, n.z, 3.5, 8, 2, .06); debrisFx(n.x, .4, n.z, 8, 'earth__pebble', 0x3a2a20, .35, 8); o.userData.plume = 0; sfx('magma_big'); return o; },
+        upd(o, n, dt) { o.position.y = -2.2 * (1 - easeOut(Math.min(1, n.t * 3))); if (Math.random() < .4) emit(n.x + rand(-.3, .3), 2.1, n.z + rand(-.3, .3), rand(-.3, .3), rand(1, 2), rand(-.3, .3), 0x3a3030, rand(.4, .7), 1.5, -.5, .3);
+          if ((o.userData.plume -= dt) <= 0 && n.t > .3) { o.userData.plume = .35; smokeFx(n.x, 2.6, n.z, .9, 0x2e2622, 2.4, 1, 2.2); } // a plume of dark smoke
+          if (Math.random() < .3) emit(n.x + rand(-.4, .4), 2.2, n.z + rand(-.4, .4), 0, rand(.5, 1.5), 0, 0xff6a20, rand(.15, .3), .4, -1); }, // the crater glowing
         drop(o, n) { dustFx(n.x, n.z, 2, 0x3a2a20); addFx(o, .5, (o, k) => { o.position.y = -2.2 * k; }); } },
-      fx: { spew(e) { burst(e.x, 2.2, e.z, 16, 0xff6a2a, 5, .3, .4, 4); flash(e.x, 2.5, e.z, 0xff5a1a, 15, .15); sfx('magma'); }, boom: e => boomFx(e.x, e.y, e.z, e.r, 0xff3a10, .8) } },
+      fx: { spew(e) { burst(e.x, 2.2, e.z, 24, 0xff6a2a, 6, .3, .45, 8, 3); flash(e.x, 2.5, e.z, 0xff5a1a, 22, .15); pillarFx(e.x, 2, e.z, .5, 3, 0xff6a20, .25); smokeFx(e.x, 2.6, e.z, .7, 0x3a2a24, 1, 2, 2); sfx('magma'); }, boom: e => lavaSplash(e.x, Math.max(e.y, .2), e.z, e.r, .8) } },
     { name: 'Meteor', icon: '☄️', mode: 'aim', range: 26, aimR: 7.5, desc: 'ULTIMATE. Call down a colossal meteor. After a short warning it obliterates the area and floods it with lava.',
       cast(p, c) { ent(p, c, c.tgt.x, c.tgt.z, { life: 1.6, r: 7.5 * c.st.aoe }); },
       ent: {
@@ -1603,7 +1630,7 @@ magma: {
         make(n) {
           const g = new THREE.Group(); g.userData.mats = [];
           if (n.kind === 'field') { const d = T.disc.clone(), m = discMat(0xff3a10); d.material = m; d.scale.setScalar(n.r); d.position.y = .06; g.add(d); g.userData.m = m; g.userData.circle = zoneCircle('magma', n.r, .6); g.add(g.userData.circle); return g; }
-          const c = zoneCircle('magma', n.r, .9), m = model('magma__meteor', 0xff3a10); g.add(c, m); g.userData.circle = c; g.userData.met = m; sfx('magma_big'); return g;
+          const c = zoneCircle('magma', n.r, .9), m = model('magma__meteor', 0xff3a10), sh = T.disc.clone(), sm = discMat(0xff5a10); sh.material = sm; sh.position.y = .07; m.scale.setScalar(1.6); g.add(c, m, sh); Object.assign(g.userData, { circle: c, met: m, sh, sm }); sfx('magma_big'); sfx('fire_roar'); return g;
         },
         upd(o, n, dt, t) {
           const u = o.userData; spinCircle(u.circle, dt, u.met ? 3 : .4);
@@ -1611,10 +1638,15 @@ magma: {
           const k = 1 - n.l; setOpacity(u.circle.userData.mats, .4 + .6 * Math.abs(Math.sin(t * 10)));
           u.met.position.set(10 * (1 - k), 45 * (1 - k) + 1, 10 * (1 - k)); u.met.lookAt(_v.copy(u.met.position).add(o.position).add(V(-10, -44, -10))); // nose along the fall, tail trailing
           for (let i = 0; i < 6; i++) emit(n.x + u.met.position.x + rand(-1, 1), u.met.position.y + rand(-1, 1), n.z + u.met.position.z + rand(-1, 1), rand(-2, 2), rand(2, 6), rand(-2, 2), flameColor(), rand(.5, 1), .6, 0);
+          for (let i = 0; i < 3; i++) { const s = rand(1, 5); emit(n.x + u.met.position.x * (1 + s * .1), u.met.position.y + 4.4 * s, n.z + u.met.position.z * (1 + s * .1), 0, 0, 0, Math.random() < .5 ? 0xffd27a : 0xff5a10, rand(.6, 1.2), .5, 0); } // the long burning tail
+          if (Math.random() < .3) smokeFx(n.x + u.met.position.x, u.met.position.y + 3, n.z + u.met.position.z, 1.5, 0x2e2622, 1.5, 1, .3);
+          u.sh.scale.setScalar(n.r * (.2 + .8 * k)); u.sm.uniforms.uA.value = .3 + .9 * k; if (k > .6) shake(.04 * k); // its glow on the ground grows as it comes down
         },
         drop(o, n) { if (o.userData.m) addFx(o, .4, (o, k) => { o.userData.m.uniforms.uA.value = 1 - k; setOpacity(o.userData.circle.userData.mats, (1 - k) * .6); }); else o.removeFromParent(); },
       },
-      fx: { impact(e) { boomFx(e.x, 1, e.z, e.r, 0xff3a10, 3); pillarFx(e.x, .05, e.z, e.r * .5, 16, 0xff5a10, 1); ringFx(e.x, .1, e.z, e.r * 1.8, 0xffa040, 1); dustFx(e.x, e.z, e.r, 0x3a2a20); shake(1); sfx('ult'); sfx('smash'); } } },
+      fx: { impact(e) { fireBoom(e.x, 1, e.z, e.r, 1.6, true); lavaSplash(e.x, 1, e.z, e.r, 2); pillarFx(e.x, .05, e.z, e.r * .5, 16, 0xff5a10, 1); ringFx(e.x, .1, e.z, e.r * 1.8, 0xffa040, 1); ringFx(e.x, .2, e.z, e.r * 2.6, 0xffd27a, 1.3, 2);
+          quakeCracks(e.x, e.z, e.r * 1.4, 16, 4, .06); dustFx(e.x, e.z, e.r, 0x3a2a20); debrisFx(e.x, 1, e.z, 16, 'magma__glob', 0x2a1410, .7, 16); smokeFx(e.x, 6, e.z, e.r * .8, 0x2a2220, 3.5, 12, 3); // the crater, rocks flung out, a mushroom of smoke
+          if (distTo(e.x, e.z) < 30) fovKick = Math.max(fovKick, 1.2); whiteFx = Math.max(whiteFx, .3); shake(1); sfx('ult'); sfx('smash'); sfx('explosion_big'); } } },
   ],
 },
 // ================================================================== CRYSTAL
@@ -1633,7 +1665,7 @@ crystal: {
         return 'end';
       } },
       look: { m: 'crystal__prism', spin: [0, 0, 6], trail: [0xffb0f0, .14, .25, 0, 1], light: 4 },
-      fx: { crack(e) { debrisFx(e.x, e.y, e.z, 3, 'crystal__prism', 0xff5ad8, .14, 5); burst(e.x, e.y, e.z, 8, 0xffd0f6, 4, .1, .25); }, // the shard shatters on impact
+      fx: { crack(e) { debrisFx(e.x, e.y, e.z, 3, 'crystal__prism', 0xff5ad8, .14, 5); burst(e.x, e.y, e.z, 8, 0xffd0f6, 4, .1, .25); prismFx(e.x, e.y, e.z, 12, 4); flash(e.x, e.y, e.z, 0xff8ae8, 10, .1); }, // the shard shatters in a spray of split light
         det: e => boomFx(e.x, e.y, e.z, 2.5, 0xff5ad8, .6), nova: e => boomFx(e.x, .5, e.z, 4.5, 0xff5ad8, .8) } },
     { name: 'Geode Bomb', icon: '🪩', cd: 6, desc: 'Lob a geode that cracks open and sprays crystal shards in every direction. The shards stick in the ground as a field of crystal spikes for 4 s that cut anything walking over them for 9.',
       cast(p, c) { shoot(p, c, 22, { d: lob(c.d, .15), grav: 16, r: .4, dmg: 10 * c.dmg, rest: .35, fuse: 1.2 }); },
@@ -1647,10 +1679,11 @@ crystal: {
       view: { make(n) { const g = new THREE.Group(); g.userData.mats = []; // crystal spikes jutting out of the floor
           for (let i = 0; i < 12; i++) { const o = model('crystal__prism', 0xff5ad8), a = rand(0, TAU), d = Math.sqrt(Math.random()) * n.r; o.position.set(Math.cos(a) * d, .1, Math.sin(a) * d); o.rotation.set(rand(-.4, .4), rand(0, TAU), rand(-.4, .4)); o.scale.setScalar(rand(.35, .6)); o.userData.s = o.scale.x; g.add(o); g.userData.mats.push(...o.userData.mats); }
           return g; },
-        upd(o, n) { const k = Math.min(1, n.t * 6), out = n.l < .1 ? n.l * 10 : 1; o.children.forEach(c => c.scale.setScalar(c.userData.s * k * out)); },
+        upd(o, n, dt, t) { const k = Math.min(1, n.t * 6), out = n.l < .1 ? n.l * 10 : 1; o.children.forEach(c => c.scale.setScalar(c.userData.s * k * out));
+          if (Math.random() < .5) { const c = pick(o.children), q = c.position; emit(n.x + q.x, .3 + rand(0, .5), n.z + q.z, 0, rand(.3, .8), 0, shimmer(t + q.x).getHex(), rand(.06, .12), .5, -.3); } }, // glints running over the spikes
         drop: o => o.removeFromParent() },
       look: { m: 'crystal__geode', spin: [3, 4, 0], light: 4 },
-      fx: { boom: e => { boomFx(e.x, e.y, e.z, e.r, 0xff5ad8, .8); debrisFx(e.x, e.y + .2, e.z, 9, 'crystal__prism', 0xff5ad8, .2, 9); debrisFx(e.x, e.y + .2, e.z, 2, 'crystal__geode', 0xff5ad8, .35, 4); dustFx(e.x, e.z, 1.2, 0x8a6a80); sfx('crystal_big'); } } },
+      fx: { boom: e => { boomFx(e.x, e.y, e.z, e.r, 0xff5ad8, .8); prismFx(e.x, e.y + .3, e.z, 40, 9); prismRays(e.x, e.y + .3, e.z, 8, 4, .35); debrisFx(e.x, e.y + .2, e.z, 9, 'crystal__prism', 0xff5ad8, .2, 9); debrisFx(e.x, e.y + .2, e.z, 2, 'crystal__geode', 0xff5ad8, .35, 4); dustFx(e.x, e.z, 1.2, 0x8a6a80); sfx('crystal_big'); } } },
     { name: 'Resonant Crystal', icon: '💠', cd: 12, mode: 'aim', range: 18, aimR: 6, desc: 'Plant a humming crystal for 6 s. It soaks up a share of all the damage dealt to enemies within 6 m of it, glowing brighter, then shatters for 25 plus 8% of everything it soaked (up to 50 more) to every enemy in range.',
       cast(p, c) { ent(p, c, c.tgt.x, c.tgt.z, { life: 6, r: 6 * c.st.aoe, hp: {} }); },
       ent: { tick(n) { // charge = hp the enemies near it have lost since the last tick
@@ -1660,9 +1693,12 @@ crystal: {
         end(n) { const dmg = 25 * n.mul + Math.min(50, n.s * .08); n.s = Math.round(n.s); fxe(n.mv, 'shatter', { x: n.x, z: n.z, r: n.r, k: Math.min(1, n.s / 400) }); for (const e of enemiesNear(n.x, n.z, n.r)) hitEnemy(e, 'crystal', dmg, own(n), e.x - n.x, e.z - n.z, 6, { aoe: true }); } },
       view: { make(n) { const g = new THREE.Group(), o = model('crystal__prism', 0xff5ad8); o.scale.setScalar(1.4); g.add(o); g.userData.mats = o.userData.mats.slice(); g.userData.o = o; g.userData.circle = zoneCircle('crystal', n.r, .35); g.add(g.userData.circle); sfx('crystal_big'); return g; },
         upd(o, n, dt, t) { const u = o.userData, k = Math.min(1, (n.s || 0) / 400); u.o.position.y = 1.4 + Math.sin(t * 3) * .15; u.o.rotation.y += dt * (1 + 6 * k); u.o.scale.setScalar(1.4 + k * 1.2 + Math.sin(t * (8 + 20 * k)) * .05 * (1 + k)); spinCircle(u.circle, dt, .5 + k * 2); fade(u.o, .7 + .3 * k);
-          if (Math.random() < .2 + k) { const a = rand(0, TAU), d = rand(1, n.r); emit(n.x + Math.cos(a) * d, rand(.3, 1.5), n.z + Math.sin(a) * d, -Math.cos(a) * d * 2, rand(0, 2), -Math.sin(a) * d * 2, 0xffb0f0, rand(.06, .14), .45, 0, 0); } },
+          if (Math.random() < .2 + k) { const a = rand(0, TAU), d = rand(1, n.r); emit(n.x + Math.cos(a) * d, rand(.3, 1.5), n.z + Math.sin(a) * d, -Math.cos(a) * d * 2, rand(0, 2), -Math.sin(a) * d * 2, 0xffb0f0, rand(.06, .14), .45, 0, 0); }
+          if ((u.pr = (u.pr || 0) - dt) <= 0) { u.pr = .6 - .35 * k; ringFx(n.x, 1.4, n.z, n.r * (.6 + .4 * k), shimmer(t).getHex(), .5, .5); sfx('tink'); } // it hums: rings of resonance pulse out, faster as it fills
+          if (u.hp !== (n.s | 0) && Math.random() < .5) { u.hp = n.s | 0; const v = pick([...views.e.values()].filter(v => Math.hypot(v.g.position.x - n.x, v.g.position.z - n.z) < n.r)); if (v) beamFx(v.g.position.clone().setY(v.g.position.y + 1), V(n.x, 1.4 + Math.sin(t * 3) * .15, n.z), shimmer(t).getHex(), .05, .2); } }, // light drawn in from the hurt
         drop: o => o.removeFromParent() },
-      fx: { shatter(e) { boomFx(e.x, 1, e.z, e.r, 0xff5ad8, .6 + e.k); debrisFx(e.x, 1.4, e.z, 10 + Math.round(16 * e.k), 'crystal__prism', 0xff5ad8, .25, 12); flash(e.x, 1.4, e.z, 0xffb0f0, 30 + 50 * e.k, .3); sfx('tink'); } } },
+      fx: { shatter(e) { boomFx(e.x, 1, e.z, e.r, 0xff5ad8, .6 + e.k); debrisFx(e.x, 1.4, e.z, 10 + Math.round(16 * e.k), 'crystal__prism', 0xff5ad8, .25, 12); flash(e.x, 1.4, e.z, 0xffb0f0, Math.min(40, 30 + 50 * e.k), .3);
+          prismRays(e.x, 1.4, e.z, 10 + Math.round(8 * e.k), e.r, .45); prismFx(e.x, 1.4, e.z, 50, 10); ringFx(e.x, .1, e.z, e.r, 0xff8ae8, .5); sfx('tink'); sfx('crystal_big'); shake(.1 + .2 * e.k); } } },
     { name: 'Crystal Spire', icon: '🔮', cd: 14, mode: 'aim', range: 14, aimR: 1.5, desc: 'Grow a crystal spire that shoots enemies. Your own projectiles that pass by it refract into three.',
       cast(p, c) { ent(p, c, c.tgt.x, c.tgt.z, { life: 10, r: 16, solid: [{ x: c.tgt.x, z: c.tgt.z, r: .8 }], h: 3 }); },
       ent: { tick(n, dt) {
@@ -1677,10 +1713,12 @@ crystal: {
         const o = V(n.x, 2.3, n.z), d = center(e).sub(o).normalize();
         shoot(own(n), { ...ctxN(n), m: MOVE['crystal.0'] }, 34, { o, d, r: .3, dmg: 13 * n.mul, child: 1, mul: n.mul });
       } },
-      view: { make(n) { const o = model('crystal__spire', 0xff5ad8, { shadow: true }); dustFx(n.x, n.z, 1.5); debrisFx(n.x, .4, n.z, 6, 'earth__pebble', 0xff5ad8, .3, 7); sfx('crystal_big'); return o; },
+      view: { make(n) { const o = model('crystal__spire', 0xff5ad8, { shadow: true }); dustFx(n.x, n.z, 1.5); debrisFx(n.x, .4, n.z, 6, 'earth__pebble', 0xff5ad8, .3, 7); sfx('crystal_big');
+          for (let i = 0; i < 7; i++) { const a = TAU * i / 7 + rand(-.3, .3), c = model('crystal__prism', 0xff5ad8); c.position.set(Math.cos(a) * rand(.7, 1.1), .1, Math.sin(a) * rand(.7, 1.1)); c.rotation.set(Math.cos(a) * .6, rand(0, TAU), -Math.sin(a) * .6); c.scale.setScalar(rand(.5, .9)); o.add(c); o.userData.mats.push(...c.userData.mats); } // a cluster of crystals round its foot
+          prismFx(n.x, 1, n.z, 30, 6); return o; },
         upd(o, n, dt, t) { o.scale.setScalar(easeOutBack(Math.min(1, n.t * 3))); o.rotation.y += dt * .3; if (Math.random() < .3) emit(n.x + rand(-.5, .5), rand(.5, 3), n.z + rand(-.5, .5), 0, .5, 0, 0xffb0f0, .1, .8); },
         drop(o, n) { burst(n.x, 1.5, n.z, 50, 0xff8ae8, 7, .3, .6, 6); debrisFx(n.x, 1.5, n.z, 10, 'crystal__prism', 0xff5ad8, .25, 8); addFx(o, .3, (o, k) => { o.scale.setScalar(1 - k); }); } },
-      fx: { refract(e) { burst(e.x, e.y, e.z, 10, 0xffb0f0, 4, .2, .25); flash(e.x, e.y, e.z, 0xff5ad8, 10, .1); } } },
+      fx: { refract(e) { burst(e.x, e.y, e.z, 10, 0xffb0f0, 4, .2, .25); flash(e.x, e.y, e.z, 0xff5ad8, 10, .1); prismRays(e.x, e.y, e.z, 3, 2, .2); prismFx(e.x, e.y, e.z, 8, 3); } } },
     { name: 'Crystal Tomb', icon: '🏺', mode: 'aim', range: 20, aimR: 8, desc: 'ULTIMATE. Encase every enemy in the area in crystal. After 2.5 seconds the tombs shatter for massive damage.',
       cast(p, c) {
         const es = enemiesNear(c.tgt.x, c.tgt.z, 8 * c.st.aoe);
@@ -1688,8 +1726,10 @@ crystal: {
         fxe(c.m.key, 'tomb', { x: c.tgt.x, z: c.tgt.z, r: 8 * c.st.aoe });
         later(2.5, () => { for (const e of es) if (!e.dead) { const q = center(e); fxe(c.m.key, 'shatter', { x: q.x, y: q.y, z: q.z }); hitEnemy(e, 'crystal', 180 * c.dmg, p, 0, 0, 2, { aoe: true }); } });
       },
-      fx: { tomb(e) { circleFx('crystal', V(e.x, .08, e.z), e.r, { life: 1.4 }); flash(e.x, 2, e.z, 0xff5ad8, 50, .4); sfx('crystal_big'); sfx('ult'); },
-        shatter(e) { meshFx(NODE.crystal__prism, V(e.x, e.y, e.z), .6, 1, 3, 5); debrisFx(e.x, e.y, e.z, 7, 'crystal__prism', 0xff5ad8, .3, 10); burst(e.x, e.y, e.z, 60, 0xff8ae8, 12, .3, .6, 6); flash(e.x, e.y, e.z, 0xff5ad8, 25, .2); sfx('tink'); shake(.15); } } },
+      fx: { tomb(e) { circleFx('crystal', V(e.x, .08, e.z), e.r, { life: 2.6 }); flash(e.x, 2, e.z, 0xff5ad8, 40, .4); sfx('crystal_big'); sfx('ult');
+          for (const v of views.e.values()) { const q = v.g.position; if (Math.hypot(q.x - e.x, q.z - e.z) > e.r) continue; for (let i = 0; i < 5; i++) { const a = TAU * i / 5 + rand(-.3, .3); riseFx('crystal__prism', 0xff5ad8, q.x + Math.cos(a) * 1.1, q.z + Math.sin(a) * 1.1, rand(.7, 1.1), 2.6); } prismFx(q.x, q.y + 1, q.z, 16, 4); popNum(q.x, q.y + 2.4, q.z, 'ENCASED', '#ff8ae8', 'tag'); } // crystals grow up round every victim
+          for (let i = 0; i < 6; i++) { const a = TAU * i / 6; pillarFx(e.x + Math.cos(a) * e.r * .8, 0, e.z + Math.sin(a) * e.r * .8, .6, 9, shimmer(i).getHex(), 1.2); } shake(.25); },
+        shatter(e) { meshFx(NODE.crystal__prism, V(e.x, e.y, e.z), .6, 1, 3, 5); debrisFx(e.x, e.y, e.z, 7, 'crystal__prism', 0xff5ad8, .3, 10); burst(e.x, e.y, e.z, 40, 0xff8ae8, 12, .3, .6, 6); flash(e.x, e.y, e.z, 0xff5ad8, 25, .2); prismRays(e.x, e.y, e.z, 8, 4, .4); prismFx(e.x, e.y, e.z, 24, 8); ringFx(e.x, .1, e.z, 2.5, 0xffb0f0, .4); sfx('tink'); sfx('crystal_big'); shake(.2); } } },
   ],
 },
 // ================================================================== SONIC
@@ -1707,7 +1747,8 @@ sonic: {
     { name: 'Sound Wave', icon: '〰️', cd: .5, desc: 'A wave of sound that passes through enemies and widens as it travels.',
       cast(p, c) { for (let k = 0; k < c.multi; k++) shoot(p, c, 26, { d: spread(c.d, k, c.multi, .15), r: .8, life: .9, pierce: 99, dmg: 15 * c.dmg, kb: 2 }); },
       shot: { tick(s, dt) { s.r += dt * 2.4; s.sc = s.r / .8; } },
-      look: { m: 'sonic__wave', light: 1.2 },
+      look: { m: 'sonic__wave', light: 1.2, upd(o, s, dt, t) { const u = o.userData; if ((u.echo = (u.echo || 0) - dt) > 0 || o.position.distanceTo(camera.position) < 4) return; // no echoes in your face u.echo = .07; const q = o.clone(); q.traverse(m => { if (m.isMesh) m.material = m.material.clone(); }); q.userData.mats = []; q.traverse(m => { if (m.isMesh) q.userData.mats.push(m.material); }); const s0 = o.scale.x; addFx(q, .3, (q, k) => { q.scale.setScalar(s0 * (1 + k * .8)); fade(q, (1 - k) * .45); });
+        if (Math.random() < .35) { const p = o.position; modelFx('sonic__note', 0x3ee8ff, p.clone(), .7, (n, k) => { n.position.y += .02; n.lookAt(camera.position); n.scale.setScalar(.6); fade(n, 1 - k); }); } } }, // echo ripples and notes left in its wake
       fx: { res(e) { ringFx(e.x, e.y, e.z, e.r, 0x3ee8ff, .4); ringFx(e.x, .1, e.z, e.r * 1.3, 0xbff8ff, .5); burst(e.x, e.y, e.z, 30, 0x3ee8ff, 8, .25, .4); for (let i = 0; i < 4; i++) modelFx('sonic__note', 0x3ee8ff, V(e.x + rand(-1, 1), e.y + 1, e.z + rand(-1, 1)), .9, (o, k) => { o.position.y += .03; o.lookAt(camera.position); fade(o, 1 - k); }); sfx('sonic_big'); shake(.1); },
         det: e => boomFx(e.x, e.y, e.z, 2.5, 0x3ee8ff, .6), nova: e => boomFx(e.x, .5, e.z, 4.5, 0x3ee8ff, .8) } },
     { name: 'Sonic Boom', icon: '📢', cd: 5, mode: 'charge', charge: 1, desc: 'Hold to build up a sonic boom, then blast a cone in front of you. Full charge stuns.',
@@ -1716,19 +1757,23 @@ sonic: {
         const a = V(e.x, e.y, e.z), d = V(e.dx, e.dy, e.dz);
         for (let i = 0; i < 3; i++) modelFx('sonic__rings', 0x3ee8ff, a.clone(), .5, (o, k) => { o.position.copy(a).addScaledVector(d, (.2 + k + i * .15) * (6 + 6 * e.ck)); o.lookAt(o.position.clone().add(d)); o.scale.setScalar(1 + k * (2 + 2 * e.ck)); fade(o, 1 - k); });
         for (let i = 0; i < 40; i++) { const s = rand(12, 22); emit(a.x, a.y, a.z, d.x * s + rand(-4, 4), d.y * s + rand(-3, 3), d.z * s + rand(-4, 4), 0xbff8ff, .2, .4, 0, 2); }
-        shake(.1 + .3 * e.ck); sfx('sonic_big');
+        const cone = model('gen__cone', 0x3ee8ff); cone.position.copy(a).addScaledVector(d, 2); cone.lookAt(a.clone().addScaledVector(d, 3)); addFx(cone, .35, (o, k) => { const L = (6 + 6 * e.ck) * easeOut(k); o.scale.set(L * .55 + .3, L * .55 + .3, L + .3); fade(o, (1 - k) * (isMe(e.id) ? .25 : .5)); }); // the shock cone
+        const f = V(d.x, 0, d.z).normalize(); for (let i = 1; i <= 4; i++) { const L = (6 + 6 * e.ck) * i / 4, x = e.x + f.x * L, z = e.z + f.z * L; ringFx(x, .1, z, .8 + L * .35, 0x3ee8ff, .3 + i * .05, .2); if (L > 3) dustFx(x, z, .6 + L * .1, 0x8a9aa8); } // ripples racing over the floor
+        if (e.ck > .95) eqBars(e.x + f.x * 6, e.z + f.z * 6, 3, 14, .6, 2.5);
+        if (isMe(e.id)) fovKick = Math.max(fovKick, .4 + .6 * e.ck); shake(.1 + .3 * e.ck); sfx('sonic_big');
       } } },
     { name: 'Implosion', icon: '🌀', cd: 7, mode: 'aim', range: 20, aimR: 6, desc: 'A pocket of silence at the target sucks enemies in for a moment, then bursts in a sonic boom that stuns them.',
       cast(p, c) { ent(p, c, c.tgt.x, c.tgt.z, { life: .7, r: 6 * c.st.aoe }); },
       ent: { tick(n, dt) { for (const e of enemiesNear(n.x, n.z, n.r)) if (!ET[e.type].boss) pull(e, n.x, n.z, 45 * dt); },
         end(n) { boomAt(ctxN(n), n.x, .5, n.z, 4, 30 * n.mul, { kb: 11, cc: ['stun', .8] }, 'boom'); } },
-      view: { make(n) { const o = model('sonic__rings', 0x3ee8ff); o.rotation.x = Math.PI / 2; o.scale.setScalar(n.r); sfx('sonic'); return o; },
-        upd(o, n, dt) { o.position.y = .6; o.rotation.z -= dt * 6; o.scale.setScalar(n.r * Math.max(.15, n.l)); if (Math.random() < .8) { const a = rand(0, TAU); emit(n.x + Math.cos(a) * n.r, .5, n.z + Math.sin(a) * n.r, -Math.cos(a) * n.r * 2, 0, -Math.sin(a) * n.r * 2, 0xbff8ff, .15, .4, 0, 0); } },
+      view: { make(n) { const o = model('sonic__rings', 0x3ee8ff); o.rotation.x = Math.PI / 2; o.scale.setScalar(n.r); const c = new THREE.Mesh(SNAKE.seg, new THREE.MeshBasicMaterial({ color: 0x02060a, transparent: true, opacity: .9 })); o.add(c); o.userData.core = c; sfx('sonic'); return o; }, // a hole of silence
+        upd(o, n, dt) { o.position.y = .6; o.rotation.z -= dt * 6; o.scale.setScalar(n.r * Math.max(.15, n.l)); o.userData.core.scale.setScalar(.25 + .2 * (1 - n.l)); if (Math.random() < .8) { const a = rand(0, TAU); emit(n.x + Math.cos(a) * n.r, .5, n.z + Math.sin(a) * n.r, -Math.cos(a) * n.r * 2, 0, -Math.sin(a) * n.r * 2, 0xbff8ff, .15, .4, 0, 0); } },
         drop: o => o.removeFromParent() },
-      fx: { boom(e) { boomFx(e.x, e.y, e.z, e.r, 0x3ee8ff, .8); ringFx(e.x, 1, e.z, e.r * 1.2, 0xffffff, .3); sfx('sonic_big'); } } },
+      fx: { boom(e) { boomFx(e.x, e.y, e.z, e.r, 0x3ee8ff, .8); ringFx(e.x, 1, e.z, e.r * 1.2, 0xffffff, .3); ringFx(e.x, .1, e.z, e.r * 1.8, 0x3ee8ff, .5, .5); eqBars(e.x, e.z, e.r * .9, 16, .7, 2.2); sfx('sonic_big'); } } },
     { name: 'Harmonic Link', icon: '🔗', cd: 13, mode: 'aim', range: 20, aimR: 7, desc: 'Link up to 6 enemies with a harmonic chord for 6 s. Damage dealt to one is shared at 40% with all the others.',
       cast(p, c) { const g = S.nid++, es = enemiesNear(c.tgt.x, c.tgt.z, 7 * c.st.aoe).slice(0, 6); for (const e of es) { e.link = { g, t: 6 }; applyStatus(e, 'sonic', p); } fxe(c.m.key, 'link', { x: c.tgt.x, z: c.tgt.z, r: 7 * c.st.aoe }); },
-      fx: { link(e) { circleFx('sonic', V(e.x, .08, e.z), e.r, { life: 1 }); sfx('sonic'); } } },
+      fx: { link(e) { circleFx('sonic', V(e.x, .08, e.z), e.r, { life: 1.2 }); eqBars(e.x, e.z, e.r, 18, 1, 1.4); sfx('sonic');
+          for (const v of views.e.values()) { const q = v.g.position; if (Math.hypot(q.x - e.x, q.z - e.z) > e.r) continue; ringFx(q.x, q.y + 1, q.z, 1.2, 0xff6ae8, .5); for (let i = 0; i < 3; i++) modelFx('sonic__note', i % 2 ? 0xff6ae8 : 0x3ee8ff, V(q.x + rand(-.5, .5), q.y + 1.8, q.z + rand(-.5, .5)), 1, (o, k) => { o.position.y += .02; o.lookAt(camera.position); o.scale.setScalar(.7); fade(o, 1 - k); }); } } } }, // a chord over every linked enemy
     { name: 'Bass Drop', icon: '🎵', desc: 'ULTIMATE. Eight beats of bass blast out around you, each bigger than the last, ending in a massive drop.',
       cast(p, c) { ent(p, c, p.x, p.z, { follow: 1, life: 4.3, r: 4 }); },
       ent: { tick(n, dt) {
@@ -1739,8 +1784,9 @@ sonic: {
       } },
       view: { make() { const o = model('sonic__rings', 0x3ee8ff); o.rotation.x = Math.PI / 2; return o; }, upd(o, n, dt, t) { o.position.y = n.y + .2; o.rotation.z += dt * 3; o.scale.setScalar(1.5 + .5 * Math.sin(t * 12.5)); }, drop: dropFade(.3) },
       fx: {
-        beat(e) { ringFx(e.x, .15, e.z, e.r, 0x3ee8ff, .45, .5); ringFx(e.x, 1.2, e.z, e.r * .8, 0xff6ae8, .35); modelFx('sonic__note', 0x3ee8ff, V(e.x + rand(-2, 2), 2, e.z + rand(-2, 2)), .8, (o, k) => { o.position.y += .05; o.lookAt(camera.position); fade(o, 1 - k); }); shake(.18); sfx('sonic_big'); },
-        drop(e) { boomFx(e.x, 1, e.z, e.r, 0x3ee8ff, 2.5); ringFx(e.x, .5, e.z, e.r * 1.3, 0xff6ae8, .7); shake(.8); sfx('ult'); },
+        beat(e) { ringFx(e.x, .15, e.z, e.r, 0x3ee8ff, .45, .5); eqBars(e.x, e.z, Math.max(3.5, e.r * .8), 20, .45, .8 + e.r * .12); ringFx(e.x, 1.2, e.z, e.r * .8, 0xff6ae8, .35); modelFx('sonic__note', 0x3ee8ff, V(e.x + rand(-2, 2), 2, e.z + rand(-2, 2)), .8, (o, k) => { o.position.y += .05; o.lookAt(camera.position); fade(o, 1 - k); }); shake(.18); sfx('sonic_big'); },
+        drop(e) { boomFx(e.x, 1, e.z, e.r, 0x3ee8ff, 2.5); ringFx(e.x, .5, e.z, e.r * 1.3, 0xff6ae8, .7); eqBars(e.x, e.z, 6, 28, 1, 6); eqBars(e.x, e.z, 10, 36, 1.1, 4); quakeCracks(e.x, e.z, e.r, 14, 2, .52); dustFx(e.x, e.z, e.r * .6, 0x8a9aa8);
+          if (isMe(e.id)) fovKick = Math.max(fovKick, 1.2); whiteFx = Math.max(whiteFx, .25); shake(.8); sfx('ult'); sfx('explosion_big'); },
       } },
   ],
 },

@@ -18,7 +18,7 @@ Move modes: **tap** casts on press (LMB repeats while held), **hold to aim** sho
 | 🌑 Shadow | cursed | NIGHTFALL (drain) |
 | ☀️ Light | radiant | SMITE (heal) |
 | ☠️ Venom | poisoned | CONTAGION (spread) |
-| ⚔️ Steel | rended | SHRAPNEL (shatter) |
+| 🧲 Steel | rended | SHRAPNEL (shatter) |
 | 🌋 Magma | molten | ERUPTION (blast) |
 | 💎 Crystal | refracted | PRISM (shatter) |
 | 🔊 Sonic | resonant | FEEDBACK (stun) |
