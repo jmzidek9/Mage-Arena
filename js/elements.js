@@ -477,6 +477,9 @@ function bomber() {
   for (const x of [-2.6, 2.6]) { const e = add(new THREE.CylinderGeometry(.32, .32, 1.4, 8).rotateX(Math.PI / 2), x, -.15, .6); const f = new THREE.Mesh(new THREE.SphereGeometry(.28, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffa040 })); f.position.set(x, -.15, -.2); g.add(f); } // engines glowing
   g.userData.mats = [m]; return g;
 }
+// Rune: glowing runic letters that float up off a spell and fade
+const RUNES = 'ᚠᚢᚦᚨᚱᚲᚷᚹᚺᚾᛁᛃᛇᛈᛉᛊᛏᛒᛖᛗᛚᛜᛞᛟ';
+function runeLetters(x, y, z, n) { for (let i = 0; i < n; i++) popNum(x + rand(-1.2, 1.2), y + rand(0, 1.2), z + rand(-1.2, 1.2), RUNES[(Math.random() * RUNES.length) | 0], '#7affd8', 'tag'); }
 const WARM = [];
 WARM.push(() => bomber());
 WARM.push(() => wreckBall()); // client: extra meshes and shaders compiled at game start (warmFx), so their first cast does not hitch
@@ -2237,17 +2240,21 @@ illusion: {
   moves: [
     { name: 'Phantom Moths', icon: '🦋', cd: .45, desc: 'Release a glowing moth flanked by two phantom moths that flutter off to hunt enemies. Phantoms deal half damage.',
       cast(p, c) { for (let k = 0; k < c.multi; k++) { const d = spread(c.d, k, c.multi, .12); shoot(p, c, 32, { d, r: .32, dmg: 13 * c.dmg, sc: c.mega ? 1.8 : 1 }); for (const s of [-1, 1]) shoot(p, c, 22, { d: d.clone().applyAxisAngle(UP, s * .55).add(V(0, .1, 0)).normalize(), r: .3, life: 1.8, dmg: 6.5 * c.dmg, home: 5, sc: .7 }); } },
+      shot: { end(s, why) { if (why !== 'life') fxe(s.mv, 'dust', { x: s.x, y: s.y, z: s.z }); } },
       look: { m: 'illusion__moth', s: 1.3, flap: 1, flat: 1, trail: [() => Math.random() < .5 ? 0xffc8ff : 0xb8f0ff, .06, .4, -.4, 1], light: 2 },
-      fx: { det: e => boomFx(e.x, e.y, e.z, 2.5, 0xf0a6ff, .6), nova: e => boomFx(e.x, .5, e.z, 4.5, 0xf0a6ff, .8) } },
+      fx: { dust(e) { for (let i = 0; i < 14; i++) { const a = rand(0, TAU); emit(e.x, e.y, e.z, Math.cos(a) * rand(1, 3), rand(-.5, 1.5), Math.sin(a) * rand(1, 3), shimmer(rand(0, 9)).getHex(), rand(.05, .1), .7, -.6); } debrisFx(e.x, e.y, e.z, 2, 'illusion__moth', 0xf0a6ff, .25, 3); }, det: e => boomFx(e.x, e.y, e.z, 2.5, 0xf0a6ff, .6), nova: e => boomFx(e.x, .5, e.z, 4.5, 0xf0a6ff, .8) } },
     { name: 'Decoy', icon: '🪞', cd: 8, mode: 'aim', range: 18, aimR: 3.5, desc: 'Conjure a phantom double of yourself at the target. Monsters within 12 m attack it instead of you for 5 s. Once it is struck 3 times, or time runs out, it shatters, damaging and beguiling everything around it.',
       cast(p, c) { for (const n of entsOf(p, c.m.key)) n.life = 0; ent(p, c, c.tgt.x, c.tgt.z, { life: 5, r: 12, lure: 1, yaw: p.yaw }); },
       ent: { tick(n) { if ((n.hits || 0) >= 3) n.life = 0; }, end(n) { boomAt(ctxN(n), n.x, 1, n.z, 3.5, 35 * n.mul, { kb: 6 }, 'shatter'); } },
-      view: { make(n) { const g = ghostWizard(0xf0a6ff); g.rotation.y = n.yaw + Math.PI; burst(n.x, 1, n.z, 40, 0xffc8ff, 5, .3, .6); sfx('illusion_big'); return g; },
+      view: { make(n) { const g = ghostWizard(0xf0a6ff); g.rotation.y = n.yaw + Math.PI; burst(n.x, 1, n.z, 40, 0xffc8ff, 5, .3, .6); sfx('illusion_big');
+          g.userData.sh = Array.from({ length: 5 }, (_, i) => { const s = model('illusion__shard', 0xf0a6ff); s.scale.setScalar(.6); scene.add(s); return s; }); g.userData.lr = 0; return g; }, // mirror shards circling the double
         upd(o, n, dt, t) { fade(o, Math.min(1, n.t * 3, n.l * 10) * (.6 + .15 * Math.sin(t * 9))); tint(o, shimmer(t + n.id)); o.position.y = .05 + Math.sin(t * 2.2) * .06;
+          o.userData.sh.forEach((s, i) => { const a = t * 1.6 + TAU * i / 5; s.position.set(n.x + Math.cos(a) * 1.3, 1 + Math.sin(t * 2 + i) * .5, n.z + Math.sin(a) * 1.3); s.rotation.y = -a; tint(s, shimmer(t + i)); fade(s, Math.min(1, n.l * 10) * .8); });
+          if ((o.userData.lr -= dt) <= 0) { o.userData.lr = .7; ringFx(n.x, .1, n.z, 12, 0xf0a6ff, .7, 1.5); } // a lure pulsing out to the monsters it draws
           if (Math.random() < .35) emit(n.x + rand(-.4, .4), rand(.2, 1.9), n.z + rand(-.4, .4), 0, rand(.3, .9), 0, Math.random() < .5 ? 0xffc8ff : 0xb8f0ff, rand(.08, .16), .7, -.3); },
-        drop: o => o.removeFromParent() },
+        drop: o => { o.userData.sh.forEach(s => s.removeFromParent()); o.removeFromParent(); } },
       fx: { shatter(e) {
-        boomFx(e.x, e.y, e.z, e.r, 0xf0a6ff, .8); flash(e.x, 1.2, e.z, 0xffffff, 40, .25);
+        boomFx(e.x, e.y, e.z, e.r, 0xf0a6ff, .8); prismRays(e.x, 1.2, e.z, 8, 3, .3); flash(e.x, 1.2, e.z, 0xffffff, 40, .25);
         for (let i = 0; i < 14; i++) { const a = rand(0, TAU), up = rand(2, 6), sp = rand(4, 9), spin = V(rand(-9, 9), rand(-9, 9), rand(-9, 9)); modelFx('illusion__shard', 0xf0a6ff, V(e.x, rand(.5, 1.8), e.z), rand(.6, 1), (o, k, dt) => { o.position.x += Math.cos(a) * sp * dt; o.position.z += Math.sin(a) * sp * dt; o.position.y += (up - 14 * k) * dt; o.rotation.x += spin.x * dt; o.rotation.y += spin.y * dt; fade(o, 1 - k * k); }); }
         sfx('tink'); sfx('illusion_big'); shake(.15);
       } } },
@@ -2258,6 +2265,7 @@ illusion: {
         for (let i = 0; i < 4; i++) modelFx('sonic__rings', 0xf0a6ff, a.clone(), .7, (o, k) => { o.position.copy(a).addScaledVector(d, (.15 + k + i * .12) * 11); o.lookAt(o.position.clone().add(d)); o.rotateZ(k * 6 + i); o.scale.setScalar(.8 + k * (4 + i)); tint(o, shimmer(k * 3 + i)); fade(o, (1 - k) * .7); });
         for (let i = 0; i < 3; i++) { const dd = d.clone().applyAxisAngle(UP, (i - 1) * .45); modelFx('illusion__mask', 0xffffff, a.clone(), .8, (o, k) => { o.position.copy(a).addScaledVector(dd, 2 + k * 9); o.position.y += Math.sin(k * 6 + i) * .3; o.lookAt(o.position.clone().sub(dd)); o.scale.setScalar(1 + k * 2); fade(o, 1 - k); }); }
         for (let i = 0; i < 50; i++) { const s = rand(8, 16), r = d.clone().applyAxisAngle(UP, rand(-.75, .75)); emit(a.x, a.y, a.z, r.x * s, rand(-1, 2), r.z * s, shimmer(rand(0, 9)).getHex(), rand(.12, .25), .7, 0, 2); }
+        const f = V(d.x, 0, d.z).normalize(); for (let i = 1; i <= 4; i++) { const L = i * 3; ringFx(a.x + f.x * L, .1, a.z + f.z * L, 1 + L * .4, shimmer(i).getHex(), .5 + i * .08, .3); } // hypnotic rings rolling out over the floor
       } } },
     { name: 'Kaleidoscope', icon: '🔷', cd: 7, desc: 'Fire a prism shard. The enemy it hits splinters into 3 glittering false images of itself that race off to the monsters nearest it and burst against them, 50 damage within 3 m each. With no other monster around, they turn back on the enemy itself.',
       cast(p, c) { shoot(p, c, 40, { r: .35, life: 1, dmg: 20 * c.dmg }); },
@@ -2278,7 +2286,7 @@ illusion: {
         upd(o, n, dt, t) { o.position.y = 1.2 + Math.sin(t * 9 + n.id) * .15; o.rotation.y = n.yaw + Math.PI; tint(o, shimmer(t * 3 + n.id)); fade(o, (.55 + .3 * Math.sin(t * 30 + n.id)) * Math.min(1, n.t * 6));
           emit(o.position.x + rand(-.3, .3), o.position.y + rand(-.4, .4), o.position.z + rand(-.3, .3), 0, rand(0, .5), 0, shimmer(rand(0, 9)).getHex(), rand(.08, .16), .4); },
         drop: o => o.removeFromParent() },
-      fx: { split(e) { burst(e.x, e.y, e.z, 20, 0xffc8ff, 6, .2, .4); flash(e.x, e.y, e.z, 0xf0a6ff, 20, .2); sfx('illusion_big'); },
+      fx: { split(e) { burst(e.x, e.y, e.z, 20, 0xffc8ff, 6, .2, .4); flash(e.x, e.y, e.z, 0xf0a6ff, 20, .2); prismRays(e.x, e.y, e.z, 6, 2.5, .3); prismFx(e.x, e.y, e.z, 18, 5); sfx('illusion_big'); },
         pop(e) { boomFx(e.x, e.y, e.z, e.r, 0xf0a6ff, .7); debrisFx(e.x, e.y, e.z, 5, 'illusion__shard', 0xf0a6ff, .2, 9); sfx('tink'); } } },
     { name: 'Phantasmagoria', icon: '🎪', desc: 'ULTIMATE. Trap everything within 14 m in a hall of mirrors: monsters are charmed and fight each other for 5 s, then the mirrors shatter for 55 damage to every one of them.',
       cast(p, c) { ent(p, c, p.x, p.z, { life: 5, r: 14 * c.st.aoe }); },
@@ -2290,7 +2298,7 @@ illusion: {
         drop: o => o.removeFromParent() },
       fx: { shatter(e) {
         for (let i = 0; i < 36; i++) { const a = rand(0, TAU), r0 = e.r * rand(.9, 1.05), sp = rand(6, 14), up = rand(3, 9), spin = V(rand(-8, 8), rand(-8, 8), rand(-8, 8)); modelFx('illusion__shard', 0xf0a6ff, V(e.x + Math.cos(a) * r0, rand(.5, 4.5), e.z + Math.sin(a) * r0), rand(.8, 1.3), (o, k, dt) => { o.position.x += Math.cos(a) * sp * dt; o.position.z += Math.sin(a) * sp * dt; o.position.y = Math.max(.1, o.position.y + (up - 18 * k) * dt); o.rotation.x += spin.x * dt; o.rotation.z += spin.z * dt; o.scale.setScalar(2); fade(o, 1 - k * k); }); }
-        ringFx(e.x, .2, e.z, e.r * 1.2, 0xffffff, .6); flash(e.x, 3, e.z, 0xf0a6ff, 90, .5); whiteFx = Math.max(whiteFx, .4); shake(.6); sfx('ult'); sfx('crystal_big');
+        ringFx(e.x, .2, e.z, e.r * 1.2, 0xffffff, .6); flash(e.x, 3, e.z, 0xf0a6ff, 40, .5); whiteFx = Math.max(whiteFx, .4); prismRays(e.x, 2, e.z, 16, e.r, .5); shake(.6); sfx('ult'); sfx('crystal_big');
       } } },
   ],
 },
@@ -2321,12 +2329,12 @@ bone: {
           if (n.l < .1) fade(o, n.l * 10);
         },
         drop(o, n) { burst(n.x, .8, n.z, 40, 0xe9dcc0, 4, .2, .6, 8); dustFx(n.x, n.z, 1, 0x8a7a60); addFx(o, .4, (o, k) => { o.position.y = -1.8 * k; o.rotation.z = k * .8; }); } },
-      fx: { crack(e) { burst(e.x, e.y, e.z, 10, 0xe9dcc0, 4, .12, .3, 6); }, det: e => boomFx(e.x, e.y, e.z, 2.5, 0xe9dcc0, .6), nova: e => boomFx(e.x, .5, e.z, 4.5, 0xe9dcc0, .8) } },
+      fx: { crack(e) { burst(e.x, e.y, e.z, 10, 0xe9dcc0, 4, .12, .3, 6); debrisFx(e.x, e.y, e.z, 3, 'bone__bone', 0xe9dcc0, .15, 5); sfx('bone'); }, det: e => boomFx(e.x, e.y, e.z, 2.5, 0xe9dcc0, .6), nova: e => boomFx(e.x, .5, e.z, 4.5, 0xe9dcc0, .8) } },
     { name: 'Cackling Skull', icon: '☠️', cd: 3.5, desc: 'Hurl a burning skull that bites an enemy, then leaps on to the next one, up to 5 times.',
       cast(p, c) { shoot(p, c, 24, { r: .45, life: 3, dmg: 22 * c.dmg, bounce: 5 + c.st.bounce, kb: 2, sc: 1.3 }); },
       shot: { hit(s, e) { hitEnemy(e, 'bone', s.dmg, own(s), s.vx, s.vz, s.kb); fxe(s.mv, 'bite', { x: s.x, y: s.y, z: s.z }); } },
-      look: { m: 'bone__skull', c: 0x3affb0, s: 1.2, jaw: 'bone__skull_jaw', trail: [() => Math.random() < .6 ? 0x6affc8 : 0xc8b48a, .1, .35, -1.5, 1], light: 3 },
-      fx: { bite(e) { burst(e.x, e.y, e.z, 10, 0xc8b48a, 5, .14, .3, 4); burst(e.x, e.y, e.z, 6, 0x6affc8, 3, .18, .4, -2); sfx('bone'); } } },
+      look: { m: 'bone__skull', c: 0x3affb0, s: 1.2, jaw: 'bone__skull_jaw', trail: [() => Math.random() < .6 ? 0x6affc8 : 0xc8b48a, .1, .35, -1.5, 1], light: 3, upd(o) { const p = o.position; for (let i = 0; i < 2; i++) emit(p.x + rand(-.15, .15), p.y + .2, p.z + rand(-.15, .15), rand(-.5, .5), rand(1.5, 3), rand(-.5, .5), Math.random() < .5 ? 0x6affc8 : 0xb8ffe8, rand(.15, .28), rand(.2, .35), -3); } }, // wreathed in ghost-fire
+      fx: { bite(e) { burst(e.x, e.y, e.z, 10, 0xc8b48a, 5, .14, .3, 4); burst(e.x, e.y, e.z, 16, 0x6affc8, 4, .22, .45, -3); flash(e.x, e.y, e.z, 0x6affc8, 15, .12); if (Math.random() < .4) popNum(e.x, e.y + .8, e.z, 'HA!', '#6affc8', 'tag'); sfx('bone'); } } },
     { name: 'Marrow Burst', icon: '💥', cd: 12, desc: 'Every skeleton you have explodes in a storm of bone shrapnel: 28 damage within 3.5 m of each. Monsters the blasts kill rise as new skeletons. With no skeletons, one rises beside you instead.',
       cast(p, c) {
         const mine = entsOf(p, 'bone.0');
@@ -2337,7 +2345,7 @@ bone: {
           for (const e of hit) if (e.dead && !ET[e.type].boss && !e.pid && entsOf(p, 'bone.0').length < 4) raiseBone(p, e.x, e.z, e.yaw, c.dmg);
         }
       },
-      fx: { marrow(e) { burst(e.x, e.y, e.z, 40, 0xe9dcc0, 10, .14, .45, 8); debrisFx(e.x, e.y, e.z, 10, 'bone__bone', 0xe9dcc0, .3, 12); ringFx(e.x, .1, e.z, e.r, 0xe9dcc0, .35); dustFx(e.x, e.z, 1.5, 0x8a7a60); flash(e.x, e.y, e.z, 0xe9dcc0, 20, .2); sfx('bone_big'); shake(.12); } } },
+      fx: { marrow(e) { for (let i = 0; i < 6; i++) { const a = TAU * i / 6; riseFx('bone__bone', 0xe9dcc0, e.x + Math.cos(a) * 1.4, e.z + Math.sin(a) * 1.4, .9, .7, a); } quakeCracks(e.x, e.z, e.r, 7, 1, .12); burst(e.x, e.y, e.z, 20, 0x6affc8, 6, .3, .5, -2); burst(e.x, e.y, e.z, 40, 0xe9dcc0, 10, .14, .45, 8); debrisFx(e.x, e.y, e.z, 10, 'bone__bone', 0xe9dcc0, .3, 12); ringFx(e.x, .1, e.z, e.r, 0xe9dcc0, .35); dustFx(e.x, e.z, 1.5, 0x8a7a60); flash(e.x, e.y, e.z, 0xe9dcc0, 20, .2); sfx('bone_big'); shake(.12); } } },
     { name: 'Bone Cage', icon: '⛓️', cd: 9, mode: 'aim', range: 20, aimR: 3.5, desc: 'Ribs of bone burst from the ground at the target for 4 s: a real cage. Monsters inside cannot get out, monsters outside cannot get in, and enemy shots cannot pass the bars. Anything that touches the bars is gashed.',
       cast(p, c) { const R = 3.5 * c.st.aoe, t = c.tgt, es = enemiesNear(t.x, t.z, R); ent(p, c, t.x, t.z, { r: R, life: 4, ids: es.map(e => e.id) }); for (const e of es) hitEnemy(e, 'bone', 22 * c.dmg, p, 0, 0, 0, { aoe: true }); },
       ent: { tick(n, dt) {
@@ -2349,8 +2357,9 @@ bone: {
         for (const s of S.shots) if (s.foe && Math.abs(Math.hypot(s.x - n.x, s.z - n.z) - n.r) < .5) { s.dead = true; ev({ k: 'block', x: r2(s.x), y: r2(s.y), z: r2(s.z) }); }
         if (pulse(n, dt, .5)) for (const e of enemiesNear(n.x, n.z, n.r + .8)) if (Math.abs(Math.hypot(e.x - n.x, e.z - n.z) - n.r) < .9 + ET[e.type].r * e.sc) hitEnemy(e, 'bone', 6 * n.mul, own(n), 0, 0, 0, { aoe: true, noCombo: true });
       } },
-      view: { make(n) { const o = model('bone__cage', 0xe9dcc0, { shadow: true }); o.scale.set(n.r, n.r * .75, n.r); o.rotation.y = rand(0, TAU); dustFx(n.x, n.z, n.r, 0x5a4a30); sfx('bone_big'); shake(.12); return o; },
-        upd(o, n) { o.position.y = -n.r * 1.6 * (1 - easeOutBack(Math.min(1, n.t * 5))); if (n.l < .12) o.position.y = -n.r * 1.6 * (1 - n.l / .12) ** 2; },
+      view: { make(n) { const o = model('bone__cage', 0xe9dcc0, { shadow: true }); o.scale.set(n.r, n.r * .75, n.r); o.rotation.y = rand(0, TAU); dustFx(n.x, n.z, n.r, 0x5a4a30); quakeCracks(n.x, n.z, n.r * 1.2, 10, 1.5, .12); debrisFx(n.x, .3, n.z, 10, 'earth__pebble', 0x6a5a40, .35, 8); ringFx(n.x, .1, n.z, n.r * 1.3, 0x6affc8, .4); sfx('bone_big'); shake(.12); return o; },
+        upd(o, n) { o.position.y = -n.r * 1.6 * (1 - easeOutBack(Math.min(1, n.t * 5))); if (n.l < .12) o.position.y = -n.r * 1.6 * (1 - n.l / .12) ** 2;
+          if (Math.random() < .5) { const a = rand(0, TAU); emit(n.x + Math.cos(a) * n.r, n.r * .75 * rand(.6, 1.4), n.z + Math.sin(a) * n.r, 0, rand(.5, 1.2), 0, 0x6affc8, rand(.1, .2), .6, -1); } }, // ghost-fire flickering along the bars
         drop(o, n) { dustFx(n.x, n.z, n.r, 0x5a4a30); o.removeFromParent(); } } },
     { name: 'Bone Dragon', icon: '🐉', mode: 'aim', range: 24, aimR: 8, desc: 'ULTIMATE. Raise a skeletal dragon that makes three low strafing runs across the target, criss-crossing it and breathing a line of ghostfire along each pass. Everything it burns turns Brittle, and monsters it kills rise as skeletons.',
       cast(p, c) { const R = 9 * c.st.aoe, a0 = Math.atan2(p.z - c.tgt.z, p.x - c.tgt.x); ent(p, c, c.tgt.x + Math.cos(a0) * R, c.tgt.z + Math.sin(a0) * R, { life: 6.9, r: R, cx: c.tgt.x, cz: c.tgt.z, a0 }); fxe(c.m.key, 'rise', { x: c.tgt.x, z: c.tgt.z, r: R }); },
@@ -2371,10 +2380,11 @@ bone: {
             for (let k = 0; k < 7; k++) { const s = rand(.8, 1.1); emit(hx, hy, hz, (bx - hx) * s + rand(-1, 1), -hy * s * 1.2, (bz - hz) * s + rand(-1, 1), Math.random() < .5 ? 0xb8ffe8 : 0xe9dcc0, rand(.3, .6), .8, 2, .3); }
             if (Math.random() < .3) flash(bx, .5, bz, 0xb8ffe8, 18, .15);
             if (Math.random() < .5) burst(bx, .2, bz, 4, 0xb8ffe8, 4, .25, .4, -2);
+            if (Math.random() < .25) scarFx(bx + rand(-1, 1), bz + rand(-1, 1), rand(.8, 1.3), 0x3affb0, 3); // ghost-fire scorching the floor
           }
         },
         drop(o) { addFx(o, .8, (o, k) => { o.position.y += .15; fade(o, 1 - k); }); } },
-      fx: { rise(e) { circleFx('bone', V(e.x, .08, e.z), e.r, { life: 1.6 }); dustFx(e.x, e.z, e.r * .6, 0x5a4a30); burst(e.x, .5, e.z, 80, 0xe9dcc0, 8, .35, 1, -3); burst(e.x, .5, e.z, 40, 0xb8ffe8, 6, .4, 1.2, -4); shake(.4); sfx('ult'); } } },
+      fx: { rise(e) { circleFx('bone', V(e.x, .08, e.z), e.r, { life: 1.6 }); dustFx(e.x, e.z, e.r * .6, 0x5a4a30); quakeCracks(e.x, e.z, e.r, 12, 2, .44); debrisFx(e.x, .5, e.z, 10, 'bone__bone', 0xe9dcc0, .4, 11); pillarFx(e.x, 0, e.z, 2, 12, 0x6affc8, .8); burst(e.x, .5, e.z, 80, 0xe9dcc0, 8, .35, 1, -3); burst(e.x, .5, e.z, 40, 0xb8ffe8, 6, .4, 1.2, -4); shake(.4); sfx('ult'); } } },
   ],
 },
 // ================================================================== RUNE
@@ -2387,14 +2397,16 @@ rune: {
   moves: [
     { name: 'Rune Bolt', icon: '🔹', cd: .4, desc: 'Fire a spinning rune that pierces through an enemy.',
       cast(p, c) { for (let k = 0; k < c.multi; k++) shoot(p, c, 38, { d: spread(c.d, k, c.multi, .1), r: .32, dmg: 21 * c.dmg, pierce: c.st.pierce + 1, sc: (c.mega ? 1.8 : 1) * (c.emp ? 1.5 : 1) }); },
+      shot: { end(s, why) { if (why !== 'life') fxe(s.mv, 'mark', { x: s.x, y: s.y, z: s.z }); } },
       look: { m: 'rune__bolt', flat: 1, spin: [0, 0, 10], trail: [0x7affd8, .13, .3, 0, 1], light: 4 },
-      fx: { emp(e) { if (isMe(e.id)) circleFx('rune', V(-.26, -.17, -.85), .26, { parent: camera, quat: Q_FACE, life: .55 }); else circleFx('rune', V(e.x, e.y, e.z), .8, { life: .5 }); sfx('tink'); },
+      fx: { mark(e) { modelFx('rune__glyph', 0x22e6b8, V(e.x, e.y, e.z), .35, (o, k) => { o.lookAt(camera.position); o.scale.setScalar(.5 + k * .6); fade(o, 1 - k); }, { flat: true }); burst(e.x, e.y, e.z, 10, 0x7affd8, 4, .12, .3); if (Math.random() < .3) runeLetters(e.x, e.y, e.z, 1); }, // a glyph flares where it strikes
+        emp(e) { if (isMe(e.id)) circleFx('rune', V(-.26, -.17, -.85), .26, { parent: camera, quat: Q_FACE, life: .55 }); else circleFx('rune', V(e.x, e.y, e.z), .8, { life: .5 }); sfx('tink'); },
         det: e => boomFx(e.x, e.y, e.z, 2.5, 0x22e6b8, .6), nova: e => boomFx(e.x, .5, e.z, 4.5, 0x22e6b8, .8) } },
     { name: 'Glyph Trap', icon: '🔯', cd: 4, mode: 'aim', range: 18, aimR: 2.2, desc: 'Inscribe a ward glyph at the target (up to 3 at once). It arms after a second, and the first enemy to step on it is blasted into the air and stunned.',
       cast(p, c) { placeWard(p, c, 3); },
       ent: { tick(n) { if (tripped(n)) { boomAt(ctxN(n), n.x, .2, n.z, 3, 55 * n.mul, { lift: 10, kb: 2, cc: ['stun', 1] }, 'trip'); n.dead = true; } } },
       view: wardView(),
-      fx: { trip(e) { boomFx(e.x, e.y, e.z, e.r, 0x22e6b8, .9); pillarFx(e.x, .05, e.z, e.r * .5, 7, 0x22e6b8, .6); modelFx('rune__glyph', 0x22e6b8, V(e.x, .5, e.z), .6, (o, k) => { o.position.y = .5 + k * 4; o.rotation.x = -Math.PI / 2; o.scale.setScalar(e.r * (.6 + k)); fade(o, 1 - k); }, { flat: true }); sfx('rune_big'); } } },
+      fx: { trip(e) { boomFx(e.x, e.y, e.z, e.r, 0x22e6b8, .9); quakeCracks(e.x, e.z, e.r * 1.2, 8, 1.2, .46); runeLetters(e.x, 1, e.z, 5); pillarFx(e.x, .05, e.z, e.r * .5, 7, 0x22e6b8, .6); modelFx('rune__glyph', 0x22e6b8, V(e.x, .5, e.z), .6, (o, k) => { o.position.y = .5 + k * 4; o.rotation.x = -Math.PI / 2; o.scale.setScalar(e.r * (.6 + k)); fade(o, 1 - k); }, { flat: true }); sfx('rune_big'); } } },
     { name: 'Sigilfall', icon: '🪨', cd: 6, mode: 'aim', range: 22, aimR: 2.6, desc: 'Inscribe a sigil ward (up to 2 at once). When an enemy steps on it, runic chains hold everything nearby and three runestones crash down, the last and largest stunning everything it hits.',
       cast(p, c) { placeWard(p, c, 2, { r: 2.6, R: 3.5 * c.st.aoe }); },
       ent: { tick(n) {
@@ -2410,7 +2422,7 @@ rune: {
       fx: { mark(e) { circleFx('rune', V(e.x, .08, e.z), e.r, { life: 1.4 }); modelFx('rune__glyph', 0x22e6b8, V(e.x, 14, e.z), 1.3, (o, k) => { o.rotation.x = Math.PI / 2; o.rotation.z = k * 2; o.scale.setScalar(e.r * .9); fade(o, k < .2 ? k * 5 : 1 - (k - .2) / .8); }, { flat: true }); sfx('rune'); },
         fall(e) { const spin = rand(-1, 1); modelFx('rune__stone', 0x22e6b8, V(e.x, 20, e.z), .33, (o, k) => { o.position.y = 20 * (1 - k * k); o.rotation.set(.15, spin * k, 0); o.scale.setScalar(e.s); for (let i = 0; i < 2; i++) emit(o.position.x + rand(-.5, .5), o.position.y + 2 * e.s, o.position.z + rand(-.5, .5), 0, 4, 0, 0x7affd8, .25, .4); }, { shadow: true }); },
         slam(e) {
-          dustFx(e.x, e.z, e.r); ringFx(e.x, .1, e.z, e.r, 0x22e6b8, .45); burst(e.x, .5, e.z, 30, 0x7affd8, 6, .25, .5, 4); flash(e.x, 1, e.z, 0x22e6b8, 30, .25); shake(.2); sfx('rune_big');
+          dustFx(e.x, e.z, e.r); ringFx(e.x, .1, e.z, e.r, 0x22e6b8, .45); quakeCracks(e.x, e.z, e.r * 1.3, 8, 1.4, .46); debrisFx(e.x, .4, e.z, 6, 'earth__pebble', 0x5a8a80, .35, 9); runeLetters(e.x, 1, e.z, 3); burst(e.x, .5, e.z, 30, 0x7affd8, 6, .25, .5, 4); flash(e.x, 1, e.z, 0x22e6b8, 30, .25); shake(.2); sfx('rune_big');
           const s = model('rune__stone', 0x22e6b8, { shadow: true }); s.position.set(e.x, 0, e.z); s.rotation.set(rand(-.15, .15), rand(0, TAU), rand(-.15, .15)); s.scale.setScalar(e.r > 3 ? 1.3 : .85);
           addFx(s, 1.6, (o, k) => { o.position.y = k > .7 ? -2.8 * ((k - .7) / .3) ** 2 : 0; if (k > .8) fade(o, 1 - (k - .8) / .2); });
         } } },
@@ -2427,7 +2439,7 @@ rune: {
           if (!u.circle) { // build the circle the moment the ward goes off
             u.ward.visible = u.top.visible = false; u.circle = zoneCircle('rune', n.r, .85); o.add(u.circle); u.stones = [];
             for (let i = 0; i < 6; i++) { const s = model('rune__stone', 0x22e6b8, { shadow: true }), a = TAU * i / 6; s.scale.setScalar(.55); s.position.set(Math.cos(a) * n.r, 0, Math.sin(a) * n.r); s.rotation.y = -a + Math.PI / 2; o.add(s); u.mats.push(...s.userData.mats); u.stones.push(s); }
-            sfx('rune_big'); dustFx(n.x, n.z, n.r * .5, 0x5a5048); flash(n.x, 1, n.z, 0x22e6b8, 40, .3);
+            sfx('rune_big'); dustFx(n.x, n.z, n.r * .5, 0x5a5048); flash(n.x, 1, n.z, 0x22e6b8, 40, .3); runeLetters(n.x, 1, n.z, 8); pillarFx(n.x, 0, n.z, n.r * .9, 5, 0x22e6b8, .7);
           }
           fade(o, 1); spinCircle(u.circle, dt, .35); u.stones.forEach((s, i) => { s.position.y = -1.4 * (1 - easeOutBack(clamp(n.t * 3 - i * .1, 0, 1))) + Math.sin(t * 2 + i) * .05; }); if (Math.random() < .4) { const a = rand(0, TAU), d = rand(0, n.r); emit(n.x + Math.cos(a) * d, .15, n.z + Math.sin(a) * d, 0, rand(.4, 1.2), 0, 0x7affd8, rand(.08, .16), 1, -.2); }
         },
@@ -2440,9 +2452,9 @@ rune: {
         es.forEach((e, i) => { fxe(c.m.key, 'mark', { id: e.id, d: .6 + i * .1 }); later(.6 + i * .1, () => { if (!alive(e)) return; const q = center(e); fxe(c.m.key, 'ruin', { x: e.x, y: q.y, z: e.z }); hitEnemy(e, 'rune', 75 * c.dmg * (es.length === 1 && ET[e.type].boss ? 3 : 1), p, 0, 0, 4, { aoe: true }); cc(e, 'stun', 1.5, p); launch(e, 5); }); });
       } },
       view: wardView('rune__glyph', .8),
-      fx: { speak(e) { circleFx('rune', V(e.x, e.y + .08, e.z), 5, { life: 1.4 }); pillarFx(e.x, e.y + .05, e.z, 2.5, 10, 0x22e6b8, 1); flash(e.x, 2, e.z, 0x22e6b8, 60, .5); sfx('rune_big'); },
+      fx: { speak(e) { circleFx('rune', V(e.x, e.y + .08, e.z), 5, { life: 1.4 }); pillarFx(e.x, e.y + .05, e.z, 2.5, 10, 0x22e6b8, 1); flash(e.x, 2, e.z, 0x22e6b8, 40, .5); quakeCracks(e.x, e.z, 8, 14, 2, .46); runeLetters(e.x, 2, e.z, 12); ringFx(e.x, .1, e.z, 20, 0x7affd8, 1, 2); shake(.35); sfx('rune_big'); },
         mark(e) { modelFx('rune__glyph', 0x22e6b8, V(0, -50, 0), e.d, (o, k) => { const v = views.e.get(e.id); if (v) o.position.set(v.g.position.x, v.g.position.y + 5 + Math.sin(k * 8) * .2, v.g.position.z); o.lookAt(camera.position); o.scale.setScalar(1.3 * easeOutBack(Math.min(1, k * 4))); fade(o, .8 + .2 * Math.sin(k * 30)); }, { flat: true }); },
-        ruin(e) { modelFx('rune__glyph', 0x22e6b8, V(e.x, e.y + 5, e.z), .25, (o, k) => { o.position.y = e.y + 5 - 5 * k; o.rotation.x = -Math.PI / 2; o.scale.setScalar(1.3 + k * 1.5); fade(o, 1 - k); }, { flat: true }); boomFx(e.x, e.y, e.z, 3, 0x22e6b8, 1); pillarFx(e.x, .05, e.z, 1.2, 7, 0x22e6b8, .5); shake(.15); sfx('rune_big'); } } },
+        ruin(e) { runeLetters(e.x, e.y + 1, e.z, 3); scarFx(e.x, e.z, 1.4, 0x22e6b8, 3); modelFx('rune__glyph', 0x22e6b8, V(e.x, e.y + 5, e.z), .25, (o, k) => { o.position.y = e.y + 5 - 5 * k; o.rotation.x = -Math.PI / 2; o.scale.setScalar(1.3 + k * 1.5); fade(o, 1 - k); }, { flat: true }); boomFx(e.x, e.y, e.z, 3, 0x22e6b8, 1); pillarFx(e.x, .05, e.z, 1.2, 7, 0x22e6b8, .5); shake(.15); sfx('rune_big'); } } },
   ],
 },
 // ================================================================== PLASMA
