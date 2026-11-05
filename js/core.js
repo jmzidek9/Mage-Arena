@@ -52,13 +52,13 @@ const BH = V(.75, .46, -.57).normalize(), BH_R = .085; // BH_R: shadow radius in
 const BH_L = V().crossVectors(V(0, 1, 0), BH).normalize(); // screen-left of the black hole
 const PLANET = BH.clone().multiplyScalar(Math.cos(1.05)).addScaledVector(BH_L, Math.sin(1.05)).add(V(0, -.45, 0)).normalize(), PLANET_R = .78;
 const RINGN = V(-.41, .849, .334).normalize(); // ring plane normal: rings sweep under the black hole to the right horizon
-const skyU = { uTime, uFlare: { value: 0 }, uStorm: { value: 0 }, uBolt: { value: 0 }, uEclipse: { value: 0 }, // uEclipse: Shadow's Eclipse, night falls (0-1)
+const skyU = { uTime, uFlare: { value: 0 }, uStorm: { value: 0 }, uBolt: { value: 0 }, uEclipse: { value: 0 }, uRed: { value: 0 }, // uEclipse: Shadow's Eclipse, night falls (0-1); uRed: Blood Moon, the sky bleeds
   // uStorm: Thunderstorm's overcast (0-1), uBolt: a sky-wide lightning flash
   uBH: { value: BH }, uP: { value: PLANET }, uPR: { value: PLANET_R }, uRingN: { value: RINGN } };
 const sky = new THREE.Mesh(new THREE.SphereGeometry(1500, 48, 24), new THREE.ShaderMaterial({
   side: THREE.BackSide, depthWrite: false, fog: false, uniforms: skyU,
   vertexShader: `varying vec3 vp; void main(){ vp = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
-  fragmentShader: `uniform float uTime, uPR, uFlare, uStorm, uBolt, uEclipse; uniform vec3 uBH, uP, uRingN; varying vec3 vp; ${GLSL_NOISE}
+  fragmentShader: `uniform float uTime, uPR, uFlare, uStorm, uBolt, uEclipse, uRed; uniform vec3 uBH, uP, uRingN; varying vec3 vp; ${GLSL_NOISE}
   vec3 space(vec3 d){
     float h = d.y;
     vec3 col = mix(vec3(.07,.07,.075), vec3(.012,.014,.02), smoothstep(-.05,.5,h));
@@ -125,7 +125,9 @@ const sky = new THREE.Mesh(new THREE.SphereGeometry(1500, 48, 24), new THREE.Sha
       col = mix(col, st, uStorm * mix(.75, .95, smoothstep(-.1, .35, d.y)));
     }
     col += vec3(.25, .2, .45) * uBolt * .25;
-    col = mix(col, vec3(.008, .003, .018) + vec3(.07, .02, .13) * pow(max(0., 1. - abs(d.y)), 8.), uEclipse * .96); // Eclipse: night falls, a faint violet glow left on the horizon
+    col = mix(col, vec3(.008, .003, .018) + vec3(.07, .02, .13) * pow(max(0., 1. - abs(d.y)), 8.), uEclipse * .96);
+    col = mix(col, vec3(.12, .005, .015) + vec3(.55, .03, .06) * pow(max(0., 1. - abs(d.y)), 5.), uRed * .9); // Blood Moon: a sky the colour of blood, brightest at the horizon
+    // Eclipse (above): night falls, a faint violet glow left on the horizon
     gl_FragColor = vec4(col, 1.); }`,
 }));
 scene.add(sky);

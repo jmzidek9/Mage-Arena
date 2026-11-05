@@ -494,6 +494,7 @@ function frame(now, manual = false) {
   skyU.uFlare.value += (flare - skyU.uFlare.value) * Math.min(1, dt * 3);
   const storm = src?.ents?.some(n => n.mv === 'storm.4') ? 1 : 0; // Thunderstorm turns the whole sky into a storm for as long as it lasts
   skyU.uStorm.value += (storm - skyU.uStorm.value) * Math.min(1, dt * (storm ? 1.8 : 1.2));
+  const red = src?.ents?.some(n => n.mv === 'blood.4') ? 1 : 0; skyU.uRed.value += (red - skyU.uRed.value) * Math.min(1, dt * (red ? 2 : 1.2)); // Blood Moon: the sky bleeds
   const ecl = src?.ents?.some(n => n.mv === 'shadow.4') ? 1 : 0; skyU.uEclipse.value += (ecl - skyU.uEclipse.value) * Math.min(1, dt * (ecl ? 2.5 : 1.2)); // Eclipse: the sky goes dark while the black sun is up
   if (skyU.uStorm.value > .5 && Math.random() < dt * 1.4) skyU.uBolt.value = Math.max(skyU.uBolt.value, rand(.5, 1)); // distant lightning across the sky
   skyU.uBolt.value = Math.max(0, skyU.uBolt.value - dt * 4.5);
