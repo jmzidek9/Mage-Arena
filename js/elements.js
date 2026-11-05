@@ -415,7 +415,17 @@ function mushroom() {
   for (let i = 0; i < 7; i++) { const a = rand(0, TAU), r = rand(.15, .45), s = new THREE.Mesh(MUSH.spot, sm); s.position.set(Math.cos(a) * r, .62 + Math.sqrt(Math.max(0, .55 * .55 - r * r)) * .7, Math.sin(a) * r); g.add(s); }
   g.userData.mats = [sm, cm, gm]; g.scale.setScalar(.01); return g;
 }
-const WARM = []; // client: extra meshes and shaders compiled at game start (warmFx), so their first cast does not hitch
+// Steel: the Wrecking Ball's angle round you at time t (host and client agree), the ball itself, and its chain links
+const wreckAng = t => t * 2.6 + t * t * .25, wreckRad = t => Math.min(1, t * 3) * (4 + 5.5 * Math.abs(Math.sin(t * Math.PI / 2))); // the chain pays out and reels back in as it swings
+const LINK_GEO = new THREE.TorusGeometry(.16, .045, 6, 12).scale(1, 1.6, 1);
+function wreckBall() {
+  const g = new THREE.Group(), m = new THREE.MeshStandardMaterial({ color: 0x5a6070, metalness: .9, roughness: .35, transparent: true }), sm = new THREE.MeshStandardMaterial({ color: 0xc8d4e8, metalness: 1, roughness: .2, emissive: 0x3a4a6a, emissiveIntensity: .4, transparent: true });
+  const b = new THREE.Mesh(new THREE.IcosahedronGeometry(.95, 2), m); b.castShadow = true; g.add(b);
+  for (let i = 0; i < 14; i++) { const d = new THREE.Vector3().randomDirection(), s = new THREE.Mesh(SNAKE.fang, sm); s.scale.set(3, 2.4, 3); s.position.copy(d).multiplyScalar(1.05); s.quaternion.setFromUnitVectors(new THREE.Vector3(0, -1, 0), d); g.add(s); }
+  g.userData.mats = [m, sm]; return g;
+}
+const WARM = [];
+WARM.push(() => wreckBall()); // client: extra meshes and shaders compiled at game start (warmFx), so their first cast does not hitch
 WARM.push(() => snakeHead(1, true));
 WARM.push(() => vineChain(2));
 // Water: flowing water (Riptide Ring, Waterfall): streaks scrolling along the uv by uS per second, foam on the bright bits; normal-blended, so it reads as water and not as glow
@@ -1415,13 +1425,13 @@ venom: {
 },
 // ================================================================== STEEL
 steel: {
-  name: 'Steel', color: 0xbcd0ec, glyph: '⚔️', adj: 'RENDED', react: { name: 'SHRAPNEL', kind: 'shatter' },
-  blurb: 'A blade master. Boomerang saws, railguns and a storm of swords. Shields mean nothing to you.',
+  name: 'Steel', color: 0xbcd0ec, glyph: '🧲', adj: 'RENDED', react: { name: 'SHRAPNEL', kind: 'shatter' },
+  blurb: 'Heavy metal and magnetism. Boomerang saws, railguns, magnets that slam enemies together and a wrecking ball. Shields mean nothing to you.',
   passive: 'Armor Breaker: Rend stacks 3 times (+6% damage taken each). At 3 stacks your hits go straight through shields.',
   st: { vuln: .06, vulnStacks: 1, stacks: 3 },
   moves: [
     { name: 'Saw Blade', icon: '🪚', cd: .6, desc: 'Throw a spinning saw that slices through enemies, then comes back and slices them again.',
-      cast(p, c) { for (let k = 0; k < c.multi; k++) shoot(p, c, 30, { d: spread(c.d, k, c.multi, .15), r: .55, life: 2.4, pierce: 99, dmg: 14 * c.dmg, ret: .42, rspd: 34, kb: 1.5, sc: c.mega ? 1.8 : 1 }); },
+      cast(p, c) { for (let k = 0; k < c.multi; k++) shoot(p, c, 30, { d: spread(c.d, k, c.multi, .15), r: .55, life: 2.4, pierce: 99, dmg: 17 * c.dmg, ret: .42, rspd: 34, kb: 1.5, sc: c.mega ? 1.8 : 1 }); },
       look: { m: 'steel__saw', spin: [0, 24, 0], trail: [0xdfe8ff, .1, .2, 0, 1], light: 3, noFace: 1 },
       fx: { det: e => boomFx(e.x, e.y, e.z, 2.5, 0xbcd0ec, .6), nova: e => boomFx(e.x, .5, e.z, 4.5, 0xbcd0ec, .8) } },
     { name: 'Railgun', icon: '🔫', cd: 4, mode: 'charge', charge: .9, desc: 'Hold to charge a hypersonic rail spike that pierces every enemy in a line and blasts them far back. The recoil shoves you backward too. Full charge adds 2 Rend stacks.',
@@ -1449,29 +1459,65 @@ steel: {
         for (const [x, y, z] of e.pts) { for (let i = 0; i < 10; i++) emit(x, y, z, (h.x - x) * rand(1.5, 3), (h.y - y) * rand(1.5, 3), (h.z - z) * rand(1.5, 3), 0xdfe8ff, .12, .35, 0, 0); }
         sfx('steel_big');
       } } },
-    { name: 'Caltrops', icon: '📌', cd: 11, desc: 'Scatter a field of steel caltrops. Enemies that step on them are cut, slowed and rended.',
-      cast(p, c) { const f = c.flat; for (let i = 0; i < 12; i++) { const a = rand(-3.5, 3.5), b = rand(-2.2, 2.2), q = clampArena(V(p.x + f.x * (6 + a) + f.z * b, 0, p.z + f.z * (6 + a) - f.x * b), .8); ent(p, c, q.x, q.z, { life: 10, r: .5, yaw: rand(0, TAU) }); } },
-      ent: { tick(n) { for (const e of enemiesNear(n.x, n.z, n.r)) if (e.y < .3) { hitEnemy(e, 'steel', 18 * n.mul, own(n), 0, 0, 0, { aoe: true }); e.fs = .4; n.dead = true; fxe(n.mv, 'snap', { x: n.x, z: n.z }); break; } } },
-      view: { make(n) { const o = model('steel__caltrop', 0xbcd0ec, { shadow: true }); o.rotation.set(rand(0, TAU), n.yaw, rand(0, TAU)); o.scale.setScalar(1.3); return o; },
-        upd(o, n) { o.position.y = .12 + Math.max(0, .6 - n.t) * 3; }, drop: dropFade(.2) },
-      fx: { snap(e) { burst(e.x, .3, e.z, 12, 0xdfe8ff, 4, .15, .3, 6); sfx('tink'); } } },
-    { name: 'Blade Storm', icon: '⚔️', desc: 'ULTIMATE. Ten giant swords orbit you, sweeping outward and back again, shredding everything they touch.',
-      cast(p, c) { ent(p, c, p.x, p.z, { follow: 1, life: 5, r: 9 }); sfx('ult'); },
+    { name: 'Polarity', icon: '🧲', cd: 10, desc: 'Charge up to 8 enemies in front of you (14 m), alternating red (+) and blue (−). A moment later every opposite pair is yanked into each other and crashes together: 35 damage to both and a 1.2 s stun. A charge with no partner is pulled to you for 20. Bosses only take the damage.',
+      cast(p, c) { const es = coneHits(p, 14, 100).sort((a, b) => Math.hypot(a.x - p.x, a.z - p.z) - Math.hypot(b.x - p.x, b.z - p.z)).slice(0, 8);
+        fxe(c.m.key, 'mark', { ids: es.map(e => e.id) }); ent(p, c, p.x, p.z, { life: 1.1, s: es.map(e => e.id), n: 0 }); },
       ent: { tick(n) {
-        const rad = 2 + 7 * Math.abs(Math.sin(n.t * Math.PI / 2.5)), a0 = n.t * 3;
-        for (let i = 0; i < 10; i++) {
-          const a = a0 + TAU * i / 10, x = n.x + Math.cos(a) * rad, z = n.z + Math.sin(a) * rad;
-          for (const e of enemiesNear(x, z, 1.3)) if (ready(n, e, .35)) hitEnemy(e, 'steel', 16 * n.mul, own(n), e.x - n.x, e.z - n.z, 4, { aoe: true });
-        }
-      } },
-      view: { make() { const g = new THREE.Group(); g.userData.mats = []; for (let i = 0; i < 10; i++) { const s = model('steel__sword', 0xbcd0ec), piv = new THREE.Group(); s.rotation.set(Math.PI / 2, 0, -Math.PI / 2); s.scale.setScalar(1.25); s.position.y = .2; piv.add(s); g.add(piv); g.userData.mats.push(...s.userData.mats); } return g; },
-        upd(o, n, dt) {
-          const rad = 2 + 7 * Math.abs(Math.sin(n.t * Math.PI / 2.5)), a0 = n.t * 3;
-          o.position.y = n.y + .6; // below eye height, so you see the blades and not their edges
-          o.children.forEach((piv, i) => { const a = a0 + TAU * i / 10; piv.position.set(Math.cos(a) * (rad - 1.6), 0, Math.sin(a) * (rad - 1.6)); piv.rotation.y = -a; });
-          fade(o, Math.min(1, n.t * 4, n.l * 5));
-          if (Math.random() < .5) { const a = a0 + rand(0, TAU); emit(n.x + Math.cos(a) * rad, n.y + 1.1, n.z + Math.sin(a) * rad, 0, 0, 0, 0xdfe8ff, .2, .25); }
-        }, drop: dropFade(.3) } },
+          if (n.n || n.t < .65) return; n.n = 1;
+          const p = own(n), es = n.s.map(id => S.enemies.find(x => x.id === id && alive(x))), plus = es.filter((e, i) => e && i % 2 === 0), minus = es.filter((e, i) => e && i % 2 === 1), pairs = [];
+          for (const a of plus) { const b = minus.filter(m => !m.used).sort((m, o) => Math.hypot(m.x - a.x, m.z - a.z) - Math.hypot(o.x - a.x, o.z - a.z))[0]; if (b) { b.used = 1; pairs.push([a, b]); } else pairs.push([a, null]); }
+          for (const b of minus) { if (!b.used) pairs.push([b, null]); delete b.used; }
+          const out = [];
+          for (const [a, b] of pairs) {
+            const ad = Math.hypot(a.x - p.x, a.z - p.z) || 1, tx = b ? (a.x + b.x) / 2 : p.x + (a.x - p.x) / ad * Math.min(ad, 3.5), tz = b ? (a.z + b.z) / 2 : p.z + (a.z - p.z) / ad * Math.min(ad, 3.5); // a loner stops 3.5 m short of you out.push([a.x, a.z, b ? b.x : p.x, b ? b.z : p.z].map(r2));
+            for (const e of [a, b]) if (e && !ET[e.type].boss) { e.kx = (tx - e.x) * 5; e.kz = (tz - e.z) * 5; e.atk = null; }
+            later(.22, () => { for (const e of [a, b]) if (e && alive(e)) { hitEnemy(e, 'steel', (b ? 35 : 20) * n.mul, p, 0, 0, 0, { aoe: true }); if (b) cc(e, 'stun', 1.2, p); } if (b) fxe(n.mv, 'clang', { x: tx, y: 1.2, z: tz }); });
+          }
+          fxe(n.mv, 'yank', { pairs: out });
+        } },
+      fx: { mark(e) { // each charged enemy wears a crackling ring, red for +, blue for −
+          e.ids.forEach((id, i) => { const v = views.e.get(id); if (!v) return; const col = i % 2 ? 0x2a6aff : 0xff2a2a, m = new THREE.Mesh(RING_GEO, new THREE.MeshBasicMaterial({ color: col, transparent: true, depthWrite: false, fog: false })); // normal-blended: additive red and blue bloomed to white
+            const q = v.g.position; popNum(q.x, q.y + 2.4, q.z, i % 2 ? '−' : '+', i % 2 ? '#6aa8ff' : '#ff6a6a', 'tag');
+            addFx(m, 1.1, (o, k) => { const w = views.e.get(id); if (!w) { o.visible = false; return; } const h = (ET[w.type]?.h || 1.6) * (w.sc || 1); o.position.copy(w.g.position).add(V(0, h * .55, 0)); o.scale.setScalar((ET[w.type]?.r || .6) * (w.sc || 1) * 1.6 * (1 + .15 * Math.sin(k * 50))); o.rotation.x = Math.sin(k * 20 + i) * .5; o.material.opacity = (k > .85 ? (1 - k) / .15 : 1) * .85;
+              if (Math.random() < .4) emit(o.position.x + rand(-.5, .5), o.position.y + rand(-.5, .5), o.position.z + rand(-.5, .5), 0, 0, 0, col, .1, .25); }); });
+          sfx('steel_big'); },
+        yank(e) { for (const [x1, z1, x2, z2] of e.pairs) for (let j = 0; j < 3; j++) { const pts = []; for (let i = 0; i <= 6; i++) { const s = i / 6; pts.push([x1 + (x2 - x1) * s + rand(-.3, .3), 1.2 + Math.sin(s * Math.PI) * (.4 + j * .5), z1 + (z2 - z1) * s + rand(-.3, .3)]); } boltFx(pts, j % 2 ? 0x6aa8ff : 0xff6a6a); } }, // magnetic field lines snap taut between each pair
+        clang(e) { burst(e.x, e.y, e.z, 40, 0xfff0d0, 10, .12, .35, 8); burst(e.x, e.y, e.z, 16, 0xdfe8ff, 5, .3, .4); ringFx(e.x, e.y, e.z, 1.8, 0xdfe8ff, .25); flash(e.x, e.y, e.z, 0xfff0d0, 25, .15);
+          debrisFx(e.x, e.y, e.z, 4, 'earth__pebble', 0x8a96a8, .2, 7); popNum(e.x, e.y + 1.2, e.z, 'CLANG!', '#dfe8ff', 'tag'); shake(clamp(.2 - distTo(e.x, e.z) * .01, .03, .15)); sfx('steel_big'); sfx('smash'); } } },
+    { name: 'Wrecking Ball', icon: '⚫', desc: 'ULTIMATE. Swing a colossal spiked iron ball on a magnetic chain round yourself for 4 s, paying the chain out to 9.5 m and reeling it back: everything it sweeps through takes 30 and is flung far away (a boss, too heavy to fling, takes 60). Then it smashes down wherever you are looking: 110 damage and a 1 s stun to everything within 5 m.',
+      cast(p, c) { ent(p, c, p.x, p.z, { follow: 1, life: 4, r: 6 }); sfx('ult'); },
+      ent: { tick(n) {
+          const a = wreckAng(n.t), R = wreckRad(n.t), bx = n.x + Math.cos(a) * R, bz = n.z + Math.sin(a) * R;
+          for (const e of enemiesNear(bx, bz, 1.8)) if (ready(n, e, ET[e.type].boss ? .3 : .5)) { hitEnemy(e, 'steel', (ET[e.type].boss ? 60 : 30) * n.mul, own(n), e.x - n.x, e.z - n.z, 16, { aoe: true }); launch(e, 6); fxe(n.mv, 'bonk', { x: e.x, y: e.y + 1, z: e.z }); } // a boss is too heavy to fling, so it takes the whole blow
+        },
+        end(n) { const p = own(n); if (!p) return; const q = lookPoint(p, 26), a = wreckAng(n.t), c = ctxN(n);
+          fxe(n.mv, 'hurl', { id: p.id, x: n.x + Math.cos(a) * wreckRad(n.t), z: n.z + Math.sin(a) * wreckRad(n.t), x2: q.x, z2: q.z });
+          later(.45, () => boomAt(c, q.x, 0, q.z, 5, 110 * n.mul, { kb: 10, cc: ['stun', 1] }, 'slam')); } },
+      view: { make() { // the ball: dark iron with steel spikes; the chain: links from your hand to it
+          const g = new THREE.Group(), u = g.userData, ball = wreckBall(); g.add(ball); u.ball = ball;
+          u.links = Array.from({ length: 14 }, (_, i) => { const l = new THREE.Mesh(LINK_GEO, ball.userData.mats[0]); l.castShadow = true; g.add(l); return l; });
+          u.mats = ball.userData.mats; u.dust = 0; sfx('steel_big'); return g; },
+        upd(o, n, dt, t) {
+          const u = o.userData, a = wreckAng(n.t), R = wreckRad(n.t), y = (n.y || 0) + 1.1 + Math.sin(a * 2) * .3, bx = Math.cos(a) * R, bz = Math.sin(a) * R;
+          u.ball.position.set(bx, y - o.position.y, bz); u.ball.rotation.x += dt * 9; u.ball.rotation.z += dt * 5;
+          const h = n.own === myId ? V(0, .9, 0) : V(0, 1.4, 0); // the chain runs from your chest, sagging a little
+          const s0 = n.own === myId ? .55 : 0; // your own chain starts well out from the camera, or its links filled the view
+          u.links.forEach((l, i) => { const s = s0 + (1 - s0) * (i + .5) / u.links.length, q = h.clone().lerp(V(bx, y - o.position.y, bz), s); q.y -= Math.sin(s * Math.PI) * .25; l.position.copy(q); l.lookAt(V(bx, y, bz).add(V(o.position.x, 0, o.position.z))); l.rotateZ(i % 2 ? Math.PI / 2 : 0); });
+          fade(o, Math.min(1, n.l * 8));
+          const wx = o.position.x + bx, wz = o.position.z + bz;
+          for (let i = 0; i < 3; i++) emit(wx + rand(-.6, .6), y + rand(-.6, .6), wz + rand(-.6, .6), -Math.sin(a) * rand(4, 9), rand(0, 2), Math.cos(a) * rand(4, 9), Math.random() < .5 ? 0xfff0d0 : 0xdfe8ff, rand(.05, .1), .3, 6); // sparks off the spikes
+          if ((u.dust -= dt) <= 0) { u.dust = .1; dustFx(wx, wz, .9, 0x8a8478); }
+          if (distTo(wx, wz) < 9 && Math.random() < .3) sfx('swing'); },
+        drop: o => o.removeFromParent() },
+      fx: { bonk(e) { burst(e.x, e.y, e.z, 26, 0xfff0d0, 9, .15, .35, 6); ringFx(e.x, e.y, e.z, 1.5, 0xdfe8ff, .25); popNum(e.x, e.y + .8, e.z, 'BONK', '#dfe8ff', 'tag'); shake(clamp(.25 - distTo(e.x, e.z) * .015, .04, .2)); sfx('smash'); },
+        hurl(e) { // the chain lets go: the ball arcs over and comes down where you look
+          const a = V(e.x, 1.2, e.z), b = V(e.x2, .9, e.z2), arc = 4 + a.distanceTo(b) * .2, o = wreckBall(); o.position.copy(a);
+          addFx(o, .45, (o, k) => { o.position.lerpVectors(a, b, k); o.position.y += Math.sin(k * Math.PI) * arc; o.rotation.x += .4; if (Math.random() < .7) emit(o.position.x, o.position.y, o.position.z, 0, 0, 0, 0xdfe8ff, .2, .3); });
+          circleFx('steel', V(e.x2, .08, e.z2), 5, { life: .5 }); sfx('steel_big'); if (isMe(e.id)) fovKick = Math.max(fovKick, .8); },
+        slam(e) { // a crater: shockwave, rubble, sparks, the ball half-buried before it fades
+          boomFx(e.x, .5, e.z, e.r, 0xbcd0ec, 1.2); dustFx(e.x, e.z, e.r * .8, 0x7a7468); debrisFx(e.x, .4, e.z, 14, 'earth__pebble', 0x8a8478, .45, 11); quakeCracks(e.x, e.z, e.r, 10, 1.6, .58); scarFx(e.x, e.z, 2, 0x8a96a8, 4);
+          const o = wreckBall(); o.position.set(e.x, .4, e.z); addFx(o, 1.2, (o, k) => { o.position.y = .4 - k * .3; fade(o, k > .7 ? (1 - k) / .3 : 1); });
+          shake(.6); sfx('explosion_big'); sfx('smash'); } } },
   ],
 },
 // ================================================================== MAGMA

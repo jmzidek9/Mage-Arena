@@ -1385,7 +1385,7 @@ const ELMETA = {
   fire: ['Burst', 'Area', 1, 'fire__phoenix'], frost: ['Control', 'Burst', 1, 'frost__lance'], storm: ['Chain', 'Burst', 2, 'storm__coil'],
   water: ['Control', 'Area', 1, 'water__wave'], earth: ['Tank', 'Control', 1, 'earth__boulder'], wind: ['Mobility', 'Control', 2, 'wind__tornado'],
   nature: ['Sustain', 'Control', 1, 'nature__flower'], shadow: ['Assassin', 'Mobility', 3, 'shadow__dagger'], light: ['Sustain', 'Support', 1, 'light__spear'],
-  venom: ['Damage over time', 'Area', 2, 'venom__wasp'], steel: ['Tank', 'Burst', 2, 'steel__sword'], magma: ['Area', 'Burst', 2, 'magma__volcano'],
+  venom: ['Damage over time', 'Area', 2, 'venom__fang'], steel: ['Control', 'Burst', 2, 'steel__magnet'], magma: ['Area', 'Burst', 2, 'magma__volcano'],
   crystal: ['Defense', 'Burst', 2, 'crystal__spire'], sonic: ['Control', 'Area', 2, 'sonic__rings'], gravity: ['Control', 'Area', 2, 'gravity__hole'],
   chrono: ['Utility', 'Control', 3, 'chrono__hourglass'], blood: ['Damage', 'High risk', 3, 'blood__scythe'], spirit: ['Summoner', 'Control', 2, 'spirit__wolf'],
   cosmic: ['Area', 'Burst', 2, 'cosmic__comet'], explosion: ['Burst', 'Mobility', 2, 'explosion__bomb'], illusion: ['Trickster', 'Control', 3, 'illusion__mask'],

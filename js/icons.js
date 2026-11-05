@@ -239,10 +239,12 @@ SPELL_ART.steel = [
   k => `<rect x="4" y="22" width="46" height="5" rx="1" fill="url(#${k.id}mt)"/><rect x="4" y="37" width="46" height="5" rx="1" fill="url(#${k.id}mt)"/>` + k.bolt([[8, 27], [14, 37], [20, 27], [26, 37], [32, 27]], 1.2) + k.beam(6, 32, 54, 32, 3.4) + `<path d="M44 29.5h12l6 2.5-6 2.5H44z" fill="url(#${k.id}mt)"/>` + k.burst(62, 32, 5, 6, .3),
   // Magnetize: a great magnet dragging monsters in
   k => `<path d="M14 6V30a18 18 0 0 0 36 0V6H40V30a8 8 0 0 1-16 0V6z" fill="#d8303a"/><path d="M14 6V30a18 18 0 0 0 9 15.6" fill="none" stroke="#ff8a90" stroke-width="2" opacity=".7"/><rect x="14" y="4" width="10" height="9" fill="url(#${k.id}mt)"/><rect x="40" y="4" width="10" height="9" fill="url(#${k.id}mt)"/>` + `<path d="M8 10C2 20 4 34 10 40M56 10C62 20 60 34 54 40" fill="none" stroke="${k.L}" stroke-width="1.6" stroke-dasharray="3 3"/>` + k.foe(14, 56, .5) + k.foe(50, 56, .5) + `<path d="M20 54l6-4M44 54l-6-4" stroke="${k.L}" stroke-width="1.8" stroke-linecap="round"/>`,
-  // Caltrops: a field of steel caltrops
-  k => k.ground(54, 30, .5) + [[14, 46, 1.4], [34, 52, 1.6], [52, 42, 1.3], [26, 30, 1.1], [44, 26, 1]].map(([x, y, s]) => `<g transform="translate(${x} ${y}) scale(${s})"><path d="M0 -10L2 0H-2z" fill="url(#${k.id}mt)"/><path d="M-9 6L-1 -1 1 2z" fill="url(#${k.id}mt)"/><path d="M9 6L1 -1-1 2z" fill="#7d8496"/><path d="M0 2L2 0-2 0z" fill="#3a3f4c"/></g>`).join('') + k.sparks([[22, 22, 1], [46, 20, 1]]),
-  // Blade Storm: giant swords whirling round the caster
-  k => k.ring(32, 34, 26, 26, 1.6, .6) + k.figure(32, 36, 1) + [0, 72, 144, 216, 288].map(a => { const r = a * Math.PI / 180; return k.blade(32 + Math.cos(r) * 20, 34 + Math.sin(r) * 20, 18, a + 180, .8); }).join(''),
+  // Polarity: a red + monster and a blue − monster yanked together by crackling field lines, crashing in a burst
+  k => k.foe(12, 40, .7, '#ff5a5a') + k.foe(52, 40, .7, '#5aa0ff') + `<circle cx="12" cy="34" r="9" fill="none" stroke="#ff4a4a" stroke-width="2.4"/><circle cx="52" cy="34" r="9" fill="none" stroke="#4a8aff" stroke-width="2.4"/><text x="8" y="18" font-size="12" font-weight="bold" fill="#ff6a6a" font-family="sans-serif">+</text><text x="49" y="18" font-size="14" font-weight="bold" fill="#6aa8ff" font-family="sans-serif">−</text>`
+    + `<path d="M20 30Q32 18 44 30M20 38Q32 50 44 38" fill="none" stroke="${k.W}" stroke-width="1.6" stroke-dasharray="3 2"/>` + k.burst(32, 34, 7, 8, .35),
+  // Wrecking Ball: a huge spiked iron ball on a chain swinging round, smashing a monster away
+  k => `<path d="M8 58Q20 30 34 30" fill="none" stroke="#8a96a8" stroke-width="3" stroke-dasharray="4 2"/>` + k.streak(10, 20, 40, 34, 8, .35) + `<circle cx="40" cy="34" r="13" fill="url(#${k.id}mt)"/>` + [0, 45, 90, 135, 180, 225, 270, 315].map(a => { const r = a * Math.PI / 180, x = 40 + Math.cos(r) * 13, y = 34 + Math.sin(r) * 13; return `<path d="M${(x + Math.cos(r) * 6).toFixed(1)} ${(y + Math.sin(r) * 6).toFixed(1)}L${(x - Math.sin(r) * 2.5).toFixed(1)} ${(y + Math.cos(r) * 2.5).toFixed(1)}L${(x + Math.sin(r) * 2.5).toFixed(1)} ${(y - Math.cos(r) * 2.5).toFixed(1)}Z" fill="#dfe8ff"/>`; }).join('')
+    + `<g transform="rotate(30 58 54)">${k.foe(58, 56, .45)}</g>` + k.burst(54, 50, 5, 8, .3),
 ];
 
 // ---- Magma ----

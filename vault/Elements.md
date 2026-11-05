@@ -176,8 +176,8 @@ A slow, nasty death. Stack poison on everything with gas, acid and fangs, and le
 | E | 🦂 **Scorpion Sting** *(hold to aim, release to cast)* | 9 s | A giant scorpion tail bursts out of the ground at the target and stings the enemy nearest it 3 times: 20 damage and 2 poison stacks per sting, and the last sting flings it into the air. The tail lashes everything within 2.5 m of where it strikes for 8. |
 | R | 🐉 **Hydra** *(hold to aim, release to cast)* | ultimate | A three-headed venom hydra bursts out of the ground at the target for 6 s. Each head spits venom at a different enemy within 16 m every 0.4 s: 7 damage and a poison stack around the hit, and a small toxic puddle. Then it dives back into the ground in a poison eruption: 60 to everything within 6 m. |
 
-## ⚔️ Steel
-A blade master. Boomerang saws, railguns and a storm of swords. Shields mean nothing to you.
+## 🧲 Steel
+Heavy metal and magnetism. Boomerang saws, railguns, magnets that slam enemies together and a wrecking ball. Shields mean nothing to you.
 
 **Passive.** Armor Breaker: Rend stacks 3 times (+6% damage taken each). At 3 stacks your hits go straight through shields.
 
@@ -186,8 +186,8 @@ A blade master. Boomerang saws, railguns and a storm of swords. Shields mean not
 | LMB | 🪚 **Saw Blade** | 0.6 s | Throw a spinning saw that slices through enemies, then comes back and slices them again. |
 | RMB | 🔫 **Railgun** *(hold to charge)* | 4 s | Hold to charge a hypersonic rail spike that pierces every enemy in a line and blasts them far back. The recoil shoves you backward too. Full charge adds 2 Rend stacks. |
 | Q | 🧲 **Magnetize** | 8 s | Magnetize every enemy in front of you and drag them right to your feet, stunned. |
-| E | 📌 **Caltrops** | 11 s | Scatter a field of steel caltrops. Enemies that step on them are cut, slowed and rended. |
-| R | ⚔️ **Blade Storm** | ultimate | Ten giant swords orbit you, sweeping outward and back again, shredding everything they touch. |
+| E | 🧲 **Polarity** | 10 s | Charge up to 8 enemies in front of you (14 m), alternating red (+) and blue (−). A moment later every opposite pair is yanked into each other and crashes together: 35 damage to both and a 1.2 s stun. A charge with no partner is pulled to you for 20. Bosses only take the damage. |
+| R | ⚫ **Wrecking Ball** | ultimate | Swing a colossal spiked iron ball on a magnetic chain round yourself for 4 s, paying the chain out to 9.5 m and reeling it back: everything it sweeps through takes 30 and is flung far away (a boss, too heavy to fling, takes 60). Then it smashes down wherever you are looking: 110 damage and a 1 s stun to everything within 5 m. |
 
 ## 🌋 Magma
 Slow and devastating. Flood the island with lava and drop a meteor on anything left standing.
@@ -440,6 +440,8 @@ A calligrapher. Living ink: brush strokes that mire, koi that hunt, and a dragon
 
 ## Balance
 **Ability rework, part 1 (2026-11-04):** Water Whip became Riptide Ring and Surf became Waterfall; Gale Force became Jet Stream; Parasite Seed became Vine Slam and Snaptrap became Bramble Wall. Tsunami, Tectonic Quake, Entangle and World Tree got new looks (a curling crest and spray, racing molten cracks and rings of spikes, roots tearing up round the area, vines whipping out of the tree). Bench after: Water 1.07 / 0.88, Earth 0.85 / 0.99, Nature 0.83 / 0.90 (then Vine Slam 25 + 15 raised to 30 + 20), Wind 0.74 / 1.00 (control kit). Riptide Ring bursts on a boss instead of passing through it.
+
+**Steel's own identity (2026-11-04):** Steel was a second sword element next to Blades. It is now heavy metal and magnetism: Caltrops became Polarity (charged pairs yanked into each other) and Blade Storm became Wrecking Ball (a spiked ball on a chain that pays out to 9.5 m, then smashes down where you look; bosses take 60 a hit since they can't be flung). Saw Blade 14 → 17. Glyph 🧲. Bench: 1.03 / 0.95.
 
 **Ability rework, part 3 (2026-11-04):** Bubble Prison became Water Cannon and Tsunami now rolls 46 m (life 2.6 → 4.2 s); Vine Slam became Sleepcaps; Blackout became Nightmare Pit and Shade Ambush is slower (assassins rise over 0.9 s, dashes 0.38 s apart) with daggers, afterimages and a triple-slash mark; Penance shows a shaft of light, a bigger halo and spears, and a sigil under each branded enemy; Serpent moves 16 m/s (lunging at 26), turns hard and looks 18 m ahead; Acid Rain became Scorpion Sting so Venom's E is no longer a second cloud; Hydra got spines, horns, a bubbling pool and mist. Bench after: Water 0.88 / 0.91, Nature 0.81 / 0.89 (Sleepcaps 28, World Tree vines 30), Shadow 1.09 / 1.11, Light 0.96 / 1.15, Venom 1.20 / 0.86 (Serpent poisons twice per bite, Hydra 6 s and 7 per spit). Nature's Q and E icons were still the old Parasite Seed and Snaptrap pictures; fixed.
 
