@@ -326,6 +326,10 @@ function fireBoom(x, y, z, r, k = 1, hot = false) {
 // Explosion's booms: a burst of fire-lit smoke rolling into grey, flying debris, embers and a scorch mark
 function blastFx(e, k = 1) {
   boomFx(e.x, e.y, e.z, e.r, 0xffa020, .8 * k);
+  const P = V(e.x, Math.max(e.y, .4), e.z); if (distTo(e.x, e.z) > e.r + 2) modelFx('fire__ball', 0xffc060, P, .35, (o, q) => { o.scale.setScalar(e.r * (.3 + .7 * easeOut(q))); fade(o, (1 - q) ** 1.5); }); // the fireball
+  ringFx(e.x, .12, e.z, e.r * 1.6, 0xfff0d0, .3, e.r * .3); // the shockwave
+  for (let i = 0; i < Math.round(16 * k); i++) { const a = rand(0, TAU), s = rand(6, 13); emit(e.x, P.y, e.z, Math.cos(a) * s, rand(2, 8), Math.sin(a) * s, Math.random() < .5 ? 0xffe0a0 : 0xffffff, rand(.04, .08), rand(.4, .7), 12, .4); } // sparks
+  if (e.r * k > 3.5) quakeCracks(e.x, e.z, e.r * .9, 8, 1.4, .07);
   smokeFx(e.x, Math.max(e.y, .5), e.z, e.r * .5 * k, 0xffa040, .55, 5, 2.2); // the fireball: bright fire-lit puffs that burn out fast
   smokeFx(e.x, Math.max(e.y, .5), e.z, e.r * .6, 0xc0662a, 1, 4, 1.8);
   smokeFx(e.x, Math.max(e.y, .5), e.z, e.r * .8, 0x5a5047, 2.4, Math.round(2 + e.r * .6), 1.4);
@@ -458,7 +462,23 @@ function bloodSplat(x, y, z, k = 1) {
   burst(x, y, z, Math.round(18 * k), 0xe8102e, 5, .18, .4); for (let i = 0; i < Math.round(12 * k); i++) emit(x, y, z, rand(-3, 3), rand(1, 4), rand(-3, 3), Math.random() < .6 ? 0xc00820 : 0x5a0010, rand(.08, .16), rand(.5, .8), 14, .4);
   scarFx(x + rand(-.3, .3), z + rand(-.3, .3), rand(.4, .7) * k, 0xc00820, 3); if (Math.random() < .5) sfx('blood');
 }
+// Cosmic: a twinkle: a four-pointed flare of starlight and a spray of tiny stars
+const FLARE_GEO = (() => { const s = new THREE.Shape(); for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4, r = i % 2 ? .12 : 1; s[i ? 'lineTo' : 'moveTo'](Math.cos(a) * r, Math.sin(a) * r); } return new THREE.ShapeGeometry(s); })();
+function starPop(x, y, z, s = 1) {
+  const m = new THREE.Mesh(FLARE_GEO, new THREE.MeshBasicMaterial({ color: 0xe8ecff, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false })); m.position.set(x, y, z);
+  addFx(m, .3, (o, k) => { o.lookAt(camera.position); o.rotateZ(k * 1.5); o.scale.setScalar(s * (.4 + 1.2 * easeOut(k))); o.material.opacity = 1 - k; });
+  for (let i = 0; i < Math.round(10 * s); i++) { const a = rand(0, TAU), b = rand(-1, 1), v = rand(2, 5) * s; emit(x, y, z, Math.cos(a) * v, b * v, Math.sin(a) * v, Math.random() < .5 ? 0xffffff : 0xb0b8ff, rand(.05, .1), .5, 2); }
+}
+// Explosion: a lit fuse spitting sparks (Grenade, Sticky Bomb), and the bomber that flies the Carpet Bomb run
+function fuseSparks(o, s, dt) { if (Math.random() < .6) { const p = o.position; emit(p.x, p.y + .15, p.z, rand(-1.5, 1.5), rand(1, 3), rand(-1.5, 1.5), Math.random() < .5 ? 0xffe0a0 : 0xff8a20, rand(.03, .06), .25, 8); } }
+function bomber() {
+  const g = new THREE.Group(), m = new THREE.MeshStandardMaterial({ color: 0x3a3e46, metalness: .6, roughness: .5 }), add = (geo, x, y, z) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.castShadow = true; g.add(o); return o; };
+  add(new THREE.CylinderGeometry(.55, .4, 7, 10).rotateX(Math.PI / 2), 0, 0, 0); add(new THREE.BoxGeometry(11, .18, 1.8), 0, 0, .3); add(new THREE.BoxGeometry(3.6, .14, 1), 0, .2, -3); add(new THREE.BoxGeometry(.14, 1.4, 1), 0, .8, -3);
+  for (const x of [-2.6, 2.6]) { const e = add(new THREE.CylinderGeometry(.32, .32, 1.4, 8).rotateX(Math.PI / 2), x, -.15, .6); const f = new THREE.Mesh(new THREE.SphereGeometry(.28, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffa040 })); f.position.set(x, -.15, -.2); g.add(f); } // engines glowing
+  g.userData.mats = [m]; return g;
+}
 const WARM = [];
+WARM.push(() => bomber());
 WARM.push(() => wreckBall()); // client: extra meshes and shaders compiled at game start (warmFx), so their first cast does not hitch
 WARM.push(() => snakeHead(1, true));
 WARM.push(() => vineChain(2));
@@ -2017,7 +2037,7 @@ spirit: {
       cast(p, c) { for (let k = 0; k < c.multi; k++) shoot(p, c, 22, { d: spread(c.d, k, c.multi, .2), r: .35, life: 2.2, dmg: 30 * c.dmg, home: 6, sc: c.mega ? 1.8 : 1 }); },
       // the wandering spirits Command raises when you have no summons live on this move
       ent: { tick(n, dt) { summonAI(n, dt, 9, 1.3, .8, e => hitEnemy(e, 'spirit', 9 * n.mul, own(n), e.x - n.x, e.z - n.z, 2), 18); } },
-      look: { m: 'spirit__wisp', trail: [0x8affd8, .18, .45, -1, 2], light: 4 },
+      look: { m: 'spirit__wisp', trail: [0x8affd8, .18, .45, -1, 2], light: 4, upd(o, s, dt) { const p = o.position; if (p.distanceTo(camera.position) < 3) return; if (Math.random() < dt * 8) smokeFx(p.x, p.y, p.z, .35, 0x5effc8, .7, 1, .4); if (Math.random() < .5) emit(p.x + rand(-.1, .1), p.y + .1, p.z + rand(-.1, .1), 0, 1.2, 0, 0xd8fff0, .1, .3, -.5); } }, // ghost-fog and pale flame in its wake
       view: { make(n) { const g = new THREE.Group(), o = spectralModel('spirit__wisp', 0x5effc8); g.add(o); g.userData.mats = o.userData.mats; Object.assign(g.userData, { w: o, s: n.s, lunge: 0, sm: o.userData.sm }); burst(n.x, .6, n.z, 26, 0x8affd8, 4, .25, .5, -2); sfx('spirit'); return g; },
         upd(o, n, dt, t) {
           const u = o.userData, k = easeOut(Math.min(1, n.t * 2));
@@ -2043,14 +2063,16 @@ spirit: {
           hitEnemy(e, 'spirit', (ET[e.type].boss ? 9 : 20) * c.dmg, p, e.x - p.x, e.z - p.z, 1, { aoe: true });
         }
       },
-      fx: { order(e) { const q = V(e.x, e.y, e.z); beamFx(handPos(e.id), q, 0x8affd8, .02, .2); for (const [x, z] of e.from) beamFx(V(x, 1.2, z), q, 0x5effc8, .05, .3); burst(e.x, e.y, e.z, 30, 0x8affd8, 6, .25, .5); ringFx(e.x, .1, e.z, 2, 0x5effc8, .4); sfx('spirit_big'); } } },
+      fx: { order(e) { const q = V(e.x, e.y, e.z); beamFx(handPos(e.id), q, 0x8affd8, .02, .2); for (const [x, z] of e.from) beamFx(V(x, 1.2, z), q, 0x5effc8, .05, .3); burst(e.x, e.y, e.z, 30, 0x8affd8, 6, .25, .5); ringFx(e.x, .1, e.z, 2, 0x5effc8, .4); sfx('spirit_big');
+          modelFx('spirit__skull', 0x8affd8, V(e.x, e.y + 1.8, e.z), 1.6, (o, k) => { o.position.y = e.y + 1.8 + Math.sin(k * 12) * .1; o.lookAt(camera.position); o.scale.setScalar(.7 * (k < .1 ? k * 10 : 1)); fade(o, (k > .8 ? (1 - k) * 5 : 1) * .9); }); popNum(e.x, e.y + 2.6, e.z, 'HUNT', '#8affd8', 'tag'); pillarFx(e.x, 0, e.z, .6, 6, 0x5effc8, .5); } } }, // a burning skull marks the prey
     { name: 'Banshee', icon: '😱', cd: 10, mode: 'aim', range: 18, aimR: 5, desc: 'Summon a banshee at the target for 7 s. Every 2 seconds she shrieks: enemies within 5 m take 18 damage and flee in fear for 1.5 s.',
       cast(p, c) { for (const n of entsOf(p, c.m.key)) n.dead = true; ent(p, c, c.tgt.x, c.tgt.z, { life: 7, r: 5 * c.st.aoe, acc: 1.6 }); },
       ent: { tick(n, dt) { if (!pulse(n, dt, 2)) return; n.s++; for (const e of enemiesNear(n.x, n.z, n.r)) { cc(e, 'fear', 1.5, own(n)); hitEnemy(e, 'spirit', 18 * n.mul, own(n), e.x - n.x, e.z - n.z, 4, { aoe: true }); } } },
       view: { make(n) { const o = model('spirit__skull', 0x8affd8), u = o.userData; Object.assign(u, { s: n.s, wail: 0, circle: zoneCircle('spirit', n.r, .35) }); u.circle.position.set(n.x, .07, n.z); scene.add(u.circle); burst(n.x, 1, n.z, 40, 0x8affd8, 5, .3, .6, -2); sfx('spirit_big'); return o; },
         upd(o, n, dt, t) {
           const u = o.userData, k = easeOut(Math.min(1, n.t * 2));
-          if (n.s !== u.s) { u.s = n.s; u.wail = 1; ringFx(n.x, 1.5, n.z, n.r, 0x8affd8, .5); ringFx(n.x, .1, n.z, n.r, 0x5effc8, .5); for (let i = 0; i < 36; i++) { const a = TAU * i / 36; emit(n.x, 2.4, n.z, Math.cos(a) * 12, rand(-1, 1), Math.sin(a) * 12, 0x8affd8, .25, .45, 0, 2); } sfx('spirit_big'); }
+          if (n.s !== u.s) { u.s = n.s; u.wail = 1; ringFx(n.x, 1.5, n.z, n.r, 0x8affd8, .5); ringFx(n.x, .1, n.z, n.r, 0x5effc8, .5); ringFx(n.x, 2.4, n.z, n.r * 1.3, 0xd8fff0, .6, 1); if (distTo(n.x, n.z) > n.r + 2) smokeFx(n.x, .5, n.z, n.r * .6, 0x5effc8, 1.4, 5, .5);
+            for (let i = 0; i < 6; i++) { const a = TAU * i / 6; modelFx('spirit__skull', 0x8affd8, V(n.x, 2.2, n.z), .7, (s, k) => { s.position.set(n.x + Math.cos(a) * n.r * easeOut(k), 2.2 - k, n.z + Math.sin(a) * n.r * easeOut(k)); s.lookAt(camera.position); s.scale.setScalar(.45); fade(s, (1 - k) * .8); }); } /* screaming faces flung out */ for (let i = 0; i < 36; i++) { const a = TAU * i / 36; emit(n.x, 2.4, n.z, Math.cos(a) * 12, rand(-1, 1), Math.sin(a) * 12, 0x8affd8, .25, .45, 0, 2); } sfx('spirit_big'); }
           u.wail = Math.max(0, u.wail - dt * 3);
           o.position.y = 1.4 + 1.2 * k + Math.sin(t * 2) * .25; o.scale.setScalar((1.8 + u.wail * 1.2) * k); o.lookAt(camera.position);
           fade(o, Math.min(1, n.l * 4) * .8); spinCircle(u.circle, dt, .5); setOpacity(u.circle.userData.mats, Math.min(.35, n.l * 2));
@@ -2060,7 +2082,7 @@ spirit: {
     { name: 'Spirit Wolf', icon: '🐺', cd: 12, desc: 'Summon a spectral wolf for 16 seconds. It hunts the enemies closest to you and savages them.',
       cast(p, c) { ent(p, c, p.x + c.flat.x * 2.5 + c.flat.z * 1.2, p.z + c.flat.z * 2.5 - c.flat.x * 1.2, { life: 16, r: .6, yaw: p.yaw + Math.PI, ...SPIRIT_LURE, hp: 6 }); }, // ahead and to one side, never on the camera
       ent: { tick(n, dt) { summonAI(n, dt, 11, 1.2, .7, e => hitEnemy(e, 'spirit', (ET[e.type].boss ? 13 : 34) * n.mul, own(n), e.x - n.x, e.z - n.z, 2), 18); } },
-      view: { make(n) { const o = spectralModel('spirit__wolf', 0x5effc8); o.scale.setScalar(1.15); o.userData.legs = [0, 1, 2, 3].map(i => o.getObjectByName('spirit__wolf_leg' + i)); o.userData.head = o.getObjectByName('spirit__wolf_head'); o.userData.tail = o.getObjectByName('spirit__wolf_tail'); o.userData.s = n.s; o.userData.bite = 0; burst(n.x, 1, n.z, 40, 0x8affd8, 5, .3, .6); sfx('spirit_big'); return o; },
+      view: { make(n) { const o = spectralModel('spirit__wolf', 0x5effc8); o.scale.setScalar(1.15); o.userData.legs = [0, 1, 2, 3].map(i => o.getObjectByName('spirit__wolf_leg' + i)); o.userData.head = o.getObjectByName('spirit__wolf_head'); o.userData.tail = o.getObjectByName('spirit__wolf_tail'); o.userData.s = n.s; o.userData.bite = 0; burst(n.x, 1, n.z, 40, 0x8affd8, 5, .3, .6); ringFx(n.x, .1, n.z, 2.5, 0x5effc8, .6, .3); pillarFx(n.x, 0, n.z, .9, 5, 0x5effc8, .6); if (distTo(n.x, n.z) > 4) smokeFx(n.x, .4, n.z, 1.2, 0x5effc8, 1.2, 4, .5); sfx('spirit_big'); sfx('wind_big'); return o; }, // a howl and a ring of ghost-fire
         upd(o, n, dt, t) {
           const u = o.userData; u.ph = (u.ph || 0) + dt * (n.v ? 14 : 2); o.rotation.y = lerpAngle(o.rotation.y, n.yaw || 0, Math.min(1, dt * 10));
           u.legs.forEach((l, i) => { if (l) l.rotation.x = Math.sin(u.ph + (i % 2 ? Math.PI : 0) + (i > 1 ? Math.PI / 2 : 0)) * (n.v ? .8 : .08); });
@@ -2086,7 +2108,8 @@ spirit: {
           fade(o, Math.min(1, n.l * 8, n.t * 2) * .9); hurtTick(o, dt);
           if (Math.random() < .25) emit(n.x + rand(-.3, .3), rand(.1, .8), n.z + rand(-.3, .3), 0, .4, 0, 0x8affd8, .25, .6, -.3);
         }, drop(o, n) { burst(n.x, 1, n.z, 30, 0x8affd8, 4, .3, .5); dropFade(.4)(o); } },
-      fx: { rise(e) { circleFx('spirit', V(e.x, .08, e.z), 4, { life: 1.4 }); sfx('ult'); sfx('spirit_big'); }, hurt: spiritHurtFx } },
+      fx: { rise(e) { circleFx('spirit', V(e.x, .08, e.z), 4, { life: 1.4 }); sfx('ult'); sfx('spirit_big'); quakeCracks(e.x, e.z, 6, 12, 2.5, .44); ringFx(e.x, .1, e.z, 8, 0x8affd8, .9, 1);
+          let f = 0; addFx(new THREE.Group(), 3, (o, k, dt) => { if ((f -= dt) > 0) return; f = .2; const a = rand(0, TAU), d = rand(1, 7); smokeFx(e.x + Math.cos(a) * d, .25, e.z + Math.sin(a) * d, 1.4, 0x6ac8a8, 2.2, 1, .15); }); }, hurt: spiritHurtFx } }, // graveyard fog rolling over the ground
   ],
 },
 // ================================================================== COSMIC
@@ -2098,8 +2121,9 @@ cosmic: {
   moves: [
     { name: 'Star Shot', icon: '⭐', cd: .38, desc: 'Fire shooting stars. Every 4th one is a giant star that pierces 3 enemies.',
       cast(p, c) { p.bd.star = (p.bd.star || 0) + 1; const big = p.bd.star % 4 === 0; for (let k = 0; k < c.multi; k++) shoot(p, c, 34, { d: spread(c.d, k, c.multi), r: big ? .7 : .3, dmg: (big ? 40 : 11) * c.dmg, pierce: c.st.pierce + (big ? 3 : 0), sc: (big ? 2.2 : 1) * (c.mega ? 1.6 : 1) }); },
+      shot: { end(s, why) { if (why !== 'life') fxe(s.mv, 'pop', { x: s.x, y: s.y, z: s.z, b: s.sc > 1.5 ? 1 : 0 }); } },
       look: { m: 'cosmic__star', spin: [0, 0, 10], trail: [() => Math.random() < .5 ? 0xb0b8ff : 0xffffff, .15, .4, 0, 2], light: 5 },
-      fx: { det: e => boomFx(e.x, e.y, e.z, 2.5, 0x6a78ff, .6), nova: e => boomFx(e.x, .5, e.z, 4.5, 0x6a78ff, .8) } },
+      fx: { pop: e => starPop(e.x, e.y, e.z, e.b ? 1.6 : .7), det: e => boomFx(e.x, e.y, e.z, 2.5, 0x6a78ff, .6), nova: e => boomFx(e.x, .5, e.z, 4.5, 0x6a78ff, .8) } },
     { name: 'Orbiting Moons', icon: '🌙', cd: 9, desc: 'Three moons orbit you. Whenever an enemy comes close, a moon slams into it and explodes.',
       cast(p, c) { for (const n of entsOf(p, c.m.key)) n.dead = true; for (let i = 0; i < 3; i++) ent(p, c, p.x, p.z, { life: 12, r: .4, y: 1.4, i }); },
       ent: { tick(n) {
@@ -2110,10 +2134,10 @@ cosmic: {
       } },
       shot: { hit: () => 'end', end(s) { boomAt(ctxS(s), s.x, s.y, s.z, 2, s.dmg * .5, { kb: 5 }); } },
       look: { m: 'cosmic__moon', spin: [1, 2, 0], trail: [0xb0b8ff, .2, .4, 0, 2], light: 4 },
-      view: { make() { const o = model('cosmic__moon', 0x6a78ff); o.scale.setScalar(1.1); return o; },
+      view: { make() { const o = model('cosmic__moon', 0x6a78ff), h = new THREE.Mesh(RING_GEO, new THREE.MeshBasicMaterial({ color: 0xb0b8ff, transparent: true, opacity: .5, blending: THREE.AdditiveBlending, depthWrite: false, fog: false })); h.scale.setScalar(.9); h.rotation.x = .5; o.add(h); o.scale.setScalar(1.1); return o; }, // a pale halo ring round each moon
         upd(o, n, dt, t) { o.rotation.y += dt * .8; for (let k = 0; k < 2; k++) { const a = t * 3 + k * Math.PI + n.id; emit(n.x + Math.cos(a) * .9, n.y + Math.sin(a) * .25, n.z + Math.sin(a) * .9, 0, 0, 0, 0xd8dcff, .07, .5); } }, // a little ring of dust round each moon
         drop: (o) => o.removeFromParent() },
-      fx: { boom: e => boomFx(e.x, e.y, e.z, e.r, 0x6a78ff, .8) } },
+      fx: { boom: e => { boomFx(e.x, e.y, e.z, e.r, 0x6a78ff, .8); starPop(e.x, e.y, e.z, 1.4); scarFx(e.x, e.z, 1.1, 0x6a78ff, 3); debrisFx(e.x, e.y, e.z, 6, 'earth__pebble', 0x9aa0c0, .3, 8); } } },
     { name: 'Constellation', icon: '✴️', cd: 2.5, mode: 'aim', range: 18, aimR: 1, desc: 'Place up to 3 stars. Stars link to each other with beams of starlight that burn enemies crossing them.',
       cast(p, c) { const mine = entsOf(p, c.m.key).sort((a, b) => a.id - b.id); while (mine.length >= 3) mine.shift().dead = true; ent(p, c, c.tgt.x, c.tgt.z, { life: 12, r: .5, y: 1.2 }); },
       ent: { tick(n) {
@@ -2128,13 +2152,15 @@ cosmic: {
           o.position.y = 1.2 + Math.sin(t * 2 + n.id) * .1; o.lookAt(camera.position);
           const u = o.userData.links, src = role === 'guest' ? R : S, mine = (src?.ents || []).filter(m => m.mv === n.mv && m.own === n.own && m.id > n.id);
           for (const [id, b] of u) if (!mine.some(m => m.id === id)) { b.removeFromParent(); u.delete(id); }
-          for (const m of mine) { let b = u.get(m.id); if (!b) { b = beamMesh(0x9aa8ff, .1); scene.add(b); u.set(m.id, b); } aimBeam(b, V(n.x, 1.2, n.z), V(m.x, 1.2, m.z), .08 + .03 * Math.sin(t * 15)); fade(b, Math.min(1, n.l * 8, n.t * 4)); }
+          for (const m of mine) { let b = u.get(m.id); if (!b) { b = beamMesh(0x9aa8ff, .1); scene.add(b); u.set(m.id, b); } aimBeam(b, V(n.x, 1.2, n.z), V(m.x, 1.2, m.z), .08 + .03 * Math.sin(t * 15)); fade(b, Math.min(1, n.l * 8, n.t * 4));
+            if (Math.random() < .6) { const s = Math.random(); emit(n.x + (m.x - n.x) * s, 1.2 + rand(-.15, .15), n.z + (m.z - n.z) * s, rand(-.2, .2), rand(-.2, .3), rand(-.2, .2), Math.random() < .5 ? 0xffffff : 0xb0b8ff, rand(.05, .1), .6, 0); } } // stardust along the beam
+          if (Math.random() < .08) starPop(n.x, o.position.y, n.z, .35);
         },
         drop(o) { for (const b of o.userData.links.values()) b.removeFromParent(); dropFade(.3)(o); } } },
     { name: 'Meteor Shower', icon: '🌠', cd: 12, mode: 'aim', range: 20, aimR: 6, desc: 'Rain twelve shooting stars down on the target area.',
       cast(p, c) { const t = c.tgt.clone(), R2 = 6 * c.st.aoe; for (let i = 0; i < 12; i++) later(i * .15, () => { const a = rand(0, TAU), d = Math.sqrt(Math.random()) * R2, x = t.x + Math.cos(a) * d, z = t.z + Math.sin(a) * d; fxe(c.m.key, 'fall', { x, z }); later(.35, () => boomAt(c, x, .2, z, 2, 22 * c.dmg, { kb: 4, raw: true })); }); },
-      fx: { fall(e) { modelFx('cosmic__comet', 0x6a78ff, V(e.x + 8, 30, e.z + 8), .36, (o, k) => { o.position.set(e.x + 8 * (1 - k), 30 * (1 - k), e.z + 8 * (1 - k)); o.lookAt(e.x, 0, e.z); for (let i = 0; i < 3; i++) emit(o.position.x, o.position.y, o.position.z, rand(-1, 1), rand(-1, 1), rand(-1, 1), 0xb0b8ff, .3, .4); }); },
-        boom(e) { boomFx(e.x, e.y, e.z, e.r, 0x6a78ff, .7); burst(e.x, .3, e.z, 14, 0xffffff, 6, .15, .4, 6); } } },
+      fx: { fall(e) { modelFx('cosmic__comet', 0x6a78ff, V(e.x + 8, 30, e.z + 8), .36, (o, k) => { o.position.set(e.x + 8 * (1 - k), 30 * (1 - k), e.z + 8 * (1 - k)); o.lookAt(e.x, 0, e.z); o.scale.setScalar(1.4); for (let i = 0; i < 5; i++) { const s = rand(0, 3); emit(o.position.x + 8 / 30 * s * 3, o.position.y + s * 3, o.position.z + 8 / 30 * s * 3, rand(-.5, .5), rand(-.5, .5), rand(-.5, .5), Math.random() < .4 ? 0xffffff : 0x8a98ff, rand(.25, .5), .35); } }); }, // a long blazing tail
+        boom(e) { boomFx(e.x, e.y, e.z, e.r, 0x6a78ff, .7); burst(e.x, .3, e.z, 14, 0xffffff, 6, .15, .4, 6); starPop(e.x, .5, e.z, 1); scarFx(e.x, e.z, 1.2, 0x6a78ff, 3); debrisFx(e.x, .3, e.z, 3, 'earth__pebble', 0x9aa0c0, .25, 7); } } },
     { name: 'Supernova', icon: '💥', desc: 'ULTIMATE. A star ignites above you and grows for 2 seconds, then goes supernova, obliterating and blinding everything nearby.',
       cast(p, c) { ent(p, c, p.x, p.z, { follow: 1, life: 2.2, r: 14 * c.st.aoe }); },
       ent: { end(n) { boomAt(ctxN(n), n.x, 2, n.z, n.r, 55 * n.mul, { kb: 12, cc: ['blind', 2], raw: true }, 'nova'); for (const e of enemiesNear(n.x, n.z, n.r)) if (ET[e.type].boss) hitEnemy(e, 'cosmic', 85 * n.mul, ctxN(n).p, 0, 0, 0, { aoe: true }); } }, // full force on a boss: 140
@@ -2142,7 +2168,10 @@ cosmic: {
         upd(o, n, dt, t) { const k = 1 - n.l; o.position.y = n.y + 5.5; o.scale.setScalar(1 + k * 6); o.rotation.z += dt * (2 + k * 10); o.lookAt(camera.position); o.userData.l.intensity = k * 80;
           for (let i = 0; i < 6; i++) { const a = rand(0, TAU), b = rand(-1, 1), d = rand(6, 12), q = V(Math.cos(a) * d, b * d * .5, Math.sin(a) * d); emit(n.x + q.x, n.y + 5.5 + q.y, n.z + q.z, -q.x * 1.5, -q.y * 1.5, -q.z * 1.5, Math.random() < .5 ? 0x9aa8ff : 0xffffff, rand(.15, .3), .6, 0, 0); } },
         drop: (o) => o.removeFromParent() },
-      fx: { nova(e) { boomFx(e.x, e.y + 3, e.z, e.r, 0x9aa8ff, 3.5); ringFx(e.x, .3, e.z, e.r * 1.4, 0xffffff, .9); flash(e.x, 5, e.z, 0xffffff, 100, .6); whiteFx = Math.max(whiteFx, .6); shake(1); } } },
+      fx: { nova(e) { boomFx(e.x, e.y + 3, e.z, e.r, 0x9aa8ff, 3.5); ringFx(e.x, .3, e.z, e.r * 1.4, 0xffffff, .9); ringFx(e.x, 5, e.z, e.r * 1.1, 0xff8ae8, 1.1, 2); ringFx(e.x, .2, e.z, e.r * 2, 0x6a78ff, 1.4, 3); flash(e.x, 5, e.z, 0xffffff, 40, .6); whiteFx = Math.max(whiteFx, .6);
+          for (let i = 0; i < 14; i++) { const a = TAU * i / 14, o = V(e.x, e.y + 5.5, e.z); beamFx(o, o.clone().add(V(Math.cos(a) * e.r, rand(-3, 6), Math.sin(a) * e.r)), i % 2 ? 0xffffff : 0x9aa8ff, .08, .5); } // rays of starlight
+          for (const c of [0x6a78ff, 0xc060ff, 0x40c8ff]) smokeFx(e.x, e.y + 5, e.z, e.r * .6, c, 2.6, 5, .6); // a nebula blooming out of it
+          starPop(e.x, e.y + 5.5, e.z, 4); if (distTo(e.x, e.z) < 30) fovKick = Math.max(fovKick, 1.2); shake(1); sfx('explosion_big'); } } },
   ],
 },
 // ================================================================== EXPLOSION
@@ -2155,7 +2184,7 @@ explosion: {
     { name: 'Grenade', icon: '💣', cd: .6, desc: 'Lob a bouncing grenade that explodes after a short fuse, or instantly when it hits an enemy.',
       cast(p, c) { for (let k = 0; k < c.multi; k++) shoot(p, c, 22, { d: lob(spread(c.d, k, c.multi, .12), .15), grav: 16, r: .25, dmg: 17 * c.dmg, rest: .45, fuse: .9, sc: c.mega ? 1.8 : 1, big: c.mega }); },
       shot: { hit: () => 'end', end(s) { boomAt(ctxS(s), s.x, Math.max(s.y, .2), s.z, 2.6 * (s.big ? 1.5 : 1), s.dmg, { kb: 6 }); } },
-      look: { m: 'explosion__grenade', spin: [8, 0, 3], trail: [0xffd080, .08, .2, 0, 1], light: 2, blink: 1 },
+      look: { m: 'explosion__grenade', spin: [8, 0, 3], trail: [0xffd080, .08, .2, 0, 1], light: 2, blink: 1, upd: fuseSparks },
       fx: { boom: e => blastFx(e), det: e => boomFx(e.x, e.y, e.z, 2.5, 0xffa020, .6), nova: e => boomFx(e.x, .5, e.z, 4.5, 0xffa020, .8) } },
     { name: 'Sticky Bomb', icon: '🧨', cd: 3, desc: 'Throw a sticky bomb that clings to whatever it hits and blows a moment later in a big blast. Bombs stuck to the same monster merge into one: every extra bomb adds its damage and widens the blast.',
       cast(p, c) {
@@ -2170,12 +2199,12 @@ explosion: {
         ground(s) { s.still = 1; s.vx = s.vy = s.vz = 0; s.y = .15; },
         end(s) { boomAt(ctxS(s), s.x, Math.max(s.y, .2), s.z, 3.2 + .9 * ((s.n || 1) - 1), s.dmg, { kb: 8 + 2 * ((s.n || 1) - 1) }); },
       },
-      look: { m: 'explosion__sticky', spin: [3, 5, 0], light: 3, blink: 1 },
+      look: { m: 'explosion__sticky', spin: [3, 5, 0], light: 3, blink: 1, upd: fuseSparks },
       fx: { boom: e => blastFx(e, 1.3) } },
     { name: 'Rocket Jump', icon: '🚀', cd: 6, desc: 'Blast the ground under your feet to rocket up and forward, flattening whatever is nearby.',
       self(p, c) { p.vy = 13; p.y = Math.max(p.y, .05); const f = flatAim(p); p.mo = { t: 0, T: .45, vx: f.x * 16, vz: f.z * 16, trail: 0xffa020 }; },
       cast(p, c) { buff(p, 'inv', .25); boomAt(c, p.x, .3, p.z, 3.5, 30 * c.dmg, { kb: 10 }, 'boom'); },
-      fx: { boom: e => blastFx(e, 1.1) } },
+      fx: { boom: e => { blastFx(e, 1.1); scarFx(e.x, e.z, 1.6, 0xff5a10, 4); for (let i = 0; i < 24; i++) emit(e.x + rand(-.4, .4), .3, e.z + rand(-.4, .4), rand(-2, 2), rand(6, 14), rand(-2, 2), flameColor(), rand(.25, .45), .4, -4); smokeFx(e.x, .5, e.z, 1.3, 0x5a5047, 2, 5, 2.4); } } }, // a gout of rocket flame and a column of smoke
     { name: 'Proximity Mines', icon: '🎯', cd: 12, desc: 'Toss four mines ahead of you. Each one blows when an enemy walks over it, and every blast sets off your other mines within 5 m a moment later, so a minefield goes up in a chain.',
       cast(p, c) { const f = c.flat; for (let k = 0; k < 4; k++) { const d = f.clone().applyAxisAngle(UP, (k - 1.5) * .35), q = clampArena(V(p.x + d.x * (7 + (k % 2) * 2.5), 0, p.z + d.z * (7 + (k % 2) * 2.5)), .8); ent(p, c, q.x, q.z, { life: 20, r: 1.6, fx0: p.x, fz0: p.z }); } },
       ent: { tick(n, dt) {
@@ -2185,14 +2214,18 @@ explosion: {
       } },
       view: { make(n) { const o = model('explosion__mine', 0xffa020, { shadow: true }); o.userData.from = V(n.fx0 ?? n.x, 1.4, n.fz0 ?? n.z); return o; },
         upd(o, n, dt, t) { const k = Math.min(1, n.t / .6); if (k < 1) { o.position.lerpVectors(o.userData.from, V(n.x, 0, n.z), k); o.position.y += Math.sin(k * Math.PI) * 2.5; o.rotation.x += dt * 10; } else { o.position.y = .02; o.rotation.x = 0; }
-          o.userData.mats.forEach(m => m.uniforms && (m.uniforms.uA.value = .5 + .5 * Math.sin(t * (n.s ? 40 : 4)))); },
+          o.userData.mats.forEach(m => m.uniforms && (m.uniforms.uA.value = .5 + .5 * Math.sin(t * (n.s ? 40 : 4))));
+          if (k >= 1 && Math.random() < .15) { const a = rand(0, TAU); emit(n.x + Math.cos(a) * n.r, .12, n.z + Math.sin(a) * n.r, 0, .3, 0, 0xff3020, .08, .5); } }, // a faint red tripwire circle round each armed mine
         drop: (o) => o.removeFromParent() },
-      fx: { beep(e) { sfx('fuse'); flash(e.x, .5, e.z, 0xff4020, 10, .2); }, boom: e => blastFx(e, 1.1) } },
+      fx: { beep(e) { sfx('fuse'); flash(e.x, .5, e.z, 0xff4020, 18, .2); ringFx(e.x, .1, e.z, 3, 0xff3020, .3, 3); ringFx(e.x, .12, e.z, 3, 0xff3020, .25, .2); popNum(e.x, 1.2, e.z, '!', '#ff5a3a', 'tag'); }, boom: e => blastFx(e, 1.1) } },
     { name: 'Carpet Bomb', icon: '✈️', desc: 'ULTIMATE. Call in a bombing run: fourteen bombs drop in a line ahead of you, one after another.',
-      cast(p, c) { const f = c.flat, x0 = p.x, z0 = p.z; for (let i = 0; i < 14; i++) { const q = clampArena(V(x0 + f.x * (4 + i * 2), 0, z0 + f.z * (4 + i * 2)), .8); later(.25 + i * .12, () => { fxe(c.m.key, 'drop', { x: q.x, z: q.z }); later(.4, () => boomAt(c, q.x, .3, q.z, 4.5, 50 * c.dmg, { kb: 8, lift: 4, raw: true })); }); } fxe(c.m.key, 'run', {}); },
+      cast(p, c) { const f = c.flat, x0 = p.x, z0 = p.z; for (let i = 0; i < 14; i++) { const q = clampArena(V(x0 + f.x * (4 + i * 2), 0, z0 + f.z * (4 + i * 2)), .8); later(.25 + i * .12, () => { fxe(c.m.key, 'drop', { x: q.x, z: q.z }); later(.4, () => boomAt(c, q.x, .3, q.z, 4.5, 50 * c.dmg, { kb: 8, lift: 4, raw: true })); }); } fxe(c.m.key, 'run', { x: x0, z: z0, dx: f.x, dz: f.z }); },
       fx: { drop(e) { modelFx('explosion__bomb', 0xffa020, V(e.x, 25, e.z), .41, (o, k) => { o.position.y = 25 * (1 - k * k); }); },
         boom: e => blastFx(e, .8),
-        run() { sfx('ult'); } } },
+        run(e) { sfx('ult'); sfx('fire_whoosh'); if (e.dx == null) return; // a bomber silhouette flies the line, low and fast, its shadow sweeping the floor
+          const pl = bomber(), sh = T.disc.clone(), sm = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: .35, depthWrite: false }); sh.material = sm; sh.scale.set(3, 1, 2.2); scene.add(sh);
+          const yaw = Math.atan2(e.dx, e.dz); addFx(pl, 2.2, (o, k) => { const d = -10 + k * 48; o.position.set(e.x + e.dx * d, 16, e.z + e.dz * d); o.rotation.set(0, yaw, Math.sin(k * 6) * .05); sh.position.set(o.position.x, .07, o.position.z); sh.rotation.y = yaw; if (k > .98) sh.removeFromParent();
+            if (Math.random() < .6) emit(o.position.x - e.dx * 2.5, 16, o.position.z - e.dz * 2.5, -e.dx * 4, 0, -e.dz * 4, 0xd8d0c8, rand(.3, .6), 1, -.3); }); } } }, // contrails
   ],
 },
 // ================================================================== ILLUSION
