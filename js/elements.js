@@ -452,10 +452,27 @@ function eqBars(x, z, r, n, life = .6, h = 2) {
 }
 const W = n => n.r * .9; // Lava Tide: its half-width on the client (only r reaches the client, not w)
 // Chrono: a glowing clock face at (x, y, z), facing you, its hands sweeping (backwards when dir < 0); follows enemy `id` when given
+// Slow Field's dome: smooth glass, clear in the middle so the fight inside stays readable, glowing only at its rim and foot.
+// Faint rings of warped time drift up it, and uTick (0..1) sends a golden band from the floor to the crown once a second.
+const DOME_GEO = new THREE.SphereGeometry(1, 64, 24, 0, TAU, 0, Math.PI / 2);
+function domeMat(color) {
+  return new THREE.ShaderMaterial({
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false,
+    uniforms: { uTime, uColor: { value: new THREE.Color(color) }, uA: { value: 1 }, uTick: { value: 0 }, uNear: { value: 1 } },
+    vertexShader: `varying vec3 vN, vV, lp; void main(){ lp = position; vec4 mv = modelViewMatrix * vec4(position, 1.); vV = -mv.xyz; vN = normalMatrix * normal; gl_Position = projectionMatrix * mv; }`,
+    fragmentShader: `uniform float uTime, uA, uTick, uNear; uniform vec3 uColor; varying vec3 vN, vV, lp;
+    void main(){
+      float f = pow(1. - abs(dot(normalize(vN), normalize(vV))), 3.2);
+      float rings = smoothstep(.035, 0., abs(fract(lp.y * 4. - uTime * .12) - .5));
+      float foot = smoothstep(.07, 0., lp.y), tick = smoothstep(.045, 0., abs(lp.y - uTick)) * (1. - uTick);
+      float a = (.012 + f * .5 + rings * .035 + foot * .45 + tick * .32) * uA, vDepth = length(vV); ${NEAR_GLSL}
+      gl_FragColor = vec4(uColor * (.85 + f * .35 + tick * .4), clamp(a, 0., 1.)); }`,
+  });
+}
 function clockFx(x, y, z, s, life, id = 0, dir = 1) {
   const o = model('chrono__clock', 0xffb43a, { flat: true }), mn = o.getObjectByName('chrono__clock_min'), hr = o.getObjectByName('chrono__clock_hr');
   o.position.set(x, y, z); addFx(o, life, (o, k, dt) => { if (id) { const v = views.e.get(id); if (!v) { fade(o, 0); return; } o.position.set(v.g.position.x, y - (o.userData.y0 ??= v.g.position.y) + v.g.position.y, v.g.position.z); }
-    o.lookAt(camera.position); o.scale.setScalar(s * (k < .15 ? easeOutBack(k / .15) : 1)); if (mn) mn.rotation.z -= dt * 8 * dir; if (hr) hr.rotation.z -= dt * .7 * dir; fade(o, (k > .8 ? (1 - k) * 5 : 1) * (s > 4 ? .45 : .85)); // a sky-sized clock stays faint
+    o.lookAt(camera.position); o.rotateX(Math.PI / 2); o.scale.setScalar(s * (k < .15 ? easeOutBack(k / .15) : 1)); if (mn) mn.rotation.y -= dt * 8 * dir; if (hr) hr.rotation.y -= dt * .7 * dir; fade(o, (k > .8 ? (1 - k) * 5 : 1) * (s > 4 ? .22 : .55) * clamp(o.position.distanceTo(camera.position) / 8, .2, 1)); // a sky-sized clock stays faint, and one right beside you must not fill your view
     if (Math.random() < .3) { const a = rand(0, TAU); emit(o.position.x + Math.cos(a) * s * .6, o.position.y + Math.sin(a) * s * .6, o.position.z, 0, 0, 0, 0xffd080, .06, .4); } });
   return o;
 }
@@ -499,6 +516,7 @@ function bladeCut(x, y, z, s = 1) {
   for (let i = 0; i < Math.round(8 * s); i++) emit(x, y, z, rand(-4, 4), rand(1, 4), rand(-4, 4), Math.random() < .5 ? 0xffffff : 0xffcc33, rand(.03, .06), rand(.25, .4), 12, .4);
 }
 const WARM = [];
+WARM.push(() => new THREE.Mesh(DOME_GEO, domeMat(0xffb43a)));
 WARM.push(() => bomber());
 WARM.push(() => wreckBall()); // client: extra meshes and shaders compiled at game start (warmFx), so their first cast does not hitch
 WARM.push(() => snakeHead(1, true));
@@ -1845,9 +1863,9 @@ chrono: {
         end(n) { boomAt(ctxN(n), n.x, 1, n.z, 4, 40 * n.mul, { kb: 4 }, 'back'); } },
       // a translucent golden double of you, a clock face turning under its feet, sand streaming off it
       view: { make(n) { const g = new THREE.Group(), u = g.userData, w = ghostWizard(0xffb43a); g.add(w); u.w = w; u.mats = [...w.userData.mats];
-          const clk = model('chrono__clock', 0xffb43a, { flat: true }); clk.rotation.x = -Math.PI / 2; clk.position.y = .08; clk.scale.setScalar(1.3); g.add(clk); u.clk = clk; u.mn = clk.getObjectByName('chrono__clock_min'); u.mats.push(...clk.userData.mats); u.s = n.s;
+          const clk = model('chrono__clock', 0xffb43a, { flat: true }); clk.position.y = .12; clk.scale.setScalar(1.3); g.add(clk); u.clk = clk; u.mn = clk.getObjectByName('chrono__clock_min'); u.mats.push(...clk.userData.mats); u.s = n.s;
           clockFx(n.x, 1.4, n.z, 2.2, .6); ringFx(n.x, .1, n.z, 2.5, 0xffd080, .5); burst(n.x, 1, n.z, 40, 0xffe0a0, 6, .25, .5); flash(n.x, 1.5, n.z, 0xffb43a, 30, .3); sfx('chrono_big'); return g; }, // stepping out of the rift
-        upd(o, n, dt, t) { const u = o.userData; u.w.rotation.y = n.yaw; u.w.position.y = .1 + Math.sin(t * 3) * .08; if (u.mn) u.mn.rotation.z -= dt * 4;
+        upd(o, n, dt, t) { const u = o.userData; u.w.rotation.y = n.yaw; u.w.position.y = .1 + Math.sin(t * 3) * .08; if (u.mn) u.mn.rotation.y -= dt * 4;
           fade(u.w, (.55 + .15 * Math.sin(t * 12)) * Math.min(1, n.t * 4, n.l * 8) * (isMe(n.own) ? Math.min(1, distTo(o.position.x, o.position.z) / 6) : 1)); // softer when it is close to your camera fade(u.clk, .7 * Math.min(1, n.l * 8));
           if (n.s !== u.s) { u.s = n.s; const h = V(o.position.x + Math.sin(n.yaw) * .6, 1.4, o.position.z + Math.cos(n.yaw) * .6); burst(h.x, h.y, h.z, 8, 0xffe0a0, 3, .15, .2); flash(h.x, h.y, h.z, 0xffb43a, 10, .08); } // the bolt leaving its hand
           if (Math.random() < .6) emit(o.position.x + rand(-.3, .3), rand(.3, 1.8), o.position.z + rand(-.3, .3), 0, -rand(.3, 1), 0, Math.random() < .5 ? 0xffd080 : 0xffb43a, rand(.05, .1), .8, 0, 0); },
@@ -1856,19 +1874,18 @@ chrono: {
     { name: 'Slow Field', icon: '🕰️', cd: 13, mode: 'aim', range: 20, aimR: 6, desc: 'Raise a golden dome of warped time (6 m, 6 s) over the target: enemies inside move and attack 70% slower, turn Timeworn every second, and enemy shots crawl.',
       cast(p, c) { ent(p, c, c.tgt.x, c.tgt.z, { life: 6, r: 6 * c.st.aoe, slowShots: 1 }); },
       ent: { tick(n, dt) { const es = enemiesNear(n.x, n.z, n.r); for (const e of es) e.fs = Math.max(e.fs || 0, .7); if (pulse(n, dt, 1)) { n.s = (n.s || 0) + 1; for (const e of es) applyStatus(e, 'chrono', own(n)); } } },
-      view: { make(n) { const g = new THREE.Group(), clk = model('chrono__clock', 0xffb43a, { flat: true }), d = model('gen__dome', 0xffb43a); clk.rotation.x = -Math.PI / 2; clk.position.y = .08; clk.scale.setScalar(n.r); d.scale.setScalar(n.r);
-          g.add(clk, d); g.userData.mats = [...clk.userData.mats, ...d.userData.mats]; g.userData.clk = clk; g.userData.d = d; g.userData.mn = clk.getObjectByName('chrono__clock_min'); g.userData.hr = clk.getObjectByName('chrono__clock_hr'); sfx('chrono_big'); return g; },
-        upd(o, n, dt, t) { const a = Math.min(1, n.t * 3, n.l * 5), u = o.userData; fade(u.clk, a); fade(u.d, a * (.28 + .08 * Math.sin(t * 2)));
-          if (!u.hg) { u.hg = model('chrono__hourglass', 0xffb43a); u.hg.scale.setScalar(1.6); o.add(u.hg);
-            u.orb = new THREE.Group(); o.add(u.orb); u.hands = []; for (let i = 0; i < 6; i++) { const h = model('chrono__hand', 0xffb43a), an = TAU * i / 6; h.position.set(Math.cos(an) * n.r * .85, 1.2 + (i % 2) * 1.2, Math.sin(an) * n.r * .85); h.rotation.y = -an; h.scale.setScalar(1.4); u.orb.add(h); u.hands.push(h); } // great clock hands drifting round the dome
-            u.tk = n.s; }
-          u.hg.position.y = 3.4 + Math.sin(t * 1.5) * .15; u.hg.rotation.y += dt * .4; fade(u.hg, a); u.orb.rotation.y += dt * .25; u.hands.forEach((h, i) => { h.rotation.z += dt * (i % 2 ? .6 : -.4); }); fade(u.orb, a * .8);
-          if (u.mn) u.mn.rotation.z -= dt * 1.5; if (u.hr) u.hr.rotation.z -= dt * .2; // the clock face under the field turns
-          if (n.s !== u.tk) { u.tk = n.s; ringFx(n.x, .12, n.z, n.r, 0xffd080, .7, n.r * 1.08); ringFx(n.x, 2.5, n.z, n.r * .9, 0xffb43a, .6, n.r); sfx('tink'); } // it ticks every second: a golden ring closing in from the rim
-          if (Math.random() < .7) emit(n.x + rand(-.08, .08), 3.2, n.z + rand(-.08, .08), 0, -1.2, 0, 0xffd080, .05, .9, 0, 0);
+      view: { make(n) { const g = new THREE.Group(), u = g.userData, clk = model('chrono__clock', 0xffb43a, { flat: true }), m = domeMat(0xffb43a), d = new THREE.Mesh(DOME_GEO, m), hg = model('chrono__hourglass', 0xffb43a);
+          clk.position.y = .12; clk.scale.setScalar(n.r * .97); d.scale.setScalar(n.r); d.userData.mats = [m]; d.renderOrder = 2; hg.scale.setScalar(1.1); hg.position.y = n.r * .62; // the clock lies on the floor; the hourglass hangs near the crown, above the fight
+          g.add(clk, d, hg); Object.assign(u, { clk, d, hg, m, mats: [...clk.userData.mats, m, ...hg.userData.mats], mn: clk.getObjectByName('chrono__clock_min'), hr: clk.getObjectByName('chrono__clock_hr'), tk: n.s }); sfx('chrono_big'); return g; },
+        upd(o, n, dt, t) { const a = Math.min(1, n.t * 3, n.l * 5), u = o.userData, inside = Math.hypot(camera.position.x - n.x, camera.position.z - n.z) < n.r;
+          fade(u.clk, a * (inside ? .3 : .42)); u.m.uniforms.uA.value = a * (inside ? .6 : 1); u.m.uniforms.uTick.value = n.t % 1; // inside it you are looking through the glass: quieter still
+          u.hg.position.y = n.r * .62 + Math.sin(t * 1.5) * .12; u.hg.rotation.y += dt * .4; fade(u.hg, a * .75);
+          if (u.mn) u.mn.rotation.y -= dt * 1.5; if (u.hr) u.hr.rotation.y -= dt * .2; // the clock face under the field turns
+          if (n.s !== u.tk) { u.tk = n.s; ringFx(n.x, .14, n.z, n.r, 0xffd080, .6, n.r * 1.04); sfx('tink'); } // it ticks every second: a golden ring closing in along the floor
+          if (Math.random() < .7) emit(n.x + rand(-.08, .08), n.r * .62 - .3, n.z + rand(-.08, .08), 0, -1.2, 0, 0xffd080, .05, .9, 0, 0);
           for (let i = 0; i < 2; i++) { const ang = rand(0, TAU), d = rand(0, n.r); emit(n.x + Math.cos(ang) * d, rand(.5, 4), n.z + Math.sin(ang) * d, 0, -.15, 0, Math.random() < .5 ? 0xffe0a0 : 0xffb43a, rand(.06, .14), 2.5, 0, 0); } // sand hanging in the air, barely moving
           if (Math.random() < dt * 8) for (const v of views.e.values()) { const q = v.g.position; if (Math.hypot(q.x - n.x, q.z - n.z) > n.r) continue; for (let i = 0; i < 3; i++) emit(q.x + rand(-.4, .4), q.y + rand(.2, 1.8), q.z + rand(-.4, .4), 0, 0, 0, 0xffd080, rand(.08, .16), .9, 0, 0); } }, // a golden blur hangs on everything caught inside
-        drop: dropFade() } },
+        drop: o => o.removeFromParent() } },
     { name: 'Time Stop', icon: '⏱️', desc: 'ULTIMATE. Stop time for 4 seconds. Enemies freeze, and all the damage you deal piles up and lands 50% stronger when time resumes.',
       cast(p, c) { S.tstop = 4; fxe(c.m.key, 'stop', { id: p.id }); },
       fx: { stop(e) { timeFx = 4; sfx('ult'); sfx('chrono_big'); shake(.3); const p = camera.position, f = camera.getWorldDirection(V()).setY(0).normalize(), c = V(p.x + f.x * 30, 14, p.z + f.z * 30);
