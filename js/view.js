@@ -1016,13 +1016,16 @@ function tintWizard(v, el) {
   v.cur = el; const c = EL[el].color;
   for (const m of v.mats) { m.userData.rim.value.set(c); if (/staff_gem|hand_rune/.test(m.name)) { m.color.set(c); m.emissive.set(c); m.emissiveIntensity = 4; } }
 }
-function renderPartner(src, dt, t, a) {
+function renderPartner(src, dt, t) {
+  const a = 1 - Math.exp(-dt * 14); // smoothed on the host too: the guest's position arrives in 30 Hz jumps
   sync(views.p, Object.values(src.players).filter(p => p.id !== myId), makeWizard, (v, p, fresh) => {
     if (v.cur !== (p.cur || p.el)) tintWizard(v, p.cur || p.el);
-    const tg = V(p.x, p.y, p.z);
-    if (fresh) v.g.position.copy(tg); else v.g.position.lerp(tg, a);
-    v.g.rotation.y = lerpAngle(v.g.rotation.y, p.yaw + Math.PI, fresh ? 1 : a);
-    v.g.rotation.x += ((p.down ? -1.35 : 0) - v.g.rotation.x) * Math.min(1, dt * 8);
+    const tg = V(p.x, p.y, p.z), g = v.g, spd = fresh ? 0 : Math.min(9, Math.hypot(tg.x - g.position.x, tg.z - g.position.z) * 14);
+    if (fresh) g.position.copy(tg); else g.position.lerp(tg, a);
+    g.rotation.y = lerpAngle(g.rotation.y, p.yaw + Math.PI, fresh ? 1 : a);
+    v.walk = (v.walk || 0) + (spd - (v.walk || 0)) * Math.min(1, dt * 8); v.ph = (v.ph || 0) + v.walk * dt * 1.6; // leans into its run and rocks with its steps
+    g.rotation.x += ((p.down ? -1.35 : v.walk * .022) - g.rotation.x) * Math.min(1, dt * 8);
+    g.rotation.z = p.down ? 0 : Math.sin(v.ph) * Math.min(1, v.walk / 5) * .07;
     v.rc.visible = p.down; v.rc.position.set(v.g.position.x, .08, v.g.position.z); v.rc.scale.setScalar(1.3); spinCircle(v.rc, dt, .5 + p.rev * 3);
     setOpacity(v.rc.userData.mats, .25 + p.rev * .75);
   }, v => { v.g.removeFromParent(); v.rc.removeFromParent(); });
@@ -1096,7 +1099,7 @@ function renderWorld(src, dt, t) {
   renderShots(src, dt, t, a);
   guardFrame(src, dt, t);
   renderEnts(src, dt, t, a);
-  renderPartner(src, dt, t, a);
+  renderPartner(src, dt, t);
   renderChannels(src, dt, t);
   renderAuras(src, dt, t);
 }
@@ -1160,7 +1163,9 @@ function hud(src, mp) {
   if (combo >= 5) $('comboCt').innerHTML = `<b>${combo}</b> HITS${combo >= 10 ? ` <em>+${Math.min(30, Math.floor(combo / 10) * 5)}% dmg</em>` : ''}`;
   const other = Object.values(src.players).find(p => p.id !== myId);
   $('mate').classList.toggle('hidden', !other);
-  if (other) { $('mateHp').style.width = other.hp / other.max * 100 + '%'; $('mateName').textContent = `${other.down ? '💀 DOWN · ' : ''}${src.mode === 'duel' ? other.ai ? 'AI Wizard' : 'Opponent' : 'Partner'} · ${EL[other.cur || other.el].glyph} ${EL[other.cur || other.el].name}`; $('mateUlt').style.width = (other.ult || 0) * 100 + '%'; }
+  const shaky = !!other && !other.ai && netShaky(); $('mate').classList.toggle('lag', shaky);
+  if (other) { $('mateHp').style.width = other.hp / other.max * 100 + '%'; $('mateName').textContent = `${other.down ? '💀 DOWN · ' : ''}${src.mode === 'duel' ? other.ai ? 'AI Wizard' : 'Opponent' : 'Partner'} · ${EL[other.cur || other.el].glyph} ${EL[other.cur || other.el].name}${other.ai ? '' : shaky ? ' · ⚠ connection unstable' : ping ? ` · ${ping} ms` : ''}`; $('mateUlt').style.width = (other.ult || 0) * 100 + '%'; }
+  mateMark(other, src);
   const D = src.duel, opp = other?.id || (myId === 'h' ? 'g' : 'h');
   const U = src.dun;
   $('wave').textContent = src.mode === 'train' ? 'Training' : src.mode === 'dungeon' && U ? `Floor ${U.floor}` : src.mode === 'duel' && D ? `Round ${D.round} · ${D.wins[myId]} – ${D.wins[opp]}` : src.phase === 'travel' ? `Cross the bridge to ${AREAS[(src.br.k + 1) % 5].name}` : src.phase === 'rest' ? `Wave ${src.wave + 1} incoming` : src.wave ? `Wave ${src.wave}` : '';
@@ -1175,11 +1180,31 @@ function hud(src, mp) {
     B.classList.toggle('p2', f < .5); $('bossSub').textContent = f < .5 ? '— PHASE II —' : '— BOSS —';
   } else hud.bossT = null;  if (src.mode === 'dungeon' && U) $('mod').textContent = U.wait ? 'Waiting for your partner on the stairs' : U.st.includes(1) ? 'Monsters are hunting you' : U.stairs ? 'The way down is open: take the stairs' : `Explore · ${U.st.filter(s => s === 2).length - 1}/${U.st.length - 1} chambers cleared`;
   $('downMsg').classList.toggle('hidden', !sp.down || src.phase === 'over');
-  if (sp.down) $('downMsg').textContent = other && !other.down ? `YOU ARE DOWN · revive ${Math.round(sp.rev * 100)}%` : 'YOU ARE DOWN';
+  if (sp.down) $('downMsg').textContent = other && !other.down ? (sp.rev > 0 ? `YOU ARE DOWN · reviving ${Math.round(sp.rev * 100)}%` : 'YOU ARE DOWN · your partner can revive you') : 'YOU ARE DOWN';
   $('lock').classList.toggle('hidden', locked() || usingVirt());
   $('touch').classList.toggle('hidden', !document.body.classList.contains('touching'));
   hurtT = Math.max(0, hurtT - 1 / 60 * 2.5); healT = Math.max(0, healT - 1 / 60 * 2);
   $('vignette').style.boxShadow = `inset 0 0 ${120 + hurtT * 80}px rgba(255,20,50,${hurtT * .8})` + (healT > 0 ? `, inset 0 0 140px rgba(60,255,140,${healT * .35})` : '') + (bf.chill > 0 ? `, inset 0 0 160px rgba(150,220,255,${Math.min(.6, bf.chill * .4)})` : ''); // frosted edges while chilled
+}
+
+// where your partner is: a tag over their head that slides to the screen edge (with an arrow) when they're out of view, and calls for a revive when they're down
+const _mm = new THREE.Vector3();
+function mateMark(other, src) {
+  const M = $('mateMark'), g = other && src.mode !== 'duel' && src.phase !== 'over' && views.p.get(other.id)?.g;
+  M.classList.toggle('hidden', !g); if (!g) return;
+  camera.updateMatrixWorld();
+  const v = _mm.set(g.position.x, g.position.y + 2.25, g.position.z).applyMatrix4(camera.matrixWorldInverse), tan = Math.tan(camera.fov * Math.PI / 360), EX = .92, EY = .86;
+  let x = v.x, y = v.y;
+  const behind = v.z > -.1;
+  if (!behind) { x /= -v.z * tan * camera.aspect; y /= -v.z * tan; } else if (!x && !y) y = -1;
+  const off = behind || Math.abs(x) > EX || Math.abs(y) > EY;
+  if (off) { const k = 1 / Math.max(Math.abs(x) / EX, Math.abs(y) / EY); x *= k; y *= k; }
+  M.style.transform = `translate(${clamp((x * .5 + .5) * innerWidth, 70, innerWidth - 70)}px,${clamp((.5 - y * .5) * innerHeight, 30, innerHeight - 30)}px) translate(-50%,-50%)`; // (kept far enough in that the whole label shows)
+  M.firstChild.style.transform = `rotate(${Math.atan2(x, y)}rad)`; M.firstChild.classList.toggle('hidden', !off);
+  const d = Math.round(Math.hypot(g.position.x - camera.position.x, g.position.z - camera.position.z)), el = EL[other.cur || other.el];
+  const txt = other.down ? (other.rev > 0 ? `REVIVING ${Math.round(other.rev * 100)}%` : `REVIVE · ${d} m`) : `${el.glyph} ${d} m`;
+  if (txt !== M.lastChild.textContent) M.lastChild.textContent = txt;
+  M.classList.toggle('down', !!other.down); M.style.setProperty('--mc', css(el.color));
 }
 
 // ===================== screens =====================
@@ -1218,6 +1243,12 @@ function runXP(e, mp) {
   const kills = mp?.stats?.kills || 0, xp = e.duel ? (e.w === myId ? 250 : 100) : Math.round((srcState()?.mode === 'dungeon' ? 80 : 60) * (e.wave || 0) + 3 * kills);
   return gainXP(xp, [...new Set([mp?.el || myEl, mp?.el2].filter(k => k && unlocked(k)))]);
 }
+// a run's numbers, side by side when two of you played it
+function runStats(src) {
+  const row = (st, who) => st ? `<div class="stats">${who ? `<span class="who">${who}</span>` : ''}<span><b>${st.kills}</b>kills</span><span><b>${Math.round(st.dmg).toLocaleString()}</b>damage</span><span><b>${st.combos}</b>reactions</span><span><b>${st.dodges}</b>perfect dodges</span><span><b>${st.best}</b>best combo</span></div>` : '';
+  const other = Object.values(src?.players || {}).find(p => p.id !== myId);
+  return other ? row(src.players[myId]?.stats, 'You') + row(other.stats, 'Partner') : row(src?.players[myId]?.stats);
+}
 function showOver(e) {
   const mp = srcState()?.players[myId], el = mp?.el || myEl, xpHtml = runXP(e, mp);
   $('overTitle').textContent = 'FALLEN';
@@ -1229,7 +1260,7 @@ function showOver(e) {
   }
   if (srcState()?.mode === 'dungeon') { // how deep you got, best per element
     let best = 0; try { const per = JSON.parse(localStorage.getItem('magepact_best_floor') || '{}'); best = per[el] = Math.max(per[el] || 0, e.wave); localStorage.setItem('magepact_best_floor', JSON.stringify(per)); } catch {}
-    $('overTxt').innerHTML = `You fell on floor ${e.wave} as <b style="color:${css(EL[el].color)}">${EL[el].name}</b>. Deepest: floor ${best}.` + xpHtml + (role === 'guest' ? '<br>Waiting for the host to play again…' : '');
+    $('overTxt').innerHTML = `You fell on floor ${e.wave} as <b style="color:${css(EL[el].color)}">${EL[el].name}</b>. Deepest: floor ${best}.` + runStats(srcState()) + xpHtml + (role === 'guest' ? '<br>Waiting for the host to play again…' : '');
     $('againBtn').classList.toggle('hidden', role !== 'host'); $('over').classList.remove('hidden'); unlockMouse(); return;
   }
   const wave = e.wave;
@@ -1238,8 +1269,7 @@ function showOver(e) {
     best = Math.max(wave, +localStorage.getItem('magepact_best') || 0); localStorage.setItem('magepact_best', best);
     const per = JSON.parse(localStorage.getItem('magepact_best_el') || '{}'); per[el] = Math.max(per[el] || 0, wave); localStorage.setItem('magepact_best_el', JSON.stringify(per));
   } catch {}
-  const st = mp?.stats;
-  $('overTxt').innerHTML = `You held out until wave ${wave} as <b style="color:${css(EL[el].color)}">${EL[el].name}</b>. Best: wave ${best}.` + (st ? `<div class="stats"><span><b>${st.kills}</b>kills</span><span><b>${Math.round(st.dmg).toLocaleString()}</b>damage</span><span><b>${st.combos}</b>reactions</span><span><b>${st.dodges}</b>perfect dodges</span><span><b>${st.best}</b>best combo</span></div>` : '') + xpHtml + (role === 'guest' ? '<br>Waiting for the host to play again…' : '');
+  $('overTxt').innerHTML = `${Object.keys(srcState()?.players || {}).length > 1 ? 'You two' : 'You'} held out until wave ${wave}. You played <b style="color:${css(EL[el].color)}">${EL[el].name}</b>. Best: wave ${best}.` + runStats(srcState()) + xpHtml + (role === 'guest' ? '<br>Waiting for the host to play again…' : '');
   $('againBtn').classList.toggle('hidden', role !== 'host');
   $('over').classList.remove('hidden');
   unlockMouse();
@@ -1335,7 +1365,6 @@ function pickMode(k) {
   $('modeName').textContent = MODES[k].name; $('soloBtn').textContent = MODES[k].play; sfx('pick'); renderLobby();
 }
 $('modeBack').onclick = () => { $('lobby').classList.add('hidden'); $('modes').classList.remove('hidden'); };
-$('menuBtn').onclick = () => location.reload(); // back to the mode browser (also leaves any online room)
 renderModes();
 
 // ===================== progression: levels, element unlocks, talents, mastery (saved per browser) =====================
@@ -1421,7 +1450,7 @@ function renderLobby() {
   }
   $('pickinfo').innerHTML = `<label>Second element<select id="el2Sel"><option value="">none</option>${PICKABLE().filter(x => x !== myEl && unlocked(x)).map(x => `<option value="${x}"${x === myEl2 ? ' selected' : ''}>${EL[x].name}</option>`).join('')}</select></label><span>Click an element to make it your main one. Right-click one (or pick it here) to carry a second element; Tab swaps between them in battle.</span>`;
   $('el2Sel').onchange = ev => { myEl2 = ev.target.value || null; savePick(); renderLobby(); };
-  renderProg(); renderDetail();
+  renderProg(); renderDetail(); netLobby(); // (a waiting partner sees your pick and the mode)
 }
 // a live 3D preview in the detail panel: the element's spell circle under its signature model, turning (own small renderer)
 const PV = { el: null, g: null, r: null };

@@ -49,6 +49,7 @@ input::placeholder{color:#b9add8;opacity:.8}input:focus{box-shadow:0 0 0 2px var
 .hudbox{position:absolute;bottom:20px;display:grid;gap:7px;padding:12px 16px;border-radius:14px;background:rgba(10,5,24,.45);border:1px solid rgba(233,196,106,.22);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
 #me{left:20px}
 #mate{right:20px;text-align:right}
+#mate.lag #mateName{color:#ff8aa0}#mateMark{position:absolute;left:0;top:0;display:flex;flex-direction:column;align-items:center;gap:1px;font-size:12px;font-weight:700;letter-spacing:.06em;color:color-mix(in srgb,var(--mc,#9affd0) 70%,white);text-shadow:0 0 6px #000,0 1px 2px #000;white-space:nowrap;pointer-events:none;will-change:transform}#mateMark i{font-style:normal;font-size:13px;line-height:1}#mateMark.down{color:#ff8aa0;font-size:14px}#mateMark.down span{animation:pulse 1s infinite}#startBtn.go{animation:startGo 1.1s infinite;border-color:var(--gold);color:#fff6d8}@keyframes startGo{50%{box-shadow:0 0 22px var(--gold)}}#status small{opacity:.7}#code-big{cursor:pointer}
 #mate .bar{width:190px}#mate .bar>i{background:linear-gradient(180deg,#9affd0,#2bbf8a 50%,#0f6a4a)}
 .who{font-size:14px;letter-spacing:.12em;color:#f6ecd0;text-shadow:0 1px 2px #000}
 .who b{color:var(--el);text-shadow:0 0 10px var(--el)}
@@ -203,7 +204,7 @@ input::placeholder{color:#b9add8;opacity:.8}input:focus{box-shadow:0 0 0 2px var
 .num.crit{font-size:26px;color:#ffe36a!important;-webkit-text-stroke:1px #000}
 .num.dot{font-size:14px;opacity:.85}
 .num.tag{font-size:16px;letter-spacing:.2em}
-#over .stats{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin-top:12px}
+#over .stats{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;align-items:center;margin-top:12px}#over .stats .who{width:64px;font-size:11px;color:var(--gold)}
 #over .stats span{display:flex;flex-direction:column;align-items:center;font-size:12px;color:var(--dim);letter-spacing:.1em;text-transform:uppercase}
 #over .stats b{font-family:Cinzel,Georgia,serif;font-size:22px;color:#fff6d8}
 #settings{position:fixed;right:16px;top:16px;z-index:8;padding:16px;max-height:calc(100vh - 32px);overflow-y:auto;max-width:min(440px,calc(100vw - 32px));border-radius:14px;background:rgba(14,8,30,.92);border:1px solid rgba(233,196,106,.4);display:grid;gap:10px;font-family:Cinzel,Georgia,serif;font-size:13px;min-width:250px}
@@ -283,6 +284,7 @@ body.touching #me{top:14px;bottom:auto;left:14px}body.touching #lock{display:non
   <div id="bar"><div id="buffs"></div><div id="res" class="hidden"></div><div id="elName"></div><div id="slots"></div></div>
   <div id="mate" class="hudbox hidden"><div id="mateName" class="who"></div><div class="bar"><i id="mateHp"></i></div><i id="mateUlt"></i></div>
   <div id="downMsg" class="hidden"></div>
+  <div id="mateMark" class="hidden"><i>▲</i><span></span></div>
   <div id="lock" class="hidden">Click to aim</div>
 </div>
 <div id="touch" class="hidden">
@@ -306,7 +308,7 @@ body.touching #me{top:14px;bottom:auto;left:14px}body.touching #lock{display:non
     <div id="modeBar"><button id="modeBack" class="ghost">← Modes</button><h2 id="modeName"></h2><div class="row"><button id="gfxBtn" class="ghost">Graphics: High</button><button id="setBtn" class="ghost">Settings</button></div></div>
     <div class="rule"></div>
     <div class="pick"><div><div id="prog"></div><div id="grid"></div><div id="pickinfo" class="pickinfo"></div></div><div id="detail"><canvas id="pvc" width="200" height="150"></canvas><div id="detailBody"></div></div></div>
-    <div class="play"><button id="soloBtn" class="el sel" style="--c:#e9c46a;color:#fff6d8">⚔ Play Solo</button><div class="online"><span class="lbl">With a friend</span><button id="hostBtn">Host game</button><i></i><input id="code" maxlength="5" placeholder="CODE" aria-label="Room code"><button id="joinBtn">Join</button><button id="startBtn" class="hidden">Start</button></div></div>
+    <div class="play"><button id="soloBtn" class="el sel" style="--c:#e9c46a;color:#fff6d8">⚔ Play Solo</button><div class="online"><span class="lbl">With a friend</span><button id="hostBtn">Host game</button><i></i><input id="code" maxlength="5" placeholder="CODE" aria-label="Room code"><button id="joinBtn">Join</button><button id="startBtn" class="hidden">Start</button><button id="netLeave" class="ghost hidden">Leave room</button></div></div>
     <div id="status">Loading Blender assets…</div>
     <button id="unlockAll" class="ghost">🔓 Unlock all elements</button>
     <details class="foot"><summary>Controls</summary><div class="sub">WASD move · Mouse aim · <b>LMB / RMB / Q / E</b> moves · <b>R</b> ultimate · Space jump · Shift dash (dash through a red attack just before it lands for a perfect dodge) · Tab swap element · Esc settings &amp; switch element</div></details>

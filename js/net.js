@@ -2,7 +2,7 @@
 'use strict';
 
 // bump when the network format or game rules change: players on different builds get told to refresh
-const GAME_VERSION = '2.5.0';
+const GAME_VERSION = '2.6.0';
 
 // ===================== snapshot (sent to the guest, and what both sides render from) =====================
 const bfSnap = bf => { const o = {}; for (const k in bf) if (bf[k] > 0) o[k] = r2(bf[k]); return o; };
@@ -88,7 +88,7 @@ const meP = () => role === 'guest' ? G : S.players[myId];
 function renderSwap() {
   const p = meP();
   $('pauseTag').classList.toggle('hidden', !playing);
-  $('pauseTag').innerHTML = paused() ? 'PAUSED' : 'MENU<small>Online: the game keeps running</small>';
+  $('pauseTag').innerHTML = paused() ? 'PAUSED' : `MENU<small>Online: the game keeps running${role === 'host' && roomCode ? ` · Room code ${roomCode}` : ''}</small>`;
   $('elSwap').classList.toggle('hidden', !playing || !p);
   if (!playing || !p) return;
   const all = role !== 'guest' && S.cheat?.allEl; // test cheat: every element, locked or not, God Mode too, with names
@@ -144,7 +144,6 @@ function pickEl(el) {
   renderSwap();
 }
 function menuChanged() { renderSwap(); $('setClose').textContent = playing ? 'Resume' : 'Close'; $('leaveBtn').classList.toggle('hidden', !playing); }
-$('leaveBtn').onclick = () => location.reload(); // back to the mode select, like Main menu on the game-over screen (also leaves any online room)
 const toggleSettings = () => { $('settings').classList.toggle('hidden'); menuChanged(); };
 $('setBtn').onclick = toggleSettings;
 $('setClose').onclick = () => { $('settings').classList.add('hidden'); menuChanged(); if (playing) lockMouse(); }; // Resume grabs the mouse back: no extra click
@@ -152,20 +151,22 @@ $('tset').onclick = toggleSettings;
 addEventListener('keydown', e => { if (e.code === 'Escape' && playing) toggleSettings(); });
 
 // ===================== networking (PeerJS / WebRTC, host-authoritative) =====================
-// ponytail: STUN-only via PeerJS's free cloud broker; strict NATs (school/office wifi) may need a TURN server.
-// ponytail: JSON snapshots over the reliable channel at 20Hz; switch to packed arrays + unreliable if bandwidth bites.
+// ponytail: PeerJS's free cloud broker and its default ICE servers; a very strict NAT (school/office wifi) may need your own TURN server.
+// ponytail: JSON snapshots at 20Hz on PeerJS's default channel (retransmitted but UNORDERED, hence the sequence numbers); switch to packed arrays if bandwidth bites.
 // ponytail: the guest owns its own position (no server reconciliation). Fine between friends, not for strangers.
 let peer = null, conn = null, guestEl = null, guestEl2 = null, guestTal = {}, R = null, G = null, snapT = 0, sendT = 0, lastPhase = null, lastSeen = 0;
-const OUT = [];
-function dropGuest() {
-  if (!conn && !guestEl) return;
-  conn = null; guestEl = null; delete S.players.g; OUT.length = 0;
-  banner('PARTNER DISCONNECTED', '#ff8aa0'); say('Your partner left. Share the code again to let them rejoin.');
-}
+let roomCode = '', ping = 0, snapN = 0, inN = 0, sendN = 0, joined = false, joinT = 0, netTick = 0;
+const OUT = [], NET_GONE = 10000; // long enough that a slow machine compiling shaders isn't mistaken for a closed tab
 const say = html => $('status').innerHTML = html;
+const roomSay = msg => say(`Room code <small>(click to copy)</small><div id="code-big">${roomCode}</div>${msg}`);
+$('status').onclick = e => {
+  if (e.target.id !== 'code-big') return;
+  navigator.clipboard?.writeText(roomCode).catch(() => {}); e.target.textContent = 'COPIED'; sfx('pick');
+  setTimeout(() => { if (e.target.isConnected) e.target.textContent = roomCode; }, 900);
+};
 // PeerJS error types in words a player can act on
 const netErr = err => ({
-  'peer-unavailable': 'No room with that code. Check the code, and make sure the host is still on the Room code screen.',
+  'peer-unavailable': 'No room with that code. Check the code, and make sure the host still has the game open.',
   'browser-incompatible': 'This browser can\'t do online play. Use Chrome, Edge, Firefox or an up-to-date Safari.',
   'network': 'Lost the connection to the room server. Check your internet and try again.',
   'server-error': 'The room server is having trouble. Wait a moment and try again.',
@@ -175,61 +176,141 @@ const netErr = err => ({
   'webrtc': 'The connection between your computers failed (a strict school or work network can block it). Try a different network, like a phone hotspot.',
 }[err.type] || `Could not connect (${err.type}).`);
 function needPeer() { if (window.Peer) return true; say('Online play needs PeerJS from the internet. You can still host and start solo.'); $('startBtn').classList.remove('hidden'); return false; }
+// the lobby's buttons follow the room: only what you can do right now
+function lobbyNet() {
+  const on = !!peer, guest = on && role === 'guest';
+  for (const id of ['hostBtn', 'code', 'joinBtn']) $(id).classList.toggle('hidden', on);
+  document.querySelector('.online i').classList.toggle('hidden', on);
+  $('netLeave').classList.toggle('hidden', !on);
+  $('soloBtn').classList.toggle('hidden', guest || !!guestEl);
+  $('modeBack').classList.toggle('hidden', guest);
+  $('startBtn').classList.toggle('hidden', !on || guest || !roomCode);
+  $('startBtn').classList.toggle('go', !!guestEl);
+}
+// leaving tells the other side at once; if the message doesn't make it, the heartbeat notices
+const leaveRoom = () => { const live = !!conn?.open; if (live) conn.send({ t: 'bye' }); setTimeout(() => location.reload(), live ? 120 : 0); };
+$('netLeave').onclick = $('leaveBtn').onclick = $('menuBtn').onclick = leaveRoom;
+addEventListener('pagehide', () => { if (conn?.open) conn.send({ t: 'bye' }); });
+// every message proves the other side is alive; heartbeats also measure the ping, in both directions
+function netSeen(m, c) {
+  lastSeen = performance.now();
+  if (m.t === 'hb') c.send({ t: 'pg', at: m.at });
+  if (m.t === 'pg') ping = Math.round(ping ? ping * .7 + (lastSeen - m.at) * .3 : lastSeen - m.at);
+}
+const netShaky = () => !!conn?.open && performance.now() - lastSeen > 2500;
+setInterval(() => {
+  if (role === 'host' && roomCode && !(netTick++ % 5) && peer?.disconnected && !peer.destroyed) peer.reconnect(); // the room server dropped us: keep the code alive for rejoins (a game in progress doesn't need it)
+  if (!conn?.open) return;
+  conn.send({ t: 'hb', at: performance.now() });
+  if (performance.now() - lastSeen < NET_GONE) return;
+  if (role === 'guest') hostGone(); else { const c = conn; dropGuest(); c.close(); } // WebRTC alone can take 30 s+ to notice a closed tab
+}, 1000);
+function dropGuest() {
+  const had = guestEl;
+  conn = null; guestEl = guestEl2 = null; delete S.players.g; OUT.length = 0; ping = 0;
+  lobbyNet();
+  if (!had) return; // a join that never finished: nobody left
+  banner(`PARTNER LEFT · ROOM CODE ${roomCode}`, '#ff8aa0', 4000);
+  roomSay('Your partner left. They can rejoin any time with this code.');
+}
+// back to a clean lobby, able to host or join again
+function guestReset(msg) {
+  clearTimeout(joinT);
+  const p = peer; conn = null; peer = null; p?.destroy();
+  role = 'host'; myId = 'h'; G = R = null; lastPhase = null; snapN = sendN = ping = 0; joined = false; netLobby.met = 0;
+  say(msg); lobbyNet();
+}
+function hostGone() {
+  if (!joined) return guestReset(netErr({ type: 'webrtc' }));
+  if (!playing) return guestReset('The host closed the room. Join again with a new code.');
+  const p = peer, overUp = !$('over').classList.contains('hidden'); conn = null; peer = null; p?.destroy();
+  if (overUp) { $('overTxt').innerHTML = $('overTxt').innerHTML.replace('Waiting for the host to play again…', 'The host left the game.'); return; }
+  playing = false; $('hud').classList.add('hidden');
+  $('overTitle').textContent = 'HOST LEFT';
+  $('overTxt').innerHTML = 'The host left the game, so this run is over. What you earned is kept.' + runXP({ wave: R?.dun?.floor ?? R?.wave ?? 0 }, R?.players.g);
+  $('againBtn').classList.add('hidden'); $('settings').classList.add('hidden'); $('over').classList.remove('hidden');
+  unlockMouse();
+}
 $('hostBtn').onclick = () => {
   if (peer || !needPeer()) return;
+  initAudio();
   const code = Array.from({ length: 5 }, () => 'ABCDEFGHJKLMNPQRSTUVWXYZ'[Math.floor(Math.random() * 24)]).join('');
   say('Opening a room…');
-  peer = new Peer('magepact-' + code);
+  peer = new Peer('magepact-' + code); lobbyNet();
   const stuck = setTimeout(() => { // a blocked or unreachable room server can hang without ever erroring
     say('Couldn\'t reach the room server (a firewall, VPN or ad blocker may be blocking it). Click Host game to retry, or Play Solo.');
-    peer.destroy(); peer = null;
+    peer.destroy(); peer = null; lobbyNet();
   }, 10000);
-  peer.on('open', () => { clearTimeout(stuck); say(`Room code<div id="code-big">${code}</div>Send it to your partner, then press Start (or start solo).`); $('startBtn').classList.remove('hidden'); });
+  peer.on('open', () => { clearTimeout(stuck); roomCode = code; roomSay('Send it to your partner, then press Start (they can also join later).'); lobbyNet(); });
   peer.on('connection', c => {
-    if (conn) return c.close();
-    conn = c; lastSeen = performance.now();
-    c.on('data', m => { lastSeen = performance.now(); onHostData(m); });
-    c.on('close', dropGuest);
+    if (conn?.open && performance.now() - lastSeen < 2500) { // a live partner keeps the seat; a silent one (a reloaded tab) gives it up to whoever is rejoining
+      c.on('open', () => { c.send({ t: 'full' }); setTimeout(() => c.close(), 500); });
+      return;
+    }
+    const old = conn; conn = c; lastSeen = performance.now(); inN = 0; ping = 0; old?.close();
+    c.on('data', m => { if (c === conn) { netSeen(m, c); onHostData(m); } });
+    c.on('close', () => { if (c === conn) dropGuest(); });
   });
-  // WebRTC can take 30s+ to notice a closed tab, so the guest heartbeats and silence means gone
-  setInterval(() => { if (conn && performance.now() - lastSeen > 6000) { conn.close(); dropGuest(); } }, 1000);
   peer.on('error', err => {
     clearTimeout(stuck);
-    if (!peer?.open) { peer?.destroy(); peer = null; } // never opened: let Host game retry
+    if (roomCode) { if (!conn?.open) roomSay(netErr(err)); return; } // the room exists: a room-server blip, the 1 s timer reconnects
+    peer?.destroy(); peer = null; lobbyNet();
     say(`${netErr(err)} Click Host game to retry, or Play Solo.`);
   });
 };
+const hello = () => ({ t: 'hello', el: myEl, el2: myEl2, tal: PROG.tal, v: GAME_VERSION });
+// while waiting in the lobby, both players see each other's picks
+function netLobby() {
+  if (!conn?.open || playing) return;
+  conn.send(role === 'guest' ? hello() : { t: 'room', mode: myMode, el: myEl });
+}
+$('code').oninput = () => { $('code').value = $('code').value.toUpperCase().replace(/[^A-Z]/g, ''); };
+$('code').onkeydown = e => { if (e.key === 'Enter') $('joinBtn').click(); };
 $('joinBtn').onclick = () => {
   const code = $('code').value.trim().toUpperCase();
   if (code.length !== 5) return say('Enter the 5-letter room code from the host.');
   if (peer || !needPeer()) return;
   initAudio(); role = 'guest'; myId = 'g';
   say('Connecting…');
-  peer = new Peer();
+  peer = new Peer(); lobbyNet();
+  joinT = setTimeout(() => guestReset('Couldn\'t connect in time. Check the code and your internet, then try again.'), 15000);
   peer.on('open', () => {
-    conn = peer.connect('magepact-' + code);
-    conn.on('open', () => { conn.send({ t: 'hello', el: myEl, el2: myEl2, tal: PROG.tal, v: GAME_VERSION }); say('Connected! Waiting for the host to press Start…'); setInterval(() => conn?.open && conn.send({ t: 'hb' }), 1000); });
-    conn.on('data', onGuestData);
-    conn.on('close', () => { playing = false; R = null; $('hud').classList.add('hidden'); $('lobby').classList.remove('hidden'); say('The host left the game.'); unlockMouse(); });
+    const c = conn = peer.connect('magepact-' + code);
+    c.on('open', () => { clearTimeout(joinT); joined = true; lastSeen = performance.now(); c.send(hello()); say('Connected! Waiting for the host…'); });
+    c.on('data', m => { if (c === conn) { netSeen(m, c); onGuestData(m); } });
+    c.on('close', () => { if (c === conn) hostGone(); });
   });
-  peer.on('error', err => { say(netErr(err)); peer.destroy(); peer = null; role = 'host'; myId = 'h'; });
+  peer.on('error', err => { if (!conn?.open) guestReset(netErr(err)); }); // once connected the room server no longer matters: a blip there must not end the game
 };
 function onHostData(m) {
+  if (m.t === 'bye') { const c = conn; dropGuest(); c?.close(); return; }
   if (m.t === 'hello') {
-    if (m.v !== GAME_VERSION) { conn.send({ t: 'bad', v: GAME_VERSION }); say(`A partner tried to join with a different game version (${m.v || 'old'} vs ${GAME_VERSION}). Both of you need the same files: refresh or re-download.`); setTimeout(() => conn?.close(), 500); return; }
+    if (m.v !== GAME_VERSION) { const c = conn; conn = null; c.send({ t: 'bad', v: GAME_VERSION }); roomSay(`A partner tried to join with a different game version (${m.v || 'old'} vs ${GAME_VERSION}). Both of you need the same files: refresh or re-download.`); setTimeout(() => c.close(), 500); return; }
+    const first = !guestEl;
     guestEl = EL[m.el] ? m.el : 'frost'; guestEl2 = EL[m.el2] && m.el2 !== guestEl ? m.el2 : null; guestTal = cleanTal(m.tal);
-    say(`Partner joined as <b style="color:${css(EL[guestEl].color)}">${EL[guestEl].name}</b>. Press Start!`);
-    if (S.phase !== 'lobby' && !S.players.g) { S.players.g = withTalents(newPlayer('g', guestEl, guestEl2), guestTal); banner('PARTNER JOINED', '#8affc0'); }
+    conn.send({ t: 'room', mode: myMode, el: myEl });
+    roomSay(`Partner joined as <b style="color:${css(EL[guestEl].color)}">${EL[guestEl].name}</b>. Press Start!`);
+    if (first) sfx('ready');
+    lobbyNet();
+    if (S.phase === 'over' && first) $('overTxt').insertAdjacentHTML('beforeend', '<br>Your partner is here: press Play again!'); // Play again brings them in
+    else if (S.phase !== 'lobby' && S.phase !== 'over' && !S.players.g) { // a late join or a rejoin lands at the host's side, whichever island or floor that is
+      const h = S.players.h, g = S.players.g = withTalents(newPlayer('g', guestEl, guestEl2), guestTal);
+      if (guestEl2) g.up.second = 1;
+      Object.assign(g, { x: h.x + 1.5, y: h.y, z: h.z });
+      banner('PARTNER JOINED', '#8affc0');
+    }
   }
   const g = S.players.g;
   if (!g) return;
   if (m.t === 'i') {
+    if (m.n <= inN) return; // the channel is unordered: an older input must not pull the wizard backwards
+    inN = m.n;
     bgTick();
     if (m.dashes !== g.dashes) g.dashAt = S.t;
     g.inp = m; g.yaw = m.yaw; g.pitch = m.pitch; g.dashT = m.dashT; g.dashes = m.dashes;
     if (!g.down) { g.x = m.x; g.y = m.y; g.z = m.z; }
   }
-  if (m.t === 'el') setElement(g, m.el);
+  if (m.t === 'el' && EL[m.el]) setElement(g, m.el);
 }
 // browsers pause requestAnimationFrame in hidden tabs and covered windows: when the host's frames stall, the guest's 30 Hz input keeps the world running
 let lastRaf = 0, lastBg = 0;
@@ -238,11 +319,21 @@ setInterval(bgTick, 33);
 function sendSnap(dt) {
   if (!conn?.open || S.phase === 'lobby' || (snapT -= dt) > 0) return;
   snapT = .05;
-  conn.send({ t: 's', s: snap(), ev: OUT.splice(0) });
+  if (conn.dataChannel?.bufferedAmount > 1 << 19) return; // the link can't keep up: skip a snapshot rather than pile up lag (events wait in OUT)
+  conn.send({ t: 's', n: ++snapN, s: snap(), ev: OUT.splice(0) });
 }
 function onGuestData(m) {
-  if (m.t === 'bad') { say(`The host is running game version ${m.v} and you have ${GAME_VERSION}. Both of you need the same files: refresh or re-download.`); return; }
+  if (m.t === 'bye') return hostGone();
+  if (m.t === 'bad') return guestReset(`The host is running game version ${m.v} and you have ${GAME_VERSION}. Both of you need the same files: refresh or re-download.`);
+  if (m.t === 'full') return guestReset('That room already has two players.');
+  if (m.t === 'room') {
+    if (MODES[m.mode]) { myMode = m.mode; $('modeName').textContent = MODES[m.mode].name; $('soloBtn').textContent = MODES[m.mode].play; }
+    if (!playing) { if (!netLobby.met) sfx('ready'); netLobby.met = 1; say(`Connected! Mode: <b>${MODES[m.mode]?.name || m.mode}</b>. Your partner is <b style="color:${css(EL[m.el].color)}">${EL[m.el].name}</b>. Pick your element, then wait for them to press Start…`); }
+    return;
+  }
   if (m.t !== 's') return;
+  if (m.n < snapN) { for (const e of m.ev) onEvent(e); return; } // arrived late (unordered channel): its events still happened, its picture is old
+  snapN = m.n;
   R = m.s;
   if (R.dun) dunSync(R.dun); // before applyMap, so the guest's first dungeon frame already has its floor
   if (R.mode && R.mode !== S.mode) applyMap(R.mode);
@@ -269,7 +360,7 @@ function guestStep(dt) {
   // predict our own casts with the same rules as the host, so circles, hand kick and our own movement are instant
   // ponytail: the Overcharge mega count and cooldowns are local too and can drift from the host's if inputs drop
   if (live) stepCast(G, frozen ? idleInput(i, G) : i, dt, false); else { G.ch = null; G.chg = null; }
-  if ((sendT -= dt) <= 0 && conn?.open) { sendT = 1 / 30; conn.send({ t: 'i', ...i, x: r2(G.x), y: r2(G.y), z: r2(G.z), dashT: G.dashT, dashes: G.dashes }); }
+  if ((sendT -= dt) <= 0 && conn?.open) { sendT = 1 / 30; conn.send({ t: 'i', ...i, n: ++sendN, x: r2(G.x), y: r2(G.y), z: r2(G.z), dashT: G.dashT, dashes: G.dashes }); }
 }
 
 // ===================== self-check (open index.html#test) =====================
@@ -420,7 +511,7 @@ if (location.hash === '#test') {
   say(res.every(r => r.startsWith('PASS')) ? `Self-check passed (${res.length}/${res.length})` : `Self-check FAILED: ${res.filter(r => r.startsWith('FAIL')).join(', ')}`);
 } else say('Ready. Pick an element, then play solo, host or join.');
 renderLobby();
-window.MP = { S, inp, keys, MOVE, EL, selfTest, testMove, testEl: k => EL[k].moves.map(m => testMove(m)) }; // console debug handle
+window.MP = { S, inp, keys, MOVE, EL, snap, selfTest, testMove, testEl: k => EL[k].moves.map(m => testMove(m)) }; // console debug handle
 
 // ===================== main loop =====================
 let last = performance.now();
@@ -430,7 +521,7 @@ function update(dt) {
   if (role === 'host') { const evs = S.events.splice(0); for (const e of evs) { onEvent(e); if (conn?.open) OUT.push(e); } sendSnap(dt); }
 }
 window.MP.tick = (sec, dt = 1 / 60) => { for (let t = 0; t < sec; t += dt) { update(dt); stepFx(dt); stepParticles(dt); } };
-window.MP.net = () => ({ role, myId, castFxN, open: !!conn?.open, guestEl, R: !!R, G: G && { x: G.x, z: G.z, hp: G.hp }, phase: (role === 'guest' ? R : S)?.phase, players: Object.keys((role === 'guest' ? R : S)?.players || {}) });
+window.MP.net = () => ({ role, myId, castFxN, open: !!conn?.open, ping, roomCode, playing, guestEl, R: !!R, G: G && { x: G.x, z: G.z, hp: G.hp }, phase: (role === 'guest' ? R : S)?.phase, players: Object.keys((role === 'guest' ? R : S)?.players || {}) });
 window.MP.gl = () => ({ ...renderer.info.render, programs: renderer.info.programs.length, geometries: renderer.info.memory.geometries });
 // slow device (many Chromebooks): after 6 s of smooth-running play under 30 fps, drop to low graphics live (no reload).
 // Measures real frame gaps, ignores hidden tabs / stalls, and never overrides a graphics setting the player picked.
