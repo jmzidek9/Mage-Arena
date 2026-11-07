@@ -1,16 +1,16 @@
 # Graph Report - Test Game  (2026-11-06)
 
 ## Corpus Check
-- 71 files · ~307,531 words
+- 71 files · ~307,755 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1409 nodes · 2381 edges · 79 communities (70 shown, 9 thin omitted)
+- 1411 nodes · 2383 edges · 79 communities (70 shown, 9 thin omitted)
 - Extraction: 91% EXTRACTED · 9% INFERRED · 0% AMBIGUOUS · INFERRED: 208 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `1c49be46`
+- Built from commit: `caca8613`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -54,7 +54,7 @@
 - rand
 - build_assets.py
 - grab
-- scarFx
+- smokeFx
 - Magma playtest report
 - Explosion playtest report
 - Steel playtest report
@@ -73,7 +73,7 @@
 - Rune playtest report
 - .__init__
 - Frost playtest report
-- beamFx
+- scarFx
 - wardView
 - animWizard
 - initAudio
@@ -154,7 +154,7 @@ Nodes (7): 4 objects (ring_outer, runes, ring_inner, sigil) so the game can coun
 
 ### Community 7 - "elements.js"
 Cohesion: 0.03
-Nodes (19): _bgeo, ELEMENTS, EQ_GEO, FALL_GEO, FLARE_GEO, HYDRA, inkPool, JET_GEO (+11 more)
+Nodes (20): _bgeo, DOME_GEO, ELEMENTS, EQ_GEO, FALL_GEO, FLARE_GEO, HYDRA, inkPool (+12 more)
 
 ### Community 8 - "Elements.md"
 Cohesion: 0.05
@@ -276,9 +276,9 @@ Nodes (6): animateArena(), burst(), emit(), popNum(), rand(), V()
 Cohesion: 0.11
 Nodes (22): arm_l(), cape(), cape2(), digit(), finger(), fist(), head(), limb() (+14 more)
 
-### Community 39 - "scarFx"
-Cohesion: 0.15
-Nodes (20): bigBoltFx(), blastFx(), bloodSplat(), boomFx(), debrisFx(), deepSplash(), dustFx(), fireBoom() (+12 more)
+### Community 39 - "smokeFx"
+Cohesion: 0.22
+Nodes (11): blastFx(), boomFx(), debrisFx(), fxRoom(), lavaSplash(), puffTex(), quakeCracks(), smokeCloud() (+3 more)
 
 ### Community 40 - "Magma playtest report"
 Cohesion: 0.22
@@ -352,9 +352,9 @@ Nodes (4): center(), lane_angle(), Blender angle (about +Z) from island k toward
 Cohesion: 0.20
 Nodes (9): E: Frost Nova, Frost playtest report, LMB: Ice Shard, Passive: Permafrost (4 hits -> freeze 1.8 s, frozen take +40%), Performance (measured), Q: Ice Wall, R: Blizzard (ultimate), RMB: Glacial Lance (+1 more)
 
-### Community 58 - "beamFx"
-Cohesion: 0.40
-Nodes (5): aimBeam(), beamFx(), beamMesh(), laserFx(), prismRays()
+### Community 58 - "scarFx"
+Cohesion: 0.18
+Nodes (14): aimBeam(), beamFx(), beamMesh(), bigBoltFx(), bloodSplat(), deepSplash(), dustFx(), fireBoom() (+6 more)
 
 ### Community 59 - "wardView"
 Cohesion: 0.50
@@ -405,8 +405,8 @@ Cohesion: 0.22
 Nodes (8): Chrono playtest report, E: Slow Field (cd 13, r 6, 6 s, 70% slow), LMB: Chrono Bolt (cd .45, 16 dmg + 16 echo after 1.2 s), Passive: Time Dilation (cooldowns ×0.82, timeworn slow .35), Q: Rewind (cd 6, 8 mark dmg, snap 35 + 14/m up to +200, +150 vs boss), R: Time Stop (ult, 4 s, damage stored ×1.5), RMB: Stasis (cd 8, 6 dmg, stores damage ×1.3 for 3 s), Top 3
 
 ## Knowledge Gaps
-- **514 isolated node(s):** `AREAS`, `ISLES`, `FOE_ATK`, `RIMC`, `ISLE_FIRE` (+509 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 741 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **515 isolated node(s):** `AREAS`, `ISLES`, `FOE_ATK`, `RIMC`, `ISLE_FIRE` (+510 more)
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 743 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
 - **9 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
@@ -425,4 +425,4 @@ _Questions this graph is uniquely positioned to answer:_
 - **Are the 11 inferred relationships involving `Mesh` (e.g. with `spell_circle()` and `wpart()`) actually correct?**
   _`Mesh` has 11 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `AREAS`, `ISLES`, `FOE_ATK` to the rest of the system?**
-  _514 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _515 weakly-connected nodes found - possible documentation gaps or missing edges._
