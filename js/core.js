@@ -304,7 +304,7 @@ scene.add(arena);
 const amb = { sig: CIRCLE_PARTS.map(n => arena.getObjectByName('sigil_' + n)), flames: [], lights: [], rocks: [], cry: new Set(), banners: [], monos: [], falls: [] };
 arena.traverse(o => {
   if (/^brazier_flame_\d+$/.test(o.name)) { // not its split child meshes (brazier_flame_0_1...), or every brazier spawns 3 lights
-    amb.flames.push(o);
+    amb.flames.push(o); PILLARS.push({ x: o.position.x, z: o.position.z, r: .65 }); // solid, like the other islands' braziers: walking into one put the camera inside its flame and washed out the screen
     o.traverse(c => { if (c.isMesh) { c.visible = !/core/.test(c.material.name); c.material = FIRE_MAT; c.castShadow = false; } });
     const l = new THREE.PointLight(0xff8a3a, 30, 18, 2); l.position.copy(o.position); l.position.y += .7; scene.add(l); amb.lights.push(l);
   }

@@ -2,7 +2,7 @@
 'use strict';
 
 // bump when the network format or game rules change: players on different builds get told to refresh
-const GAME_VERSION = '2.8.0';
+const GAME_VERSION = '2.8.1';
 
 // ===================== snapshot (sent to the guest, and what both sides render from) =====================
 const bfSnap = bf => { const o = {}; for (const k in bf) if (bf[k] > 0) o[k] = r2(bf[k]); return o; };
@@ -490,6 +490,7 @@ function selfTest() {
   Object.assign(S, { phase: 'lobby', players: {}, enemies: [], shots: [], ents: [], timers: [], events: [], hz: [], cheat: ch });
   t(`all ${ELIST.length + 1} element blocks block, wear down, break and recover${gerr.length ? ' (' + gerr.join('; ') + ')' : ''}`, !gerr.length);
   t('every element block has its own name', new Set([...ELIST, 'god'].map(k => BLOCK[k]?.name)).size === ELIST.length + 1);
+  t('the 4 braziers on the first island are solid', ARENA_PILLARS.filter(q => Math.abs(Math.hypot(q.x, q.z) - 10) < .01 && q.r === .65).length === 4);
   // steerable moves bend toward the crosshair, and basic attacks never do
   const serr = [], steerable = Object.values(MOVE).filter(m => m.el && m.steer), ch2 = S.cheat;
   for (const m of steerable) {
