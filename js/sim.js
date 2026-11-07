@@ -449,6 +449,26 @@ function shoot(p, c, spd, o = {}) {
   if (S.shots.length < MAX_SHOTS) S.shots.push(s);
   return s;
 }
+// steerable moves (a move's `steer`: how fast it can turn, radians a second) curve toward the owner's crosshair, so they bend instead of snapping.
+// Zones and ground-huggers head for where the crosshair meets the floor; everything else flies at the crosshair in 3D. Runs on the host from each player's live aim.
+// ponytail: always on while you hold your aim on it; a hold-to-steer key if players want to look away without dragging their shots along.
+const steerer = o => { const p = S.players[o.own]; return p && !p.down && !p.ai ? p : null; };
+function steerHeading(dx, dz, x, z, p, rate, dt) {
+  const q = groundAt(p, 60), tx = q.x - x, tz = q.z - z, cur = Math.atan2(dx, dz);
+  if (Math.hypot(tx, tz) < 1) return cur; // already there: carry on rather than spin on the spot
+  return cur + clamp(lerpAngle(0, Math.atan2(tx, tz) - cur, 1), -rate * dt, rate * dt);
+}
+function steerEnt(n, dt) {
+  const p = steerer(n); if (!p) return;
+  const a = steerHeading(n.dx, n.dz, n.x, n.z, p, n.steer, dt); n.dx = Math.sin(a); n.dz = Math.cos(a); n.yaw = a;
+}
+function steerShot(s, dt) {
+  const p = steerer(s); if (!p) return;
+  if (s.flatSteer) { const sp = Math.hypot(s.vx, s.vz), a = steerHeading(s.vx, s.vz, s.x, s.z, p, s.steer, dt); s.vx = Math.sin(a) * sp; s.vz = Math.cos(a) * sp; return; }
+  const sp = Math.hypot(s.vx, s.vy, s.vz) || 1, v = V(s.vx / sp, s.vy / sp, s.vz / sp), to = eyeOf(p).addScaledVector(aimOf(p), 40).sub(V(s.x, s.y, s.z)).normalize(), ang = v.angleTo(to);
+  if (ang < 1e-3) return;
+  v.lerp(to, Math.min(1, s.steer * dt / ang)).normalize().multiplyScalar(sp); s.vx = v.x; s.vy = v.y; s.vz = v.z;
+}
 function endShot(s, why, e) { if (s.dead) return; s.dead = true; MOVE[s.mv]?.shot?.end?.(s, why, e); }
 function stepShots(dt) {
   for (const s of S.shots) {
@@ -461,6 +481,7 @@ function stepShots(dt) {
       const e = S.enemies.find(x => x.id === s.stuck);
       if (e && !e.dead) { s.x = e.x + s.ox; s.y = e.y + s.oy; s.z = e.z + s.oz; } else s.stuck = null;
     } else if (!s.still) {
+      if (s.steer) steerShot(s, dt);
       if (s.home) {
         const e = nearest(s.x + s.vx * .15, s.z + s.vz * .15, 18, s.hit);
         if (e) {
@@ -540,6 +561,7 @@ function stepEnts(dt) {
     if (n.dead) continue;
     n.t += dt; n.life -= dt; S.actor = n.own; S.ultSrc = !!n.ult; S.mvSrc = n.mv;
     if (n.follow) { const p = own(n); if (p) { n.x = p.x; n.z = p.z; n.y = p.y; } }
+    if (n.steer) steerEnt(n, dt);
     const H = MOVE[n.mv]?.ent;
     H?.tick?.(n, dt);
     if (n.life <= 0 && !n.dead) { n.dead = true; H?.end?.(n); }

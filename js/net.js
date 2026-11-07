@@ -2,7 +2,7 @@
 'use strict';
 
 // bump when the network format or game rules change: players on different builds get told to refresh
-const GAME_VERSION = '2.7.0';
+const GAME_VERSION = '2.8.0';
 
 // ===================== snapshot (sent to the guest, and what both sides render from) =====================
 const bfSnap = bf => { const o = {}; for (const k in bf) if (bf[k] > 0) o[k] = r2(bf[k]); return o; };
@@ -490,6 +490,26 @@ function selfTest() {
   Object.assign(S, { phase: 'lobby', players: {}, enemies: [], shots: [], ents: [], timers: [], events: [], hz: [], cheat: ch });
   t(`all ${ELIST.length + 1} element blocks block, wear down, break and recover${gerr.length ? ' (' + gerr.join('; ') + ')' : ''}`, !gerr.length);
   t('every element block has its own name', new Set([...ELIST, 'god'].map(k => BLOCK[k]?.name)).size === ELIST.length + 1);
+  // steerable moves bend toward the crosshair, and basic attacks never do
+  const serr = [], steerable = Object.values(MOVE).filter(m => m.el && m.steer), ch2 = S.cheat;
+  for (const m of steerable) {
+    try {
+      Object.assign(S, { phase: 'fight', mode: 'arena', isl: 0, t: 0, wave: 3, enemies: [], shots: [], ents: [], rings: [], timers: [], events: [], hz: [], budget: 0, bossLeft: 0, cheat: null });
+      const p = newPlayer('h', m.el); Object.assign(p, { x: 0, z: 0, yaw: 0, pitch: 0, ult: 1 }); p.cds = {}; S.players = { h: p };
+      fire(p, m, 1, true);
+      const step = n => { for (let f = 0; f < n; f++) { stepTimers(1 / 60); stepShots(1 / 60); stepEnts(1 / 60); } };
+      step(2);
+      const live = () => S.shots.find(s => s.mv === m.key && s.steer) || S.ents.find(n => n.mv === m.key && n.steer);
+      const head = o => o.vx != null ? Math.atan2(o.vx, o.vz) : Math.atan2(o.dx, o.dz), o0 = live();
+      if (!o0) throw new Error('nothing to steer');
+      const h0 = head(o0); p.yaw += 1; step(12);
+      const o1 = live(); if (!o1) throw new Error('it ended too soon');
+      if (Math.abs(lerpAngle(0, head(o1) - h0, 1)) < .1) throw new Error('it did not turn');
+    } catch (err) { serr.push(`${m.key} ${m.name}: ${err.message}`); }
+  }
+  Object.assign(S, { phase: 'lobby', players: {}, enemies: [], shots: [], ents: [], timers: [], events: [], hz: [], cheat: ch2 });
+  t(`all ${steerable.length} steerable moves curve toward the crosshair${serr.length ? ' (' + serr.join('; ') + ')' : ''}`, steerable.length > 0 && !serr.length);
+  t('basic attacks (left click) are never steerable', Object.values(MOVE).filter(m => m.el && m.slot === 0).every(m => !m.steer));
   // every island monster's attack warning is its own, sized to the attack (not a swipe the size of its whole reach)
   const terr = [];
   for (const k of isle.filter(k => ET[k].cost)) for (const al of [null, ET[k].alt].filter((x, i) => !i || x)) {

@@ -80,7 +80,9 @@ function moveIcon(m) {
   const i = +String(m.key || '').split('.')[1], fn = SPELL_ART[m.el]?.[i];
   if (!fn) return m.icon;
   const id = 'pi' + (iconSeq++).toString(36) + '_', col = '#' + (EL[m.el]?.color ?? 0xffffff).toString(16).padStart(6, '0'), k = paintKit(id, col);
-  return `<svg class="pico" viewBox="0 0 64 64" aria-hidden="true">${k.defs}${fn(k)}</svg>`;
+  // a steerable move wears a small curved arrow in the corner: it bends with your crosshair
+  const bend = m.steer ? `<g fill="none" stroke-linecap="round" stroke-linejoin="round"><path id="${id}b" d="M38 13 Q54 11 56 27 M50 22 L56 28 L61 21" stroke="#0a0614" stroke-width="6"/><path d="M38 13 Q54 11 56 27 M50 22 L56 28 L61 21" stroke="#fff6d8" stroke-width="3"/></g>` : '';
+  return `<svg class="pico" viewBox="0 0 64 64" aria-hidden="true">${k.defs}${fn(k)}${bend}</svg>`;
 }
 
 // ---- Fire ----

@@ -55,6 +55,11 @@ const until = async (page, fn, arg, ms = 25000) => { try { await page.waitForFun
     await h.evaluate(() => { MP.keys[BIND.fwd] = false; });
     check('guest sees the host legs stride', Math.max(...legs) - Math.min(...legs) > .25, `swing ${(Math.max(...legs) - Math.min(...legs)).toFixed(2)} rad`);
     await g.screenshot({ path: path.join(out, '1-guest-running.png') });
+    // the guest's own crosshair steers what it casts, though the host runs it
+    const h0 = await h.evaluate(() => { fire(MP.S.players.g, MP.MOVE['water.1'], 1, true); const n = MP.S.ents.find(x => x.mv === 'water.1' && x.own === 'g'); return Math.atan2(n.dx, n.dz); });
+    for (let i = 0; i < 10; i++) { await g.evaluate(() => { MP.inp.yaw -= .15; MP.frames(2); }); await sleep(50); }
+    const h1 = await h.evaluate(() => { const n = MP.S.ents.find(x => x.mv === 'water.1' && x.own === 'g'); return n ? Math.atan2(n.dx, n.dz) : null; });
+    check('the guest steers its own ability', h1 != null && Math.abs(h1 - h0) > .1, h1 == null ? 'ring ended' : `turned ${Math.abs(h1 - h0).toFixed(2)} rad`);
     await h.screenshot({ path: path.join(out, '1-host.png') }); await g.screenshot({ path: path.join(out, '1-guest.png') });
 
     // a third player can't take the seat
