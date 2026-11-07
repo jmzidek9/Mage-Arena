@@ -1,16 +1,16 @@
 # Graph Report - Test Game  (2026-11-06)
 
 ## Corpus Check
-- 71 files · ~305,983 words
+- 71 files · ~307,479 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1404 nodes · 2367 edges · 79 communities (70 shown, 9 thin omitted)
+- 1409 nodes · 2381 edges · 79 communities (70 shown, 9 thin omitted)
 - Extraction: 91% EXTRACTED · 9% INFERRED · 0% AMBIGUOUS · INFERRED: 208 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `ce221224`
+- Built from commit: `4e4b2aef`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -97,7 +97,7 @@
 
 ## God Nodes (most connected - your core abstractions)
 1. `TRS()` - 60 edges
-2. `Elements` - 37 edges
+2. `Elements` - 38 edges
 3. `aim()` - 32 edges
 4. `Mesh` - 30 edges
 5. `ell()` - 28 edges
@@ -126,7 +126,7 @@
 
 ### Community 0 - "sim.js"
 Cohesion: 0.06
-Nodes (94): addUlt(), aimOf(), alive(), aoe(), applyStatus(), blast(), bomberBlast(), bondMul() (+86 more)
+Nodes (98): addUlt(), aimOf(), alive(), aoe(), applyStatus(), blast(), bomberBlast(), bondMul() (+90 more)
 
 ### Community 1 - "core.js"
 Cohesion: 0.02
@@ -169,8 +169,8 @@ Cohesion: 0.50
 Nodes (3): Audio credits, Music (`audio/music/`), Sound effects (`audio/sfx/`, file names kept from the packs)
 
 ### Community 11 - "build_elements.py"
-Cohesion: 0.13
-Nodes (21): arcpts(), crescent(), crescent_blade(), lens(), M(), mirror_shard(), plated_rock(), put() (+13 more)
+Cohesion: 0.14
+Nodes (20): arcpts(), crescent(), crescent_blade(), lens(), M(), mirror_shard(), plated_rock(), put() (+12 more)
 
 ### Community 12 - "areas.js"
 Cohesion: 0.08
@@ -230,7 +230,7 @@ Nodes (19): bestFor(), gainXP(), needXP(), PICKABLE(), pickMode(), pvShow(), ren
 
 ### Community 26 - "Elements"
 Cohesion: 0.05
-Nodes (37): 🐙 Abyss, 🔮 Arcane, Balance, 🗡️ Blades, Blocks, 🩸 Blood, 💀 Bone, ⏳ Chrono (+29 more)
+Nodes (38): 🐙 Abyss, 🔮 Arcane, Balance, 🗡️ Blades, Blocks, 🩸 Blood, 💀 Bone, ⏳ Chrono (+30 more)
 
 ### Community 27 - "Mage Arena"
 Cohesion: 0.29
@@ -273,8 +273,8 @@ Cohesion: 0.40
 Nodes (6): animateArena(), burst(), emit(), popNum(), rand(), V()
 
 ### Community 37 - "build_assets.py"
-Cohesion: 0.12
-Nodes (21): arm_l(), cape(), cape2(), digit(), finger(), fist(), head(), limb() (+13 more)
+Cohesion: 0.11
+Nodes (22): arm_l(), cape(), cape2(), digit(), finger(), fist(), head(), limb() (+14 more)
 
 ### Community 39 - "scarFx"
 Cohesion: 0.15
@@ -405,15 +405,15 @@ Cohesion: 0.22
 Nodes (8): Chrono playtest report, E: Slow Field (cd 13, r 6, 6 s, 70% slow), LMB: Chrono Bolt (cd .45, 16 dmg + 16 echo after 1.2 s), Passive: Time Dilation (cooldowns ×0.82, timeworn slow .35), Q: Rewind (cd 6, 8 mark dmg, snap 35 + 14/m up to +200, +150 vs boss), R: Time Stop (ult, 4 s, damage stored ×1.5), RMB: Stasis (cd 8, 6 dmg, stores damage ×1.3 for 3 s), Top 3
 
 ## Knowledge Gaps
-- **513 isolated node(s):** `AREAS`, `ISLES`, `FOE_ATK`, `RIMC`, `ISLE_FIRE` (+508 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 740 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **514 isolated node(s):** `AREAS`, `ISLES`, `FOE_ATK`, `RIMC`, `ISLE_FIRE` (+509 more)
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 741 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
 - **9 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `r2()` connect `r2` to `sim.js`, `core.js`?**
-  _High betweenness centrality (0.040) - this node is a cross-community bridge._
+  _High betweenness centrality (0.041) - this node is a cross-community bridge._
 - **Why does `laserShot()` connect `r2` to `elements.js`?**
   _High betweenness centrality (0.012) - this node is a cross-community bridge._
 - **Why does `chainBolt()` connect `r2` to `elements.js`?**
@@ -425,4 +425,4 @@ _Questions this graph is uniquely positioned to answer:_
 - **Are the 11 inferred relationships involving `Mesh` (e.g. with `spell_circle()` and `wpart()`) actually correct?**
   _`Mesh` has 11 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `AREAS`, `ISLES`, `FOE_ATK` to the rest of the system?**
-  _513 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _514 weakly-connected nodes found - possible documentation gaps or missing edges._
