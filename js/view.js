@@ -1163,7 +1163,7 @@ function hud(src, mp) {
   if (other) { $('mateHp').style.width = other.hp / other.max * 100 + '%'; $('mateName').textContent = `${other.down ? '💀 DOWN · ' : ''}${src.mode === 'duel' ? other.ai ? 'AI Wizard' : 'Opponent' : 'Partner'} · ${EL[other.cur || other.el].glyph} ${EL[other.cur || other.el].name}`; $('mateUlt').style.width = (other.ult || 0) * 100 + '%'; }
   const D = src.duel, opp = other?.id || (myId === 'h' ? 'g' : 'h');
   const U = src.dun;
-  $('wave').textContent = src.mode === 'dungeon' && U ? `Floor ${U.floor}` : src.mode === 'duel' && D ? `Round ${D.round} · ${D.wins[myId]} – ${D.wins[opp]}` : src.phase === 'travel' ? `Cross the bridge to ${AREAS[(src.br.k + 1) % 5].name}` : src.phase === 'rest' ? `Wave ${src.wave + 1} incoming` : src.wave ? `Wave ${src.wave}` : '';
+  $('wave').textContent = src.mode === 'train' ? 'Training' : src.mode === 'dungeon' && U ? `Floor ${U.floor}` : src.mode === 'duel' && D ? `Round ${D.round} · ${D.wins[myId]} – ${D.wins[opp]}` : src.phase === 'travel' ? `Cross the bridge to ${AREAS[(src.br.k + 1) % 5].name}` : src.phase === 'rest' ? `Wave ${src.wave + 1} incoming` : src.wave ? `Wave ${src.wave}` : '';
   const boss = src.enemies.find(e => ET[e.type].boss);
   $('boss').classList.toggle('hidden', !boss);
   if (boss) {
@@ -1246,7 +1246,7 @@ function showOver(e) {
   renderLobby();
 }
 
-// ===================== mode browser: Arena / 1v1 Duel / Dungeon =====================
+// ===================== mode browser: Arena / Training / Dungeon / Mage City (the 1v1 Duel is still in modes.js, off the menu) =====================
 // card art: small inline SVG scenes (ids are prefixed per card so they don't clash)
 const svg = body => `<svg viewBox="0 0 400 240" preserveAspectRatio="xMidYMid slice" aria-hidden="true">${body}</svg>`;
 const STARS = [[30, 30], [70, 62], [120, 22], [160, 50], [345, 28], [375, 70], [330, 120], [20, 110], [95, 100], [380, 150]].map(([x, y], i) => `<circle cx="${x}" cy="${y}" r="${i % 3 ? .8 : 1.4}" fill="#fff" opacity="${i % 2 ? .5 : .85}"/>`).join('');
@@ -1281,6 +1281,13 @@ const MODE_ART = {
     <circle cx="112" cy="176" r="10" fill="#ff9a4a" opacity=".35"/><path d="M112,166 l4,9 h-8 z" fill="#ffd9a8"/>
     <circle cx="262" cy="176" r="10" fill="#ff9a4a" opacity=".35"/><path d="M262,166 l4,9 h-8 z" fill="#ffd9a8"/>
     <path d="M40,120 l14,-6 l10,8 l-12,8 z" fill="#2c2840"/><path d="M350,110 l12,-4 l8,7 l-10,6 z" fill="#2c2840"/>`),
+  train: svg(`<defs><radialGradient id="tSky" cx="50%" cy="20%" r="90%"><stop offset="0" stop-color="#1f4a3a"/><stop offset=".5" stop-color="#0d1f1c"/><stop offset="1" stop-color="#05080a"/></radialGradient>
+    <linearGradient id="tRock" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3e4a46"/><stop offset="1" stop-color="#0b1210"/></linearGradient></defs>
+    <rect width="400" height="240" fill="url(#tSky)"/>${STARS}
+    <path d="M30 190 L370 190 L330 220 L250 238 L150 238 L70 220 Z" fill="url(#tRock)"/><ellipse cx="200" cy="190" rx="170" ry="12" fill="#4a5a54"/>
+    ${[90, 160, 240, 310].map((x, i) => `<g transform="translate(${x} ${i % 3 ? 186 : 180})"><rect x="-2" y="-30" width="4" height="30" fill="#6a5034"/><rect x="-16" y="-62" width="32" height="6" rx="2" fill="#8a6a44"/><ellipse cx="0" cy="-48" rx="12" ry="18" fill="#c8a870"/><circle cx="0" cy="-74" r="9" fill="#d8b880"/><circle cx="0" cy="-48" r="8" fill="none" stroke="#c03030" stroke-width="2.5"/><circle cx="0" cy="-48" r="3" fill="#c03030"/></g>`).join('')}
+    <g class="pulse" style="transform-origin:240px 130px"><path d="M226 124 l10 -10 l4 12 l12 -6 l-4 14 z" fill="#ffd36a"/></g><text x="252" y="112" fill="#ffd36a" font-size="18" font-weight="700" font-family="sans-serif">128</text>
+    <path d="M150 140 L230 132" stroke="#7ad8ff" stroke-width="4" stroke-linecap="round" opacity=".8"/>`),
   duel: svg(`<defs><linearGradient id="dSky" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#3a140c"/><stop offset=".5" stop-color="#120a1e"/><stop offset="1" stop-color="#0a1c3a"/></linearGradient>
     <radialGradient id="dBurst"><stop offset="0" stop-color="#fff"/><stop offset=".3" stop-color="#ffe9ff" stop-opacity=".9"/><stop offset="1" stop-color="#b48cff" stop-opacity="0"/></radialGradient>
     <filter id="dBlur" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="5"/></filter></defs>
@@ -1308,8 +1315,8 @@ const MODE_ART = {
 const MODES = {
   arena: { name: 'Arena', c: '#e9c46a', play: '⚔ Play Solo', tag: 'Hold the floating ruins under the black hole against endless waves.',
     info: ['Endless waves', 'Boss every 5', 'Solo or co-op'] },
-  duel: { name: '1v1 Duel', c: '#ff8a5a', play: '⚔ Duel the AI', tag: 'Wizard against wizard on a floating platform. Burn them down or knock them off.',
-    info: ['Best of 3', 'Vs a friend online', 'Or vs an AI wizard'] },
+  train: { name: 'Training', c: '#7ad8a0', play: '⚔ Start Training', tag: 'A quiet island full of target dummies that never fight back. Try every move and read the damage.',
+    info: ['Nothing attacks you', 'Damage & DPS per move', 'No cooldowns, any element'] },
   dungeon: { name: 'Dungeon', c: '#ffa040', play: '⚔ Enter Alone', tag: 'Descend through torchlit medieval halls, floor after floor, as deep as you dare.',
     info: ['Endless floors', 'Boss every 5', 'Solo or co-op'] },
   city: { name: 'Mage City', c: '#c9a0ff', play: '⚔ Play Solo', tag: 'Endless waves through a floating city of towers and halls. Every wall can be blasted apart.',

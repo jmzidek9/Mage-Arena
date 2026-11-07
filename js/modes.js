@@ -1,4 +1,4 @@
-// Mage Arena game modes beyond the Arena: the 1v1 Duel (here) and the Dungeon (dungeon.js). Host-side rules plus the map switch both machines run.
+// Mage Arena game modes beyond the Arena: Training and the 1v1 Duel (here) and the Dungeon (dungeon.js). Host-side rules plus the map switch both machines run.
 // Loaded after sim.js (uses its state and helpers) and before view.js.
 'use strict';
 
@@ -11,11 +11,62 @@ function applyMap(mode) {
   MAP.r = mode === 'duel' ? DUEL_R : ARENA_R;
   MAP.rects = MAP.erects = null; MAP.caps = null;
   PILLARS.length = 0; PILLARS.push(...(mode === 'duel' ? DUEL_PILLARS : ARENA_PILLARS));
-  if (mode === 'arena') islandMap(); // the islands and bridges built so far (areas.js)
+  if (mode === 'arena' || mode === 'train') islandMap(); // the islands and bridges built so far (areas.js); Training uses the first island
   if (mode === 'dungeon') dunMap(); // the floor itself is in dungeon.js
   if (mode === 'city') cityMap(); // and the city in city.js
   if (mapMode !== mode) { mapMode = mode; showScenery(mode); }
 }
+
+// ===================== training =====================
+// The first island with target dummies that never attack (they respawn 1.5 s after they die), you can't be hurt,
+// every element is in the Esc menu, and a panel shows total damage, DPS over the last 5 s and damage per move (S.dmgBy, see damage()).
+// N: cooldowns off / on (your ultimate is always ready while they are off). X: reset the damage meter.
+const TRAIN_SPOTS = [ // [type, x, z, hp, 1 = walks about]
+  ['grunt', -6, -2, 500], ['grunt', -2, -3, 500], ['grunt', 2, -3, 500], ['grunt', 6, -2, 500],
+  ['runner', -4, -8, 300, 1], ['runner', 4, -8, 300, 1],
+  ['brute', 0, -9, 2000], ['boss', 0, -16, 12000]];
+function startTrain() {
+  S.wave = 1; S.phase = 'fight'; S.budget = 0; S.bossLeft = 0;
+  S.cheat = { ...(S.cheat || {}), inv: 1, allEl: 1 };
+  S.dmgBy = {}; S.trn = { spots: TRAIN_SPOTS.map(([type, x, z, hp, walk]) => ({ type, x, z, hp, walk, id: 0, t: 0 })), hist: [], t0: S.t };
+}
+function stepTrain(dt) {
+  const T = S.trn; if (!T) return;
+  for (const q of T.spots) {
+    if (q.id && S.enemies.some(e => e.id === q.id && !e.dead)) continue;
+    if ((q.t -= dt) > 0) continue;
+    if (q.id) { q.id = 0; q.t = 1.5; continue; } // it died: back in a moment
+    const e = spawnEnemy(q.type, q.x, q.z); e.hp = e.max = q.hp; e.dummy = q.walk ? 2 : 1; e.yaw = Math.atan2(-q.x, 8 - q.z); q.id = e.id;
+  }
+  const tot = Object.values(S.dmgBy).reduce((a, b) => a + b, 0);
+  T.hist.push([S.t, tot]); while (T.hist.length > 2 && S.t - T.hist[0][0] > 5) T.hist.shift();
+  T.tot = tot; T.dps = Math.round((tot - T.hist[0][1]) / Math.max(1, S.t - T.hist[0][0]));
+}
+// a dummy: takes hits, knockback and crowd control like any monster, but never attacks; walkers stroll round the yard
+function stepDummy(e, dt, hard) {
+  e.atk = null; e.v = 0;
+  if (e.dummy !== 2 || hard) return;
+  const cx = 0, cz = -6, d = Math.hypot(e.x - cx, e.z - cz);
+  if (d > 9) e.wander = Math.atan2(cx - e.x, cz - e.z); else e.wander += rand(-1.5, 1.5) * dt;
+  const sp = 2.4 * (1 - Math.min(.85, Math.max(e.m.slow, e.fs || 0))); e.fs = 0;
+  e.x += Math.sin(e.wander) * sp * dt; e.z += Math.cos(e.wander) * sp * dt; e.yaw = e.wander; e.v = sp;
+}
+addEventListener('keydown', e => {
+  if (S.mode !== 'train' || !playing || role === 'guest' || !$('settings')?.classList.contains('hidden')) return;
+  if (e.code === 'KeyN') { const C = S.cheat ||= {}; C.cd = !C.cd; if (C.cd) for (const p of players()) p.ult = 1; banner(C.cd ? 'COOLDOWNS OFF' : 'COOLDOWNS ON', '#7ad8a0', 1200); sfx('pick'); }
+  if (e.code === 'KeyX') { S.dmgBy = {}; if (S.trn) S.trn.hist = []; banner('DAMAGE METER RESET', '#7ad8a0', 1000); sfx('pick'); }
+});
+// the panel (host / solo: the numbers live on the host)
+function renderTrain() {
+  const on = S.mode === 'train' && playing && role !== 'guest', P = $('train');
+  P.classList.toggle('hidden', !on); if (!on) return;
+  const T = S.trn || {}, by = Object.entries(S.dmgBy || {}).sort((a, b) => b[1] - a[1]), top = by[0]?.[1] || 1;
+  const nm = k => MOVE[k] ? `${['LMB', 'RMB', 'Q', 'E', 'R'][MOVE[k].slot]} · ${MOVE[k].name}` : k === 'status' ? 'Statuses & passives' : k;
+  P.innerHTML = `<h4>Training</h4><div class="big"><b>${(T.tot || 0).toLocaleString()}</b> damage · <b>${T.dps || 0}</b> DPS</div>`
+    + by.slice(0, 10).map(([k, v]) => `<div class="row"><span>${nm(k)}</span><span>${v.toLocaleString()}</span><i style="width:${v / top * 100}%"></i></div>`).join('')
+    + `<div class="keys"><kbd>N</kbd> cooldowns ${S.cheat?.cd ? '<b>off</b>' : 'on'} · <kbd>X</kbd> reset · <kbd>Esc</kbd> switch element</div>`;
+}
+setInterval(renderTrain, 250);
 
 // ===================== 1v1 duel =====================
 // Each wizard gets an invisible stand-in enemy that follows them, so every move (shots, zones, chains, summons, reactions)
@@ -117,15 +168,16 @@ function startMode() {
   applyMap(S.mode);
   if (S.mode === 'duel') startDuel();
   if (S.mode === 'dungeon') startDungeon();
+  if (S.mode === 'train') startTrain();
   if (S.mode === 'city') { cityReset(); ev({ k: 'cityreset' }); } // every block back in place, on both machines
 }
 function showScenery(mode) {
   const under = mode === 'dungeon';
-  arena.visible = mode === 'arena'; duelG.visible = mode === 'duel'; dunView.visible = under; cityG.visible = mode === 'city';
+  arena.visible = mode === 'arena' || mode === 'train'; duelG.visible = mode === 'duel'; dunView.visible = under; cityG.visible = mode === 'city';
   for (const l of cityLights) l.visible = false; // cityFrame lights the nearest braziers
   if (mode !== 'city') { moon.position.copy(BH).multiplyScalar(70); moon.target.position.set(0, 0, 0); moon.target.updateMatrixWorld(); }
   Object.assign(moon.shadow.camera, mode === 'city' ? { left: -42, right: 42, top: 42, bottom: -42 } : { left: -27, right: 27, top: 27, bottom: -27 }); moon.shadow.camera.updateProjectionMatrix();
-  for (const l of amb.lights) l.visible = mode === 'arena';
+  for (const l of amb.lights) l.visible = mode === 'arena' || mode === 'train';
   for (const l of duelAmb.lights) l.visible = mode === 'duel';
   for (const l of dunLights) l.visible = under;
   for (const o of skyBits) o.visible = !under;

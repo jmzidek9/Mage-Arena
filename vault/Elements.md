@@ -145,7 +145,7 @@ An assassin. Drag enemies into the dark, snare them, ambush them from every side
 | Key | Move | Cooldown | What it does |
 |---|---|---|---|
 | LMB | 🗡️ **Shadow Daggers** | 0.45 s | Throw a fan of three shadow daggers. |
-| RMB | 🕳️ **Nightmare Pit** *(hold to aim, release to cast)* | 6 s | Tear open a pit of living darkness at the target for 2 s. Every enemy in it is dragged down into the floor, helpless, taking 10 every 0.25 s. Then shadow spikes burst out of the pit and hurl them back up for 30 more. Bosses are too big to swallow: they only take the damage. |
+| RMB | ⚫ **Void Orb** | 6 s | Launch a slow black sun of shadow that drifts 18 m ahead, passing through enemies. Its tendrils drag every enemy within 6 m toward it, and anything it touches takes 18. Then it collapses: 65 to everything within 4.5 m, and a ring of shadow daggers bursts out of it for 14 each. |
 | Q | 🕸️ **Shadow Snare** *(hold to aim, release to cast)* | 7 s | A pool of darkness opens at the target and shadow tendrils burst out of it, seizing every enemy in the area: 18 damage, held in place for 1.5 s and dragged into the middle. While held they take 40% more damage. |
 | E | 🥷 **Shade Ambush** *(hold to aim, release to cast)* | 9 s | Three shadow assassins climb out of the ground around the target, daggers drawn, then one after another dash straight through it from three sides: each dash cuts every enemy in its path for 30 and stuns it for 0.5 s. |
 | R | 🌑 **Eclipse** | ultimate | A black sun rises and night falls for 5 s. Every enemy within 20 m (up to 14) is blinded, unable to attack, and shadows slash it for 22 every 0.6 s. When the light returns, every one of them is cut down for 60 more. |
@@ -188,8 +188,8 @@ Slow and devastating. Flood the island with lava and drop a meteor on anything l
 |---|---|---|---|
 | LMB | 🔴 **Magma Glob** | 0.7 s | Lob a heavy glob of magma. It bounces once before it splashes, and leaves a pool of lava that cools into a lump of black rock after 3 s, blocking monsters for 6 s (up to 4 rocks). |
 | RMB | ♨️ **Eruption** *(hold to aim, release to cast)* | 5 s | The ground at your target glows, then erupts in a geyser of lava that launches enemies. They come down into the lava pool it leaves behind, which burns for 3 s and then cools into rock. |
-| Q | 🌡️ **Heat Wave** | 10 s | Send a slow, 9 m wide wall of shimmering heat rolling 10 m forward. Enemies caught in it are slowed and heat up with every scorch, and any that heat up 5 times melt for 70. |
-| E | 🗻 **Volcano** *(hold to aim, release to cast)* | 15 s | Raise a small volcano that keeps lobbing magma bombs at enemies. |
+| Q | 🌊 **Lava Tide** | 10 s | Send a slow, 9 m wide wave of molten lava rolling 10 m forward. Enemies caught in it are slowed and coated in lava with every scorch (6 each), and any coated 5 times harden into rock and crack apart for 70. |
+| E | 🗻 **Volcano** *(hold to aim, release to cast)* | 15 s | Raise a small volcano for 10 s that lobs a magma bomb every 0.9 s at an enemy within 16 m, aimed where it is heading: 22 damage in a 2.2 m splash. |
 | R | ☄️ **Meteor** *(hold to aim, release to cast)* | ultimate | Call down a colossal meteor. After a short warning it obliterates the area and floods it with lava. |
 
 ## 💎 Crystal
@@ -201,8 +201,8 @@ Precision and geometry. Shards that split and refract, turrets, and diamond-hard
 |---|---|---|---|
 | LMB | 🔷 **Prism Shard** | 0.45 s | A crystal shard that splits into three smaller shards when it hits. |
 | RMB | 🪩 **Geode Bomb** | 6 s | Lob a geode that cracks open and sprays crystal shards in every direction. The shards stick in the ground as a field of crystal spikes for 4 s that cut anything walking over them for 9. |
-| Q | 💠 **Resonant Crystal** *(hold to aim, release to cast)* | 12 s | Plant a humming crystal for 6 s. It soaks up a share of all the damage dealt to enemies within 6 m of it, glowing brighter, then shatters for 25 plus 8% of everything it soaked (up to 50 more) to every enemy in range. |
-| E | 🔮 **Crystal Spire** *(hold to aim, release to cast)* | 14 s | Grow a crystal spire that shoots enemies. Your own projectiles that pass by it refract into three. |
+| Q | 💠 **Crystal Rift** | 8 s | Rip a rift of jagged crystal spikes 16 m along the floor toward your aim. Every enemy it reaches is impaled for 60 and launched. A moment later the spikes shatter, cutting everything along the rift for 30 more. |
+| E | 🔮 **Crystal Spire** *(hold to aim, release to cast)* | 14 s | Grow a crystal spire for 10 s, crowned by three orbiting shards. Every 0.5 s it fires a crystal bolt (13) at the nearest enemy within 16 m. Your own projectiles that pass by it refract into three. |
 | R | 🏺 **Crystal Tomb** *(hold to aim, release to cast)* | ultimate | Encase every enemy in the area in crystal. After 2.5 seconds the tombs shatter for massive damage. |
 
 ## 🔊 Sonic
@@ -239,9 +239,9 @@ Master of time. Echoing attacks, frozen moments, rewinding your enemies, and sto
 | Key | Move | Cooldown | What it does |
 |---|---|---|---|
 | LMB | 🕐 **Chrono Bolt** | 0.45 s | A bolt of frozen time. Each hit echoes 1.2 seconds later for the same damage again. |
-| RMB | ⏸️ **Stasis** | 8 s | Freeze an enemy in time for 3 seconds. Damage it takes meanwhile is stored and lands all at once, 30% stronger. |
-| Q | ⏪ **Rewind** | 6 s | Mark the spot every enemy in front of you (14 m) is standing on. 2.5 s later time snaps back: each one is yanked back to its mark and takes 55, plus 14 for every metre it had moved (up to 255). Bosses take 150 more. Knock them far away first. |
-| E | 🕰️ **Slow Field** *(hold to aim, release to cast)* | 13 s | Warp time in an area: enemies inside move and attack 70% slower, and enemy shots crawl. |
+| RMB | ⏸️ **Stasis** | 8 s | Fire an hourglass that shatters on the first enemy it hits and freezes it, and up to 3 more within 6 m of it, in time for 3 seconds. Damage they take meanwhile is stored and lands all at once, 30% stronger. Bosses resist it and take 30 instead. |
+| Q | 👤 **Future Self** | 12 s | Tear open a rift in time and pull your future self through it. For 6 s a golden echo of you fights at your side, firing a Chrono Bolt (18, echoing 1.2 s later for 18 more) every 0.3 s at the enemy nearest your aim within 24 m. When its time runs out it snaps back to the future in a burst: 40 to everything within 4 m. |
+| E | 🕰️ **Slow Field** *(hold to aim, release to cast)* | 13 s | Raise a golden dome of warped time (6 m, 6 s) over the target: enemies inside move and attack 70% slower, turn Timeworn every second, and enemy shots crawl. |
 | R | ⏱️ **Time Stop** | ultimate | Stop time for 4 seconds. Enemies freeze, and all the damage you deal piles up and lands 50% stronger when time resumes. |
 
 ## 🩸 Blood
@@ -253,8 +253,8 @@ Brutal damage that grows the lower your health gets. Make enemies bleed, pile th
 |---|---|---|---|
 | LMB | 🩸 **Blood Bolt** | 0.4 s | A fast bolt of blood magic that hits hard. |
 | RMB | 🌙 **Crimson Fan** | 3.5 s | Fling a fan of five blood blades that slice through everything in front of you, 16 damage each, and make enemies bleed. Up close, every blade lands. |
-| Q | 💉 **Exsanguinate** | 8 s | Rip open every bleeding enemy within 20 m: 30 damage plus 12 for every second of bleed left on it, and the bleed is used up. Enemies it kills burst, making everything around them bleed. Enemies within 8 m that were not bleeding take 15 and start bleeding. |
-| E | 🩸 **Crimson Mire** | 9 s | Splash a pool of blood on the ground for 4 seconds. It drags enemies toward its centre and makes them bleed, 10 damage every half second. Pile them up, then Exsanguinate. |
+| Q | 🌀 **Crimson Maelstrom** | 8 s | A whirlwind of blood blades spins around you for 2.5 s, cutting every enemy within 4.5 m for 6 every 0.25 s and making it bleed. Then the blades fly outward, slashing everything within 7 m for 24 and throwing it back. |
+| E | 🩸 **Crimson Mire** | 9 s | Splash a pool of blood on the ground for 4 seconds. It drags enemies toward its centre and makes them bleed, 10 damage every half second. Pile them up, then spin Crimson Maelstrom through them. |
 | R | 🌕 **Blood Moon** | ultimate | A blood moon rises above you and drains every enemy nearby for 4 seconds. Anything it drains to death bursts, splashing 18 damage on the enemies around it. |
 
 **Rework (2026-11-03):** healing cut (lifesteal 6% to 2.5%, bleeding enemies feed you 10% of the bleed instead of 50%). Blood Scythe, Blood Tether and Blood Orb became Crimson Fan, Exsanguinate and Crimson Mire: make them bleed, pile them up, rip them open. Blood moves no longer cost HP. Blood Moon now rises out of the ground into a pulsing halo over a sea of red light, with blood raining up into it.
@@ -282,7 +282,7 @@ The power of the stars. Constellations, orbiting moons, meteor showers and a sup
 | LMB | ⭐ **Star Shot** | 0.38 s | Fire shooting stars. Every 4th one is a giant star that pierces 3 enemies. |
 | RMB | 🌙 **Orbiting Moons** | 9 s | Three moons orbit you. Whenever an enemy comes close, a moon slams into it and explodes. |
 | Q | ✴️ **Constellation** *(hold to aim, release to cast)* | 2.5 s | Place up to 3 stars. Stars link to each other with beams of starlight that burn enemies crossing them. |
-| E | 🌠 **Meteor Shower** *(hold to aim, release to cast)* | 12 s | Rain twelve shooting stars down on the target area. |
+| E | 🌠 **Meteor Shower** *(hold to aim, release to cast)* | 12 s | Tear open a starry rift in the sky over the target and rain twelve shooting stars down through it, 22 damage each within 2 m, then drop one great star in the middle: 45 within 4 m. |
 | R | 💥 **Supernova** | ultimate | A star ignites above you and grows for 2 seconds, then goes supernova, obliterating and blinding everything nearby. |
 
 ## 💣 Explosion
@@ -293,7 +293,7 @@ Pure demolition. Grenades, sticky bombs, mines, rocket jumps and a carpet-bombin
 | Key | Move | Cooldown | What it does |
 |---|---|---|---|
 | LMB | 💣 **Grenade** | 0.6 s | Lob a bouncing grenade that explodes after a short fuse, or instantly when it hits an enemy. |
-| RMB | 🧨 **Sticky Bomb** | 3 s | Throw a sticky bomb that clings to whatever it hits and blows a moment later in a big blast. Bombs stuck to the same monster merge into one: every extra bomb adds its damage and widens the blast. |
+| RMB | 🚀 **Rocket Launcher** | 3 s | Fire a smoking rocket straight ahead. It picks up speed as it flies and blows up on the first thing it hits: 52 damage in a 3.6 m blast that hurls enemies away. |
 | Q | 🚀 **Rocket Jump** | 6 s | Blast the ground under your feet to rocket up and forward, flattening whatever is nearby. |
 | E | 🎯 **Proximity Mines** | 12 s | Toss four mines ahead of you. Each one blows when an enemy walks over it, and every blast sets off your other mines within 5 m a moment later, so a minefield goes up in a chain. |
 | R | ✈️ **Carpet Bomb** | ultimate | Call in a bombing run: fourteen bombs drop in a line ahead of you, one after another. |
@@ -308,7 +308,7 @@ Smoke and mirrors. Fool monsters into fighting phantoms, and each other.
 | LMB | 🦋 **Phantom Moths** | 0.45 s | Release a glowing moth flanked by two phantom moths that flutter off to hunt enemies. Phantoms deal half damage. |
 | RMB | 🪞 **Decoy** *(hold to aim, release to cast)* | 8 s | Conjure a phantom double of yourself at the target. Monsters within 12 m attack it instead of you for 5 s. Once it is struck 3 times, or time runs out, it shatters, damaging and beguiling everything around it. |
 | Q | 😵‍💫 **Mesmerize** | 10 s | A hypnotic pulse charms every monster in front of you for 4 s: they turn on each other and attack the nearest monster instead of you. Bosses resist it. |
-| E | 🔷 **Kaleidoscope** | 7 s | Fire a prism shard. The enemy it hits splinters into 3 glittering false images of itself that race off to the monsters nearest it and burst against them, 50 damage within 3 m each. With no other monster around, they turn back on the enemy itself. |
+| E | 🔷 **Kaleidoscope** | 7 s | Fire a prism shard (20). The enemy it hits splinters into 3 big glittering false images of itself that race off to the monsters nearest it and burst against them, 50 damage within 3 m each. With no other monster around, they turn back on the enemy itself. |
 | R | 🎪 **Phantasmagoria** | ultimate | Trap everything within 14 m in a hall of mirrors: monsters are charmed and fight each other for 5 s, then the mirrors shatter for 55 damage to every one of them. |
 
 ## 💀 Bone
@@ -319,7 +319,7 @@ A necromancer. Bone spears, cackling skulls, skeletons that burst into shrapnel,
 | Key | Move | Cooldown | What it does |
 |---|---|---|---|
 | LMB | 🦴 **Bone Toss** | 0.5 s | Hurl a spinning bone that pierces 2 enemies and pins the last one it hits for a moment. |
-| RMB | ☠️ **Cackling Skull** | 3.5 s | Hurl a burning skull that bites an enemy, then leaps on to the next one, up to 5 times. |
+| RMB | 🪝 **Skeleton Rip** | 5 s | Hurl a barbed bone hook. The enemy it catches has its skeleton torn right out of it: 40 damage and stunned for 1.5 s, while its skeleton rises in front of it as a skeleton warrior that fights for you for 12 s (it counts for Marrow Burst). |
 | Q | 💥 **Marrow Burst** | 12 s | Every skeleton you have explodes in a storm of bone shrapnel: 28 damage within 3.5 m of each. Monsters the blasts kill rise as new skeletons. With no skeletons, one rises beside you instead. |
 | E | ⛓️ **Bone Cage** *(hold to aim, release to cast)* | 9 s | Ribs of bone burst from the ground at the target for 4 s: a real cage. Monsters inside cannot get out, monsters outside cannot get in, and enemy shots cannot pass the bars. Anything that touches the bars is gashed. |
 | R | 🐉 **Bone Dragon** *(hold to aim, release to cast)* | ultimate | Raise a skeletal dragon that makes three low strafing runs across the target, criss-crossing it and breathing a line of ghostfire along each pass. Everything it burns turns Brittle, and monsters it kills rise as skeletons. |
@@ -372,7 +372,7 @@ Something ancient lives below. Tentacles erupt from the floor to seize, crush an
 |---|---|---|---|
 | LMB | 🔵 **Void Bolt** | 0.42 s | Fire a bolt of black water that bursts on impact, splashing the enemies around it. |
 | RMB | 🦑 **Grasp of the Deep** *(hold to aim, release to cast)* | 6 s | A great tentacle erupts at the target and seizes every enemy there, hoisting them into the air. Then it hurls the biggest one at the nearest other monster (within 14 m): 45 to both and a splash around the landing. The rest are slammed into the floor. |
-| Q | 👄 **Maw of the Deep** *(hold to aim, release to cast)* | 10 s | Hide a maw in the floor at the target for up to 12 s. The first monster to step on it is swallowed whole: gone from the fight for 2 s, then spat out for 70 damage, splashing 35 on everything within 3.5 m. Bosses are too big to swallow. |
+| Q | 🌀 **Whirlpool** *(hold to aim, release to cast)* | 10 s | Open a whirlpool of black water at the target for 3 s. It spins every enemy within 5 m round and drags it toward the eye, drowning it for 10 every 0.3 s. Then the deep erupts in a geyser: 75 to everything within 3.5 m of the eye, flinging it high. Bosses only take the damage. |
 | E | 🐙 **Tentacle Ring** | 14 s | Eight tentacles burst up around you for 6 s and lash any enemy that comes within 6 m, three at a time. |
 | R | 👁️ **Kraken** *(hold to aim, release to cast)* | ultimate | The Kraken stirs: colossal tentacles burst from the floor around the target and thrash for 6 s, crushing enemies and dragging them in, then haul everything down for 100 damage. |
 
@@ -387,7 +387,7 @@ Precision light. Instant beams that ricochet off pillars, walls, the floor and y
 | RMB | ✳️ **Ricochet Beam** *(hold to charge)* | 4 s | Hold to charge a thick beam that bounces up to 4 times off pillars, walls and the floor, piercing everything it touches. |
 | Q | 🔷 **Refractor** *(hold to aim, release to cast)* | 5 s | Hang a floating crystal lens at the target for 12 s (up to 2). Any of your lasers that pass through it split into 3 beams that lock onto the nearest enemies, each counting as one more bounce. When it expires it bursts. |
 | E | 🛸 **Laser Drone** | 15 s | Deploy a hovering drone that follows you for 12 s and fires a bouncing laser at the nearest enemy every 0.4 s. |
-| R | 🔺 **Prism Nova** | ultimate | A great prism rises above you and spins for 4 s, firing eight lasers in a star that bounce off everything and shred whatever they cross. |
+| R | 🔺 **Prism Nova** | ultimate | A great prism rises above you for 4 s and fires eight standing lasers out in a star. Each bounces up to 3 times off everything it meets, and every enemy in a beam is shredded for 17 every 0.25 s (25% more after each bounce). |
 
 ## 🔮 Arcane
 Pure magic. Homing missiles, an owl familiar and polymorphs, and charges that build into a devastating barrage.
@@ -400,7 +400,7 @@ Pure magic. Homing missiles, an owl familiar and polymorphs, and charges that bu
 | RMB | 🎆 **Arcane Barrage** | 3 s | Spend all your Arcane Charges on a barrage of heavy arcane bolts: 2, plus 2 for every charge spent. |
 | Q | 🦉 **Arcane Familiar** | 14 s | Summon a spectral owl for 12 s. It circles above you, and every second it swoops on whatever you are aiming at, raking it for 22 and marking it: marked enemies take 20% more damage for 4 s. Each strike gives you an Arcane Charge. |
 | E | 🐑 **Polymorph** | 12 s | Turn the first enemy you hit, and up to 2 more near it, into harmless sheep for 4 s. Bosses resist it. |
-| R | 🪄 **Arcane Torrent** | ultimate | Open an arcane rift above you that rains 38 homing missiles on enemies within 22 m over 4 s. |
+| R | 🪄 **Arcane Torrent** | ultimate | Tear open a great arcane rift in the sky in front of you that rains 38 homing missiles on enemies within 22 m over 4 s, then collapses in a nova: 40 to everything within 6 m under it. |
 
 ## 🗡️ Blades
 A sword saint. Summoned swords orbit you, guard you, and fly wherever you point.
@@ -426,12 +426,14 @@ A calligrapher. Living ink: brush strokes that mire, koi that hunt, and a dragon
 | RMB | 🖌️ **Brush Stroke** | 5 s | Sweep a giant brush through a 120° arc in front of you: 30 damage to everything within 7.5 m and a hard shove, leaving a crescent of wet ink that mires anything on it (50% slower) for 5 s. |
 | Q | 🐟 **Ink Koi** | 9 s | Paint three koi of living ink that swim low along the floor as if it were water, hunting the nearest enemies. Each one leaps up to bite for 36 and bursts in a splash of ink. |
 | E | 🫧 **Ink Pool** *(hold to aim, release to cast)* | 12 s | Pour a pool of ink at the target for 6 s. Every enemy that wades in is seized by the ink and stuck fast for 1.5 s, then mired (50% slower) while it stays, taking damage every second. |
-| R | 🐉 **Ink Dragon** *(hold to aim, release to cast)* | ultimate | Paint a great ink dragon that bursts from the floor and coils around the target for 4 s. Its body is a cage: nothing caught inside can get out, and the coil tightens, squeezing everyone toward the centre while ink rains on them. Then it dives in: 90 damage and a 1.2 s stun. |
+| R | 🐉 **Ink Dragon** *(hold to aim, release to cast)* | ultimate | Paint a great ink dragon that bursts from the floor and circles high over the target for 4 s. Its coil is a cage: nothing caught inside can get out, and it tightens, squeezing everyone toward the centre. All the while the dragon spits globs of ink down on them, 4 a second, each 22 on a direct hit and 22 within 2.4 m. Then it dives in: 90 damage and a 1.2 s stun. |
 
 ## Balance
 **Ability rework, part 1 (2026-11-04):** Water Whip became Riptide Ring and Surf became Waterfall; Gale Force became Jet Stream; Parasite Seed became Vine Slam and Snaptrap became Bramble Wall. Tsunami, Tectonic Quake, Entangle and World Tree got new looks (a curling crest and spray, racing molten cracks and rings of spikes, roots tearing up round the area, vines whipping out of the tree). Bench after: Water 1.07 / 0.88, Earth 0.85 / 0.99, Nature 0.83 / 0.90 (then Vine Slam 25 + 15 raised to 30 + 20), Wind 0.74 / 1.00 (control kit). Riptide Ring bursts on a boss instead of passing through it.
 
 **After removing combos and Steel (2026-11-04):** full bench, median crowd 175.8 / boss 138.7. Tuned the outliers: Meteor 135 → 110 (Magma 1.30 → 1.08 crowd), The Reaper 70 → 85 a sweep (Soul 0.74 → 0.85), Arcane Torrent missiles 16 → 22 (Arcane 0.73 → 0.83 crowd, 1.31 boss), Rain of Blades 28 → 36 (Blades 0.76 → 0.81). Gravity (0.61) and Sonic (0.65) stay low on bosses, as before: they are crowd-control kits.
+
+**Rework (2026-11-04, second pass):** Eruption no longer shakes the screen; Heat Wave became Lava Tide (a rolling crest of molten lava, no more fire); Volcano bombs lead moving targets (0.8 s flight). Crystal Rift replaces Resonant Crystal; Crystal Spire got an orbiting crown, beam shots and climbing light rings. Crimson Maelstrom replaces Exsanguinate, Void Orb replaces Nightmare Pit (it looked like Shadow Snare), Whirlpool replaces Maw of the Deep, Future Self replaces Rewind, Skeleton Rip replaces Cackling Skull, Rocket Launcher replaces Sticky Bomb. Stasis now freezes up to 4 enemies. Ink Dragon circles high and spits ink (4 a second) before it dives. Kaleidoscope, Slow Field, Arcane Torrent (rift now in front of you, ends in a nova) and Meteor Shower (sky rift plus a great final star) are much easier to see. Prism Nova's lasers stand still and have a three-layer pulsing look. The 1v1 Duel is off the menu: **Training** took its place (dummies that never attack, damage / DPS per move, N = cooldowns off, X = reset; `js/modes.js`).
 
 **Visual pass (2026-11-04):** every move of Magma, Crystal, Sonic, Gravity, Chrono, Blood, Spirit, Cosmic, Explosion, Illusion, Bone, Rune, Plasma, Soul, Abyss, Laser, Arcane, Blades and Ink got stronger looks (no number changes), built on shared helpers in `js/elements.js`: lavaSplash, prismFx/prismRays, eqBars, clockFx, bloodSplat, starPop, deepSplash, plasmaArcs, runeLetters, bladeCut, quakeCracks, plus a per-projectile `look.upd` hook (`js/view.js`). The Blood Moon turns the sky red (`uRed`), the Eclipse turns it dark (`uEclipse`). Fixed on the way: Heat Wave's wall never showed (its width wasn't sent to clients), and Supernova, Singularity, Phantasmagoria, Word of Ruin and Kraken flashed far above the 40 cap; Vent and Fusion Beam no longer white out your own view.
 

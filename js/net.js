@@ -454,7 +454,7 @@ function frame(now, manual = false) {
   if (AC && (AC.state === 'running') === paused()) paused() ? AC.suspend() : AC.resume(); // sound freezes with a solo pause
   if (!manual) autoQuality();
   const src = role === 'guest' ? R : (playing ? snap() : null), mp = me();
-  music(!playing || !src ? 'menu' : src.phase === 'over' ? 'over' : src.enemies.some(e => ET[e.type].boss) ? 'boss' : src.mode);
+  music(!playing || !src ? 'menu' : src.phase === 'over' ? 'over' : src.mode === 'train' ? 'train' : src.enemies.some(e => ET[e.type].boss) ? 'boss' : src.mode);
   if (playing && mp) footsteps(mp, src?.mode, dt);
   animateArena(dt, t, src?.mod === 'darkness' && src?.phase === 'fight');
   islandFrame(src, dt); // the other islands and bridges, building themselves (areas.js)

@@ -717,6 +717,7 @@ const MUSIC = {
   menu: ['fantasy_orchestral_theme.mp3', 'dark_shrine.ogg'],
   arena: ['battle_theme_a.mp3', 'swordfight.ogg', 'heartfelt_battle.ogg', 'random_battle.mp3', 'mythica.mp3'],
   duel: ['swordfight.ogg', 'random_battle.mp3', 'battle_theme_a.mp3', 'heartfelt_battle.ogg'],
+  train: ['fantasy_orchestral_theme.mp3', 'mythica.mp3'],
   dungeon: ['dungeon_ambience.ogg', 'dungeon_theme.mp3', 'cave_explorer.mp3', 'forgotten_tombs.mp3'],
   boss: ['weltherrscher.ogg', 'mythica.mp3'],
   over: ['dark_shrine.ogg'],

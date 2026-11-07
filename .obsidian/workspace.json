@@ -4,17 +4,21 @@
     "type": "split",
     "children": [
       {
-        "id": "3a609be18955a3f7",
+        "id": "8d75ca7e495e1370",
         "type": "tabs",
         "children": [
           {
-            "id": "13fd76ad245316ca",
+            "id": "a9df8628b4b753af",
             "type": "leaf",
             "state": {
-              "type": "graph",
-              "state": {},
-              "icon": "lucide-git-fork",
-              "title": "Graph view"
+              "type": "markdown",
+              "state": {
+                "file": "vault/Spells.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "Spells"
             }
           }
         ]
@@ -181,6 +185,31 @@
       "bases:Create new base": false
     }
   },
-  "active": "13fd76ad245316ca",
-  "lastOpenFiles": []
+  "active": "a9df8628b4b753af",
+  "lastOpenFiles": [
+    "vault/Elements.md",
+    "playtest/out/chrono/boss_1799.jpg",
+    "playtest/out/chrono/boss_599.jpg",
+    "playtest/out/blood/m4_BloodMoon_074.jpg",
+    "playtest/out/blood/m4_BloodMoon_045.jpg",
+    "playtest/out/blood/m4_BloodMoon_022.jpg",
+    "playtest/out/blood/m4_BloodMoon_010.jpg",
+    "playtest/out/explosion/metrics.json",
+    "playtest/out/explosion/boss_1799.jpg",
+    "playtest/out/explosion/boss_1199.jpg",
+    "playtest/out/explosion/boss_599.jpg",
+    "playtest/out/explosion/kit_1799.jpg",
+    "playtest/out/median.json",
+    "playtest/out/explosion",
+    "playtest/out/venom/metrics.json",
+    "playtest/out/venom",
+    "playtest/out/gravity/metrics.json",
+    "playtest/out/gravity",
+    "playtest/out/illusion/metrics.json",
+    "playtest/out/illusion",
+    "playtest/out/spirit/metrics.json",
+    "playtest/node_modules/playwright-core/bin/README.md",
+    "graphify-out/2026-10-31/GRAPH_REPORT.md",
+    "graphify-out/2026-10-30/GRAPH_REPORT.md"
+  ]
 }

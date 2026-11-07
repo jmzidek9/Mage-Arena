@@ -38,6 +38,10 @@ input::placeholder{color:#b9add8;opacity:.8}input:focus{box-shadow:0 0 0 2px var
 #cross::before{content:'';position:absolute;left:50%;top:50%;width:26px;height:26px;margin:-13px;border-radius:50%;border:1.5px solid color-mix(in srgb,var(--el) 80%,white);opacity:.65;-webkit-mask:conic-gradient(#000 0 20%,transparent 0 25%,#000 0 45%,transparent 0 50%,#000 0 70%,transparent 0 75%,#000 0 95%,transparent 0);mask:conic-gradient(#000 0 20%,transparent 0 25%,#000 0 45%,transparent 0 50%,#000 0 70%,transparent 0 75%,#000 0 95%,transparent 0);animation:spin 8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 #wave{position:absolute;top:18px;left:50%;transform:translateX(-50%);font-size:24px;font-weight:700;letter-spacing:.25em;color:#f6ecd0;text-shadow:0 0 14px rgba(154,92,255,.9),0 2px 2px #000}
+#train{position:absolute;top:120px;right:18px;width:280px;padding:10px 12px;background:rgba(8,14,12,.72);border:1px solid rgba(122,216,160,.4);border-radius:8px;color:#e8f4ec;font-size:12px;pointer-events:none}
+#train h4{margin:0 0 4px;font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:#7ad8a0}#train .big{font-size:14px;margin-bottom:6px}#train .big b{color:#ffd36a;font-size:18px}
+#train .row{position:relative;display:flex;justify-content:space-between;padding:2px 4px;margin:2px 0}#train .row span{position:relative;z-index:1}#train .row i{position:absolute;left:0;top:0;bottom:0;background:rgba(122,216,160,.22);border-radius:3px}
+#train .keys{margin-top:6px;opacity:.75}#train kbd{border:1px solid #7ad8a0;border-radius:3px;padding:0 4px}
 #mod{position:absolute;top:54px;left:50%;transform:translateX(-50%);color:#ffd36a;font-size:14px;letter-spacing:.16em;text-transform:uppercase;text-shadow:0 0 10px #000}
 .bar{position:relative;width:280px;height:16px;border-radius:9px;background:linear-gradient(#0a0614,#1a1030);border:1px solid rgba(233,196,106,.7);box-shadow:0 0 0 2px rgba(0,0,0,.55),0 0 16px rgba(0,0,0,.6);overflow:hidden}
 .bar>i{display:block;height:100%;width:100%;background:linear-gradient(180deg,#ff8aa0 0%,#e8334f 45%,#8a1028 100%);box-shadow:0 0 12px #ff3d6a;transition:width .2s}
@@ -265,6 +269,7 @@ body.touching #me{top:14px;bottom:auto;left:14px}body.touching #lock{display:non
   <div id="cross"></div>
   <div id="charge" class="hidden"><i id="chargeBar"></i></div>
   <div id="wave"></div><div id="mod"></div>
+  <div id="train" class="hidden"></div>
   <div id="boss" class="hidden"><div>THE OBSIDIAN TYRANT</div><div class="bar"><b id="bossChip"></b><i id="bossHp"></i><s></s></div><div id="bossSub"></div></div>
   <div id="banner"></div>
   <div id="combo"></div>

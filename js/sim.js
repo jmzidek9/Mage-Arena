@@ -444,7 +444,7 @@ const MAX_SHOTS = 400, MAX_ENTS = 160;
 function shoot(p, c, spd, o = {}) {
   const st = p ? stats(p) : null, org = o.o || c.o, d = o.d || c.d;
   const s = { id: S.nid++, own: p?.id, mv: c.m.key, el: c.el, x: org.x, y: org.y, z: org.z, vx: d.x * spd, vy: d.y * spd, vz: d.z * spd,
-    life: 2, r: .3, dmg: 10, kb: 2.5, pierce: st ? st.pierce : 0, bounce: st ? st.bounce : 0, grav: 0, home: 0, hit: [], t: 0, sc: 1, mul: c.dmg ?? 1, ult: S.ultSrc || c.m.slot === 4, ...o };
+    life: 2, r: .3, dmg: 10, kb: 2.5, pierce: st ? st.pierce : 0, bounce: st ? st.bounce : 0, grav: 0, home: 0, hit: [], t: 0, sc: 1, mul: c.dmg ?? 1, ult: S.ultSrc || c.m.slot === 4, src: S.mvSrc || c.m.key, ...o };
   delete s.o; delete s.d;
   if (S.shots.length < MAX_SHOTS) S.shots.push(s);
   return s;
@@ -454,7 +454,7 @@ function stepShots(dt) {
   for (const s of S.shots) {
     if (s.dead) continue;
     if (s.foe) { stepFoeShot(s, dt); continue; }
-    S.actor = s.own; S.ultSrc = !!s.ult; S.mvSrc = s.mv;
+    S.actor = s.own; S.ultSrc = !!s.ult; S.mvSrc = s.src; // the move that fired it, even when it borrows another move's look (Arcane Torrent's missiles)
     const H = MOVE[s.mv]?.shot || {};
     s.t += dt; s.life -= dt;
     if (s.stuck != null) {
@@ -887,6 +887,7 @@ function stepEnemies(dt) {
       if (d < m && d > 0) { const push = (m - d) * .5; e.x += dx / d * push; e.z += dz / d * push; }
     }
     if (Math.hypot(e.kx, e.kz) < 5) collide(e, R, sol);
+    if (e.dummy) { stepDummy(e, dt, hard); continue; } // Training (modes.js)
     if (hard || (e.y > .3 && !t.fly && !e.fly)) continue;
     // field effects (slow fields, heat waves) are written onto e.fs by entity ticks each frame
     const fieldSlow = e.fs || 0; e.fs = 0;
@@ -1103,6 +1104,7 @@ function hostStep(dt) {
   for (let k = 0, n = Math.ceil(dt / .017); k < n; k++) stepShots(dt / n); // ~60 Hz projectile steps even on a slow host, so fast shots can't skip past enemies
   stepEnts(dt); stepEnemies(dt); stepRings(dt); stepHazards(dt); stepPlayers(dt);
   if (S.mode === 'duel') stepDuel(dt);
+  else if (S.mode === 'train') stepTrain(dt);
   else { stepRevive(dt); if (S.mode === 'dungeon') stepDungeon(dt); else stepSpawner(dt); if (S.mode === 'city') cityStep(dt); }
 }
 // look around but nothing pressed: the press counters are the player's own, so nothing reads as a new dash / jump / swap
