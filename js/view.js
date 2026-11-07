@@ -446,6 +446,7 @@ function onEvent(e) {
     case 'blk': cityApply(e); break; // Mage City: blocks blasted out or collapsing
     case 'prop': cityPropFx(e); break;
     case 'blkd': cityCrackFx(e); break; // Mage City: blocks hit but still standing
+    case 'citysync': citySync(e); break; // and everything that's happened to it, for someone joining late
     case 'cityreset': if (role === 'guest') cityReset(); break;
     case 'spawn': {
       circleFx('sigil', V(e.x, .06, e.z), 1.6 * Math.max(1, e.s * 1.4), { life: 1.1, color: 0xff3050 });
@@ -1078,10 +1079,10 @@ function animWizard(v, p, dt, t) {
   Lx = mix(Lx, aimL + tremble, chan); Lz = mix(Lz, .1, chan); Rx = mix(Rx, -.35, chan);
   Lx = mix(Lx, -1.25, gd); Lz = mix(Lz, .55, gd); Rx = mix(Rx, -1.3, gd); Rz = mix(Rz, -.45, gd);
   Lx = mix(Lx, aimL, Math.max(jabL, 0)); Lz = mix(Lz, .08, jabL); Rx = mix(Rx, aimR, jabR);
-  Lx = mix(Lx, -2.75, Math.max(ult, up)); Rx = mix(Rx, -2.75, Math.max(ult, up)); Lz = mix(Lz, -.75, Math.max(ult, up)); Rz = mix(Rz, .75, Math.max(ult, up));
+  const vee = Math.max(ult, up); Lx = mix(Lx, -.4, vee); Rx = mix(Rx, -.4, vee); Lz = mix(Lz, -2.35, vee); Rz = mix(Rz, 2.35, vee); // a wide V, up and out: straight up would run into the hat brim
   Lx = mix(Lx, .25, dn); Lz = mix(Lz, -.6, dn); Rx = mix(Rx, .1, dn); Rz = mix(Rz, .55, dn);
   // body: leans into the run and the dash, follows the aim, recoils from its own casts and from hits
-  const bx = ease('bx', run * .24 * f + dash * .5 * Math.max(f, 0) + dash * .3 * Math.min(f, 0) - pitch * .25 + chg * .08 - chan * .1 + gd * .08 - ult * .38 - up * .3, 12) - (jabL + jabR) * .1 - Math.abs(hurt) * .32 + v.land * .3;
+  const bx = ease('bx', run * .24 * f + dash * .5 * Math.max(f, 0) + dash * .3 * Math.min(f, 0) - pitch * .25 + chg * .08 - chan * .1 + gd * .08 - ult * .2 - up * .15, 12) - (jabL + jabR) * .1 - Math.abs(hurt) * .32 + v.land * .3;
   const bz = ease('bz', -s * run * .17 + S1 * .05 * run, 12) + hurt * .16;
   const by = ease('by', S1 * .2 * run * dir * Math.max(0, f) - jabL * .35 + jabR * .3, 16);
   const bob = -.04 * run + Math.abs(S1) * .07 * run + breath * .012 - v.land * .22 - dash * .1;
@@ -1104,10 +1105,10 @@ function animWizard(v, p, dt, t) {
   P.head.o.rotation.set(P.head.r.x - pitch * .65 - bx * .4 + dn * .45 + Math.abs(hurt) * .25, P.head.r.y + hTurn - by * .5, P.head.r.z + dn * .25);
   P.hat.o.rotation.set(P.hat.r.x - run * .4 * f - dash * .5 - clamp(v.vy * .05, -.5, .5) + Math.sin(t * 1.7) * .05, 0, P.hat.r.z - s * run * .25 + S1 * .1 * run);
   // the cape trails on a spring: flat out in a dash, billowing when falling
-  const capeTo = clamp(.03 + fwd * .085, -.06, .6) + dash * .45 + air * clamp(-v.vy * .08, -.25, .7) + Math.sin(t * 2.1) * .025 + Math.sin(t * 11) * .05 * run;
+  const capeTo = clamp(.03 + fwd * .06, -.06, .4) + dash * .4 + air * clamp(-v.vy * .08, -.25, .7) + Math.sin(t * 2.1) * .025 + Math.sin(t * 11) * .05 * run;
   v.capeV += (capeTo - (A.cape ?? 0)) * 70 * dt; v.capeV *= Math.exp(-9 * dt); A.cape = (A.cape ?? 0) + v.capeV * dt;
   P.cape.o.rotation.set(P.cape.r.x + A.cape, 0, P.cape.r.z - side * .018);
-  P.cape2.o.rotation.set(P.cape2.r.x + ease('cape2', A.cape * .55 + Math.sin(t * 3.1) * .05 + Math.sin(t * 13) * .08 * run, 7), 0, P.cape2.r.z - side * .02);
+  P.cape2.o.rotation.set(P.cape2.r.x + ease('cape2', A.cape * .3 + Math.sin(t * 3.1) * .05 + Math.sin(t * 13) * .08 * run, 7), 0, P.cape2.r.z - side * .02);
   // the whole body: falls and rises, squashes on landing, floats through an ultimate
   g.position.set(pos.x, pos.y + lift, pos.z);
   g.rotation.x += (-1.35 * dn - g.rotation.x) * Math.min(1, dt * 10);

@@ -103,6 +103,17 @@ const until = async (page, fn, arg, ms = 25000) => { try { await page.waitForFun
     check('...right away (the bye message arrived)', Date.now() - t0 < 3000);
     await g2.screenshot({ path: path.join(out, '4-host-left.png') });
     console.log(`snapshot size: ${size} bytes`);
+
+    // Mage City: joining late, you see the damage already done
+    const hc = await open('city host'), gc = await open('city guest');
+    await hc.evaluate(() => { pickMode('city'); }); await hc.click('#hostBtn');
+    await until(hc, () => MP.net().roomCode);
+    await hc.click('#startBtn');
+    await hc.evaluate(() => { MP.S.cheat = { inv: 1 }; const p = MP.S.players.h, a = CITY.lay.blocks; for (let i = 0; i < 40; i++) { const n = i * 5 * 37 % a.length - (i * 5 * 37 % a.length) % 5, x = cX(a[n]), z = cX(a[n + 1]); cityHit(x, (a[n + 2] + .5) * CB, z, 3, 500); } });
+    const gone = await hc.evaluate(() => [...CITY.blk.values()].filter(b => b.gone).length);
+    await join(gc, (await net(hc)).roomCode);
+    const synced = await until(gc, n => MP.net().playing && [...CITY.blk.values()].filter(b => b.gone).length >= n, gone);
+    check('a late joiner sees the city damage already done', synced && gone > 0, `${gone} blocks gone on the host, ${await gc.evaluate(() => [...CITY.blk.values()].filter(b => b.gone).length)} on the guest`);
     check('no page errors', !errs.length, errs.slice(0, 5).join(' | '));
   } catch (e) { fails++; console.log('FAIL crashed:', e.message); }
   await b.close();

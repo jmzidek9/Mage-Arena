@@ -253,8 +253,23 @@ function cityCrackFx(e) {
     const b = CITY.blk.get(e.d[j]); if (!b || b.hidden) continue; b.st = e.d[j + 1];
     const i = b.n, d = V3.bm[V3.where[i * 3]]; col.set(B[i * 5 + 3]).multiplyScalar(1 - .17 * b.st);
     d.bm.setColorAt(V3.where[i * 3 + 1], col); d.im.setColorAt(V3.where[i * 3 + 2], col); d.im.instanceColor.needsUpdate = true;
-    if (b.st >= 2) { const m = V3.blockM[i]; for (let q = 0; q < 3; q++) emit(m.elements[12] + rand(-.6, .6), m.elements[13] + rand(-.6, .6), m.elements[14] + rand(-.6, .6), rand(-1, 1), rand(0, 2), rand(-1, 1), 0x9a95a4, rand(.06, .12), .5, 9); }
+    if (b.st >= 2 && !e.q) { const m = V3.blockM[i]; for (let q = 0; q < 3; q++) emit(m.elements[12] + rand(-.6, .6), m.elements[13] + rand(-.6, .6), m.elements[14] + rand(-.6, .6), rand(-1, 1), rand(0, 2), rand(-1, 1), 0x9a95a4, rand(.06, .12), .5, 9); }
   }
+}
+// someone joining a game in progress gets the city as it stands: what's already gone and cracked, quietly (no debris or dust)
+const cityState = () => { const a = [], d = []; for (const [k, b] of CITY.blk) if (b.gone) a.push(k); else if (b.st) d.push(k, b.st); return { k: 'citysync', a, d, p: CITY.props.flatMap((p, i) => p.dead ? [i] : []) }; };
+function citySync(e) {
+  const V3 = CITY.view; if (!CITY.ready || !V3) return;
+  for (const k of e.a) {
+    const b = CITY.blk.get(k); if (!b) continue;
+    b.gone = 1; const lv = k % 32, c = (k - lv) / 32; CITY.occ[c] &= ~(1 << lv);
+    if (b.hidden) continue; b.hidden = 1;
+    const i = b.n, d = V3.bm[V3.where[i * 3]];
+    d.bm.setVisibleAt(V3.where[i * 3 + 1], false); d.im.setMatrixAt(V3.where[i * 3 + 2], _dm.makeScale(0, 0, 0)); d.dirty = true;
+  }
+  cityCrackFx({ d: e.d, q: 1 });
+  for (const i of e.p) cityPropFx({ i, q: 1 });
+  CITY.dist = null;
 }
 // apply a 'blk' event (both machines; the host already cleared its grid)
 function cityApply(e) {
@@ -664,8 +679,9 @@ function cityPropFx(e) {
   if (p.o ? !p.o.visible : p.bid != null && !V3.pbm.getVisibleAt(p.bid)) return;
   p.hp = 0; p.dead = 1; if (p.solid) { const i = PILLARS.indexOf(p.solid); if (i >= 0) PILLARS.splice(i, 1); }
   if (p.o) p.o.visible = false;
-  if (p.bid != null) { V3.pbm.setVisibleAt(p.bid, false); spawnDebris(p.geo, p.m.clone(), p.k === 'statue' || p.k === 'fountain' ? STONE.a : 0xffffff, [rand(-3, 3), rand(3, 7), rand(-3, 3)], p.k === 'fountain' ? .1 : 1); }
+  if (p.bid != null) { V3.pbm.setVisibleAt(p.bid, false); if (!e.q) spawnDebris(p.geo, p.m.clone(), p.k === 'statue' || p.k === 'fountain' ? STONE.a : 0xffffff, [rand(-3, 3), rand(3, 7), rand(-3, 3)], p.k === 'fountain' ? .1 : 1); }
   for (const g of p.glow || []) V3.gbm.setVisibleAt(g, false);
+  if (e.q) return;
   const y = p.k === 'crystal' || p.k === 'roof' ? p.y : 1.5, col = p.k === 'crystal' ? 0xdaa0ff : p.k === 'brazier' ? 0xc4a06c : p.k === 'tree' ? 0x5a8a44 : STONE.a;
   for (let f = 0; f < (p.k === 'monolith' || p.k === 'statue' || p.k === 'fountain' ? 16 : 7); f++) { const sz = rand(.2, .55); spawnDebris('shard' + (f % 3), Mx(p.x + rand(-.6, .6), y + rand(0, 2), p.z + rand(-.6, .6), rand(0, 6), rand(0, 6), 0, sz), col, [rand(-6, 6), rand(3, 9), rand(-6, 6)], 2.5, 0); }
   if (p.k === 'crystal') { burst(p.x, y, p.z, 60, 0xdaa0ff, 9, .3, .6); flash(p.x, y, p.z, 0xdaa0ff, 40, .3); sfx('tink'); }

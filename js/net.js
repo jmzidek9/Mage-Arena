@@ -297,6 +297,7 @@ function onHostData(m) {
       const h = S.players.h, g = S.players.g = withTalents(newPlayer('g', guestEl, guestEl2), guestTal);
       if (guestEl2) g.up.second = 1;
       Object.assign(g, { x: h.x + 1.5, y: h.y, z: h.z });
+      if (S.mode === 'city') OUT.push(cityState());
       banner('PARTNER JOINED', '#8affc0');
     }
   }

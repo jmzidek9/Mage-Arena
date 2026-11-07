@@ -11,7 +11,7 @@ Peer-to-peer WebRTC through **PeerJS 1.5.4**, using its free cloud broker for th
 6. **Cast prediction:** the guest runs the same `stepCast` rules locally (`host = false`): cooldowns, charge / aim / channel states, instant cast circles and hand kick, and the move's own movement (dashes, leaps, glides). `onEvent` skips the host's copy of the guest's own `cast` events, so nothing plays twice. The host still decides all damage, projectiles and entities.
 7. Mid-game element switches go to the host as `{t:'el', el}`, and the host applies them.
 8. Both sides send a heartbeat `{t:'hb', at}` every second and answer it with `{t:'pg', at}`, which gives the ping shown on the partner's HUD box. 2.5 s of silence shows "connection unstable"; 10 s means gone. Leaving on purpose sends `{t:'bye'}`, so the other side knows at once.
-9. **If the guest goes:** the host keeps playing and sees the room code (also in the Esc menu). A rejoiner lands at the host's side, on whatever island or floor that is. A silent seat can be taken over straight away, so reloading a crashed tab works. Joining on the game-over screen waits for Play again.
+9. **If the guest goes:** the host keeps playing and sees the room code (also in the Esc menu). A rejoiner lands at the host's side, on whatever island or floor that is, and in Mage City gets the city as it stands (`citysync`: broken and cracked blocks, dead props). A silent seat can be taken over straight away, so reloading a crashed tab works. Joining on the game-over screen waits for Play again.
 10. **If the host goes:** the guest gets a HOST LEFT screen and keeps their XP. In the lobby the guest returns to a clean state and can join again.
 11. PeerJS's default channel retransmits but is **unordered**, so snapshots and inputs carry a sequence number `n` and stale ones are dropped (a stale snapshot's events still play). The host skips a snapshot when over 512 KB is waiting to send, instead of building up lag.
 12. Room-server blips don't touch a game in progress: the guest ignores them once connected, and the host reconnects to keep its code alive for rejoins.
@@ -43,7 +43,6 @@ The wizard is jointed (`blender/build_assets.py`: legs, skirt, body, head, hat, 
 ## Known ceilings (`ponytail:` comments in the code)
 - STUN + PeerJS's TURN on port 3478. Very strict networks (some school or office wifi) that only allow web traffic on port 443 may still block the connection. Fixing that needs a TURN server on 443 (TLS).
 - JSON snapshots with sequence numbers. If bandwidth becomes a problem, switch to packed arrays.
-- A rejoiner in Mage City doesn't get the blocks already destroyed: they're only sent as events when they happen.
 - The guest owns its own position (no reconciliation). That's fine between friends, not against strangers.
 - The guest's cooldowns and Overcharge count are local predictions and can drift slightly from the host's if inputs drop.
 
