@@ -20,7 +20,16 @@ Peer-to-peer WebRTC through **PeerJS 1.5.4**, using its free cloud broker for th
 `node playtest/coop.js [outDir]` runs real clients over the real room server (needs internet): host and join, wrong code, lobby sync, ping, a full room, leaving and rejoining mid-run, the revive marker, game over, Play again and the host leaving. Run it after any change here. Tabs in the background draw no frames, so the test calls `MP.frames` before reading the HUD.
 
 ## Partner HUD
-`mateMark` (view.js) puts a tag over the partner's head showing distance. It slides to the screen edge with an arrow when they're out of view and reads REVIVE or REVIVING when they're down. The end screen shows both players' numbers. The partner's wizard is smoothed on the host too and leans and rocks as it moves.
+`mateMark` (view.js) puts a tag over the partner's head showing distance. It slides to the screen edge with an arrow when they're out of view and reads REVIVE or REVIVING when they're down. The end screen shows both players' numbers.
+
+## Partner animation
+The wizard is jointed (`blender/build_assets.py`: legs, skirt, body, head, hat, arms, staff, two-part cape in the wizard's element colour). `animWizard` (view.js) poses it on both machines from the snapshot and events, so it costs no extra bandwidth beyond three small fields (`gr` grounded, `dsh` dashing, `cg` charging or aiming a move). Speed and direction are measured from what's on screen, so legs match the real motion, forward, back or sideways.
+- **Moving:** stride with dust at each footfall, lean, arm swing, cape on a spring, hat tip that flops; the head follows the aim and the body turns a beat later.
+- **Air:** arms out, legs tucked, robe flared; a puff on take-off, and a squash and ring on a hard landing.
+- **Dash:** hard lean, cape out, two afterimages and a spark trail.
+- **Casting:** basic moves jab the palm, RMB thrusts the staff, skills use both, an ultimate throws both arms up and floats off the ground. Charging gathers at the chest, channels hold the arm out with a tremble, and gem and palm flare with all of these. `handPos` returns the real animated palm, so a partner's beams start from their hand.
+- **Block, hit, down:** staff held across, a flinch with a red flash, a collapse that rises with the revive progress, then a burst and arms flung up when revived.
+- **Element swap:** the staff twirls and everything retints. **Joining or leaving:** burns in with a pillar, leaves in a burst.
 
 ## Cross-platform
 - Works in current Chrome (Windows, Mac, ChromeOS / Chromebooks), Edge, Firefox and Safari 15+ (Mac, iPad). Different browsers can play together. Both players just need the same version of the files.

@@ -48,6 +48,13 @@ const until = async (page, fn, arg, ms = 25000) => { try { await page.waitForFun
     const ng = await net(g), nh = await net(h);
     check('ping measured on both sides', ng.ping > 0 && nh.ping > 0, `guest ${ng.ping} ms, host ${nh.ping} ms`);
     check('marker shown on both', await h.evaluate(() => !document.getElementById('mateMark').classList.contains('hidden')) && await g.evaluate(() => !document.getElementById('mateMark').classList.contains('hidden')));
+    // the partner's body animates over the network: the host runs, and the guest sees its legs stride and its wizard lean
+    await h.evaluate(() => { MP.keys[BIND.fwd] = true; });
+    await g.bringToFront();
+    const legs = []; for (let i = 0; i < 8; i++) { legs.push(await g.evaluate(() => { MP.frames(2); return views.p.get('h').parts.legL.o.rotation.x; })); await sleep(90); }
+    await h.evaluate(() => { MP.keys[BIND.fwd] = false; });
+    check('guest sees the host legs stride', Math.max(...legs) - Math.min(...legs) > .25, `swing ${(Math.max(...legs) - Math.min(...legs)).toFixed(2)} rad`);
+    await g.screenshot({ path: path.join(out, '1-guest-running.png') });
     await h.screenshot({ path: path.join(out, '1-host.png') }); await g.screenshot({ path: path.join(out, '1-guest.png') });
 
     // a third player can't take the seat

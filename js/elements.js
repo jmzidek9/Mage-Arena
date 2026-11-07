@@ -171,6 +171,7 @@ function riseFx(name, color, x, z, s = 1, life = 1, yaw = rand(0, TAU)) {
 function zoneCircle(el, r, a = .7) { const c = makeCircle(el); c.scale.setScalar(r); c.position.y = .07; setOpacity(c.userData.mats, a); c.userData.r = r; return c; }
 function handPos(id) {
   if (id === myId) return camera.localToWorld(V(-.24, -.16, -.75));
+  const arm = views.p?.get(id)?.parts.armL?.o; if (arm) return arm.localToWorld(V(-.14, -.46, .36)); // your partner's real, animated palm
   const p = (role === 'guest' ? R : S)?.players[id];
   return p ? handOf({ ...p, pitch: p.pitch || 0 }) : V();
 }

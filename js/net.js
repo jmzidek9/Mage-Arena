@@ -2,14 +2,14 @@
 'use strict';
 
 // bump when the network format or game rules change: players on different builds get told to refresh
-const GAME_VERSION = '2.6.0';
+const GAME_VERSION = '2.7.0';
 
 // ===================== snapshot (sent to the guest, and what both sides render from) =====================
 const bfSnap = bf => { const o = {}; for (const k in bf) if (bf[k] > 0) o[k] = r2(bf[k]); return o; };
 const snap = () => ({
   phase: S.phase, mode: S.mode, wave: S.wave, mod: S.mod, ts: S.tstop > 0 ? 1 : 0, isl: S.isl, ib: S.ib, brs: S.brs, br: S.br && { k: S.br.k, t: r2(S.br.t) },
   duel: S.duel, dun: S.dun && { floor: S.dun.floor, seed: S.dun.seed, o: S.dun.o, st: S.dun.st, stairs: S.dun.stairs, wait: S.dun.wait },
-  players: Object.fromEntries(Object.values(S.players).map(p => [p.id, { id: p.id, ai: p.ai ? 1 : 0, kick: p.kick, spawn: p.spawn, tp: p.tp, el: p.el, el2: p.el2, cur: p.cur, x: r2(p.x), y: r2(p.y), z: r2(p.z), yaw: r2(p.yaw), pitch: r2(p.pitch),
+  players: Object.fromEntries(Object.values(S.players).map(p => [p.id, { id: p.id, ai: p.ai ? 1 : 0, kick: p.kick, spawn: p.spawn, tp: p.tp, el: p.el, el2: p.el2, cur: p.cur, x: r2(p.x), y: r2(p.y), z: r2(p.z), yaw: r2(p.yaw), pitch: r2(p.pitch), gr: p.gr ? 1 : 0, dsh: p.dashT > 0 ? 1 : 0, cg: p.chg?.m || 0,
     hp: Math.round(p.hp), max: p.max, down: p.down, gd: p.guard ? 1 : 0, gh: Math.round(p.gh ?? 0), gm: p.gm || 0, gk: r2(p.gk || 0), rev: r2(p.rev), up: p.up, ult: r2(p.ult), bf: bfSnap(p.bf), ch: p.ch, chT: r2(p.chT), combo: p.combo, stats: p.stats,
     r: [Math.round(p.bd.heat || 0), p.bd.souls || 0, p.bd.arc || 0, p.bd.swords || 0, 0, (p.bd.runeN || 0) % 3, p.bd.foc && S.t - p.bd.foc.t < 1.5 ? p.bd.foc.n : 0] }])), // element resources: heat, souls, arcane charges, swords, (unused), rune count, laser focus
   enemies: S.enemies.filter(e => !e.pid).map(e => ({ id: e.id, type: e.type, x: r2(e.x), y: r2(e.y), z: r2(e.z), yaw: r2(e.yaw), hp: Math.round(e.hp), max: Math.round(e.max), sc: e.sc, elite: e.elite,
@@ -307,7 +307,7 @@ function onHostData(m) {
     inN = m.n;
     bgTick();
     if (m.dashes !== g.dashes) g.dashAt = S.t;
-    g.inp = m; g.yaw = m.yaw; g.pitch = m.pitch; g.dashT = m.dashT; g.dashes = m.dashes;
+    g.inp = m; g.yaw = m.yaw; g.pitch = m.pitch; g.dashT = m.dashT; g.dashes = m.dashes; g.gr = m.gr;
     if (!g.down) { g.x = m.x; g.y = m.y; g.z = m.z; }
   }
   if (m.t === 'el' && EL[m.el]) setElement(g, m.el);
@@ -360,7 +360,7 @@ function guestStep(dt) {
   // predict our own casts with the same rules as the host, so circles, hand kick and our own movement are instant
   // ponytail: the Overcharge mega count and cooldowns are local too and can drift from the host's if inputs drop
   if (live) stepCast(G, frozen ? idleInput(i, G) : i, dt, false); else { G.ch = null; G.chg = null; }
-  if ((sendT -= dt) <= 0 && conn?.open) { sendT = 1 / 30; conn.send({ t: 'i', ...i, n: ++sendN, x: r2(G.x), y: r2(G.y), z: r2(G.z), dashT: G.dashT, dashes: G.dashes }); }
+  if ((sendT -= dt) <= 0 && conn?.open) { sendT = 1 / 30; conn.send({ t: 'i', ...i, n: ++sendN, x: r2(G.x), y: r2(G.y), z: r2(G.z), dashT: G.dashT, dashes: G.dashes, gr: G.gr ? 1 : 0 }); }
 }
 
 // ===================== self-check (open index.html#test) =====================

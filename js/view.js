@@ -21,7 +21,7 @@ function castFx(e) {
   if (mine) fc.userData.dim = .45; // the circle under your own camera fills the view, keep it subtle
   if (!mine) { pillarFx(e.x, e.y + .05, e.z, 1.35 * big, 3.6 * big, col); flash(e.x, e.y + .6, e.z, col, 12, .35); } // never stack glow around your own camera
   if (mine) { circleFx(el, V(-.26, -.17, -.85), .17 * Math.min(big, 1.6), { parent: camera, quat: Q_FACE, life: .4 }); vmKick = 1; shake(e.mega ? .3 : m.slot === 4 ? .35 : .05); }
-  else circleFx(el, V(...e.o), .55 * big, { quat: new THREE.Quaternion().setFromUnitVectors(UP, V(...e.d)), life: .45 });
+  else { circleFx(el, V(...e.o), .55 * big, { quat: new THREE.Quaternion().setFromUnitVectors(UP, V(...e.d)), life: .45 }); wizardCast(e.id, m); }
   for (let k = 0; k < 22; k++) {
     const a = rand(0, TAU), r = rand(.6, 1.6) * big;
     emit(e.x + Math.cos(a) * r, e.y + .1, e.z + Math.sin(a) * r, -Math.sin(a) * 2, rand(2, 4.5), Math.cos(a) * 2, col, rand(.15, .3) * (mine ? .3 : 1), rand(.5, .9), -1, 1);
@@ -490,9 +490,9 @@ function onEvent(e) {
     case 'echo': if (e.id === myId) popNum(camera.position.x, camera.position.y + .3, camera.position.z, 'ECHO', '#ffd36a', 'tag'); break;
     case 'heal': if (e.id === myId) { healT = 1; } break;
     case 'pickup': burst(e.x, .8, e.z, e.big ? 80 : 30, 0x6aff9a, 6, .3, .6, -2); sfx(e.big ? 'heal' : 'pickup'); if (e.big) banner('HEARTSTONE: TEAM HEALED', '#8affc0', 1400); break;
-    case 'hurt': if (e.id === myId) { hurtT = 1; shake(.35); sfx('hurt'); } break;
+    case 'hurt': if (e.id === myId) { hurtT = 1; shake(.35); sfx('hurt'); } else wizardHurt(e.id); break;
     case 'down': banner(e.id === myId ? 'YOU ARE DOWN' : 'PARTNER DOWN, REVIVE THEM', '#ff6a8a'); break;
-    case 'up': banner(e.id === myId ? 'REVIVED' : 'PARTNER REVIVED', '#8affc0'); sfx('pick'); break;
+    case 'up': banner(e.id === myId ? 'REVIVED' : 'PARTNER REVIVED', '#8affc0'); sfx('pick'); if (e.id !== myId) wizardUp(e.id); break;
     case 'wave': {
       banner(e.boss ? `WAVE ${e.n}: ${(e.bn || 'The Tyrant').toUpperCase()}` : `WAVE ${e.n}`, e.boss ? '#ff8a4a' : '#e8dcff', 2200);
       $('mod').textContent = e.mod ? { swarm: '⚠ Swarm: twice the enemies, half the health', haste: '⚠ Haste: enemies move faster', darkness: '⚠ Darkness falls', elite: '⚠ An elite stalks you' }[e.mod] : '';
@@ -1004,31 +1004,133 @@ function renderEnts(src, dt, t, a) {
 }
 
 // ---------- partner wizard ----------
+// A jointed body (blender/build_assets.py). Nothing here touches the rules: it reads the snapshot and the events on both machines.
+const WIZ_PARTS = /^wizard_(skirt|body|head|hat|armL|armR|staff|legL|legR|cape2?)$/;
 function makeWizard(p) {
   const g = WIZ.clone(); g.rotation.order = 'YXZ';
-  const mats = [];
-  g.traverse(o => { if (!o.isMesh) return; o.material = o.material.clone(); enhance(o.material, EL[p.cur || p.el].color); mats.push(o.material); });
+  const mats = [], parts = {};
+  g.traverse(o => {
+    const n = o.name.match(WIZ_PARTS); if (n) parts[n[1]] = { o, r: o.rotation.clone(), p: o.position.clone() };
+    if (!o.isMesh) return; o.material = o.material.clone(); enhance(o.material, EL[p.cur || p.el].color); mats.push(o.material);
+  });
   const rc = makeCircle(p.el); rc.visible = false;
   scene.add(g, rc);
-  return { g, rc, mats, cur: null };
+  return { g, rc, mats, parts, glow: mats.filter(m => /staff_gem|hand_rune/.test(m.name)), skin: mats.filter(m => !/staff_gem|hand_rune/.test(m.name)), cur: null, a: {}, pos: V(p.x, p.y, p.z), vx: 0, vy: 0, vz: 0, ph: 0, born: 1, hurt: 0, up: 0, land: 0, twirl: 0, cast: null, capeV: 0, wasGr: true, wasDash: false, stepN: 0 };
 }
 function tintWizard(v, el) {
-  v.cur = el; const c = EL[el].color;
-  for (const m of v.mats) { m.userData.rim.value.set(c); if (/staff_gem|hand_rune/.test(m.name)) { m.color.set(c); m.emissive.set(c); m.emissiveIntensity = 4; } }
+  const c = EL[el].color; v.cur = el;
+  for (const m of v.mats) { m.userData.rim.value.set(c); if (/staff_gem|hand_rune/.test(m.name)) { m.color.set(c); m.emissive.set(c); m.emissiveIntensity = 4; } if (m.name === 'cape') m.color.set(c).multiplyScalar(.5); }
+}
+// the events a partner's body answers to (their own wizard's first-person view has its own)
+const CAST_T = [.28, .34, .46, .46, 1.35];
+function wizardCast(id, m) { const v = views.p.get(id); if (v && m) v.cast = { slot: m.slot, t: 0, T: CAST_T[m.slot] ?? .4 }; }
+function wizardHurt(id) { const v = views.p.get(id); if (v) { v.hurt = 1; v.fl = Math.random() < .5 ? -1 : 1; } }
+function wizardUp(id) {
+  const v = views.p.get(id); if (!v) return;
+  v.up = 1; const p = v.g.position, c = EL[v.cur]?.color ?? 0x8affc0;
+  ringFx(p.x, p.y + .1, p.z, 3, 0x8affc0, .5); pillarFx(p.x, p.y, p.z, .9, 3.5, c, .5); burst(p.x, p.y + 1, p.z, 36, 0x8affc0, 5, .14, .7, -1, 2);
+}
+// a soft puff at the feet
+function wizardPuff(x, y, z, n, sp) { for (let i = 0; i < n; i++) { const a = rand(0, TAU); emit(x + Math.cos(a) * .12, y + .08, z + Math.sin(a) * .12, Math.cos(a) * rand(.4, sp), rand(.3, 1.2), Math.sin(a) * rand(.4, sp), 0x9a8a78, rand(.08, .16), rand(.25, .5), 0, 2); } }
+function wizardGhost(v, col, a) { const q = ghostWizard(col); q.rotation.order = 'YXZ'; q.position.copy(v.g.position); q.rotation.copy(v.g.rotation); q.rotation.x = v.a.bx || 0; addFx(q, .34, (o, k) => fade(o, (1 - k) * a)); }
+// the pose: every joint eases toward what the wizard is doing right now, with quick things (casts, flinches, landings) layered on top
+function animWizard(v, p, dt, t) {
+  const g = v.g, P = v.parts, A = v.a, pos = v.pos, ease = (k, to, rate = 14) => A[k] = (A[k] ?? to) + (to - (A[k] ?? to)) * Math.min(1, dt * rate), mix = (a, b, k) => a + (b - a) * k;
+  const el = EL[p.cur || p.el], col = el.color, near = distTo(pos.x, pos.z) < 40;
+  // how it's moving, measured from what's on screen (so host and guest see the same thing)
+  if (dt > 0) {
+    let vx = (pos.x - (v.lx ?? pos.x)) / dt, vz = (pos.z - (v.lz ?? pos.z)) / dt; const vy = (pos.y - (v.ly ?? pos.y)) / dt;
+    if (Math.hypot(vx, vz) > 40) vx = vz = 0; // a teleport isn't a sprint
+    v.vx += (vx - v.vx) * Math.min(1, dt * 12); v.vz += (vz - v.vz) * Math.min(1, dt * 12); v.vy += (vy - v.vy) * Math.min(1, dt * 12);
+    v.lx = pos.x; v.ly = pos.y; v.lz = pos.z;
+  }
+  const th = g.rotation.y, spd = Math.hypot(v.vx, v.vz), fwd = v.vx * Math.sin(th) + v.vz * Math.cos(th), side = v.vx * Math.cos(th) - v.vz * Math.sin(th);
+  const f = spd > .3 ? fwd / spd : 1, s = spd > .3 ? side / spd : 0, run = Math.min(1, spd / 6.2), dir = f < -.25 ? -1 : 1, down = !!p.down;
+  v.ph += dir * spd * dt * 2.6; // about 1.2 m a step, so feet don't skate
+  const S1 = Math.sin(v.ph), C1 = Math.cos(v.ph), gr = p.gr == null || !!p.gr, air = ease('air', gr ? 0 : 1, 12), dash = ease('dash', p.dsh ? 1 : 0, p.dsh ? 30 : 9);
+  // footfalls, take-off, landing, dash
+  const stepN = Math.floor(v.ph / Math.PI);
+  if (stepN !== v.stepN) { v.stepN = stepN; if (gr && run > .4 && near && !down) { const sd = stepN % 2 ? 1 : -1; wizardPuff(pos.x + Math.cos(th) * sd * .16, pos.y, pos.z - Math.sin(th) * sd * .16, 3, 1); } }
+  if (gr !== v.wasGr) {
+    if (!gr && v.vy > 1 && near) wizardPuff(pos.x, pos.y, pos.z, 8, 1.6);
+    if (gr) { const hard = clamp(-v.vy / 9, .25, 1); v.land = hard; if (near) { wizardPuff(pos.x, pos.y, pos.z, Math.round(6 + hard * 14), 3); if (hard > .6) ringFx(pos.x, pos.y + .08, pos.z, 1.8, 0x9a8a78, .3); } }
+    v.wasGr = gr;
+  }
+  if (!!p.dsh !== v.wasDash) { v.wasDash = !!p.dsh; if (p.dsh && near) { wizardGhost(v, col, .55); setTimeout(() => { if (v.g.parent) wizardGhost(v, col, .35); }, 70); wizardPuff(pos.x, pos.y, pos.z, 8, 2.5); } }
+  if (p.dsh && near) for (let i = 0; i < 3; i++) emit(pos.x + rand(-.3, .3), pos.y + rand(.2, 2), pos.z + rand(-.3, .3), -v.vx * .12, rand(-.2, .4), -v.vz * .12, col, rand(.06, .14), rand(.18, .34), 0, 3);
+  // quick things
+  v.hurt = Math.max(0, v.hurt - dt * 4.5); v.land = Math.max(0, v.land - dt * 4.5); v.up = Math.max(0, v.up - dt * 1.5); v.twirl = Math.max(0, v.twirl - dt * 2.6); v.born = Math.max(0, v.born - dt * 1.5);
+  let jabL = 0, jabR = 0, ult = 0, lift = 0, cSlot = -1;
+  if (v.cast) {
+    const C = v.cast; C.t += dt; const k = C.t / C.T; cSlot = C.slot;
+    if (k >= 1) v.cast = null;
+    else if (C.slot === 4) { ult = Math.min(1, k * 7) * Math.min(1, (1 - k) * 4); lift = Math.sin(k * Math.PI) * .55; } // arms flung up, rising off the ground
+    else { const e = k < .16 ? k / .16 : (1 - k) / .84 * (1 - k) / .84; if (C.slot === 0) jabL = e; else if (C.slot === 1) jabR = e; else jabL = jabR = e; } // basic: the palm; heavy: the staff; skills: both
+  }
+  const pitch = p.pitch || 0, gd = ease('gd', p.gd && !down ? 1 : 0, 20), chan = ease('chan', p.ch && !down ? 1 : 0, 16), chg = ease('chg', p.cg && !down ? 1 : 0, 12);
+  const dn = ease('dn', down ? 1 - (p.rev || 0) * .6 : 0, down ? 6 : 5), up = v.up * v.up, breath = Math.sin(t * 1.9), hurt = v.hurt * v.hurt * (v.fl || 1), tremble = Math.sin(t * 47) * .025;
+  const aimL = -.95 - pitch, aimR = -.9 - pitch;
+  // arms: swinging, then whatever overrides the swing
+  let Lx = S1 * .55 * run + breath * .015, Lz = -.06, Rx = -S1 * .2 * run - .12 * run + breath * .015, Rz = .05;
+  Lz -= air * .55; Rz += air * .4; Lx += air * (v.vy < 0 ? -.55 : .25); Rx += air * -.25;
+  Lx = mix(Lx, 1.1, dash); Rx = mix(Rx, .75, dash); Lz = mix(Lz, -.2, dash);
+  Lx = mix(Lx, -1.45 + Math.sin(t * 9) * .05, chg); Lz = mix(Lz, .35, chg); Rx = mix(Rx, -.55, chg); // gathering power at the chest
+  Lx = mix(Lx, aimL + tremble, chan); Lz = mix(Lz, .1, chan); Rx = mix(Rx, -.35, chan);
+  Lx = mix(Lx, -1.25, gd); Lz = mix(Lz, .55, gd); Rx = mix(Rx, -1.3, gd); Rz = mix(Rz, -.45, gd);
+  Lx = mix(Lx, aimL, Math.max(jabL, 0)); Lz = mix(Lz, .08, jabL); Rx = mix(Rx, aimR, jabR);
+  Lx = mix(Lx, -2.75, Math.max(ult, up)); Rx = mix(Rx, -2.75, Math.max(ult, up)); Lz = mix(Lz, -.75, Math.max(ult, up)); Rz = mix(Rz, .75, Math.max(ult, up));
+  Lx = mix(Lx, .25, dn); Lz = mix(Lz, -.6, dn); Rx = mix(Rx, .1, dn); Rz = mix(Rz, .55, dn);
+  // body: leans into the run and the dash, follows the aim, recoils from its own casts and from hits
+  const bx = ease('bx', run * .24 * f + dash * .5 * Math.max(f, 0) + dash * .3 * Math.min(f, 0) - pitch * .25 + chg * .08 - chan * .1 + gd * .08 - ult * .38 - up * .3, 12) - (jabL + jabR) * .1 - Math.abs(hurt) * .32 + v.land * .3;
+  const bz = ease('bz', -s * run * .17 + S1 * .05 * run, 12) + hurt * .16;
+  const by = ease('by', S1 * .2 * run * dir * Math.max(0, f) - jabL * .35 + jabR * .3, 16);
+  const bob = -.04 * run + Math.abs(S1) * .07 * run + breath * .012 - v.land * .22 - dash * .1;
+  P.body.o.rotation.set(P.body.r.x + bx * (1 - dn * .4), P.body.r.y + by, P.body.r.z + bz);
+  P.body.o.position.y = P.body.p.y + bob * (1 - dn);
+  const flare = 1 + air * .13 + dash * .1 + run * .04 + ult * .14;
+  P.skirt.o.rotation.set(P.skirt.r.x + bx * .45 + run * .05 * f, P.skirt.r.y + by * .4, P.skirt.r.z + bz * .6 + S1 * .05 * run); P.skirt.o.position.y = P.skirt.p.y + bob * .6 * (1 - dn); P.skirt.o.scale.set(flare, 1 - run * .16 - air * .22, flare); // the hem hikes up so the striding boots clear it
+  // legs: forward / back and side to side by the way it's really going, the swinging foot lifted clear; tucked in the air
+  const amp = .6 * run * (1 - air), lS = S1 * amp, tuck = air * (1 - dn);
+  P.legL.o.rotation.set(P.legL.r.x + mix(-lS * f, -.42, tuck) - v.land * .25, 0, P.legL.r.z + lS * s - .03);
+  P.legR.o.rotation.set(P.legR.r.x + mix(lS * f, .12, tuck) - v.land * .25, 0, P.legR.r.z - lS * s + .03);
+  P.legL.o.position.y = P.legL.p.y + Math.max(0, C1 * dir) * .07 * run + air * .1; P.legR.o.position.y = P.legR.p.y + Math.max(0, -C1 * dir) * .07 * run + air * .1;
+  // arms and the staff, which stays upright in the hand until it's used
+  const L = [ease('Lx', Lx, 20), ease('Lz', Lz, 20)], R = [ease('Rx', Rx, 20), ease('Rz', Rz, 20)];
+  P.armL.o.rotation.set(P.armL.r.x + L[0], by * -.4, P.armL.r.z + L[1]); P.armR.o.rotation.set(P.armR.r.x + R[0], by * -.4, P.armR.r.z + R[1]);
+  const thrust = Math.max(jabR, gd * .55, ult * .3, dash * .55);
+  P.staff.o.rotation.set(P.staff.r.x - R[0] * (1 - thrust) + thrust * -1 + S1 * .06 * run, P.staff.r.y + v.twirl * v.twirl * TAU * 2, P.staff.r.z - R[1] + gd * 1.15 + dn * .7);
+  // head: looks where the player aims, ahead of a body that turns a beat later
+  const hTurn = clamp(lerpAngle(0, (p.yaw + Math.PI) - th, 1), -.9, .9) * (1 - dn);
+  P.head.o.rotation.set(P.head.r.x - pitch * .65 - bx * .4 + dn * .45 + Math.abs(hurt) * .25, P.head.r.y + hTurn - by * .5, P.head.r.z + dn * .25);
+  P.hat.o.rotation.set(P.hat.r.x - run * .4 * f - dash * .5 - clamp(v.vy * .05, -.5, .5) + Math.sin(t * 1.7) * .05, 0, P.hat.r.z - s * run * .25 + S1 * .1 * run);
+  // the cape trails on a spring: flat out in a dash, billowing when falling
+  const capeTo = clamp(.03 + fwd * .085, -.06, .6) + dash * .45 + air * clamp(-v.vy * .08, -.25, .7) + Math.sin(t * 2.1) * .025 + Math.sin(t * 11) * .05 * run;
+  v.capeV += (capeTo - (A.cape ?? 0)) * 70 * dt; v.capeV *= Math.exp(-9 * dt); A.cape = (A.cape ?? 0) + v.capeV * dt;
+  P.cape.o.rotation.set(P.cape.r.x + A.cape, 0, P.cape.r.z - side * .018);
+  P.cape2.o.rotation.set(P.cape2.r.x + ease('cape2', A.cape * .55 + Math.sin(t * 3.1) * .05 + Math.sin(t * 13) * .08 * run, 7), 0, P.cape2.r.z - side * .02);
+  // the whole body: falls and rises, squashes on landing, floats through an ultimate
+  g.position.set(pos.x, pos.y + lift, pos.z);
+  g.rotation.x += (-1.35 * dn - g.rotation.x) * Math.min(1, dt * 10);
+  g.rotation.z = Math.sin(t * 60) * .01 * (down && p.rev > 0 ? 1 : 0);
+  const sq = v.land * .1; g.scale.set(1 + sq, 1 - sq * 1.3, 1 + sq);
+  // light: gem and palm blaze when it casts, a hit flashes the robe, and it burns in on arrival
+  const blaze = 3 + Math.sin(t * 4) * .5 + (jabL + jabR) * 7 + chg * (5 + Math.sin(t * 16) * 2) + chan * 5 + ult * 9 + up * 6;
+  for (const m of v.glow) m.emissiveIntensity = blaze;
+  if (v.hurt > 0 || v.flashed) { for (const m of v.skin) { m.emissive.setRGB(1, .12, .16); m.emissiveIntensity = v.hurt * v.hurt * .16; } v.flashed = v.hurt > 0; }
+  if (v.born > 0 || v.wasBorn) { for (const m of v.mats) m.userData.dis.value = v.born * v.born * .95; v.wasBorn = v.born > 0; }
 }
 function renderPartner(src, dt, t) {
   const a = 1 - Math.exp(-dt * 14); // smoothed on the host too: the guest's position arrives in 30 Hz jumps
   sync(views.p, Object.values(src.players).filter(p => p.id !== myId), makeWizard, (v, p, fresh) => {
-    if (v.cur !== (p.cur || p.el)) tintWizard(v, p.cur || p.el);
-    const tg = V(p.x, p.y, p.z), g = v.g, spd = fresh ? 0 : Math.min(9, Math.hypot(tg.x - g.position.x, tg.z - g.position.z) * 14);
-    if (fresh) g.position.copy(tg); else g.position.lerp(tg, a);
-    g.rotation.y = lerpAngle(g.rotation.y, p.yaw + Math.PI, fresh ? 1 : a);
-    v.walk = (v.walk || 0) + (spd - (v.walk || 0)) * Math.min(1, dt * 8); v.ph = (v.ph || 0) + v.walk * dt * 1.6; // leans into its run and rocks with its steps
-    g.rotation.x += ((p.down ? -1.35 : v.walk * .022) - g.rotation.x) * Math.min(1, dt * 8);
-    g.rotation.z = p.down ? 0 : Math.sin(v.ph) * Math.min(1, v.walk / 5) * .07;
-    v.rc.visible = p.down; v.rc.position.set(v.g.position.x, .08, v.g.position.z); v.rc.scale.setScalar(1.3); spinCircle(v.rc, dt, .5 + p.rev * 3);
+    const el = p.cur || p.el;
+    if (v.cur !== el) { if (v.cur) { v.twirl = 1; ringFx(v.g.position.x, v.g.position.y + 1.2, v.g.position.z, 1.6, EL[el].color, .35); burst(v.g.position.x, v.g.position.y + 2, v.g.position.z, 18, EL[el].color, 3, .1, .45); } tintWizard(v, el); }
+    if (fresh) { v.pos.set(p.x, p.y, p.z); v.g.rotation.y = p.yaw + Math.PI; pillarFx(p.x, p.y, p.z, 1.2, 5, EL[el].color, .7); ringFx(p.x, p.y + .1, p.z, 2.6, EL[el].color, .5); } // it burns in where it arrives
+    else v.pos.lerp(V(p.x, p.y, p.z), a);
+    v.g.rotation.y = lerpAngle(v.g.rotation.y, p.yaw + Math.PI, 1 - Math.exp(-dt * 9)); // a beat behind the head
+    animWizard(v, p, dt, t);
+    v.rc.visible = !!p.down; v.rc.position.set(v.g.position.x, v.g.position.y + .08, v.g.position.z); v.rc.scale.setScalar(1.3); spinCircle(v.rc, dt, .5 + p.rev * 3);
     setOpacity(v.rc.userData.mats, .25 + p.rev * .75);
-  }, v => { v.g.removeFromParent(); v.rc.removeFromParent(); });
+  }, v => { const q = v.g.position; ringFx(q.x, q.y + .1, q.z, 2.2, EL[v.cur]?.color ?? 0xffffff, .4); burst(q.x, q.y + 1, q.z, 24, EL[v.cur]?.color ?? 0xffffff, 4, .1, .5); v.g.removeFromParent(); v.rc.removeFromParent(); });
 }
 
 // ---------- channels (flamethrower, solar beam) for every player, aim reticle + charge for you ----------

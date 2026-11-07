@@ -600,22 +600,106 @@ def limb(mesh, m, start, d, L, r0, r1, n=10, smooth=True):
 
 
 # ---------- teammate wizard (third-person body, facing Blender -Y) ----------
+# Jointed so the game can animate it (animWizard in js/view.js). Pivots: wizard (feet) > legL/R (hips), skirt + body (waist);
+# body > head > hat (floppy tip), armL/R (shoulders), cape > cape2; armR > staff (at the hand, so it can stay upright).
 W = coll('wizard')
-m = Mesh('wizard', W, loc=(0, 10, 0))
-m.lathe(robe, [(0, 0), (0.55, 0), (0.5, 0.3), (0.38, 0.9), (0.3, 1.3), (0.22, 1.45), (0, 1.5)], n=16, smooth=True)
-m.lathe(gold, [(0.33, 0.82), (0.4, 0.84), (0.4, 0.9), (0.33, 0.92)], n=16, closed=True, smooth=True)
-m.sphere(robe, 0.24, TRS((0, 0, 1.62)))
-m.sphere(shadow, 1, TRS((0, -0.1, 1.6), scale=(0.17, 0.11, 0.19)))
-for sx in (-1, 1):
-    m.sphere(hand_rune, 0.03, TRS((sx * 0.065, -0.2, 1.63)), u=8, v=6)
-    limb(m, robe, (sx * 0.28, 0, 1.3), (sx * 0.25, -0.5, -0.8), 0.6, 0.1, 0.12)
-m.lathe(robe, [(0, 1.74), (0.46, 1.74), (0.46, 1.78), (0.2, 1.84), (0.13, 2.1), (0.05, 2.38), (0, 2.45)], n=16, smooth=True)
-m.lathe(gold, [(0.19, 1.8), (0.22, 1.81), (0.2, 1.88), (0.17, 1.88)], n=16, closed=True)
-m.lathe(wood, [(0, 0), (0.025, 0), (0.025, 1.95), (0, 1.95)], n=8, M=Matrix.Translation((0.45, -0.3, 0)), smooth=True)
-open_hand(m, TRS((-0.42, -0.3, 0.86), (math.pi, 0, math.pi / 2), (2.1, 2.1, 2.1)))  # same hands as first person, scaled up
-fist(m, TRS((0.45, -0.3, 0.92), scale=(2.1, 2.1, 2.1)))
-crystal(m, gem_mat, Matrix.Translation((0.45, -0.3, 1.92)), 0.06, 0.28)
-WIZARD = [m.done()]
+cape_mat = mat('cape', (0.3, 0.12, 0.62), rough=0.75)  # the game tints it the wizard's element
+root = Mesh('wizard', W, loc=(0, 10, 0))
+root.sphere(robe, 0.05, TRS((0, 0, 0.9)), u=6, v=4)  # (hidden inside the waist: the root needs a mesh)
+rt = root.done()
+WIZARD = [rt]
+
+
+def wpart(name, parent, loc, build, rot=(0, 0, 0)):
+    m = Mesh('wizard_' + name, W, loc=loc, rot=rot, parent=parent)
+    build(m)
+    ob = m.done()
+    WIZARD.append(ob)
+    return ob
+
+
+def wball(m, mt, c, r, u=14, v=9):
+    m.sphere(mt, 1, TRS(c, scale=r), u=u, v=v)
+
+
+def skirt(m):
+    m.lathe(robe, [(0, -0.68), (0.47, -0.68), (0.45, -0.62), (0.43, -0.4), (0.39, -0.18), (0.36, 0), (0, 0.03)], n=20, smooth=True)
+    m.lathe(gold, [(0.45, -0.69), (0.49, -0.68), (0.48, -0.6), (0.44, -0.61)], n=20, closed=True, smooth=True)
+
+
+def torso(m):
+    m.lathe(robe, [(0, -0.06), (0.36, -0.06), (0.37, 0), (0.33, 0.2), (0.3, 0.4), (0.22, 0.55), (0, 0.6)], n=20, smooth=True)
+    m.lathe(gold, [(0.35, -0.08), (0.4, -0.06), (0.4, 0), (0.35, 0.02)], n=20, closed=True, smooth=True)
+    m.lathe(gold, [(0.2, 0.5), (0.25, 0.52), (0.23, 0.58), (0.17, 0.58)], n=16, closed=True, smooth=True)
+    m.sphere(hand_rune, 0.045, TRS((0, -0.4, -0.03)), u=10, v=7)  # belt gem
+    for sx in (-1, 1):
+        wball(m, gold, (sx * 0.28, 0, 0.42), (0.14, 0.14, 0.09))  # shoulder plates
+
+
+def head(m):
+    m.sphere(robe, 0.24, TRS((0, 0, 0.17)))
+    wball(m, shadow, (0, -0.1, 0.15), (0.17, 0.11, 0.19))
+    for sx in (-1, 1):
+        m.sphere(hand_rune, 0.03, TRS((sx * 0.065, -0.2, 0.18)), u=8, v=6)
+    m.lathe(robe, [(0, 0.29), (0.46, 0.29), (0.46, 0.33), (0.2, 0.39), (0.13, 0.65), (0, 0.66)], n=18, smooth=True)
+    m.lathe(gold, [(0.19, 0.35), (0.22, 0.36), (0.2, 0.43), (0.17, 0.43)], n=18, closed=True)
+
+
+def hat(m):
+    m.lathe(robe, [(0, -0.01), (0.13, 0), (0.09, 0.14), (0.05, 0.28), (0, 0.35)], n=14, smooth=True)
+
+
+def sleeve_arm(sx, wr):
+    def build(m):
+        el = (wr[0] * 0.5, wr[1] * 0.45, wr[2] * 0.52)
+        m.tube(robe, [(0, 0, 0), el, wr], [0.1, 0.105, 0.135], n=10)
+        d = Vector(wr) - Vector(el)
+        m.lathe(gold, [(0.115, -0.03), (0.15, -0.02), (0.15, 0.03), (0.115, 0.04)], n=14, M=aim(d, wr), closed=True, smooth=True)
+    return build
+
+
+def arm_l(m):
+    sleeve_arm(-1, (-0.14, -0.28, -0.4))(m)
+    open_hand(m, TRS((-0.14, -0.3, -0.44), (math.pi, 0, math.pi / 2), (2.1, 2.1, 2.1)))  # same hands as first person, scaled up
+    m.sphere(hand_rune, 0.05, TRS((-0.14, -0.33, -0.44)), u=10, v=7)  # the casting palm
+
+
+def staff(m):
+    m.lathe(wood, [(0, -0.92), (0.025, -0.92), (0.025, 1.03), (0, 1.03)], n=8, smooth=True)
+    for z in (0.5, 0.92):
+        m.lathe(gold, [(0.024, z - 0.02), (0.038, z - 0.012), (0.038, z + 0.012), (0.024, z + 0.02)], n=10, closed=True, smooth=True)
+    fist(m, TRS(scale=(2.1, 2.1, 2.1)))
+    crystal(m, gem_mat, Matrix.Translation((0, 0, 1.0)), 0.06, 0.28)
+
+
+def leg(sx):
+    def build(m):
+        m.tube(robe, [(0, 0, 0), (0, 0, -0.35), (0, 0, -0.62)], [0.1, 0.085, 0.07], n=8)
+        m.lathe(gold, [(0.07, -0.56), (0.09, -0.55), (0.09, -0.52), (0.07, -0.51)], n=10, closed=True)
+        wball(m, glove, (0, -0.08, -0.66), (0.09, 0.2, 0.085))  # boot
+    return build
+
+
+def cape(m):
+    m.prism(cape_mat, [(-0.25, 0), (0.25, 0), (0.33, -0.54), (-0.33, -0.54)], -0.018, 0.018, basis((0, 0, 0), (1, 0, 0), (0, 0, 1), (0, -1, 0)))
+
+
+def cape2(m):
+    hem = [(0.42, -0.62), (0.26, -0.54), (0.13, -0.66), (0, -0.56), (-0.13, -0.66), (-0.26, -0.54), (-0.42, -0.62)]
+    m.prism(cape_mat, [(-0.33, 0.02), (0.33, 0.02)] + hem, -0.018, 0.018, basis((0, 0, 0), (1, 0, 0), (0, 0, 1), (0, -1, 0)))
+
+
+for sx, nm in ((-1, 'legL'), (1, 'legR')):
+    wpart(nm, rt, (sx * 0.16, 0, 0.74), leg(sx))
+wpart('skirt', rt, (0, 0, 0.9), skirt)
+wb = wpart('body', rt, (0, 0, 0.9), torso)
+wh = wpart('head', wb, (0, 0, 0.55), head)
+wpart('hat', wh, (0, 0, 0.65), hat)
+wpart('armL', wb, (-0.28, 0, 0.4), arm_l)
+wr = wpart('armR', wb, (0.28, 0, 0.4), sleeve_arm(1, (0.17, -0.28, -0.36)))
+wpart('staff', wr, (0.17, -0.3, -0.38), staff)
+wc = wpart('cape', wb, (0, 0.24, 0.47), cape, rot=(0.34, 0, 0))
+wpart('cape2', wc, (0, 0, -0.54), cape2, rot=(-0.06, 0, 0))
 
 
 # ---------- save, export, render ----------
