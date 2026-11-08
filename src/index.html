@@ -78,7 +78,7 @@ input::placeholder{color:#b9add8;opacity:.8}input:focus{box-shadow:0 0 0 2px var
 #modeStats b{color:var(--gold);font-size:1.08em;letter-spacing:.06em}
 #modeStats i{width:1px;height:11px;background:rgba(233,196,106,.35)}
 #modeCols{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:clamp(10px,1.4vw,20px);width:min(1180px,100%);margin-top:clamp(2px,1vh,10px)}
-#modes>:first-child{margin-top:auto}
+#modes>.eyebrow{margin-top:auto}
 .mode{--c:#e9c46a;position:relative;cursor:pointer;display:flex;flex-direction:column;padding:0;overflow:hidden;text-align:left;border-radius:20px;border:1px solid color-mix(in srgb,var(--c) 45%,transparent);background:linear-gradient(180deg,rgba(16,10,32,.92),rgba(8,5,18,.96));animation:rise .7s cubic-bezier(.2,.9,.3,1) backwards}
 .mode:hover,.mode:focus-visible{transform:translateY(-6px);border-color:var(--c);box-shadow:0 0 0 1px var(--c),0 18px 50px rgba(0,0,0,.55),0 0 46px color-mix(in srgb,var(--c) 45%,transparent);outline:none}
 .mode .art{position:relative;height:clamp(110px,24vh,240px);overflow:hidden}
@@ -128,7 +128,35 @@ input::placeholder{color:#b9add8;opacity:.8}input:focus{box-shadow:0 0 0 2px var
 @keyframes flick{0%,100%{opacity:1;transform:scale(1)}30%{opacity:.8;transform:scale(.94,1.06)}60%{opacity:.95;transform:scale(1.04,.96)}}
 /* the keyboard hint sticks to the bottom of the screen so it is visible even when the cards scroll */
 #modes .hint{position:sticky;bottom:0;z-index:3;display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:4px 6px;width:100%;margin-top:auto;padding:9px 10px 7px;font-size:12px;color:var(--dim);letter-spacing:.06em;background:linear-gradient(0deg,rgba(3,2,10,.94),rgba(3,2,10,.72) 65%,transparent);border-top:1px solid rgba(233,196,106,.14);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}#modes .hint kbd{font-family:Cinzel,Georgia,serif;font-size:11px;padding:1px 6px;border-radius:5px;border:1px solid rgba(233,196,106,.4);color:#fff6d8;margin:0 2px}#modes .hint b{color:#fff6d8;font-weight:600}
-@media (prefers-reduced-motion:reduce){.mode,.spin,.pulse,.flick,h1{animation:none}}
+/* ---- main screen polish: living background, shimmering title, glass cards with a cursor spotlight ---- */
+#modes{overflow-x:hidden;background:radial-gradient(ellipse 70% 50% at 50% 18%,rgba(120,60,220,.30),transparent 70%),radial-gradient(ellipse 60% 40% at 15% 100%,rgba(255,150,60,.14),transparent 70%),radial-gradient(ellipse 60% 40% at 85% 100%,rgba(90,160,255,.14),transparent 70%),radial-gradient(ellipse at 50% 35%,rgba(20,8,44,.35),rgba(3,2,10,.82) 75%)}
+#modes .fx{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+#modes .fx i{position:absolute;bottom:-12px;width:var(--s);height:var(--s);border-radius:50%;background:var(--k);box-shadow:0 0 calc(var(--s)*4) var(--k);opacity:0;animation:ember var(--d) linear var(--w) infinite}
+@keyframes ember{0%{opacity:0;transform:translate(0,0)}12%{opacity:.9}100%{opacity:0;transform:translate(var(--x),-105vh)}}
+#modes>:not(.fx){position:relative;z-index:1}
+#modes .hint{position:sticky}
+#modes h1{background:linear-gradient(100deg,#9a6a20 0%,#fff6d8 22%,#e9c46a 38%,#fff 50%,#e9c46a 62%,#fff6d8 78%,#9a6a20 100%);background-size:250% 100%;-webkit-background-clip:text;background-clip:text;animation:breathe 4s ease-in-out infinite,shine 6s ease-in-out infinite;letter-spacing:.18em;padding-left:.18em}
+@keyframes shine{0%,20%{background-position:100% 0}80%,100%{background-position:0 0}}
+#modes .eyebrow{display:flex;align-items:center;gap:14px}
+#modes .eyebrow::before,#modes .eyebrow::after{content:'';width:clamp(20px,5vw,70px);height:1px;background:linear-gradient(90deg,transparent,var(--gold))}
+#modes .eyebrow::after{transform:scaleX(-1)}
+#modeStats span{padding:5px 14px;border-radius:999px;background:rgba(233,196,106,.07);border:1px solid rgba(233,196,106,.28)}
+#modeStats i{display:none}
+.mode{--mx:50%;--my:50%;background:linear-gradient(180deg,rgba(24,14,48,.78),rgba(8,5,18,.9));-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);box-shadow:0 10px 40px rgba(0,0,0,.45),0 0 28px color-mix(in srgb,var(--c) 10%,transparent),inset 0 1px 0 rgba(255,255,255,.08);transition:transform .25s cubic-bezier(.2,.9,.3,1),border-color .25s,box-shadow .3s;will-change:transform}
+.mode::before{content:'';position:absolute;inset:0;z-index:3;border-radius:inherit;pointer-events:none;opacity:0;transition:opacity .3s;background:radial-gradient(360px circle at var(--mx) var(--my),color-mix(in srgb,var(--c) 26%,transparent),transparent 65%)}
+.mode:hover::before,.mode:focus-visible::before{opacity:1}
+.mode:hover,.mode:focus-visible{transform:translateY(-8px) scale(1.015)}
+.mode .art::before{content:'';position:absolute;inset:0;z-index:1;pointer-events:none;background:linear-gradient(115deg,transparent 35%,rgba(255,255,255,.16) 50%,transparent 65%);transform:translateX(-120%);transition:transform .9s}
+.mode:hover .art::before{transform:translateX(120%)}
+.mode h2{font-size:clamp(22px,3.1vh,32px)}
+.mode h2::after{content:'';display:block;width:34px;height:2px;margin-top:8px;background:linear-gradient(90deg,var(--c),transparent);transition:width .35s}
+.mode:hover h2::after{width:100%}
+.mode .go{margin:0 14px 14px;padding:10px 16px;border:1px solid color-mix(in srgb,var(--c) 40%,transparent);border-radius:12px;background:color-mix(in srgb,var(--c) 8%,transparent);transition:background .25s,color .25s,box-shadow .25s}
+.mode:hover .go{background:var(--c);color:#14091f;box-shadow:0 0 26px color-mix(in srgb,var(--c) 60%,transparent)}
+.mode .stat{font-weight:700}
+#modes .hint{background:linear-gradient(0deg,rgba(3,2,10,.9),transparent);border-top:0;font-size:12.5px}
+@media (max-width:620px){.mode .go{margin:0;border:0;border-radius:0;background:none}.mode:hover .go{background:none;color:var(--c);box-shadow:none}.mode h2::after{display:none}}
+@media (prefers-reduced-motion:reduce){.mode,.spin,.pulse,.flick,h1,#modes .fx i{animation:none}}
 #modeBar{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;width:100%}
 #modeBar>button{justify-self:start}@media (max-width:560px){#modeBar{grid-template-columns:auto 1fr;row-gap:8px}#modeBar h2{grid-row:2;grid-column:1/-1}#modeBar .row{flex-wrap:nowrap}#modeBar .row button{padding:6px 10px}}#modeBar .row{justify-self:end;gap:8px}
 #modeBar h2{margin:0;font-family:Cinzel,Georgia,serif;font-size:clamp(24px,4vh,40px);letter-spacing:.16em;color:#fff6d8;text-shadow:0 0 16px rgba(154,92,255,.8)}
@@ -328,6 +356,7 @@ body.touching #me{top:14px;bottom:auto;left:14px}body.touching #lock{display:non
 </div>
 
 <div id="modes" class="overlay">
+  <div class="fx" id="modeFx"></div>
   <div class="eyebrow">First-person elemental magic · 1–2 players</div>
   <h1>MAGE ARENA</h1>
   <div class="rule"></div>

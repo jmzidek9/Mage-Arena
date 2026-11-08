@@ -1476,8 +1476,13 @@ function renderModes() {
     return `<button class="mode" data-mode="${k}" style="--c:${m.c};animation-delay:${i * .08}s"><div class="art">${MODE_ART[k]}<kbd>${i + 1}</kbd></div>
     <div class="body"><h2>${m.name}</h2><p>${m.tag}</p><ul>${m.info.map(t => `<li>${t}</li>`).join('')}</ul></div><div class="go">Choose <span>→</span></div>${st ? `<span class="stat">${st}</span>` : ''}</button>`;
   }).join('');
-  for (const b of $('modeCols').children) b.onclick = () => pickMode(b.dataset.mode);
+  for (const b of $('modeCols').children) {
+    b.onclick = () => pickMode(b.dataset.mode);
+    b.onpointermove = e => { const r = b.getBoundingClientRect(); b.style.setProperty('--mx', `${e.clientX - r.left}px`); b.style.setProperty('--my', `${e.clientY - r.top}px`); }; // cursor spotlight
+  }
   renderModeStats();
+  const fx = $('modeFx'); // drifting embers behind the menu, built once
+  if (fx && !fx.children.length) fx.innerHTML = Array.from({ length: 26 }, () => `<i style="left:${Math.random() * 100}%;--s:${1 + Math.random() * 2.5}px;--d:${9 + Math.random() * 12}s;--w:${-Math.random() * 20}s;--x:${(Math.random() - .5) * 160}px;--k:${['#ffd36a', '#c39bff', '#ff9a5a', '#8ad8ff'][Math.floor(Math.random() * 4)]}"></i>`).join('');
 }
 addEventListener('keydown', e => { const k = Object.keys(MODES)[+e.key - 1]; if (k && !$('modes').classList.contains('hidden')) pickMode(k); });
 function pickMode(k) {
