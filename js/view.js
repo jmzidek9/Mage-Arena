@@ -1380,71 +1380,6 @@ function showOver(e) {
 }
 
 // ===================== mode browser: Arena / Training / Dungeon / Mage City (the 1v1 Duel is still in modes.js, off the menu) =====================
-// card art: small inline SVG scenes (ids are prefixed per card so they don't clash)
-const svg = body => `<svg viewBox="0 0 400 240" preserveAspectRatio="xMidYMid slice" aria-hidden="true">${body}</svg>`;
-const STARS = [[30, 30], [70, 62], [120, 22], [160, 50], [345, 28], [375, 70], [330, 120], [20, 110], [95, 100], [380, 150]].map(([x, y], i) => `<circle cx="${x}" cy="${y}" r="${i % 3 ? .8 : 1.4}" fill="#fff" opacity="${i % 2 ? .5 : .85}"/>`).join('');
-const MODE_ART = {
-  city: svg(`<defs><radialGradient id="cSky" cx="70%" cy="26%" r="90%"><stop offset="0" stop-color="#3d1f63"/><stop offset=".45" stop-color="#160b2b"/><stop offset="1" stop-color="#05040b"/></radialGradient>
-    <radialGradient id="cHole"><stop offset=".3" stop-color="#000"/><stop offset=".36" stop-color="#ffd9a0"/><stop offset=".55" stop-color="#ff8a3a" stop-opacity=".45"/><stop offset="1" stop-color="#ff7a2a" stop-opacity="0"/></radialGradient>
-    <linearGradient id="cStone" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8f8a9c"/><stop offset="1" stop-color="#3c3752"/></linearGradient>
-    <linearGradient id="cRock" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3e3756"/><stop offset="1" stop-color="#0b0912"/></linearGradient></defs>
-    <rect width="400" height="240" fill="url(#cSky)"/>${STARS}<circle class="pulse" cx="300" cy="62" r="46" fill="url(#cHole)" style="transform-origin:300px 62px"/>
-    <path d="M10,196 L390,196 L330,236 L70,236 Z" fill="url(#cRock)"/>
-    <g fill="url(#cStone)"><rect x="40" y="150" width="34" height="46"/><rect x="82" y="128" width="26" height="68"/><rect x="118" y="88" width="22" height="108"/><rect x="150" y="140" width="46" height="56"/><rect x="206" y="104" width="30" height="92"/><rect x="246" y="150" width="40" height="46"/><rect x="296" y="120" width="24" height="76"/><rect x="330" y="158" width="36" height="38"/></g>
-    <g fill="#5c5769"><path d="M118,88 h22 v-6 h-4 v4 h-5 v-4 h-4 v4 h-5 v-4 h-4 z"/><path d="M206,104 h30 v-6 h-4 v4 h-5 v-4 h-4 v4 h-4 v-4 h-4 v4 h-5 v-4 h-4 z"/><path d="M82,128 h26 v-5 h-4 v3 h-5 v-3 h-4 v3 h-5 v-3 h-4 z"/></g>
-    <g fill="#e9c46a"><rect x="118" y="92" width="22" height="3"/><rect x="206" y="108" width="30" height="3"/></g>
-    <g fill="#14101f"><rect x="125" y="110" width="4" height="9"/><rect x="132" y="140" width="4" height="9"/><rect x="214" y="126" width="4" height="9"/><rect x="225" y="150" width="4" height="9"/><rect x="160" y="168" width="10" height="28"/><rect x="90" y="150" width="4" height="8"/><rect x="304" y="140" width="4" height="8"/></g>
-    <path d="M129,82 l5,-14 l5,14 z M221,98 l4,-12 l4,12 z" fill="#daa0ff"/><circle class="pulse" cx="134" cy="72" r="10" fill="#daa0ff" opacity=".35" style="transform-origin:134px 72px"/>
-    <path d="M150,140 l-8,-8 l14,-6 l6,10 z M246,150 l6,-9 l10,4 l-3,7 z" fill="#8f8a9c" opacity=".9"/>
-    <g fill="#ff9a4a"><circle cx="58" cy="146" r="2.5"/><circle cx="268" cy="146" r="2.5"/></g>
-    <g fill="#733895"><path d="M100,136 h6 v18 l-3,-3 l-3,3 z"/><path d="M308,130 h6 v18 l-3,-3 l-3,3 z"/></g>`),
-  arena: svg(`<defs><radialGradient id="aSky" cx="62%" cy="30%" r="85%"><stop offset="0" stop-color="#3d1f63"/><stop offset=".45" stop-color="#160b2b"/><stop offset="1" stop-color="#05040b"/></radialGradient>
-    <radialGradient id="aGlow"><stop offset=".28" stop-color="#ffe2b0"/><stop offset=".42" stop-color="#ff9a4a" stop-opacity=".55"/><stop offset="1" stop-color="#ff7a2a" stop-opacity="0"/></radialGradient>
-    <linearGradient id="aRock" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3e3756"/><stop offset="1" stop-color="#0b0912"/></linearGradient></defs>
-    <rect width="400" height="240" fill="url(#aSky)"/>${STARS}
-    <g class="spin" style="transform-origin:250px 78px"><circle cx="250" cy="78" r="78" fill="url(#aGlow)"/></g>
-    <ellipse cx="250" cy="78" rx="70" ry="13" fill="none" stroke="#ffd59a" stroke-width="2.5" opacity=".8" transform="rotate(-14 250 78)"/>
-    <circle cx="250" cy="78" r="25" fill="#000" stroke="#fff3d6" stroke-width="2"/>
-    <path d="M181,93 A70,13 0 0 0 319,63" fill="none" stroke="#fff1d0" stroke-width="3.5" transform="rotate(-14 250 78)" opacity=".95"/>
-    <path d="M30,184 L370,184 L338,200 L300,226 L238,240 L160,240 L100,222 L60,202 Z" fill="url(#aRock)"/>
-    <ellipse cx="200" cy="184" rx="170" ry="13" fill="#4b4566"/><ellipse cx="200" cy="184" rx="90" ry="6" fill="none" stroke="#b48cff" stroke-width="1.5" opacity=".7"/>
-    <rect x="70" y="128" width="12" height="56" fill="#5a5470"/><rect x="66" y="124" width="20" height="6" fill="#6a6482"/>
-    <path d="M300,184 v-40 l4,-6 l3,5 l5,-3 v44 z" fill="#5a5470"/>
-    <path d="M140,184 v-34 a22,22 0 0 1 44,0 v34 h-8 v-34 a14,14 0 0 0 -28,0 v34 z" fill="#4e4864"/>
-    <circle cx="112" cy="176" r="10" fill="#ff9a4a" opacity=".35"/><path d="M112,166 l4,9 h-8 z" fill="#ffd9a8"/>
-    <circle cx="262" cy="176" r="10" fill="#ff9a4a" opacity=".35"/><path d="M262,166 l4,9 h-8 z" fill="#ffd9a8"/>
-    <path d="M40,120 l14,-6 l10,8 l-12,8 z" fill="#2c2840"/><path d="M350,110 l12,-4 l8,7 l-10,6 z" fill="#2c2840"/>`),
-  train: svg(`<defs><radialGradient id="tSky" cx="50%" cy="20%" r="90%"><stop offset="0" stop-color="#1f4a3a"/><stop offset=".5" stop-color="#0d1f1c"/><stop offset="1" stop-color="#05080a"/></radialGradient>
-    <linearGradient id="tRock" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3e4a46"/><stop offset="1" stop-color="#0b1210"/></linearGradient></defs>
-    <rect width="400" height="240" fill="url(#tSky)"/>${STARS}
-    <path d="M30 190 L370 190 L330 220 L250 238 L150 238 L70 220 Z" fill="url(#tRock)"/><ellipse cx="200" cy="190" rx="170" ry="12" fill="#4a5a54"/>
-    ${[90, 160, 240, 310].map((x, i) => `<g transform="translate(${x} ${i % 3 ? 186 : 180})"><rect x="-2" y="-30" width="4" height="30" fill="#6a5034"/><rect x="-16" y="-62" width="32" height="6" rx="2" fill="#8a6a44"/><ellipse cx="0" cy="-48" rx="12" ry="18" fill="#c8a870"/><circle cx="0" cy="-74" r="9" fill="#d8b880"/><circle cx="0" cy="-48" r="8" fill="none" stroke="#c03030" stroke-width="2.5"/><circle cx="0" cy="-48" r="3" fill="#c03030"/></g>`).join('')}
-    <g class="pulse" style="transform-origin:240px 130px"><path d="M226 124 l10 -10 l4 12 l12 -6 l-4 14 z" fill="#ffd36a"/></g><text x="252" y="112" fill="#ffd36a" font-size="18" font-weight="700" font-family="sans-serif">128</text>
-    <path d="M150 140 L230 132" stroke="#7ad8ff" stroke-width="4" stroke-linecap="round" opacity=".8"/>`),
-  duel: svg(`<defs><linearGradient id="dSky" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#3a140c"/><stop offset=".5" stop-color="#120a1e"/><stop offset="1" stop-color="#0a1c3a"/></linearGradient>
-    <radialGradient id="dBurst"><stop offset="0" stop-color="#fff"/><stop offset=".3" stop-color="#ffe9ff" stop-opacity=".9"/><stop offset="1" stop-color="#b48cff" stop-opacity="0"/></radialGradient>
-    <filter id="dBlur" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="5"/></filter></defs>
-    <rect width="400" height="240" fill="url(#dSky)"/>${STARS}
-    <ellipse cx="200" cy="200" rx="185" ry="22" fill="#2a2638"/><ellipse cx="200" cy="196" rx="185" ry="20" fill="#3c3752"/>
-    <ellipse cx="200" cy="196" rx="60" ry="6" fill="none" stroke="#e9c46a" stroke-width="1.2" opacity=".6"/>
-    <g class="beam"><path d="M108,118 Q150,104 200,116" stroke="#ff7a2a" stroke-width="10" fill="none" filter="url(#dBlur)"/><path d="M108,118 Q150,104 200,116" stroke="#ffd2a8" stroke-width="3" fill="none"/>
-    <path d="M292,118 Q250,130 200,116" stroke="#3aa8ff" stroke-width="10" fill="none" filter="url(#dBlur)"/><path d="M292,118 Q250,130 200,116" stroke="#cfeeff" stroke-width="3" fill="none"/></g>
-    <circle class="pulse" cx="200" cy="116" r="34" fill="url(#dBurst)" style="transform-origin:200px 116px"/>
-    <path d="M200,92 l5,17 l17,-5 l-12,13 l12,13 l-17,-5 l-5,17 l-5,-17 l-17,5 l12,-13 l-12,-13 l17,5 z" fill="#fff" opacity=".9"/>
-    <g stroke="#ff9a5a" stroke-width="1.6" stroke-opacity=".85"><path d="M70,196 L80,140 L64,140 L86,92 L106,140 L92,140 L102,196 Z" fill="#14101f"/><circle cx="86" cy="128" r="8" fill="#14101f"/></g><path d="M98,150 L110,116" stroke="#14101f" stroke-width="4"/><circle cx="109" cy="117" r="5" fill="#ffb070"/>
-    <g stroke="#7cc8ff" stroke-width="1.6" stroke-opacity=".85"><path d="M330,196 L320,140 L336,140 L314,92 L294,140 L308,140 L298,196 Z" fill="#14101f"/><circle cx="314" cy="128" r="8" fill="#14101f"/></g><path d="M302,150 L290,116" stroke="#14101f" stroke-width="4"/><circle cx="291" cy="117" r="5" fill="#9ad8ff"/>`),
-  dungeon: svg(`<defs><pattern id="gBrick" width="48" height="24" patternUnits="userSpaceOnUse"><rect width="48" height="24" fill="#2b2420"/><path d="M0,23.5 H48 M24,0 V12 M0,11.5 H48 M12,12 V24 M36,12 V24" stroke="#120d0b" stroke-width="2"/></pattern>
-    <radialGradient id="gTorch"><stop offset="0" stop-color="#ffb35a" stop-opacity=".75"/><stop offset="1" stop-color="#ff7a2a" stop-opacity="0"/></radialGradient>
-    <linearGradient id="gDeep" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#050302"/><stop offset="1" stop-color="#2a160a"/></linearGradient></defs>
-    <rect width="400" height="240" fill="url(#gBrick)"/><rect width="400" height="240" fill="#000" opacity=".25"/>
-    <circle class="flick" cx="78" cy="96" r="70" fill="url(#gTorch)"/><circle class="flick" cx="322" cy="96" r="70" fill="url(#gTorch)" style="animation-delay:-.7s"/>
-    <path d="M128,240 V118 A72,72 0 0 1 272,118 V240 Z" fill="#4a3f36"/><path d="M142,240 V120 A58,58 0 0 1 258,120 V240 Z" fill="url(#gDeep)"/>
-    <path d="M160,240 L176,214 H224 L240,240 Z M180,208 L190,192 H210 L220,208 Z M194,186 L198,178 H202 L206,186 Z" fill="#5a3a22" opacity=".85"/>
-    <g stroke="#6a5a48" stroke-width="3.5"><path d="M156,82 V150 M171,68 V150 M186,63 V150 M200,62 V150 M214,63 V150 M229,68 V150 M244,82 V150"/><path d="M144,100 H256 M143,125 H257 M143,148 H257"/></g>
-    <g fill="#8a7a66"><path d="M153,150 l3,8 l3,-8 z M168,150 l3,8 l3,-8 z M183,150 l3,8 l3,-8 z M197,150 l3,8 l3,-8 z M211,150 l3,8 l3,-8 z M226,150 l3,8 l3,-8 z M241,150 l3,8 l3,-8 z"/></g>
-    <rect x="74" y="104" width="8" height="30" fill="#3a2a1c"/><path class="flick" d="M78,80 q10,14 0,26 q-10,-12 0,-26" fill="#ffcf7a" style="transform-origin:78px 106px"/>
-    <rect x="318" y="104" width="8" height="30" fill="#3a2a1c"/><path class="flick" d="M322,80 q10,14 0,26 q-10,-12 0,-26" fill="#ffcf7a" style="transform-origin:322px 106px;animation-delay:-.7s"/>`),
-};
 const MODES = {
   arena: { name: 'Arena', c: '#e9c46a', play: '⚔ Play Solo', tag: 'Hold the floating ruins under the black hole against endless waves.',
     info: ['Endless waves', 'Boss every 5', 'Solo or co-op'] },
@@ -1468,23 +1403,35 @@ function modeStat(k) {
 function renderModeStats() {
   const el = $('modeStats'); if (!el) return;
   let best = 0; try { best = +localStorage.getItem('magepact_best') || 0; } catch {}
-  el.innerHTML = [`<span>Level <b>${PROG.lvl}</b></span>`, `<span><b>${PROG.unl.length}</b> / ${ELIST.length} elements</span>`].concat(best ? [`<span>Best wave <b>${best}</b></span>`] : []).join('<i></i>');
+  el.innerHTML = [`<span>Level <b>${PROG.lvl}</b></span>`, `<span><b>${PROG.unl.length}</b> / ${ELIST.length} elements</span>`].concat(best ? [`<span>Best wave <b>${best}</b></span>`] : []).join('<em>◆</em>');
+}
+// main screen: a list of modes on the left; hovering or arrow keys select one and show its description below the list
+let modeSel = 'arena';
+function selMode(k) {
+  modeSel = k; const m = MODES[k], st = modeStat(k);
+  for (const b of $('modeCols').children) b.classList.toggle('on', b.dataset.mode === k);
+  $('modeDesc').innerHTML = `<p>${m.tag}</p><div class="facts">${(st ? [`<b>${st}</b>`] : []).concat(m.info).join('<em>◆</em>')}</div>`;
+  $('modeDesc').style.setProperty('--c', m.c);
 }
 function renderModes() {
-  $('modeCols').innerHTML = Object.entries(MODES).map(([k, m], i) => {
-    const st = modeStat(k);
-    return `<button class="mode" data-mode="${k}" style="--c:${m.c};animation-delay:${i * .08}s"><div class="art">${MODE_ART[k]}<kbd>${i + 1}</kbd></div>
-    <div class="body"><h2>${m.name}</h2><p>${m.tag}</p><ul>${m.info.map(t => `<li>${t}</li>`).join('')}</ul></div><div class="go">Choose <span>→</span></div>${st ? `<span class="stat">${st}</span>` : ''}</button>`;
-  }).join('');
+  const R = ['I', 'II', 'III', 'IV', 'V'];
+  $('modeCols').innerHTML = Object.entries(MODES).map(([k, m], i) => `<button class="mi" data-mode="${k}" style="--c:${m.c};animation-delay:${.15 + i * .08}s"><i>${R[i]}</i><span>${m.name}</span></button>`).join('');
   for (const b of $('modeCols').children) {
     b.onclick = () => pickMode(b.dataset.mode);
-    b.onpointermove = e => { const r = b.getBoundingClientRect(); b.style.setProperty('--mx', `${e.clientX - r.left}px`); b.style.setProperty('--my', `${e.clientY - r.top}px`); }; // cursor spotlight
+    b.onpointerenter = b.onfocus = () => modeSel !== b.dataset.mode && (selMode(b.dataset.mode), sfx('pick'));
   }
+  selMode(modeSel);
   renderModeStats();
   const fx = $('modeFx'); // drifting embers behind the menu, built once
   if (fx && !fx.children.length) fx.innerHTML = Array.from({ length: 26 }, () => `<i style="left:${Math.random() * 100}%;--s:${1 + Math.random() * 2.5}px;--d:${9 + Math.random() * 12}s;--w:${-Math.random() * 20}s;--x:${(Math.random() - .5) * 160}px;--k:${['#ffd36a', '#c39bff', '#ff9a5a', '#8ad8ff'][Math.floor(Math.random() * 4)]}"></i>`).join('');
 }
-addEventListener('keydown', e => { const k = Object.keys(MODES)[+e.key - 1]; if (k && !$('modes').classList.contains('hidden')) pickMode(k); });
+addEventListener('keydown', e => {
+  if ($('modes').classList.contains('hidden')) return;
+  const ks = Object.keys(MODES), k = ks[+e.key - 1], d = { ArrowDown: 1, s: 1, ArrowUp: -1, w: -1 }[e.key];
+  if (k) pickMode(k);
+  else if (d) { e.preventDefault(); selMode(ks[(ks.indexOf(modeSel) + d + ks.length) % ks.length]); sfx('pick'); }
+  else if (e.key === 'Enter' && !(document.activeElement instanceof HTMLButtonElement)) pickMode(modeSel); // a focused button already clicks itself on Enter
+});
 function pickMode(k) {
   myMode = k;
   $('modes').classList.add('hidden'); $('lobby').classList.remove('hidden');

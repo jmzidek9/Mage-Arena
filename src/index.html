@@ -7,7 +7,7 @@
 <title>Mage Arena</title>
 <link rel="icon" href="data:,">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Spectral:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Cinzel+Decorative:wght@900&family=Cormorant+Garamond:ital,wght@1,500&family=Spectral:wght@400;600&display=swap" rel="stylesheet">
 <style>
 :root{--ink:#efe8ff;--dim:#b9add8;--gold:#e9c46a;--gold2:#8a6a2a;--glow:#9a5cff;--el:#ff6a2a;--panel:rgba(18,10,38,.62)}
 html,body{margin:0;height:100%;overflow:hidden;background:#05060d;color:var(--ink);font-family:Spectral,Georgia,serif;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;overscroll-behavior:none}
@@ -68,95 +68,51 @@ input::placeholder{color:#b9add8;opacity:.8}input:focus{box-shadow:0 0 0 2px var
 #vignette{position:absolute;inset:0}
 #code-big{font-family:Cinzel,Georgia,serif;font-weight:900;font-size:46px;letter-spacing:.35em;color:#fff6d8;text-shadow:0 0 20px var(--glow);margin:6px 0}
 @keyframes rise{from{opacity:0;transform:translateY(30px) scale(.9)}}
-/* ---- lobby: element grid + detail ---- */
-#modes{justify-content:flex-start;gap:clamp(8px,1.5vh,16px);padding:clamp(12px,2.4vh,28px) 16px;overflow:auto;background:radial-gradient(ellipse at 50% 35%,rgba(40,16,80,.25),rgba(3,2,10,.72) 70%)}
-#modes .eyebrow{font-family:Cinzel,Georgia,serif;font-size:clamp(11px,1.4vh,14px);letter-spacing:clamp(.12em,.6vw,.42em);color:var(--gold);text-transform:uppercase;opacity:.9}
-#modes h1{font-size:clamp(30px,min(7vh,10vw),96px);line-height:1}
-#modes .sub{font-size:clamp(13px,1.8vh,18px)}
-/* level / elements / record, so the main screen says who you are before you pick */
-#modeStats{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:6px 12px;font-family:Cinzel,Georgia,serif;font-size:clamp(10px,1.25vh,13px);letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
-#modeStats b{color:var(--gold);font-size:1.08em;letter-spacing:.06em}
-#modeStats i{width:1px;height:11px;background:rgba(233,196,106,.35)}
-#modeCols{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:clamp(10px,1.4vw,20px);width:min(1180px,100%);margin-top:clamp(2px,1vh,10px)}
-#modes>.eyebrow{margin-top:auto}
-.mode{--c:#e9c46a;position:relative;cursor:pointer;display:flex;flex-direction:column;padding:0;overflow:hidden;text-align:left;border-radius:20px;border:1px solid color-mix(in srgb,var(--c) 45%,transparent);background:linear-gradient(180deg,rgba(16,10,32,.92),rgba(8,5,18,.96));animation:rise .7s cubic-bezier(.2,.9,.3,1) backwards}
-.mode:hover,.mode:focus-visible{transform:translateY(-6px);border-color:var(--c);box-shadow:0 0 0 1px var(--c),0 18px 50px rgba(0,0,0,.55),0 0 46px color-mix(in srgb,var(--c) 45%,transparent);outline:none}
-.mode .art{position:relative;height:clamp(110px,24vh,240px);overflow:hidden}
-/* the mode's own record (best wave / deepest floor) */
-.mode .stat{position:absolute;z-index:2;right:9px;top:9px;font-family:Cinzel,Georgia,serif;font-size:10px;letter-spacing:.13em;text-transform:uppercase;padding:4px 9px;border-radius:999px;background:rgba(6,3,14,.72);border:1px solid color-mix(in srgb,var(--c) 55%,transparent);color:color-mix(in srgb,var(--c) 55%,white);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);pointer-events:none}
-.mode .art svg{display:block;width:100%;height:100%;transition:transform .8s cubic-bezier(.2,.9,.3,1)}
-.mode:hover .art svg{transform:scale(1.07)}
-.mode .art::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,transparent 55%,rgba(16,10,32,.95));pointer-events:none}
-.mode .art kbd{position:absolute;top:12px;left:12px;z-index:1;font-family:Cinzel,Georgia,serif;font-size:12px;width:24px;height:24px;display:grid;place-items:center;border-radius:7px;background:rgba(0,0,0,.55);border:1px solid color-mix(in srgb,var(--c) 60%,transparent);color:#fff6d8}
-.mode .body{flex:1;padding:4px 20px 14px;display:grid;gap:9px;align-content:start}
-.mode h2{margin:0;font-size:clamp(22px,2.9vh,30px);letter-spacing:.14em;color:#fff6d8;text-shadow:0 0 18px color-mix(in srgb,var(--c) 60%,transparent)}
-.mode p{margin:0;font-family:Spectral,Georgia,serif;font-weight:400;font-size:clamp(14px,1.8vh,17px);line-height:1.45;letter-spacing:0;color:var(--dim)}
-.mode ul{margin:2px 0 0;padding:0;list-style:none;display:flex;flex-wrap:wrap;gap:6px}
-.mode li{font-family:Spectral,Georgia,serif;font-weight:600;font-size:12.5px;letter-spacing:.02em;color:color-mix(in srgb,var(--c) 45%,white);padding:3px 10px;border-radius:999px;background:color-mix(in srgb,var(--c) 12%,transparent);border:1px solid color-mix(in srgb,var(--c) 35%,transparent)}
-.mode .go{display:flex;justify-content:space-between;align-items:center;padding:12px 20px;border-top:1px solid color-mix(in srgb,var(--c) 22%,transparent);font-size:13px;letter-spacing:.22em;text-transform:uppercase;color:var(--c)}
-.mode .go span{transition:transform .25s;font-size:18px}.mode:hover .go span{transform:translateX(6px)}
-.mode:hover .go{background:color-mix(in srgb,var(--c) 10%,transparent)}
-/* main screen density: every mode visible without scrolling on a laptop, two columns on a tablet, and a
-   compact horizontal card on a narrow pane (the phone / review-pane size) where the art becomes a thumbnail */
-@media (max-width:1100px){#modeCols{grid-template-columns:repeat(2,minmax(0,1fr))}.mode .art{height:clamp(100px,20vh,180px)}}
-@media (max-width:620px){
-  #modes{gap:9px}
-  #modes .eyebrow{letter-spacing:.16em}
-  #modeCols{grid-template-columns:1fr;grid-auto-rows:1fr;gap:9px}
-  .mode{display:grid;grid-template-columns:104px minmax(0,1fr);grid-template-rows:auto auto;align-items:stretch;border-radius:14px}
-  .mode .art{grid-column:1;grid-row:1 / span 2;width:104px;height:100%;min-height:92px}
-  .mode .art kbd{top:7px;left:7px;width:20px;height:20px;font-size:10px}
-  .mode .body{grid-column:2;grid-row:1;padding:9px 12px 0;gap:4px}
-  .mode h2{font-size:19px;letter-spacing:.1em}
-  /* the tagline needs more room than a thumbnail card has, so the fact chips take its place */
-  .mode p{display:none}
-  .mode ul{display:flex;gap:4px;margin:0}
-  .mode li{font-size:10.5px;padding:2px 7px}
-  .mode .go{grid-column:2;grid-row:2;justify-content:flex-start;gap:8px;padding:2px 12px 8px;border-top:0;font-size:11px;letter-spacing:.16em}
-  .mode .go span{margin-left:0}
-  /* the record moves out of the thumbnail and sits at the end of the footer row */
-  .mode .stat{position:static;grid-column:2;grid-row:2;justify-self:end;align-self:center;margin-right:10px;z-index:2;font-size:9px;padding:2px 7px}
-}
-@media (max-height:720px){
-  #modes h1{font-size:clamp(26px,7vh,54px)}
-  #modes .rule,#modes .eyebrow{display:none}
-  #modes .sub{font-size:12px}
-  #modeCols{margin-top:0}
-}
-.spin{animation:spin 40s linear infinite}.pulse{animation:pulse 1.6s ease-in-out infinite}.flick{animation:flick 1.4s ease-in-out infinite}
 @keyframes pulse{50%{transform:scale(1.18);opacity:.8}}
-@keyframes flick{0%,100%{opacity:1;transform:scale(1)}30%{opacity:.8;transform:scale(.94,1.06)}60%{opacity:.95;transform:scale(1.04,.96)}}
-/* the keyboard hint sticks to the bottom of the screen so it is visible even when the cards scroll */
-#modes .hint{position:sticky;bottom:0;z-index:3;display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:4px 6px;width:100%;margin-top:auto;padding:9px 10px 7px;font-size:12px;color:var(--dim);letter-spacing:.06em;background:linear-gradient(0deg,rgba(3,2,10,.94),rgba(3,2,10,.72) 65%,transparent);border-top:1px solid rgba(233,196,106,.14);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}#modes .hint kbd{font-family:Cinzel,Georgia,serif;font-size:11px;padding:1px 6px;border-radius:5px;border:1px solid rgba(233,196,106,.4);color:#fff6d8;margin:0 2px}#modes .hint b{color:#fff6d8;font-weight:600}
-/* ---- main screen polish: living background, shimmering title, glass cards with a cursor spotlight ---- */
-#modes{overflow-x:hidden;background:radial-gradient(ellipse 70% 50% at 50% 18%,rgba(120,60,220,.30),transparent 70%),radial-gradient(ellipse 60% 40% at 15% 100%,rgba(255,150,60,.14),transparent 70%),radial-gradient(ellipse 60% 40% at 85% 100%,rgba(90,160,255,.14),transparent 70%),radial-gradient(ellipse at 50% 35%,rgba(20,8,44,.35),rgba(3,2,10,.82) 75%)}
+/* ---- main screen: cinematic menu on the left, the live 3D arena on the right ---- */
+#modes{align-items:flex-start;justify-content:center;gap:0;text-align:left;padding:clamp(20px,5vh,60px) 0 clamp(64px,10vh,90px) 7vw;overflow:hidden;background:linear-gradient(90deg,rgba(3,2,10,.95) 0%,rgba(3,2,10,.74) 34%,rgba(3,2,10,0) 66%),linear-gradient(0deg,rgba(3,2,10,.6),transparent 25%)}
 #modes .fx{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
 #modes .fx i{position:absolute;bottom:-12px;width:var(--s);height:var(--s);border-radius:50%;background:var(--k);box-shadow:0 0 calc(var(--s)*4) var(--k);opacity:0;animation:ember var(--d) linear var(--w) infinite}
 @keyframes ember{0%{opacity:0;transform:translate(0,0)}12%{opacity:.9}100%{opacity:0;transform:translate(var(--x),-105vh)}}
-#modes>:not(.fx){position:relative;z-index:1}
-#modes .hint{position:sticky}
-#modes h1{background:linear-gradient(100deg,#9a6a20 0%,#fff6d8 22%,#e9c46a 38%,#fff 50%,#e9c46a 62%,#fff6d8 78%,#9a6a20 100%);background-size:250% 100%;-webkit-background-clip:text;background-clip:text;animation:breathe 4s ease-in-out infinite,shine 6s ease-in-out infinite;letter-spacing:.18em;padding-left:.18em}
-@keyframes shine{0%,20%{background-position:100% 0}80%,100%{background-position:0 0}}
-#modes .eyebrow{display:flex;align-items:center;gap:14px}
-#modes .eyebrow::before,#modes .eyebrow::after{content:'';width:clamp(20px,5vw,70px);height:1px;background:linear-gradient(90deg,transparent,var(--gold))}
-#modes .eyebrow::after{transform:scaleX(-1)}
-#modeStats span{padding:5px 14px;border-radius:999px;background:rgba(233,196,106,.07);border:1px solid rgba(233,196,106,.28)}
-#modeStats i{display:none}
-.mode{--mx:50%;--my:50%;background:linear-gradient(180deg,rgba(24,14,48,.78),rgba(8,5,18,.9));-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);box-shadow:0 10px 40px rgba(0,0,0,.45),0 0 28px color-mix(in srgb,var(--c) 10%,transparent),inset 0 1px 0 rgba(255,255,255,.08);transition:transform .25s cubic-bezier(.2,.9,.3,1),border-color .25s,box-shadow .3s;will-change:transform}
-.mode::before{content:'';position:absolute;inset:0;z-index:3;border-radius:inherit;pointer-events:none;opacity:0;transition:opacity .3s;background:radial-gradient(360px circle at var(--mx) var(--my),color-mix(in srgb,var(--c) 26%,transparent),transparent 65%)}
-.mode:hover::before,.mode:focus-visible::before{opacity:1}
-.mode:hover,.mode:focus-visible{transform:translateY(-8px) scale(1.015)}
-.mode .art::before{content:'';position:absolute;inset:0;z-index:1;pointer-events:none;background:linear-gradient(115deg,transparent 35%,rgba(255,255,255,.16) 50%,transparent 65%);transform:translateX(-120%);transition:transform .9s}
-.mode:hover .art::before{transform:translateX(120%)}
-.mode h2{font-size:clamp(22px,3.1vh,32px)}
-.mode h2::after{content:'';display:block;width:34px;height:2px;margin-top:8px;background:linear-gradient(90deg,var(--c),transparent);transition:width .35s}
-.mode:hover h2::after{width:100%}
-.mode .go{margin:0 14px 14px;padding:10px 16px;border:1px solid color-mix(in srgb,var(--c) 40%,transparent);border-radius:12px;background:color-mix(in srgb,var(--c) 8%,transparent);transition:background .25s,color .25s,box-shadow .25s}
-.mode:hover .go{background:var(--c);color:#14091f;box-shadow:0 0 26px color-mix(in srgb,var(--c) 60%,transparent)}
-.mode .stat{font-weight:700}
-#modes .hint{background:linear-gradient(0deg,rgba(3,2,10,.9),transparent);border-top:0;font-size:12.5px;-webkit-backdrop-filter:none;backdrop-filter:none}
-@media (max-width:620px){#modes .hint,#modes .eyebrow::before,#modes .eyebrow::after{display:none}#modes .eyebrow{display:block;font-size:9.5px;letter-spacing:.12em}#modeCols{margin-bottom:auto}.mode .go{margin:0;border:0;border-radius:0;background:none}.mode:hover .go{background:none;color:var(--c);box-shadow:none}.mode h2::after{display:none}}
-@media (prefers-reduced-motion:reduce){.mode,.spin,.pulse,.flick,h1,#modes .fx i{animation:none}}
+#modes>:not(.fx){position:relative;z-index:1;animation:slideIn .9s cubic-bezier(.2,.9,.3,1) backwards}
+@keyframes slideIn{from{opacity:0;transform:translateX(-30px)}}
+#modes .eyebrow{display:flex;align-items:center;gap:12px;font:700 clamp(10px,1.5vh,12px) Cinzel,Georgia,serif;letter-spacing:.5em;text-transform:uppercase;color:var(--gold);margin-bottom:6px}
+#modes .eyebrow::before{content:'';width:40px;height:1px;background:linear-gradient(90deg,transparent,var(--gold))}
+#modes .eyebrow::after{content:'◆';font-size:8px;letter-spacing:0}
+#modes h1{font:900 clamp(48px,11.5vh,104px)/1 'Cinzel Decorative',Cinzel,Georgia,serif;letter-spacing:.04em;background:linear-gradient(100deg,transparent 40%,rgba(255,255,255,.85) 50%,transparent 60%) 0 0/250% 100% no-repeat,linear-gradient(180deg,#fffaf0 0%,#f6dc8c 32%,#c9922e 58%,#f3d27a 74%,#7a4a10 100%);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-stroke:1px rgba(255,236,180,.25);filter:drop-shadow(0 2px 0 #2a1406) drop-shadow(0 0 26px rgba(154,92,255,.65));animation:slideIn .9s cubic-bezier(.2,.9,.3,1) backwards,shine 7s ease-in-out 1.2s infinite}
+@keyframes shine{0%{background-position:150% 0,0 0}35%,100%{background-position:-60% 0,0 0}}
+#modes h1 span{display:block;font-size:.62em;letter-spacing:.32em;margin-top:.08em}
+#modes .flourish{width:min(360px,70vw);height:26px;margin:clamp(6px,1.6vh,14px) 0 0}
+#modeCols{display:flex;flex-direction:column;margin-top:clamp(12px,3.5vh,34px)}
+.mi{position:relative;display:flex;align-items:baseline;gap:18px;padding:clamp(5px,1.1vh,10px) 40px clamp(5px,1.1vh,10px) 4px;border:0;border-radius:0;background:none;box-shadow:none;font:700 clamp(20px,3.6vh,30px) Cinzel,Georgia,serif;letter-spacing:.22em;text-transform:uppercase;color:rgba(233,224,255,.42);text-align:left;transition:color .25s,letter-spacing .35s,transform .35s cubic-bezier(.2,.9,.3,1);animation:slideIn .8s cubic-bezier(.2,.9,.3,1) backwards}
+.mi:hover{transform:none;box-shadow:none}
+.mi i{font:500 italic clamp(15px,2.2vh,19px) 'Cormorant Garamond',Georgia,serif;letter-spacing:.05em;color:rgba(233,196,106,.45);width:30px;text-align:right;transition:color .25s}
+.mi.on{transform:translateX(10px);letter-spacing:.26em}
+.mi.on span{color:transparent;background:linear-gradient(180deg,#fffaf0,#f3d27a 55%,#b07a20);-webkit-background-clip:text;background-clip:text;filter:drop-shadow(0 0 14px rgba(233,196,106,.45))}
+.mi.on i{color:#f3d27a}
+.mi::before{content:'❧';position:absolute;left:-34px;top:50%;transform:translate(-8px,-50%);font-size:clamp(18px,3vh,24px);color:var(--gold);opacity:0;transition:opacity .25s,transform .35s}
+.mi.on::before{opacity:1;transform:translate(0,-50%)}
+.mi:focus-visible{outline:none}.mi:focus-visible span{text-decoration:underline 1px rgba(233,196,106,.6);text-underline-offset:8px}
+#modeDesc{--c:var(--gold);margin:clamp(8px,2vh,18px) 0 0 52px;max-width:440px;min-height:5.2em}
+#modeDesc p{margin:0;font:500 italic clamp(16px,2.4vh,20px)/1.4 'Cormorant Garamond',Georgia,serif;color:#d8cdee;animation:fadeUp .35s ease-out}
+#modeDesc .facts{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;margin-top:10px;padding-top:10px;border-top:1px solid;border-image:linear-gradient(90deg,var(--c),transparent) 1;font:700 10.5px Cinzel,Georgia,serif;letter-spacing:.18em;text-transform:uppercase;color:#b9add8;animation:fadeUp .45s ease-out}
+#modeDesc .facts b{color:color-mix(in srgb,var(--c) 70%,white)}
+#modes em{font-style:normal;font-size:7px;color:var(--gold)}
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}}
+#modeStats{position:absolute!important;left:7vw;bottom:clamp(18px,4vh,32px);display:flex;flex-wrap:wrap;align-items:center;gap:6px 18px;font:700 11px Cinzel,Georgia,serif;letter-spacing:.3em;text-transform:uppercase;color:var(--dim)}
+#modeStats b{color:#f3d27a;font-size:14px;letter-spacing:.1em}
+#modes .hint{position:absolute!important;right:28px;bottom:clamp(18px,4vh,32px);display:flex;align-items:center;gap:6px;font-size:12px;color:var(--dim);letter-spacing:.06em}
+#modes .hint kbd{font-family:Cinzel,Georgia,serif;font-size:11px;padding:1px 6px;border-radius:5px;border:1px solid rgba(233,196,106,.4);color:#fff6d8}
+@media (max-width:760px){
+  #modes{padding:28px 22px 80px 44px;background:linear-gradient(90deg,rgba(3,2,10,.92),rgba(3,2,10,.6)),linear-gradient(0deg,rgba(3,2,10,.7),transparent 30%)}
+  #modes .eyebrow{letter-spacing:.16em;font-size:9.5px}#modes .eyebrow::before{width:20px}
+  .mi{font-size:22px;letter-spacing:.16em;white-space:nowrap;gap:14px}.mi.on{letter-spacing:.18em}
+  #modes h1{font-size:clamp(40px,13vw,64px)}
+  #modeDesc{margin-left:48px}
+  #modeStats{left:44px;right:22px;letter-spacing:.18em}
+  #modes .hint{display:none}
+}
+@media (prefers-reduced-motion:reduce){#modes *,#modes h1,#modes .fx i{animation:none!important}}
 #modeBar{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;width:100%}
 #modeBar>button{justify-self:start}@media (max-width:560px){#modeBar{grid-template-columns:auto 1fr;row-gap:8px}#modeBar h2{grid-row:2;grid-column:1/-1}#modeBar .row{flex-wrap:nowrap}#modeBar .row button{padding:6px 10px}}#modeBar .row{justify-self:end;gap:8px}
 #modeBar h2{margin:0;font-family:Cinzel,Georgia,serif;font-size:clamp(24px,4vh,40px);letter-spacing:.16em;color:#fff6d8;text-shadow:0 0 16px rgba(154,92,255,.8)}
@@ -357,13 +313,13 @@ body.touching #me{top:14px;bottom:auto;left:14px}body.touching #lock{display:non
 
 <div id="modes" class="overlay">
   <div class="fx" id="modeFx"></div>
-  <div class="eyebrow">First-person elemental magic · 1–2 players</div>
-  <h1>MAGE ARENA</h1>
-  <div class="rule"></div>
-  <div class="sub">Choose how you want to play</div>
-  <div id="modeStats"></div>
+  <div class="eyebrow">First-person elemental magic</div>
+  <h1>Mage<span>ARENA</span></h1>
+  <svg class="flourish" viewBox="0 0 360 26" aria-hidden="true"><defs><linearGradient id="flG" x1="0" x2="1"><stop offset="0" stop-color="#e9c46a"/><stop offset="1" stop-color="#e9c46a" stop-opacity="0"/></linearGradient></defs><path d="M2,13 C30,13 40,3 60,5 C75,7 70,20 58,18 C50,16 54,8 62,10 M60,13 H340" fill="none" stroke="url(#flG)" stroke-width="1.4"/><path d="M84,13 l7,-6 l7,6 l-7,6 z" fill="#e9c46a"/></svg>
   <div id="modeCols"></div>
-  <div class="hint"><span><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd><kbd>4</kbd> pick a mode</span><span>·</span><span>Keyboard &amp; mouse, gamepad or touch</span></div>
+  <div id="modeDesc"></div>
+  <div id="modeStats"></div>
+  <div class="hint"><kbd>↑</kbd><kbd>↓</kbd> choose · <kbd>Enter</kbd> play · <kbd>1</kbd>–<kbd>4</kbd></div>
 </div>
 
 <div id="lobby" class="overlay hidden">
