@@ -1456,10 +1456,28 @@ const MODES = {
     info: ['Huge map', 'Everything breaks', 'Solo or co-op'] },
 };
 let myMode = 'arena';
+// a mode's own record, shown on its card ('New' until you have played it)
+function modeStat(k) {
+  try {
+    if (k === 'train') return `${PROG.unl.length}/${ELIST.length} elements`;
+    if (k === 'dungeon') { const per = JSON.parse(localStorage.getItem('magepact_best_floor') || '{}'); const b = Math.max(0, ...Object.values(per).map(Number)); return b ? `Deepest F${b}` : 'New'; }
+    const b = +localStorage.getItem('magepact_best') || 0; return b ? `Best W${b}` : 'New';
+  } catch { return ''; }
+}
+// level, unlocks and best wave, so the main screen says who you are before you pick a mode
+function renderModeStats() {
+  const el = $('modeStats'); if (!el) return;
+  let best = 0; try { best = +localStorage.getItem('magepact_best') || 0; } catch {}
+  el.innerHTML = [`<span>Level <b>${PROG.lvl}</b></span>`, `<span><b>${PROG.unl.length}</b> / ${ELIST.length} elements</span>`].concat(best ? [`<span>Best wave <b>${best}</b></span>`] : []).join('<i></i>');
+}
 function renderModes() {
-  $('modeCols').innerHTML = Object.entries(MODES).map(([k, m], i) => `<button class="mode" data-mode="${k}" style="--c:${m.c};animation-delay:${i * .08}s"><div class="art">${MODE_ART[k]}<kbd>${i + 1}</kbd></div>
-    <div class="body"><h2>${m.name}</h2><p>${m.tag}</p><ul>${m.info.map(t => `<li>${t}</li>`).join('')}</ul></div><div class="go">Choose <span>→</span></div></button>`).join('');
+  $('modeCols').innerHTML = Object.entries(MODES).map(([k, m], i) => {
+    const st = modeStat(k);
+    return `<button class="mode" data-mode="${k}" style="--c:${m.c};animation-delay:${i * .08}s"><div class="art">${MODE_ART[k]}<kbd>${i + 1}</kbd></div>
+    <div class="body"><h2>${m.name}</h2><p>${m.tag}</p><ul>${m.info.map(t => `<li>${t}</li>`).join('')}</ul></div><div class="go">Choose <span>→</span></div>${st ? `<span class="stat">${st}</span>` : ''}</button>`;
+  }).join('');
   for (const b of $('modeCols').children) b.onclick = () => pickMode(b.dataset.mode);
+  renderModeStats();
 }
 addEventListener('keydown', e => { const k = Object.keys(MODES)[+e.key - 1]; if (k && !$('modes').classList.contains('hidden')) pickMode(k); });
 function pickMode(k) {
@@ -1467,8 +1485,7 @@ function pickMode(k) {
   $('modes').classList.add('hidden'); $('lobby').classList.remove('hidden');
   $('modeName').textContent = MODES[k].name; $('soloBtn').textContent = MODES[k].play; sfx('pick'); renderLobby();
 }
-$('modeBack').onclick = () => { $('lobby').classList.add('hidden'); $('modes').classList.remove('hidden'); };
-renderModes();
+$('modeBack').onclick = () => { $('lobby').classList.add('hidden'); $('modes').classList.remove('hidden'); renderModes(); }; // records may have changed during the run
 
 // ===================== progression: levels, element unlocks, talents, mastery (saved per browser) =====================
 const STARTERS = ['fire', 'frost', 'storm', 'water', 'earth', 'wind', 'nature', 'shadow', 'light', 'venom'];
@@ -1518,6 +1535,7 @@ function renderTalents() {
 $('unlockAll').onclick = () => { PROG.unl = ELIST.slice(); PROG.keys = 0; saveProg(); sfx('ready'); renderLobby(); };
 $('talReset').onclick = () => { PROG.tal = cleanTal({}); saveProg(); renderTalents(); renderProg(); };
 $('talClose').onclick = () => $('talents').classList.add('hidden');
+renderModes(); // after PROG exists: the cards and the header line read your level, unlocks and records
 
 // ===================== lobby: 29 elements =====================
 // picker info per element: playstyle tags, difficulty (1-3) and the model its preview shows
