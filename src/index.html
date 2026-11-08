@@ -154,8 +154,8 @@ input::placeholder{color:#b9add8;opacity:.8}input:focus{box-shadow:0 0 0 2px var
 .mode .go{margin:0 14px 14px;padding:10px 16px;border:1px solid color-mix(in srgb,var(--c) 40%,transparent);border-radius:12px;background:color-mix(in srgb,var(--c) 8%,transparent);transition:background .25s,color .25s,box-shadow .25s}
 .mode:hover .go{background:var(--c);color:#14091f;box-shadow:0 0 26px color-mix(in srgb,var(--c) 60%,transparent)}
 .mode .stat{font-weight:700}
-#modes .hint{background:linear-gradient(0deg,rgba(3,2,10,.9),transparent);border-top:0;font-size:12.5px}
-@media (max-width:620px){.mode .go{margin:0;border:0;border-radius:0;background:none}.mode:hover .go{background:none;color:var(--c);box-shadow:none}.mode h2::after{display:none}}
+#modes .hint{background:linear-gradient(0deg,rgba(3,2,10,.9),transparent);border-top:0;font-size:12.5px;-webkit-backdrop-filter:none;backdrop-filter:none}
+@media (max-width:620px){#modes .hint,#modes .eyebrow::before,#modes .eyebrow::after{display:none}#modes .eyebrow{display:block;font-size:9.5px;letter-spacing:.12em}#modeCols{margin-bottom:auto}.mode .go{margin:0;border:0;border-radius:0;background:none}.mode:hover .go{background:none;color:var(--c);box-shadow:none}.mode h2::after{display:none}}
 @media (prefers-reduced-motion:reduce){.mode,.spin,.pulse,.flick,h1,#modes .fx i{animation:none}}
 #modeBar{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;width:100%}
 #modeBar>button{justify-self:start}@media (max-width:560px){#modeBar{grid-template-columns:auto 1fr;row-gap:8px}#modeBar h2{grid-row:2;grid-column:1/-1}#modeBar .row{flex-wrap:nowrap}#modeBar .row button{padding:6px 10px}}#modeBar .row{justify-self:end;gap:8px}
