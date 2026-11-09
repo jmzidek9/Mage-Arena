@@ -1595,88 +1595,245 @@ function pvShow(el) {
 const soften = m => (m.userData.mats || []).forEach(x => { if (x.uniforms?.uCore?.value) x.uniforms.uA.value = .45; });
 // is a model flat before fitting (a projectile flying level)?
 function flat0(m) { const s = new THREE.Box3().setFromObject(m).getSize(V()); return s.y < .45 * Math.max(s.x, s.z); }
-// ===================== lobby: the whole screen takes on the element you are looking at =====================
-// The lobby's background is a wash of the element's colour (CSS, from --el); a full-screen canvas over the panel (it lets
-// clicks through) adds a burst of light on each switch, and the element's own weather drifting across the screen (embers, snow, rain and lightning, leaves,
-// runes, bubbles, a gravity swirl...). Plain 2D canvas, about 140 sprites, only while the lobby is open.
-const LFX_KIND = { // [motion, shape, count]
-  fire: ['rise', 'dot', 150], magma: ['rise', 'dot', 140], explosion: ['rise', 'spark', 130], soul: ['rise', 'dot', 110], light: ['rise', 'dot', 120],
-  spirit: ['rise', 'wisp', 70], venom: ['rise', 'bubble', 80], abyss: ['rise', 'bubble', 80], plasma: ['rise', 'spark', 130],
-  frost: ['fall', 'flake', 80], crystal: ['fall', 'glint', 110], bone: ['fall', 'dot', 90], earth: ['fall', 'rock', 70], ink: ['fall', 'drop', 70],
-  blood: ['fall', 'drop', 70], shadow: ['fall', 'smoke', 60], nature: ['fall', 'leaf', 60],
-  water: ['rain', 'streak', 160], storm: ['rain', 'streak', 170], wind: ['wind', 'streak', 90], blades: ['wind', 'glint', 70],
-  cosmic: ['twinkle', 'star', 140], arcane: ['twinkle', 'star', 120], illusion: ['twinkle', 'glint', 110], god: ['twinkle', 'star', 140],
-  rune: ['twinkle', 'glyph', 60], gravity: ['swirl', 'dot', 160], chrono: ['orbit', 'dot', 130], sonic: ['rings', 'dot', 60], laser: ['scan', 'dot', 60],
+// ===================== lobby: the whole screen takes on the element you picked =====================
+// The lobby's background is a wash of the element's colour (CSS, from --el, which glides to each new colour: see @property
+// --el). A full-screen canvas over the panel (it lets clicks through) adds, per element:
+//  - an ambient layer: heat glowing up from below, frost creeping in from the edges, light rays, drifting fog or nebula,
+//    a dark vignette, or a soft glow;
+//  - its weather, one or two layers of particles at three depths (far ones small, dim and slow, near ones big and quick)
+//    that sway, fade in and out and drift a little with the mouse;
+//  - an extra for some: forked lightning (Storm), a lens ring (Gravity), a clock face (Chrono), a rune circle (Rune).
+// Switching cross-fades the old element's effect out and the new one in, while two soft rings, a bloom and a spray of
+// sparks in the new colour ripple out from the card you clicked. Every shape is drawn once into a sprite and reused.
+const LFX_EL = { // [ambient, [[motion, shape, count], ...], extra]
+  fire: ['heat', [['rise', 'ember', 120], ['rise', 'spark', 24]]],
+  magma: ['heat', [['rise', 'ember', 110], ['rise', 'spark', 30]]],
+  explosion: ['heat', [['rise', 'spark', 80], ['rise', 'ember', 60]]],
+  soul: ['nebula', [['rise', 'wisp', 36], ['rise', 'dot', 70]]],
+  light: ['rays', [['rise', 'dot', 90], ['twinkle', 'glint', 36]]],
+  spirit: ['fog', [['rise', 'wisp', 44], ['rise', 'dot', 56]]],
+  venom: ['fog', [['rise', 'bubble', 60], ['fall', 'drop', 18]]],
+  abyss: ['dark', [['rise', 'bubble', 70], ['rise', 'dot', 40]]],
+  plasma: ['nebula', [['rise', 'spark', 90], ['twinkle', 'glint', 30]]],
+  frost: ['frost', [['fall', 'flake', 70], ['fall', 'dot', 80]]],
+  crystal: ['frost', [['fall', 'glint', 80], ['twinkle', 'star', 30]]],
+  bone: ['fog', [['fall', 'dot', 80], ['fall', 'smoke', 14]]],
+  earth: ['heat', [['fall', 'rock', 50], ['rise', 'dot', 60]]],
+  ink: ['dark', [['fall', 'drop', 50], ['fall', 'smoke', 18]]],
+  blood: ['dark', [['fall', 'drop', 60], ['rise', 'dot', 40]]],
+  shadow: ['dark', [['fall', 'smoke', 30], ['rise', 'dot', 60]]],
+  nature: ['rays', [['fall', 'leaf', 45], ['rise', 'dot', 60]]],
+  water: ['fog', [['rain', 'streak', 140], ['rise', 'bubble', 22]]],
+  storm: ['dark', [['rain', 'streak', 170]], 'bolt'],
+  wind: ['fog', [['wind', 'streak', 70], ['wind', 'leaf', 14], ['wind', 'dot', 40]]],
+  blades: ['rays', [['wind', 'glint', 50], ['wind', 'streak', 30]]],
+  cosmic: ['nebula', [['twinkle', 'star', 110], ['shoot', 'streak', 3]]],
+  arcane: ['nebula', [['twinkle', 'star', 80], ['rise', 'dot', 50]]],
+  illusion: ['nebula', [['twinkle', 'glint', 80], ['rise', 'bubble', 20]]],
+  god: ['rays', [['twinkle', 'star', 90], ['rise', 'dot', 60]]],
+  rune: ['glow', [['twinkle', 'glyph', 40], ['rise', 'dot', 50]], 'circle'],
+  gravity: ['dark', [['swirl', 'dot', 150]], 'lens'],
+  chrono: ['glow', [['orbit', 'dot', 110], ['twinkle', 'glint', 20]], 'clock'],
+  sonic: ['glow', [['rings', 'dot', 7], ['twinkle', 'dot', 50]]],
+  laser: ['glow', [['scan', 'dot', 7], ['twinkle', 'dot', 50]]],
 };
-const LFX = { el: null, col: [154, 92, 255], to: [154, 92, 255], ps: [], burst: 0, flash: 0, sprites: {}, raf: 0 };
+const LFX_SIZE = { dot: 10, ember: 9, spark: 7, wisp: 46, smoke: 150, flake: 18, star: 15, glint: 13, leaf: 20, drop: 11, bubble: 15, rock: 10, glyph: 26, streak: 1 };
+const LFX_LITE = new Set(['dot', 'ember', 'spark', 'wisp', 'flake', 'star', 'glint', 'bubble', 'glyph', 'streak']); // additive; the rest paint over
+const LFX_RUNES = 'ᚠᚢᚦᚨᚱᚲᚷᚹᚺᚾᛁᛃᛇᛈᛉᛊᛏᛒᛖᛗᛚᛜᛞᛟ';
+const LFX = { sys: [], sparks: [], burst: null, bolt: null, boltT: 3, flash: 0, from: null, mx: .5, my: .5, pmx: .5, pmy: .5, T: 0, last: 0, raf: 0, sprites: {},
+  reduce: matchMedia('(prefers-reduced-motion: reduce)').matches };
+const lfxRgb = c => [(c >> 16) & 255, (c >> 8) & 255, c & 255], lfxA = (rgb, a) => `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${a})`;
+const lfxLite = (rgb, k = .6) => rgb.map(v => Math.round(v + (255 - v) * k));
 function lobbyFx(el) {
-  if (LFX.el === el) return;
-  const first = !LFX.el; LFX.el = el; LFX.to = [...new THREE.Color(EL[el].color).toArray().map(v => Math.round(v * 255))];
-  if (first) LFX.col = [...LFX.to]; else LFX.burst = 1;
-  LFX.ps = [];
   if (!LFX.raf) LFX.raf = requestAnimationFrame(lfxFrame);
+  const cur = LFX.sys[LFX.sys.length - 1];
+  if (cur?.el === el) return;
+  const [amb, layers, extra] = LFX_EL[el] || LFX_EL.arcane, rgb = lfxRgb(EL[el].color);
+  for (const s of LFX.sys) s.fade = -1;
+  LFX.sys.push({ el, amb, layers, extra, rgb, a: cur ? 0 : .01, fade: 1, ps: [], filled: false, seed: Math.random() * 100 });
+  if (cur && !LFX.reduce) { // the ripple from the card you clicked
+    const cv = $('elFx'), x = LFX.from?.[0] ?? cv.clientWidth / 2, y = LFX.from?.[1] ?? cv.clientHeight * .42;
+    LFX.burst = { t: 0, x, y, rgb };
+    for (let i = 0; i < 28; i++) { const a = Math.random() * TAU, v = 160 + Math.random() * 420; LFX.sparks.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, t: 0, life: .6 + Math.random() * .6, s: 6 + Math.random() * 8, rgb }); }
+  }
+  LFX.from = null;
 }
-// a soft glowing dot in a colour, drawn once and reused
-function lfxSprite(rgb) {
-  const k = rgb.join(); if (LFX.sprites[k]) return LFX.sprites[k];
-  const c = document.createElement('canvas'); c.width = c.height = 32; const g = c.getContext('2d'), r = g.createRadialGradient(16, 16, 0, 16, 16, 16);
-  r.addColorStop(0, `rgba(255,255,255,1)`); r.addColorStop(.2, `rgba(${k},.9)`); r.addColorStop(1, `rgba(${k},0)`); g.fillStyle = r; g.fillRect(0, 0, 32, 32);
-  return LFX.sprites[k] = c;
+$('grid').addEventListener('pointerdown', e => { const b = e.target.closest('.elc'); if (b) { const r = b.getBoundingClientRect(); LFX.from = [r.left + r.width / 2, r.top + r.height / 2]; } });
+addEventListener('pointermove', e => { LFX.mx = e.clientX / innerWidth; LFX.my = e.clientY / innerHeight; });
+// a shape drawn once (64 px) in a colour, reused every frame
+function lfxSprite(shape, rgb, ch) {
+  const key = shape + rgb + (ch || ''); if (LFX.sprites[key]) return LFX.sprites[key];
+  const S = 64, h = S / 2, c = document.createElement('canvas'); c.width = c.height = S;
+  const g = c.getContext('2d'), L = lfxLite(rgb), W_ = lfxLite(rgb, .9); g.translate(h, h);
+  const soft = (r, stops) => { const gr = g.createRadialGradient(0, 0, 0, 0, 0, r); stops.forEach(([o, col]) => gr.addColorStop(o, col)); g.fillStyle = gr; g.beginPath(); g.arc(0, 0, r, 0, TAU); g.fill(); };
+  if (shape === 'dot' || shape === 'wisp') soft(h, [[0, lfxA(W_, 1)], [.18, lfxA(L, .9)], [.45, lfxA(rgb, .35)], [1, lfxA(rgb, 0)]]);
+  else if (shape === 'ember' || shape === 'spark') soft(h, [[0, 'rgba(255,255,240,1)'], [.14, lfxA(lfxLite(rgb, .45), .95)], [.4, lfxA(rgb, .45)], [1, lfxA(rgb, 0)]]);
+  else if (shape === 'smoke') soft(h, [[0, lfxA(rgb.map(v => v * .45), .55)], [.5, lfxA(rgb.map(v => v * .3), .25)], [1, lfxA(rgb, 0)]]);
+  else if (shape === 'flake') {
+    g.shadowColor = lfxA(rgb, 1); g.shadowBlur = 7; g.strokeStyle = lfxA(lfxLite(rgb, .8), 1); g.lineCap = 'round';
+    for (let i = 0; i < 6; i++) { g.rotate(TAU / 6); g.lineWidth = 3; g.beginPath(); g.moveTo(0, 0); g.lineTo(0, -22); g.stroke(); g.lineWidth = 2; g.beginPath(); g.moveTo(0, -12); g.lineTo(-6, -18); g.moveTo(0, -12); g.lineTo(6, -18); g.stroke(); }
+  } else if (shape === 'star' || shape === 'glint') {
+    soft(h * (shape === 'star' ? .55 : .4), [[0, lfxA(W_, .9)], [1, lfxA(rgb, 0)]]);
+    g.shadowColor = lfxA(rgb, 1); g.shadowBlur = 8; g.fillStyle = lfxA(W_, 1); const k = shape === 'star' ? .16 : .1;
+    g.beginPath(); for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4 - Math.PI / 2, r = i % 2 ? h * k : h * (i % 4 ? .5 : .92); g.lineTo(Math.cos(a) * r, Math.sin(a) * r); } g.closePath(); g.fill();
+  } else if (shape === 'leaf') {
+    const gr = g.createLinearGradient(-22, 0, 22, 0); gr.addColorStop(0, lfxA(rgb.map(v => v * .55), 1)); gr.addColorStop(1, lfxA(lfxLite(rgb, .25), 1));
+    g.fillStyle = gr; g.beginPath(); g.moveTo(-24, 0); g.quadraticCurveTo(0, -15, 24, 0); g.quadraticCurveTo(0, 15, -24, 0); g.fill();
+    g.strokeStyle = lfxA(lfxLite(rgb, .5), .8); g.lineWidth = 1.5; g.beginPath(); g.moveTo(-22, 0); g.lineTo(22, 0); g.stroke();
+  } else if (shape === 'drop') {
+    const gr = g.createLinearGradient(0, -22, 0, 18); gr.addColorStop(0, lfxA(lfxLite(rgb, .3), .95)); gr.addColorStop(1, lfxA(rgb.map(v => v * .6), .95));
+    g.fillStyle = gr; g.beginPath(); g.moveTo(0, -24); g.bezierCurveTo(10, -6, 16, 4, 16, 10); g.arc(0, 10, 16, 0, Math.PI); g.bezierCurveTo(-16, 4, -10, -6, 0, -24); g.fill();
+    g.fillStyle = 'rgba(255,255,255,.55)'; g.beginPath(); g.ellipse(-6, 6, 3, 6, .4, 0, TAU); g.fill();
+  } else if (shape === 'bubble') {
+    soft(h * .9, [[0, lfxA(rgb, 0)], [.75, lfxA(rgb, .12)], [.95, lfxA(L, .55)], [1, lfxA(L, 0)]]);
+    g.strokeStyle = lfxA(L, .9); g.lineWidth = 2.5; g.beginPath(); g.arc(0, 0, h * .8, 0, TAU); g.stroke();
+    g.strokeStyle = 'rgba(255,255,255,.85)'; g.lineWidth = 3; g.lineCap = 'round'; g.beginPath(); g.arc(0, 0, h * .55, -2.6, -1.9); g.stroke();
+  } else if (shape === 'rock') {
+    g.fillStyle = lfxA(rgb.map(v => v * .5), 1); g.beginPath(); [[-14, -6], [-4, -16], [12, -12], [16, 4], [4, 15], [-12, 10]].forEach(([x, y]) => g.lineTo(x, y)); g.closePath(); g.fill();
+    g.fillStyle = lfxA(lfxLite(rgb, .2), .5); g.beginPath(); g.moveTo(-4, -16); g.lineTo(12, -12); g.lineTo(2, -2); g.lineTo(-14, -6); g.fill();
+  } else if (shape === 'glyph') {
+    g.shadowColor = lfxA(rgb, 1); g.shadowBlur = 12; g.fillStyle = lfxA(W_, 1); g.font = '40px serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(ch, 0, 2);
+  }
+  return LFX.sprites[key] = c;
 }
-function lfxSpawn(kind, W, H, fresh) {
-  const [mo] = kind, R = Math.random, p = { x: R() * W, y: R() * H, vx: 0, vy: 0, s: .5 + R(), a: R() * TAU, va: (R() - .5) * 2, t: 0, life: 4 + R() * 6, ph: R() * TAU };
-  if (mo === 'rise') { if (!fresh) p.y = H + 10; p.vy = -(30 + R() * 60); p.vx = (R() - .5) * 20; }
-  if (mo === 'fall') { if (!fresh) p.y = -10; p.vy = 20 + R() * 40; p.vx = (R() - .5) * 15; }
-  if (mo === 'rain') { if (!fresh) p.y = -20; p.vy = 700 + R() * 400; p.vx = -120; }
-  if (mo === 'wind') { if (!fresh) p.x = -40; p.vx = 400 + R() * 500; p.vy = (R() - .5) * 30; }
-  if (mo === 'swirl' || mo === 'orbit') { p.r = 80 + R() * Math.max(W, H) * .6; p.a = R() * TAU; }
-  if (mo === 'rings') { p.r = R() * Math.max(W, H) * .7; }
-  if (mo === 'scan') { p.y = R() * H; p.vy = (R() < .5 ? -1 : 1) * (40 + R() * 80); }
-  if (kind[1] === 'glyph') p.ch = 'ᚠᚢᚦᚨᚱᚲᚷᚹᚺᚾᛁᛃᛇᛈᛉᛊᛏᛒᛖᛗᛚᛜᛞᛟ'[Math.floor(R() * 24)];
+function lfxSpawn(sys, L, W, H, fresh) {
+  const [mo, sh] = L, R = Math.random, z = .45 + R() * .95, sp = LFX.reduce ? .5 : 1;
+  const p = { L, x: R() * W, y: R() * H, z, vx: 0, vy: 0, a: R() * TAU, va: (R() - .5) * 1.4, t: fresh ? -R() * 1.2 : 0, life: 5 + R() * 7, ph: R() * TAU, s: .65 + R() * .6 };
+  if (mo === 'rise') { if (!fresh) p.y = H + 30; p.vy = -(22 + R() * 46) * z * sp; p.vx = (R() - .5) * 14; }
+  if (mo === 'fall') { if (!fresh) p.y = -30; p.vy = (16 + R() * 34) * z * sp * (sh === 'smoke' ? .5 : 1); p.vx = (R() - .5) * 12; }
+  if (mo === 'rain') { if (!fresh) p.y = -40 - R() * H * .3; p.vy = (620 + R() * 380) * z * sp; p.vx = -p.vy * .16; }
+  if (mo === 'wind') { if (!fresh) p.x = -60; p.vx = (360 + R() * 440) * z * sp * (sh === 'leaf' ? .55 : 1); p.vy = (R() - .5) * 26; }
+  if (mo === 'shoot') { p.x = W * (.3 + R() * .9); p.y = -30; p.vx = -(700 + R() * 400); p.vy = 380 + R() * 200; p.t = -(1 + R() * 5); }
+  if (mo === 'twinkle') { p.vx = (R() - .5) * 6; p.vy = (R() - .5) * 6; p.life = 2.5 + R() * 4; }
+  if (mo === 'swirl' || mo === 'orbit') { p.r = 60 + R() * Math.max(W, H) * .62; }
+  if (mo === 'rings') { p.r = R() * Math.max(W, H) * .75; }
+  if (mo === 'scan') { p.y = R() * H; p.vy = (R() < .5 ? -1 : 1) * (40 + R() * 70); }
+  if (sh === 'glyph') p.ch = LFX_RUNES[Math.floor(R() * LFX_RUNES.length)];
   return p;
 }
+function lfxAmbient(g, s, W, H, T) {
+  const A = s.a, rgb = s.rgb, L = lfxLite(rgb, .55), dot = lfxSprite('dot', rgb), cx = W / 2, cy = H * .42;
+  g.globalCompositeOperation = 'lighter';
+  if (s.amb === 'heat') {
+    const gr = g.createLinearGradient(0, H, 0, H * .5); gr.addColorStop(0, lfxA(rgb, .22 * A)); gr.addColorStop(1, lfxA(rgb, 0)); g.fillStyle = gr; g.fillRect(0, H * .5, W, H * .5);
+    for (let i = 0; i < 4; i++) { const sz = W * .5 * (1 + .1 * Math.sin(T * 1.3 + i * 2)); g.globalAlpha = .28 * A; g.drawImage(dot, W * (i + .5) / 4 + Math.sin(T * .3 + i) * 60 - sz / 2, H + 60 - sz / 2, sz, sz); }
+  } else if (s.amb === 'frost') {
+    const gr = g.createRadialGradient(cx, cy, Math.min(W, H) * .3, cx, cy, Math.max(W, H) * .78), k = .24 + .04 * Math.sin(T * .8);
+    gr.addColorStop(0, lfxA(L, 0)); gr.addColorStop(1, lfxA(L, k * A)); g.fillStyle = gr; g.fillRect(0, 0, W, H);
+  } else if (s.amb === 'rays') {
+    for (let i = 0; i < 5; i++) {
+      const x0 = W * (.08 + i * .2) + Math.sin(T * .17 + i * 1.9) * 50, w0 = 30 + i % 2 * 26, w1 = 140 + (i % 3) * 60, sh = H * .32, br = .5 + .5 * Math.sin(T * .55 + i * 1.7);
+      const gr = g.createLinearGradient(0, 0, 0, H); gr.addColorStop(0, lfxA(L, .16 * A * br)); gr.addColorStop(.85, lfxA(L, 0));
+      g.globalAlpha = 1; g.fillStyle = gr; g.beginPath(); g.moveTo(x0 - w0, -10); g.lineTo(x0 + w0, -10); g.lineTo(x0 + sh + w1, H); g.lineTo(x0 + sh - w1, H); g.closePath(); g.fill();
+    }
+  } else if (s.amb === 'fog' || s.amb === 'nebula') {
+    for (let i = 0; i < 5; i++) {
+      const neb = s.amb === 'nebula', sz = W * (neb ? .55 : .6), x = neb ? W * (.5 + .4 * Math.cos(T * .05 + i * 1.3 + s.seed)) : ((i * W * .32 + T * 22 * (1 + i % 2) + s.seed * 50) % (W + sz)) - sz / 2,
+        y = neb ? H * (.45 + .32 * Math.sin(T * .07 + i * 2.1 + s.seed)) : H * (.6 + .12 * (i % 3));
+      g.globalAlpha = (neb ? .16 : .13) * A; g.drawImage(i % 2 && neb ? lfxSprite('dot', lfxLite(rgb, .35)) : dot, x - sz / 2, y - sz / 2, sz, sz);
+    }
+  } else if (s.amb === 'glow') {
+    const sz = Math.min(W, H) * 1.15 * (1 + .05 * Math.sin(T * 1.2)); g.globalAlpha = .2 * A; g.drawImage(dot, cx - sz / 2, cy - sz / 2, sz, sz);
+  } else if (s.amb === 'dark') {
+    g.globalCompositeOperation = 'source-over'; const gr = g.createRadialGradient(cx, cy, Math.min(W, H) * .25, cx, cy, Math.max(W, H) * .75);
+    gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(1, `rgba(0,0,0,${.35 * A})`); g.fillStyle = gr; g.fillRect(0, 0, W, H);
+    g.globalCompositeOperation = 'lighter'; const sz = Math.min(W, H) * .9; g.globalAlpha = .1 * A; g.drawImage(dot, cx - sz / 2, cy - sz / 2, sz, sz);
+  }
+  g.globalAlpha = 1;
+  // extras
+  if (s.extra === 'lens' || s.extra === 'clock' || s.extra === 'circle') {
+    const r = Math.min(W, H) * .36; g.strokeStyle = lfxA(L, .22 * A); g.lineWidth = 1.5;
+    if (s.extra === 'lens') { for (let k = 0; k < 3; k++) { g.setLineDash([18 + k * 10, 14]); g.lineDashOffset = -T * (30 + k * 20); g.beginPath(); g.ellipse(cx, cy, r * (1 + k * .22), r * .38 * (1 + k * .22), -.2, 0, TAU); g.stroke(); } g.setLineDash([]); }
+    if (s.extra === 'clock') {
+      g.beginPath(); g.arc(cx, cy, r, 0, TAU); g.stroke();
+      for (let i = 0; i < 12; i++) { const a = i * TAU / 12, k = i % 3 ? .94 : .88; g.beginPath(); g.moveTo(cx + Math.cos(a) * r * k, cy + Math.sin(a) * r * k); g.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r); g.stroke(); }
+      for (const [len, sp] of [[.55, .05], [.8, .6]]) { const a = T * sp - Math.PI / 2; g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + Math.cos(a) * r * len, cy + Math.sin(a) * r * len); g.stroke(); }
+    }
+    if (s.extra === 'circle') {
+      g.beginPath(); g.arc(cx, cy, r, 0, TAU); g.stroke(); g.beginPath(); g.arc(cx, cy, r * .86, 0, TAU); g.stroke();
+      for (let i = 0; i < 16; i++) { const a = i * TAU / 16 + T * .08, spr = lfxSprite('glyph', s.rgb, LFX_RUNES[i % LFX_RUNES.length]), sz = 22; g.globalAlpha = .45 * A; g.drawImage(spr, cx + Math.cos(a) * r * .93 - sz / 2, cy + Math.sin(a) * r * .93 - sz / 2, sz, sz); }
+      g.globalAlpha = 1;
+    }
+  }
+}
 function lfxFrame(now) {
-  const cv = $('elFx'); if (!cv) return;
-  if ($('lobby').classList.contains('hidden') || !LFX.el) { LFX.raf = requestAnimationFrame(lfxFrame); return; }
-  const W = cv.clientWidth, H = cv.clientHeight; if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
-  const dt = Math.min(.05, (now - (LFX.last || now)) / 1000); LFX.last = now;
-  const g = cv.getContext('2d'), kind = LFX_KIND[LFX.el] || ['rise', 'dot', 100], [mo, sh, n] = kind;
-  for (let i = 0; i < 3; i++) LFX.col[i] += (LFX.to[i] - LFX.col[i]) * Math.min(1, dt * 4);
-  const rgb = LFX.col.map(Math.round), C = rgb.join(), cx = W * .5, cy = H * .42;
-  g.clearRect(0, 0, W, H);
-  // a burst of light from the middle when you switch, and lightning for Storm
-  if (LFX.burst > 0) { const r = (1 - LFX.burst) * Math.max(W, H) * .9; g.strokeStyle = `rgba(${C},${LFX.burst * .7})`; g.lineWidth = 40 * LFX.burst + 2; g.beginPath(); g.arc(cx, cy, r, 0, TAU); g.stroke();
-    g.fillStyle = `rgba(${C},${LFX.burst * .08})`; g.fillRect(0, 0, W, H); LFX.burst -= dt * 1.6; }
-  if (LFX.el === 'storm' && Math.random() < dt * .35) LFX.flash = 1;
-  if (LFX.flash > 0) { g.fillStyle = `rgba(210,190,255,${LFX.flash * .12})`; g.fillRect(0, 0, W, H); LFX.flash -= dt * 4; }
-  // the weather
-  const fill = !LFX.ps.length; while (LFX.ps.length < n) LFX.ps.push(lfxSpawn(kind, W, H, fill)); // a new element's weather fills the whole screen at once
-  const spr = lfxSprite(rgb), lite = mo !== 'fall' || sh !== 'smoke';
-  g.globalCompositeOperation = lite ? 'lighter' : 'source-over';
-  for (let i = LFX.ps.length - 1; i >= 0; i--) {
-    const p = LFX.ps[i]; p.t += dt; p.a += p.va * dt;
-    if (mo === 'swirl') { p.r -= dt * (40 + 4000 / p.r); p.a += dt * 120 / p.r; p.x = cx + Math.cos(p.a) * p.r; p.y = cy + Math.sin(p.a) * p.r * .6; if (p.r < 12) { LFX.ps[i] = lfxSpawn(kind, W, H); continue; } }
-    else if (mo === 'orbit') { p.a += dt * (.05 + 30 / p.r); p.x = cx + Math.cos(p.a) * p.r; p.y = cy + Math.sin(p.a) * p.r * .6; }
-    else if (mo === 'rings') { p.r += dt * 120; if (p.r > Math.max(W, H)) p.r = 0; g.strokeStyle = `rgba(${C},${.25 * (1 - p.r / Math.max(W, H))})`; g.lineWidth = 2; g.beginPath(); g.arc(cx, cy, p.r, 0, TAU); g.stroke(); continue; }
-    else if (mo === 'scan') { p.y += p.vy * dt; if (p.y < 0 || p.y > H) p.vy *= -1; g.fillStyle = `rgba(${C},.12)`; g.fillRect(0, p.y, W, 2); g.drawImage(spr, (p.ph * 997 + p.t * 500) % W - 8, p.y - 8, 16, 16); continue; }
-    else { p.x += (p.vx + (mo === 'fall' ? Math.sin(p.t * 1.5 + p.ph) * 25 : mo === 'rise' ? Math.sin(p.t * 2 + p.ph) * 12 : 0)) * dt; p.y += p.vy * dt; }
-    if (p.y < -60 || p.y > H + 60 || p.x < -80 || p.x > W + 80 || (mo === 'twinkle' && p.t > p.life)) { LFX.ps[i] = lfxSpawn(kind, W, H); continue; }
-    const tw = mo === 'twinkle' ? Math.sin(p.t / p.life * Math.PI) : 1, sz = p.s * 10;
-    g.globalAlpha = Math.max(0, Math.min(1, tw * (mo === 'rise' ? 1 - Math.max(0, (H * .25 - p.y) / (H * .25)) : 1))) * .7;
-    if (sh === 'streak') { g.strokeStyle = `rgba(${C},.55)`; g.lineWidth = p.s * 1.6; const l = mo === 'rain' ? .035 : .06; g.beginPath(); g.moveTo(p.x, p.y); g.lineTo(p.x - p.vx * l, p.y - p.vy * l); g.stroke(); }
-    else if (sh === 'flake' || sh === 'star' || sh === 'glint') { const k = sh === 'flake' ? 6 : 4, r = sz * (sh === 'flake' ? .6 : .7); g.strokeStyle = `rgba(${sh === 'flake' ? '235,248,255' : C},.9)`; g.lineWidth = 1.2; g.beginPath(); for (let j = 0; j < k; j++) { const a = p.a + j * TAU / k; g.moveTo(p.x, p.y); g.lineTo(p.x + Math.cos(a) * r, p.y + Math.sin(a) * r); } g.stroke(); g.drawImage(spr, p.x - sz * .6, p.y - sz * .6, sz * 1.2, sz * 1.2); }
-    else if (sh === 'leaf') { g.save(); g.translate(p.x, p.y); g.rotate(p.a); g.fillStyle = `rgba(${C},.8)`; g.beginPath(); g.ellipse(0, 0, sz * 1.1, sz * .45, 0, 0, TAU); g.fill(); g.restore(); }
-    else if (sh === 'drop') { g.fillStyle = `rgba(${C},.75)`; g.beginPath(); g.ellipse(p.x, p.y, sz * .35, sz * .6, 0, 0, TAU); g.fill(); }
-    else if (sh === 'bubble') { g.strokeStyle = `rgba(${C},.7)`; g.lineWidth = 1.4; g.beginPath(); g.arc(p.x, p.y, sz * .7, 0, TAU); g.stroke(); }
-    else if (sh === 'rock') { g.fillStyle = `rgba(${C},.55)`; g.save(); g.translate(p.x, p.y); g.rotate(p.a); g.fillRect(-sz * .3, -sz * .3, sz * .6, sz * .6); g.restore(); }
-    else if (sh === 'smoke') { g.globalAlpha *= .35; g.drawImage(spr, p.x - sz * 4, p.y - sz * 4, sz * 8, sz * 8); }
-    else if (sh === 'glyph') { g.fillStyle = `rgba(${C},.9)`; g.font = `${Math.round(sz * 2.4)}px serif`; g.fillText(p.ch, p.x, p.y); }
-    else if (sh === 'wisp') g.drawImage(spr, p.x - sz * 2, p.y - sz * 2, sz * 4, sz * 4);
-    else if (sh === 'spark') { g.drawImage(spr, p.x - sz * .6, p.y - sz * .6, sz * 1.2, sz * 1.2); g.strokeStyle = `rgba(${C},.5)`; g.lineWidth = 1; g.beginPath(); g.moveTo(p.x, p.y); g.lineTo(p.x - p.vx * .05, p.y - p.vy * .05); g.stroke(); }
-    else g.drawImage(spr, p.x - sz * .7, p.y - sz * .7, sz * 1.4, sz * 1.4);
+  LFX.raf = requestAnimationFrame(lfxFrame);
+  const cv = $('elFx'); if (!cv || $('lobby').classList.contains('hidden') || !LFX.sys.length) { LFX.last = 0; return; }
+  const D = Math.min(devicePixelRatio || 1, 1.5), W = cv.clientWidth, H = cv.clientHeight;
+  if (cv.width !== Math.round(W * D) || cv.height !== Math.round(H * D)) { cv.width = Math.round(W * D); cv.height = Math.round(H * D); }
+  const dt = LFX.last ? Math.min(.05, (now - LFX.last) / 1000) : 0; LFX.last = now; const T = LFX.T += dt;
+  const g = cv.getContext('2d'); g.setTransform(D, 0, 0, D, 0, 0); g.clearRect(0, 0, W, H);
+  const k = Math.min(1, dt * 3); LFX.pmx += (LFX.mx - LFX.pmx) * k; LFX.pmy += (LFX.my - LFX.pmy) * k;
+  const ox = LFX.reduce ? 0 : (LFX.pmx - .5) * -46, oy = LFX.reduce ? 0 : (LFX.pmy - .5) * -30;
+  for (const s of LFX.sys) s.a = Math.max(0, Math.min(1, s.a + s.fade * dt / (s.fade > 0 ? .8 : .6)));
+  LFX.sys = LFX.sys.filter(s => s.fade > 0 || s.a > 0);
+  for (const s of LFX.sys) {
+    lfxAmbient(g, s, W, H, T);
+    const live = s.fade > 0, cx = W / 2, cy = H * .42;
+    if (live) for (const L of s.layers) { const n = Math.round(L[2] * (LFX.reduce ? .4 : 1)), have = s.ps.filter(p => p.L === L).length; for (let i = have; i < n; i++) s.ps.push(lfxSpawn(s, L, W, H, !s.filled)); }
+    s.filled = true;
+    for (let i = s.ps.length - 1; i >= 0; i--) {
+      const p = s.ps[i], [mo, sh] = p.L, z = p.z; p.t += dt; p.a += p.va * dt;
+      let gone = false;
+      if (p.t < 0 && mo === 'shoot') continue;
+      if (mo === 'swirl') { p.r -= dt * (34 + 3600 / p.r) * z; p.a += dt * 110 / p.r; p.x = cx + Math.cos(p.a) * p.r; p.y = cy + Math.sin(p.a) * p.r * .55; gone = p.r < 14; }
+      else if (mo === 'orbit') { p.a += dt * (.04 + 26 / p.r) * z; p.x = cx + Math.cos(p.a) * p.r; p.y = cy + Math.sin(p.a) * p.r * .55; }
+      else if (mo === 'rings') { p.r += dt * 110; if (p.r > Math.max(W, H)) p.r = 0; const f = 1 - p.r / Math.max(W, H); g.globalCompositeOperation = 'lighter'; g.strokeStyle = lfxA(lfxLite(s.rgb, .4), .3 * f * s.a); g.lineWidth = 1 + 3 * f; g.beginPath(); g.ellipse(cx, cy, p.r, p.r * .8, 0, 0, TAU); g.stroke(); continue; }
+      else if (mo === 'scan') { p.y += p.vy * dt; if (p.y < 0 || p.y > H) p.vy *= -1; const gr = g.createLinearGradient(0, 0, W, 0); gr.addColorStop(0, lfxA(s.rgb, 0)); gr.addColorStop(.5, lfxA(lfxLite(s.rgb, .4), .22 * s.a)); gr.addColorStop(1, lfxA(s.rgb, 0)); g.globalCompositeOperation = 'lighter'; g.fillStyle = gr; g.fillRect(0, p.y - 1, W, 2); continue; }
+      else {
+        const sway = mo === 'fall' ? Math.sin(p.t * 1.3 + p.ph) * 22 * z : mo === 'rise' ? Math.sin(p.t * 1.9 + p.ph) * 12 * z : mo === 'wind' ? Math.sin(p.t * 2.5 + p.ph) * 30 : 0;
+        p.x += (p.vx + sway) * dt; p.y += p.vy * dt;
+        gone = p.y < -70 || p.y > H + 70 || p.x < -90 || p.x > W + 90 || (mo === 'twinkle' && p.t > p.life);
+      }
+      if (gone) { if (live) s.ps[i] = lfxSpawn(s, p.L, W, H, false); else s.ps.splice(i, 1); continue; }
+      const fadeIn = Math.max(0, Math.min(1, p.t / .9)), depth = .4 + .6 * (z - .45) / .95;
+      let al = fadeIn * depth * s.a * (mo === 'twinkle' ? Math.sin(Math.min(1, p.t / p.life) * Math.PI) : 1);
+      if (mo === 'rise') al *= Math.min(1, p.y / (H * .3)); // fades out toward the top
+      if (al <= .01) continue;
+      const x = p.x + ox * z, y = p.y + oy * z, sz = LFX_SIZE[sh] * p.s * z;
+      g.globalCompositeOperation = LFX_LITE.has(sh) ? 'lighter' : 'source-over'; g.globalAlpha = Math.min(1, al);
+      if (sh === 'streak') {
+        const l = mo === 'rain' ? .045 : mo === 'shoot' ? .16 : .07, gr = g.createLinearGradient(x - p.vx * l, y - p.vy * l, x, y);
+        gr.addColorStop(0, lfxA(s.rgb, 0)); gr.addColorStop(1, lfxA(lfxLite(s.rgb, mo === 'shoot' ? .8 : .45), mo === 'rain' ? .55 : .8));
+        g.strokeStyle = gr; g.lineWidth = (mo === 'shoot' ? 2.4 : 1.4) * z; g.lineCap = 'round'; g.beginPath(); g.moveTo(x - p.vx * l, y - p.vy * l); g.lineTo(x, y); g.stroke();
+        continue;
+      }
+      const spr = lfxSprite(sh, s.rgb, p.ch);
+      if (sh === 'flake' || sh === 'leaf' || sh === 'rock' || sh === 'glint') { const c = Math.cos(p.a) * D, n = Math.sin(p.a) * D; g.setTransform(c, n, -n, c, x * D, y * D); g.drawImage(spr, -sz / 2, -sz / 2, sz, sz); g.setTransform(D, 0, 0, D, 0, 0); }
+      else if (sh === 'spark' && mo !== 'twinkle') { g.drawImage(spr, x - sz / 2, y - sz / 2, sz, sz); g.strokeStyle = lfxA(lfxLite(s.rgb, .5), .6); g.lineWidth = 1.2 * z; g.beginPath(); g.moveTo(x, y); g.lineTo(x - p.vx * .06, y - (p.vy - 30) * .06); g.stroke(); }
+      else g.drawImage(spr, x - sz / 2, y - sz / 2, sz, sz);
+    }
+    g.globalAlpha = 1;
+    // Storm's lightning: a forked bolt from the top every few seconds, flickering twice, with a soft flash
+    if (s.extra === 'bolt' && live) {
+      if ((LFX.boltT -= dt) <= 0) {
+        LFX.boltT = 2.5 + Math.random() * 4; const pts = [[W * (.15 + Math.random() * .7), -10]], fork = [];
+        while (pts[pts.length - 1][1] < H * (.45 + Math.random() * .25)) { const [px, py] = pts[pts.length - 1]; pts.push([px + (Math.random() - .5) * 90, py + 30 + Math.random() * 40]); if (Math.random() < .18 && !fork.length) fork.push([px, py]); }
+        if (fork.length) { let [fx, fy] = fork[0]; const d = Math.random() < .5 ? -1 : 1; for (let i = 0; i < 5; i++) { fx += d * (20 + Math.random() * 40); fy += 25 + Math.random() * 30; fork.push([fx, fy]); } }
+        LFX.bolt = { pts, fork, t: 0 }; LFX.flash = 1;
+      }
+    }
+  }
+  if (LFX.bolt) {
+    const b = LFX.bolt; b.t += dt; const on = b.t < .08 || (b.t > .14 && b.t < .26), rgb = LFX.sys[LFX.sys.length - 1].rgb;
+    if (on) { g.globalCompositeOperation = 'lighter'; for (const [w, a, col] of [[9, .25, rgb], [4, .5, lfxLite(rgb, .5)], [1.6, 1, [255, 255, 255]]]) for (const line of [b.pts, b.fork]) { if (line.length < 2) continue; g.strokeStyle = lfxA(col, a); g.lineWidth = w; g.lineJoin = 'round'; g.beginPath(); line.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y)); g.stroke(); } }
+    if (b.t > .3) LFX.bolt = null;
+  }
+  if (LFX.flash > 0) { g.globalCompositeOperation = 'lighter'; g.fillStyle = `rgba(200,185,255,${LFX.flash * .1})`; g.fillRect(0, 0, W, H); LFX.flash -= dt * 3; }
+  // the ripple from the clicked card: a bloom, two soft rings and a spray of sparks
+  if (LFX.burst) {
+    const b = LFX.burst; b.t += dt; const R = Math.hypot(W, H), L = lfxLite(b.rgb, .5);
+    g.globalCompositeOperation = 'lighter';
+    for (const [d, w] of [[0, 34], [.16, 18]]) { const t = Math.max(0, b.t - d) / 1.1; if (t <= 0 || t >= 1) continue; const e = 1 - (1 - t) ** 3; for (const [lw, al] of [[2 + w * 2.2 * (1 - e) + 10, .12], [2 + w * (1 - e), .3], [1.5, .55]]) { g.strokeStyle = lfxA(L, al * (1 - t)); g.lineWidth = lw; g.beginPath(); g.arc(b.x, b.y, e * R, 0, TAU); g.stroke(); } } // a soft halo, the ring, a bright edge
+    const t = Math.min(1, b.t / .9), sz = 160 + (1 - (1 - t) ** 2) * R * .9; g.globalAlpha = .4 * (1 - t); g.drawImage(lfxSprite('dot', b.rgb), b.x - sz / 2, b.y - sz / 2, sz, sz); g.globalAlpha = 1;
+    if (b.t > 1.3) LFX.burst = null;
+  }
+  for (let i = LFX.sparks.length - 1; i >= 0; i--) {
+    const p = LFX.sparks[i]; p.t += dt; if (p.t > p.life) { LFX.sparks.splice(i, 1); continue; }
+    const d = Math.exp(-dt * 3.2); p.vx *= d; p.vy *= d; p.vy += 60 * dt; p.x += p.vx * dt; p.y += p.vy * dt;
+    g.globalCompositeOperation = 'lighter'; g.globalAlpha = 1 - p.t / p.life; g.drawImage(lfxSprite('spark', p.rgb), p.x - p.s / 2, p.y - p.s / 2, p.s, p.s);
   }
   g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
-  LFX.raf = requestAnimationFrame(lfxFrame);
 }
 function savePick() { try { localStorage.setItem('magepact_pick', JSON.stringify({ el: myEl, el2: myEl2 })); } catch {} }
 function renderDetail() {

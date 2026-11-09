@@ -164,7 +164,7 @@ input::placeholder{color:#b9add8;opacity:.8}input:focus{box-shadow:0 0 0 2px var
 #startBtn{border-color:var(--gold);box-shadow:0 0 20px rgba(233,196,106,.45)}
 #lobby .panel{animation:rise .5s cubic-bezier(.2,.9,.3,1)}
 .elc{transition:transform .15s,box-shadow .2s}.elc:hover{transform:translateY(-3px)}
-#lobby .panel{max-width:min(1400px,100%);position:relative;z-index:1}#elFx{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:3}#lobby{background:radial-gradient(ellipse 70% 60% at 50% 40%,color-mix(in srgb,var(--el) 45%,transparent),color-mix(in srgb,var(--el) 12%,rgba(3,2,10,.8)) 80%);transition:background .4s}
+#lobby .panel{max-width:min(1400px,100%);position:relative;z-index:1}#elFx{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:3}#lobby{background:radial-gradient(ellipse 70% 60% at 50% 40%,color-mix(in srgb,var(--el) 45%,transparent),color-mix(in srgb,var(--el) 12%,rgba(3,2,10,.8)) 80%)}
 .pick{display:flex;flex-direction:column;gap:12px;flex:none}.pick>*{overflow:visible}
 #detail{display:grid;grid-template-columns:minmax(220px,300px) minmax(0,1fr) minmax(260px,340px);grid-template-rows:minmax(0,1fr);gap:18px;align-items:center;height:clamp(300px,45vh,520px);padding:10px 16px;background:radial-gradient(ellipse 45% 70% at 50% 62%,color-mix(in srgb,var(--el) 38%,transparent),transparent 70%),linear-gradient(180deg,rgba(18,10,38,.35),rgba(10,6,24,.6));border-color:color-mix(in srgb,var(--el) 30%,transparent)}
 #detail .stage{align-self:stretch;display:flex;align-items:center;justify-content:center;min-width:0}
@@ -183,6 +183,7 @@ input::placeholder{color:#b9add8;opacity:.8}input:focus{box-shadow:0 0 0 2px var
 .strip .pickinfo{margin-top:8px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:6px 12px}
 @media (max-width:900px){#detail{grid-template-columns:1fr;grid-template-rows:auto;height:auto;max-height:none}#detail .stage{order:-1;height:200px}#mvCol{order:1}#pvc{width:auto;height:100%}#detailBody,#mvCol{max-height:none}#detail .dh b{font-size:26px}}
 @media (max-height:760px){#detail{height:clamp(260px,44vh,400px)}.elc .g,.elc .g .sigil{height:34px;width:34px}}
+@property --el{syntax:'<color>';inherits:true;initial-value:#ff6a2a}:root{transition:--el .7s cubic-bezier(.4,0,.2,1)}
 @property --spin{syntax:'<angle>';inherits:false;initial-value:0deg}
 .strip .shead{display:flex;align-items:center;gap:14px;margin:2px 0 8px;font-family:Cinzel,Georgia,serif;font-size:12px;letter-spacing:.3em;text-transform:uppercase;color:#fff6d8}.strip .shead::before,.strip .shead::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,transparent,rgba(233,196,106,.55),transparent)}.strip .shead i{font-style:normal;color:var(--gold);letter-spacing:0}
 .elc{overflow:hidden;isolation:isolate;box-shadow:inset 0 1px 0 rgba(255,255,255,.08),inset 0 -14px 22px -14px color-mix(in srgb,var(--c) 55%,transparent),0 4px 12px rgba(0,0,0,.35);transition:transform .18s cubic-bezier(.2,.9,.3,1.4),box-shadow .25s,border-color .25s}
