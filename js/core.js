@@ -864,6 +864,7 @@ function animateArena(dt, t, dark) {
     duelAmb.lights.forEach((l, i) => l.intensity = 14 + Math.sin(t * 11 + i * 3) * 4);
     duelAmb.rocks.forEach(r => r.o.position.y = r.y + Math.sin(t * .4 + r.ph) * .6);
   }
+  if (typeof trainG !== 'undefined' && trainG.visible) trainFrame(dt, t);
   if (!arena.visible) return;
   amb.sig.forEach((o, i) => o.rotation.y += dt * [.05, -.08, .11, -.04][i]);
   amb.rocks.forEach(r => r.o.position.y = r.y + Math.sin(t * .4 + r.ph) * .6);

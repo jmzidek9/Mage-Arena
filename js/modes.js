@@ -10,9 +10,9 @@ function applyMap(mode) {
   S.mode = mode;
   MAP.r = mode === 'duel' ? DUEL_R : ARENA_R;
   MAP.rects = MAP.erects = null; MAP.caps = null;
-  PILLARS.length = 0; PILLARS.push(...(mode === 'duel' ? DUEL_PILLARS : ARENA_PILLARS));
+  PILLARS.length = 0; PILLARS.push(...(mode === 'duel' ? DUEL_PILLARS : mode === 'train' ? TRAIN_PILLARS : ARENA_PILLARS));
   if (mode === 'arena') islandMap(); // the islands and bridges built so far (areas.js)
-  if (mode === 'train') MAP.r = TRAIN_R; // its own round yard
+  if (mode === 'train') { MAP.r = TRAIN_R; buildTrain(); } // its own round yard
   if (mode === 'dungeon') dunMap(); // the floor itself is in dungeon.js
   if (mode === 'city') cityMap(); // and the city in city.js
   if (mapMode !== mode) { mapMode = mode; showScenery(mode); }
@@ -33,8 +33,10 @@ const TRAIN_STATIONS = [ // [label, x, z, pad radius, colour, dummies [type, dx,
   ['Moving', 14, -4, 5, 0x7ad8a0, [['runner', -2, 0, 300, 1], ['runner', 2, 1, 300, 1], ['runner', 0, -2, 300, 1]]],
 ];
 const TRAIN_SPOTS = TRAIN_STATIONS.flatMap(([, x, z, r, , ds]) => ds.map(([type, dx, dz, hp, walk]) => [type, x + dx, z + dz, hp, walk, x, z, r]));
-// the yard's scenery, built the first time Training opens (so the sign font has loaded)
-const trainG = new THREE.Group(), trainLights = []; trainG.visible = false; scene.add(trainG);
+// the yard's scenery, built the first time Training opens (so the sign font has loaded): an arena-stone tiled floor with a
+// dark runway down the range lane, the arena's own carved props (rim walls, pillars and banners, braziers, monoliths,
+// crystals, floating rocks, far islands) placed for this yard, and a glowing sigil where you start
+const trainG = new THREE.Group(), trainLights = [], TRAIN_PILLARS = [], tAmb = { flames: [], rocks: [], monos: [], sig: null };
 function buildTrain() {
   if (trainG.children.length) return;
   const mat = (n, fb) => arenaMat(n) || new THREE.MeshStandardMaterial({ color: fb });
@@ -42,42 +44,82 @@ function buildTrain() {
   const canvas = (w, h, draw) => { const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t; };
   const text = (s, col, w = 512, h = 128) => canvas(w, h, g => { g.font = `700 ${h * .5}px Cinzel, Georgia, serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.shadowColor = col; g.shadowBlur = h * .18; g.fillStyle = '#fff6d8'; g.fillText(s, w / 2, h / 2); });
   const add = (geo, m, x = 0, y = 0, z = 0) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.receiveShadow = !m.isMeshBasicMaterial; trainG.add(o); return o; };
-  // floor: slate tiles 5 m across with a faint line every metre (tile edges line up with the centre)
-  const floor = canvas(512, 512, (g, w) => {
-    g.fillStyle = '#2e2b38'; g.fillRect(0, 0, w, w); const n = 5, s = w / n;
-    for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) { g.fillStyle = `hsl(255,7%,${31 + ((i * 7 + j * 3) % 5) * 1.6}%)`; g.fillRect(i * s + 2, j * s + 2, s - 4, s - 4); }
-    g.strokeStyle = 'rgba(233,196,106,.38)'; g.lineWidth = 5; g.strokeRect(0, 0, w, w);
+  // an arena prop moved to angle `ang` (0 = +z, toward the start) at radius `r`, keeping how it faces the middle
+  const src = re => arena.children.filter(o => re.test(o.name));
+  const place = (o, ang, r, { y = 0, s = 1, spin = 0 } = {}) => {
+    const c = o.clone(), a0 = Math.atan2(o.position.x, o.position.z), r0 = Math.hypot(o.position.x, o.position.z) || 1, piv = new THREE.Group();
+    c.position.set(0, o.position.y * s + y, r); c.rotation.y = o.rotation.y - a0 + spin; c.scale.multiplyScalar(s);
+    piv.rotation.y = ang; piv.add(c); trainG.add(piv); piv.updateMatrixWorld(true); return c;
+  };
+  const deg = d => d * Math.PI / 180, at = (ang, r) => [Math.sin(ang) * r, Math.cos(ang) * r];
+  // floor: 2 m flagstones in the arena's stone tones over dark grout, a slate runway down the lane, a darker border ring
+  const tone = [0xadaaaf, 0x9b99a4, 0xa4a2ab, 0x9b99a4, 0xadaaaf, 0xa4a2ab, 0x9b99a4, 0xadaaaf, 0xa4a2ab], cells = []; // moss on about one stone in 25
+  for (let x = -TRAIN_R; x <= TRAIN_R; x += 2) for (let z = -TRAIN_R; z <= TRAIN_R; z += 2) if (Math.hypot(x, z) < TRAIN_R - .9) cells.push([x, z]);
+  const tiles = new THREE.InstancedMesh(new THREE.BoxGeometry(1.86, .3, 1.86), new THREE.MeshStandardMaterial({ roughness: .92 }), cells.length), M4 = new THREE.Matrix4(), C = new THREE.Color();
+  cells.forEach(([x, z], i) => {
+    const r = Math.hypot(x, z), lane = Math.abs(x) < 3 && z < 9 && z > -25, h = Math.sin(x * 12.9898 + z * 78.233) * 43758.5453 % 1;
+    M4.makeRotationY((h - .5) * .04).setPosition(x, -.15 + h * .02, z); tiles.setMatrixAt(i, M4);
+    C.set(lane ? 0x5f5a6c : r > TRAIN_R - 3.5 ? 0x847f8e : (Math.abs(h) > .96 ? 0x869b81 : tone[Math.floor(Math.abs(h) * 9)])).multiplyScalar(.82 + Math.abs(h) * .25); tiles.setColorAt(i, C);
   });
-  floor.wrapS = floor.wrapT = THREE.RepeatWrapping; floor.repeat.set(TRAIN_R * 2 / 5, TRAIN_R * 2 / 5);
-  add(new THREE.CircleGeometry(TRAIN_R, 128).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ map: floor, roughness: .85 }));
-  add(new THREE.CylinderGeometry(TRAIN_R, TRAIN_R * .97, 1.6, 128, 1, true), mat('slab', 0x504b5d), 0, -.8, 0);
-  const under = new THREE.ConeGeometry(TRAIN_R * .97, 22, 40, 6).rotateX(Math.PI), p = under.attributes.position; // a ragged rock root under the yard
-  for (let i = 0; i < p.count; i++) { const y = p.getY(i), k = (11 - y) / 22, n = 1 + Math.sin(i * 12.9898) * .18 * k; p.setX(i, p.getX(i) * n); p.setZ(i, p.getZ(i) * n); }
-  under.computeVertexNormals(); add(under, mat('rock', 0x796f79), 0, -12.6, 0);
-  add(new THREE.TorusGeometry(TRAIN_R - .15, .16, 8, 160).rotateX(Math.PI / 2), mat('gold', 0xf9d789), 0, .05, 0);
+  tiles.receiveShadow = true; trainG.add(tiles);
+  add(new THREE.CircleGeometry(TRAIN_R, 128).rotateX(-Math.PI / 2), mat('grout', 0x3f3f4b), 0, -.2, 0);
+  const s = TRAIN_R / 22.5; // the arena's walls and underside, widened to this yard
+  for (const n of [/^arena_walls$/, /^arena_underside$/]) { const c = src(n)[0]?.clone(); if (c) { c.scale.set(s, n.source.includes('under') ? 1.25 : 1, s); trainG.add(c); } }
   // the range lane: a gold line and a label every 5 m from the start, between two faint rails
-  for (const x of [-2.6, 2.6]) add(new THREE.PlaneGeometry(.06, 30).rotateX(-Math.PI / 2), glow(0xe9c46a), x, .02, 8 - 15).material.opacity = .35;
+  for (const x of [-3, 3]) add(new THREE.PlaneGeometry(.07, 33).rotateX(-Math.PI / 2), glow(0xe9c46a), x, .02, 8 - 16.5).material.opacity = .45;
   for (let d = 5; d <= 30; d += 5) {
-    add(new THREE.PlaneGeometry(5.2, d % 10 ? .08 : .14).rotateX(-Math.PI / 2), glow(0xe9c46a), 0, .025, 8 - d);
-    add(new THREE.PlaneGeometry(4, 1).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: text(`${d} m`, "#e9c46a"), transparent: true, depthWrite: false }), -5, .03, 8 - d + .4);
+    add(new THREE.PlaneGeometry(6, d % 10 ? .09 : .16).rotateX(-Math.PI / 2), glow(0xe9c46a), 0, .025, 8 - d);
+    add(new THREE.PlaneGeometry(4, 1).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: text(`${d} m`, '#e9c46a'), transparent: true, depthWrite: false }), -5.2, .03, 8 - d + .4);
   }
+  // where you start: a slowly turning sigil
+  const sig = makeCircle('arcane', 0xe9c46a); sig.scale.setScalar(1.15); sig.position.set(0, .03, 8); trainG.add(sig); tAmb.sig = sig;
   // stations: a glowing pad and a sign on a post, turned to face the start
   for (const [label, x, z, r, col] of TRAIN_STATIONS) {
-    add(new THREE.RingGeometry(r - .12, r, 64).rotateX(-Math.PI / 2), glow(col), x, .03, z);
-    add(new THREE.CircleGeometry(r, 64).rotateX(-Math.PI / 2), glow(col), x, .015, z).material.opacity = .08;
-    const px = x ? x - Math.sign(x) * (r + .8) : 3.6, pz = x ? z + r * .6 : z, yaw = Math.atan2(0 - px, 8 - pz);
-    add(new THREE.CylinderGeometry(.08, .1, 3, 8), mat('bronze', 0xc4a06c), px, 1.5, pz);
-    const board = add(new THREE.PlaneGeometry(3, .75), new THREE.MeshBasicMaterial({ map: text(label, '#' + col.toString(16).padStart(6, '0')), transparent: true, side: THREE.DoubleSide, depthWrite: false }), px, 3.1, pz);
+    add(new THREE.RingGeometry(r - .14, r, 64).rotateX(-Math.PI / 2), glow(col), x, .03, z);
+    add(new THREE.RingGeometry(r * .55, r * .55 + .06, 64).rotateX(-Math.PI / 2), glow(col), x, .03, z).material.opacity = .5;
+    add(new THREE.CircleGeometry(r, 64).rotateX(-Math.PI / 2), glow(col), x, .015, z).material.opacity = .1;
+    const px = x ? x - Math.sign(x) * (r + .9) : 4.4, pz = x ? z + r * .6 : z, yaw = Math.atan2(0 - px, 8 - pz);
+    add(new THREE.CylinderGeometry(.09, .12, 3.2, 8), mat('bronze', 0xc4a06c), px, 1.6, pz).castShadow = true;
+    add(new THREE.BoxGeometry(3.3, .95, .08), mat('slab', 0x504b5d), px, 3.2, pz).rotation.y = yaw;
+    const board = add(new THREE.PlaneGeometry(3.1, .78), new THREE.MeshBasicMaterial({ map: text(label, '#' + col.toString(16).padStart(6, '0')), transparent: true, side: THREE.DoubleSide, depthWrite: false }), px + Math.sin(yaw) * .05, 3.2, pz + Math.cos(yaw) * .05);
     board.rotation.y = yaw;
   }
-  // crystal lamps round the rim
-  for (let i = 0; i < 8; i++) {
-    const a = (i + .5) * TAU / 8, x = Math.sin(a) * (TRAIN_R - 1.4), z = Math.cos(a) * (TRAIN_R - 1.4);
-    add(new THREE.CylinderGeometry(.35, .5, 1.4, 8), mat('slab', 0x504b5d), x, .7, z);
-    add(new THREE.OctahedronGeometry(.5), mat(i % 2 ? 'crystal_cyan' : 'crystal_violet', 0xdaa0ff), x, 2, z).scale.y = 1.6;
-    if (i % 2 === 0) { const l = new THREE.PointLight(0xb8a0ff, 18, 24, 2); l.position.set(x, 2.6, z); l.visible = false; scene.add(l); trainLights.push(l); }
+  // pillars with banners round the rim (none in front, so the lane stays open)
+  const pil = src(/^pillar_\d+$/), ban = src(/^banner_\d+$/);
+  [35, 80, 125, -35, -80, -125].forEach((d, i) => {
+    const r = TRAIN_R - 2.6, p = pil[i % pil.length]; place(p, deg(d), r).castShadow = true;
+    const b = ban[i % ban.length]; if (b) { const pr = Math.hypot(p.position.x, p.position.z), br = Math.hypot(b.position.x, b.position.z); place(b, deg(d), r - (pr - br)); }
+    TRAIN_PILLARS.push({ x: at(deg(d), r)[0], z: at(deg(d), r)[1], r: 1.05 });
+  });
+  // braziers: flanking the start and lighting the crowd and the moving pen
+  const bz = src(/^brazier_\d+$/)[0], bf = src(/^brazier_flame_\d+$/)[0];
+  for (const [x, z] of [[-4.6, 11], [4.6, 11], [-19.5, -1], [19.5, -1], [-6, -24], [6, -24]]) {
+    const ang = Math.atan2(x, z), r = Math.hypot(x, z);
+    place(bz, ang, r); const f = place(bf, ang, r); tAmb.flames.push(f);
+    TRAIN_PILLARS.push({ x, z, r: .65 });
+    const l = new THREE.PointLight(0xff8a3a, 26, 18, 2); l.position.set(x, 1.9, z); l.visible = false; scene.add(l); trainLights.push(l);
   }
+  // behind the start: monoliths floating either side of the way in
+  src(/^monolith_\d+$/).slice(0, 6).forEach((o, i) => { const c = place(o, deg([-12, 12, -40, 40, -160, 160][i]), TRAIN_R + 3 + (i % 2) * 2, { y: 1 + i * .4 }); tAmb.monos.push({ o: c, y: c.position.y, ph: i * 1.7 }); });
+  // crystal clusters by the walls, floating rocks and far islands in the sky
+  const cry = src(/^crystal_\d+$/);
+  [60, 100, 150, 200, 255, 300, 165, 285].forEach((d, i) => { for (let k = 0; k < 3; k++) place(cry[(i + k) % cry.length], deg(d + k * 2.2 - 2), TRAIN_R - 1.6 - k * .5, { s: 1 + (k === 1) * .5, spin: k }); });
+  src(/^float_rock_\d+$/).forEach((o, i) => { const c = place(o, deg(i * 360 / 16 + 7), TRAIN_R + 8 + (i % 4) * 5, { y: -3 + (i % 5) * 2.2, s: .8 + (i % 3) * .25 }); tAmb.rocks.push({ o: c, y: c.position.y, ph: i * 1.3 }); });
+  src(/^far_island_\d+$/).forEach(o => trainG.add(o.clone()));
+  trainG.traverse(o => { if (o.isMesh && !o.material.isMeshBasicMaterial) o.receiveShadow = true; });
 }
+// flickering braziers, drifting rocks and monoliths, the turning start sigil (from animateArena while the yard shows)
+function trainFrame(dt, t) {
+  tAmb.flames.forEach((f, i) => {
+    const s = 1 + Math.sin(t * 13 + i * 2) * .08 + Math.sin(t * 7.3 + i) * .06; f.scale.set(s, s * 1.1, s);
+    if (Math.random() < .5) { const p = f.getWorldPosition(new THREE.Vector3()); emit(p.x + rand(-.25, .25), p.y + rand(.3, .9), p.z + rand(-.25, .25), rand(-.3, .3), rand(1.5, 3.2), rand(-.3, .3), Math.random() < .5 ? 0xff8a3a : 0xffd27a, rand(.05, .12), rand(.8, 1.6), -.4, .4); }
+  });
+  trainLights.forEach((l, i) => { if (i < tAmb.flames.length) l.intensity = 22 + Math.sin(t * 11 + i * 3) * 5; });
+  tAmb.rocks.forEach(r => r.o.position.y = r.y + Math.sin(t * .4 + r.ph) * .6);
+  tAmb.monos.forEach(r => { r.o.position.y = r.y + Math.sin(t * .5 + r.ph) * .35; r.o.rotation.y += dt * .05; });
+  if (tAmb.sig) spinCircle(tAmb.sig, dt, .25);
+}
+trainG.visible = false; scene.add(trainG);
 function startTrain() {
   S.wave = 1; S.phase = 'fight'; S.budget = 0; S.bossLeft = 0;
   S.cheat = { ...(S.cheat || {}), inv: 1, allEl: 1 };

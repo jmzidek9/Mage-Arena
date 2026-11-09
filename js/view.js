@@ -1592,11 +1592,94 @@ function pvShow(el) {
 const soften = m => (m.userData.mats || []).forEach(x => { if (x.uniforms?.uCore?.value) x.uniforms.uA.value = .45; });
 // is a model flat before fitting (a projectile flying level)?
 function flat0(m) { const s = new THREE.Box3().setFromObject(m).getSize(V()); return s.y < .45 * Math.max(s.x, s.z); }
+// ===================== lobby: the whole screen takes on the element you are looking at =====================
+// The lobby's background is a wash of the element's colour (CSS, from --el); a full-screen canvas over the panel (it lets
+// clicks through) adds a burst of light on each switch, and the element's own weather drifting across the screen (embers, snow, rain and lightning, leaves,
+// runes, bubbles, a gravity swirl...). Plain 2D canvas, about 140 sprites, only while the lobby is open.
+const LFX_KIND = { // [motion, shape, count]
+  fire: ['rise', 'dot', 150], magma: ['rise', 'dot', 140], explosion: ['rise', 'spark', 130], soul: ['rise', 'dot', 110], light: ['rise', 'dot', 120],
+  spirit: ['rise', 'wisp', 70], venom: ['rise', 'bubble', 80], abyss: ['rise', 'bubble', 80], plasma: ['rise', 'spark', 130],
+  frost: ['fall', 'flake', 80], crystal: ['fall', 'glint', 110], bone: ['fall', 'dot', 90], earth: ['fall', 'rock', 70], ink: ['fall', 'drop', 70],
+  blood: ['fall', 'drop', 70], shadow: ['fall', 'smoke', 60], nature: ['fall', 'leaf', 60],
+  water: ['rain', 'streak', 160], storm: ['rain', 'streak', 170], wind: ['wind', 'streak', 90], blades: ['wind', 'glint', 70],
+  cosmic: ['twinkle', 'star', 140], arcane: ['twinkle', 'star', 120], illusion: ['twinkle', 'glint', 110], god: ['twinkle', 'star', 140],
+  rune: ['twinkle', 'glyph', 60], gravity: ['swirl', 'dot', 160], chrono: ['orbit', 'dot', 130], sonic: ['rings', 'dot', 60], laser: ['scan', 'dot', 60],
+};
+const LFX = { el: null, col: [154, 92, 255], to: [154, 92, 255], ps: [], burst: 0, flash: 0, sprites: {}, raf: 0 };
+function lobbyFx(el) {
+  if (LFX.el === el) return;
+  const first = !LFX.el; LFX.el = el; LFX.to = [...new THREE.Color(EL[el].color).toArray().map(v => Math.round(v * 255))];
+  if (first) LFX.col = [...LFX.to]; else LFX.burst = 1;
+  LFX.ps = [];
+  if (!LFX.raf) LFX.raf = requestAnimationFrame(lfxFrame);
+}
+// a soft glowing dot in a colour, drawn once and reused
+function lfxSprite(rgb) {
+  const k = rgb.join(); if (LFX.sprites[k]) return LFX.sprites[k];
+  const c = document.createElement('canvas'); c.width = c.height = 32; const g = c.getContext('2d'), r = g.createRadialGradient(16, 16, 0, 16, 16, 16);
+  r.addColorStop(0, `rgba(255,255,255,1)`); r.addColorStop(.2, `rgba(${k},.9)`); r.addColorStop(1, `rgba(${k},0)`); g.fillStyle = r; g.fillRect(0, 0, 32, 32);
+  return LFX.sprites[k] = c;
+}
+function lfxSpawn(kind, W, H, fresh) {
+  const [mo] = kind, R = Math.random, p = { x: R() * W, y: R() * H, vx: 0, vy: 0, s: .5 + R(), a: R() * TAU, va: (R() - .5) * 2, t: 0, life: 4 + R() * 6, ph: R() * TAU };
+  if (mo === 'rise') { if (!fresh) p.y = H + 10; p.vy = -(30 + R() * 60); p.vx = (R() - .5) * 20; }
+  if (mo === 'fall') { if (!fresh) p.y = -10; p.vy = 20 + R() * 40; p.vx = (R() - .5) * 15; }
+  if (mo === 'rain') { if (!fresh) p.y = -20; p.vy = 700 + R() * 400; p.vx = -120; }
+  if (mo === 'wind') { if (!fresh) p.x = -40; p.vx = 400 + R() * 500; p.vy = (R() - .5) * 30; }
+  if (mo === 'swirl' || mo === 'orbit') { p.r = 80 + R() * Math.max(W, H) * .6; p.a = R() * TAU; }
+  if (mo === 'rings') { p.r = R() * Math.max(W, H) * .7; }
+  if (mo === 'scan') { p.y = R() * H; p.vy = (R() < .5 ? -1 : 1) * (40 + R() * 80); }
+  if (kind[1] === 'glyph') p.ch = 'ᚠᚢᚦᚨᚱᚲᚷᚹᚺᚾᛁᛃᛇᛈᛉᛊᛏᛒᛖᛗᛚᛜᛞᛟ'[Math.floor(R() * 24)];
+  return p;
+}
+function lfxFrame(now) {
+  const cv = $('elFx'); if (!cv) return;
+  if ($('lobby').classList.contains('hidden') || !LFX.el) { LFX.raf = requestAnimationFrame(lfxFrame); return; }
+  const W = cv.clientWidth, H = cv.clientHeight; if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
+  const dt = Math.min(.05, (now - (LFX.last || now)) / 1000); LFX.last = now;
+  const g = cv.getContext('2d'), kind = LFX_KIND[LFX.el] || ['rise', 'dot', 100], [mo, sh, n] = kind;
+  for (let i = 0; i < 3; i++) LFX.col[i] += (LFX.to[i] - LFX.col[i]) * Math.min(1, dt * 4);
+  const rgb = LFX.col.map(Math.round), C = rgb.join(), cx = W * .5, cy = H * .42;
+  g.clearRect(0, 0, W, H);
+  // a burst of light from the middle when you switch, and lightning for Storm
+  if (LFX.burst > 0) { const r = (1 - LFX.burst) * Math.max(W, H) * .9; g.strokeStyle = `rgba(${C},${LFX.burst * .7})`; g.lineWidth = 40 * LFX.burst + 2; g.beginPath(); g.arc(cx, cy, r, 0, TAU); g.stroke();
+    g.fillStyle = `rgba(${C},${LFX.burst * .08})`; g.fillRect(0, 0, W, H); LFX.burst -= dt * 1.6; }
+  if (LFX.el === 'storm' && Math.random() < dt * .35) LFX.flash = 1;
+  if (LFX.flash > 0) { g.fillStyle = `rgba(210,190,255,${LFX.flash * .12})`; g.fillRect(0, 0, W, H); LFX.flash -= dt * 4; }
+  // the weather
+  const fill = !LFX.ps.length; while (LFX.ps.length < n) LFX.ps.push(lfxSpawn(kind, W, H, fill)); // a new element's weather fills the whole screen at once
+  const spr = lfxSprite(rgb), lite = mo !== 'fall' || sh !== 'smoke';
+  g.globalCompositeOperation = lite ? 'lighter' : 'source-over';
+  for (let i = LFX.ps.length - 1; i >= 0; i--) {
+    const p = LFX.ps[i]; p.t += dt; p.a += p.va * dt;
+    if (mo === 'swirl') { p.r -= dt * (40 + 4000 / p.r); p.a += dt * 120 / p.r; p.x = cx + Math.cos(p.a) * p.r; p.y = cy + Math.sin(p.a) * p.r * .6; if (p.r < 12) { LFX.ps[i] = lfxSpawn(kind, W, H); continue; } }
+    else if (mo === 'orbit') { p.a += dt * (.05 + 30 / p.r); p.x = cx + Math.cos(p.a) * p.r; p.y = cy + Math.sin(p.a) * p.r * .6; }
+    else if (mo === 'rings') { p.r += dt * 120; if (p.r > Math.max(W, H)) p.r = 0; g.strokeStyle = `rgba(${C},${.25 * (1 - p.r / Math.max(W, H))})`; g.lineWidth = 2; g.beginPath(); g.arc(cx, cy, p.r, 0, TAU); g.stroke(); continue; }
+    else if (mo === 'scan') { p.y += p.vy * dt; if (p.y < 0 || p.y > H) p.vy *= -1; g.fillStyle = `rgba(${C},.12)`; g.fillRect(0, p.y, W, 2); g.drawImage(spr, (p.ph * 997 + p.t * 500) % W - 8, p.y - 8, 16, 16); continue; }
+    else { p.x += (p.vx + (mo === 'fall' ? Math.sin(p.t * 1.5 + p.ph) * 25 : mo === 'rise' ? Math.sin(p.t * 2 + p.ph) * 12 : 0)) * dt; p.y += p.vy * dt; }
+    if (p.y < -60 || p.y > H + 60 || p.x < -80 || p.x > W + 80 || (mo === 'twinkle' && p.t > p.life)) { LFX.ps[i] = lfxSpawn(kind, W, H); continue; }
+    const tw = mo === 'twinkle' ? Math.sin(p.t / p.life * Math.PI) : 1, sz = p.s * 10;
+    g.globalAlpha = Math.max(0, Math.min(1, tw * (mo === 'rise' ? 1 - Math.max(0, (H * .25 - p.y) / (H * .25)) : 1))) * .7;
+    if (sh === 'streak') { g.strokeStyle = `rgba(${C},.55)`; g.lineWidth = p.s * 1.6; const l = mo === 'rain' ? .035 : .06; g.beginPath(); g.moveTo(p.x, p.y); g.lineTo(p.x - p.vx * l, p.y - p.vy * l); g.stroke(); }
+    else if (sh === 'flake' || sh === 'star' || sh === 'glint') { const k = sh === 'flake' ? 6 : 4, r = sz * (sh === 'flake' ? .6 : .7); g.strokeStyle = `rgba(${sh === 'flake' ? '235,248,255' : C},.9)`; g.lineWidth = 1.2; g.beginPath(); for (let j = 0; j < k; j++) { const a = p.a + j * TAU / k; g.moveTo(p.x, p.y); g.lineTo(p.x + Math.cos(a) * r, p.y + Math.sin(a) * r); } g.stroke(); g.drawImage(spr, p.x - sz * .6, p.y - sz * .6, sz * 1.2, sz * 1.2); }
+    else if (sh === 'leaf') { g.save(); g.translate(p.x, p.y); g.rotate(p.a); g.fillStyle = `rgba(${C},.8)`; g.beginPath(); g.ellipse(0, 0, sz * 1.1, sz * .45, 0, 0, TAU); g.fill(); g.restore(); }
+    else if (sh === 'drop') { g.fillStyle = `rgba(${C},.75)`; g.beginPath(); g.ellipse(p.x, p.y, sz * .35, sz * .6, 0, 0, TAU); g.fill(); }
+    else if (sh === 'bubble') { g.strokeStyle = `rgba(${C},.7)`; g.lineWidth = 1.4; g.beginPath(); g.arc(p.x, p.y, sz * .7, 0, TAU); g.stroke(); }
+    else if (sh === 'rock') { g.fillStyle = `rgba(${C},.55)`; g.save(); g.translate(p.x, p.y); g.rotate(p.a); g.fillRect(-sz * .3, -sz * .3, sz * .6, sz * .6); g.restore(); }
+    else if (sh === 'smoke') { g.globalAlpha *= .35; g.drawImage(spr, p.x - sz * 4, p.y - sz * 4, sz * 8, sz * 8); }
+    else if (sh === 'glyph') { g.fillStyle = `rgba(${C},.9)`; g.font = `${Math.round(sz * 2.4)}px serif`; g.fillText(p.ch, p.x, p.y); }
+    else if (sh === 'wisp') g.drawImage(spr, p.x - sz * 2, p.y - sz * 2, sz * 4, sz * 4);
+    else if (sh === 'spark') { g.drawImage(spr, p.x - sz * .6, p.y - sz * .6, sz * 1.2, sz * 1.2); g.strokeStyle = `rgba(${C},.5)`; g.lineWidth = 1; g.beginPath(); g.moveTo(p.x, p.y); g.lineTo(p.x - p.vx * .05, p.y - p.vy * .05); g.stroke(); }
+    else g.drawImage(spr, p.x - sz * .7, p.y - sz * .7, sz * 1.4, sz * 1.4);
+  }
+  g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
+  LFX.raf = requestAnimationFrame(lfxFrame);
+}
 function savePick() { try { localStorage.setItem('magepact_pick', JSON.stringify({ el: myEl, el2: myEl2 })); } catch {} }
 function renderDetail() {
   const k = hoverEl || myEl, e = EL[k], [t1, t2, dif] = ELMETA[k], st = stars(k), mx = PROG.mast[k] || 0, nxt = MASTERY[st];
   document.documentElement.style.setProperty('--el', css(e.color));
-  pvShow(k);
+  pvShow(k); lobbyFx(k);
   $('detailBody').innerHTML = `<div class="dh">${elIcon(k)}<div><b>${e.name}</b><small>${e.blurb}</small></div></div>
     <div class="tags"><span>${t1}</span><span>${t2}</span><span class="dif d${dif}">${'●'.repeat(dif)}${'○'.repeat(3 - dif)} ${DIFF[dif]}</span>${unlocked(k) ? `<span class="mast" title="Mastery: ${mx}${nxt ? ' / ' + nxt : ''} XP">${'★'.repeat(st)}${'☆'.repeat(5 - st)}</span>` : `<span class="lk">🔒 ${PROG.keys ? 'Click to unlock' : 'Locked: level up to unlock'}</span>`}</div>
     <div class="passive"><em>Passive</em> ${e.passive}</div>

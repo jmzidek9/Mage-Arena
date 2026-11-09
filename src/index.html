@@ -164,7 +164,7 @@ input::placeholder{color:#b9add8;opacity:.8}input:focus{box-shadow:0 0 0 2px var
 #startBtn{border-color:var(--gold);box-shadow:0 0 20px rgba(233,196,106,.45)}
 #lobby .panel{animation:rise .5s cubic-bezier(.2,.9,.3,1)}
 .elc{transition:transform .15s,box-shadow .2s}.elc:hover{transform:translateY(-3px)}
-#lobby .panel{max-width:min(1400px,100%)}
+#lobby .panel{max-width:min(1400px,100%);position:relative;z-index:1}#elFx{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:3}#lobby{background:radial-gradient(ellipse 70% 60% at 50% 40%,color-mix(in srgb,var(--el) 45%,transparent),color-mix(in srgb,var(--el) 12%,rgba(3,2,10,.8)) 80%);transition:background .4s}
 .pick{display:flex;flex-direction:column;gap:12px;flex:none}.pick>*{overflow:visible}
 #detail{display:grid;grid-template-columns:minmax(220px,300px) minmax(0,1fr) minmax(260px,340px);grid-template-rows:minmax(0,1fr);gap:18px;align-items:center;height:clamp(300px,48vh,540px);padding:10px 16px;background:radial-gradient(ellipse 45% 70% at 50% 62%,color-mix(in srgb,var(--el) 38%,transparent),transparent 70%),linear-gradient(180deg,rgba(18,10,38,.35),rgba(10,6,24,.6));border-color:color-mix(in srgb,var(--el) 30%,transparent)}
 #detail .stage{align-self:stretch;display:flex;align-items:center;justify-content:center;min-width:0}
@@ -341,7 +341,7 @@ body.touching #me{top:14px;bottom:auto;left:14px}body.touching #lock{display:non
   <div class="hint"><kbd>↑</kbd><kbd>↓</kbd> choose · <kbd>Enter</kbd> play · <kbd>1</kbd>–<kbd>2</kbd></div>
 </div>
 
-<div id="lobby" class="overlay hidden">
+<div id="lobby" class="overlay hidden"><canvas id="elFx"></canvas>
   <div class="panel">
     <div id="modeBar"><button id="modeBack" class="ghost">← Modes</button><h2 id="modeName"></h2><div class="row"><button id="gfxBtn" class="ghost">Graphics: High</button><button id="setBtn" class="ghost">Settings</button></div></div>
     <div class="rule"></div>
