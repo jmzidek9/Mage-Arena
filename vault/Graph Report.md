@@ -1,26 +1,26 @@
 # Graph Report - Test Game  (2026-11-08)
 
 ## Corpus Check
-- 149 files · ~382,646 words
+- 149 files · ~384,902 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 27 file(s) not represented in the graph (top: (none) 12, .ipynb 12, .properties 1)
 
 ## Summary
-- 2257 nodes · 3863 edges · 152 communities (139 shown, 13 thin omitted)
-- Extraction: 93% EXTRACTED · 7% INFERRED · 0% AMBIGUOUS · INFERRED: 283 edges (avg confidence: 0.9)
+- 2266 nodes · 3878 edges · 143 communities (131 shown, 12 thin omitted)
+- Extraction: 93% EXTRACTED · 7% INFERRED · 0% AMBIGUOUS · INFERRED: 285 edges (avg confidence: 0.9)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `d6d8d0c0`
+- Built from commit: `174cda35`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
-- stepEnemies
+- push
 - core.js
 - dungeon.js
 - view.js
-- aim
+- TRS
 - net.js
 - Mesh
 - elements.js
@@ -33,7 +33,7 @@
 - renderWorld
 - city.js
 - run.js
-- argparse
+- evaluate_chat_gsm8k.py
 - ringFx
 - addShader
 - Wind playtest report
@@ -63,7 +63,7 @@
 - Illusion playtest report
 - add_merges.py
 - Crystal playtest report
-- TRS
+- stepEnemies
 - Cosmic playtest report
 - Fire playtest report
 - damage
@@ -77,7 +77,7 @@
 - react
 - evaluate_plugin.py
 - Qwen/README.md
-- Evaluation
+- EVALUATION.md
 - Bone playtest report
 - build_enemies.py
 - Blades playtest report
@@ -95,13 +95,13 @@
 - all.sh
 - model
 - auto_comments.py
-- Chrono playtest report
+- ev
 - README_JA.md
 - Soul playtest report
 - ctxOf
-- Water playtest report
+- Storm playtest report
 - Qwen/README_CN.md
-- インストールと環境
+- デモと推論
 - cIx
 - evaluate_chat_ceval.py
 - evaluate_chat_mmlu.py
@@ -109,50 +109,42 @@
 - 环境配置
 - evaluate_cmmlu.py
 - evaluate_mmlu.py
-- EVALUATION.md
+- ReAct Prompting 示例
 - system_prompt.md
 - 使用通义千问作为Agent
-- デモと推論
-- Demo & 推理
+- Abyss playtest report
+- Evaluation
 - Netcode
 - numpy
 - Qwen/cli_demo.py
 - react_demo.py
-- FAQ
+- Demo & 推理
 - Quickstart
-- 快速使用
+- Blood playtest report
 - Inference Qwen Using vLLM
 - Inference Qwen Using 🤖 ModelScope and 🤗 Transformers
 - 运行步骤
 - Deployment
 - 部署
 - Inicio rápido
-- Démarrage Rapide
+- renderModes
 - デプロイ
 - クイックスタート
 - Tokenization
 - Mage Arena playtest report (all 30 elements)
-- Installation & Environment
-- pvShow
 - swift/README.md
 - swift/README_CN.md
 - Tokenization
-- dcu-support/web_demo.py
-- .chat
+- argparse
 - finetune_lora_single_gpu.sh
 - finetune_qlora_single_gpu.sh
 - 微调
-- Déploiement
-- トークン化
 - Mage Arena
 - hud
 - auto_comments.md
 - finetune_ds.sh
 - finetune_lora_ds.sh
 - finetune_qlora_ds.sh
-- 量化
-- 🐳 使用预构建的Docker镜像
-- 🐳 Docker
 - Fine-tuning Qwen by Ascend NPU
 - Quantization
 - Inference Qwen Using TensorRT-LLM
@@ -162,8 +154,6 @@
 - docker_cli_demo.sh
 - docker_openai_api.sh
 - docker_web_demo.sh
-- 量子化
-- ファインチューニング
 - dashscope/README.md
 - tests/README.md
 
@@ -184,21 +174,21 @@
   playtest/reports/arcane.md → js/core.js
 - `R: Bass Drop` --references--> `ringFx()`  [INFERRED]
   playtest/reports/sonic.md → js/core.js
-- `RMB: Ball Lightning (cd 6, orb 6 dmg pierce, zaps 2 targets x5 every 0.25 s, burst 20)` --references--> `boltFx()`  [INFERRED]
+- `LMB: Chain Lightning (cd 0.36, 6 dmg, chains 2 at 75%)` --references--> `burst()`  [INFERRED]
   playtest/reports/storm.md → js/core.js
-- `Q: Rewind (cd 6, 8 mark dmg, snap 35 + 14/m up to +200, +150 vs boss)` --references--> `burst()`  [INFERRED]
-  playtest/reports/chrono.md → js/core.js
 - `⚡ Storm` --references--> `bigBoltFx()`  [INFERRED]
   vault/Elements.md → js/elements.js
+- `Passive: Kindling (death blast 20 x dmgMul, r 2.6)` --references--> `fireBoom()`  [INFERRED]
+  playtest/reports/fire.md → js/elements.js
 
 ## Import Cycles
 - None detected.
 
-## Communities (152 total, 13 thin omitted)
+## Communities (143 total, 12 thin omitted)
 
-### Community 0 - "stepEnemies"
-Cohesion: 0.17
-Nodes (28): aoe(), bomberBlast(), bossMeteors(), ccEnd(), dropOrb(), endWave(), enemiesNear(), enemyHits() (+20 more)
+### Community 0 - "push"
+Cohesion: 0.22
+Nodes (13): aoe(), bomberBlast(), dropOrb(), foeOrb(), inCone(), inLine(), kill(), later() (+5 more)
 
 ### Community 1 - "core.js"
 Cohesion: 0.02
@@ -210,19 +200,19 @@ Nodes (55): add(), anchor(), ARRIVE, block(), BUCKET, buildDungeonView(), buildF
 
 ### Community 3 - "view.js"
 Cohesion: 0.05
-Nodes (43): BOSS_COL, BOSS_GAIT, CAST_T, castFx(), CASTS, CC_OV, COMBO_FX, DIFF (+35 more)
+Nodes (44): BOSS_COL, BOSS_GAIT, CAST_T, castFx(), CASTS, CC_OV, COMBO_FX, DIFF (+36 more)
 
-### Community 4 - "aim"
-Cohesion: 0.13
-Nodes (24): barm(), boss_body(), boss_sword(), brute_body(), cn_body(), ft_body(), golem(), hg_ring() (+16 more)
+### Community 4 - "TRS"
+Cohesion: 0.08
+Nodes (42): barm(), boss_body(), boss_sword(), brute_body(), sbody(), ba_body(), bwing(), bz_arm() (+34 more)
 
 ### Community 5 - "net.js"
 Cohesion: 0.08
 Nodes (45): applySettings(), autoQuality(), bfSnap(), bgTick(), BIND_NAMES, CHEAT_TOGGLES, cheatSpawn(), dropGuest() (+37 more)
 
 ### Community 6 - "Mesh"
-Cohesion: 0.13
-Nodes (9): spell_circle(), wpart(), bridge(), bridge_gate(), bridge_pier(), bridge_post(), horn_(), area() (+1 more)
+Cohesion: 0.12
+Nodes (11): spell_circle(), wpart(), part(), bridge(), bridge_gate(), bridge_pier(), bridge_post(), horn_() (+3 more)
 
 ### Community 7 - "elements.js"
 Cohesion: 0.03
@@ -242,15 +232,15 @@ Nodes (5): Audio credits, Music (`audio/music/`), Sound effects (`audio/sfx/`, f
 
 ### Community 11 - "lib.py"
 Cohesion: 0.05
-Nodes (47): arcpts(), blob_cloud(), crescent(), crescent_blade(), lens(), M(), mirror_shard(), plated_rock() (+39 more)
+Nodes (46): arcpts(), blob_cloud(), crescent(), crescent_blade(), lens(), M(), mirror_shard(), plated_rock() (+38 more)
 
 ### Community 12 - "areas.js"
 Cohesion: 0.08
 Nodes (34): addPool(), AREAS, aroundIsle(), bridgeEnds(), bsc(), die(), easeBack(), FOE_ATK (+26 more)
 
 ### Community 13 - "modes.js"
-Cohesion: 0.14
-Nodes (13): applyMap(), buildTrain(), DUEL_SPOTS, duelReset(), showScenery(), startDuel(), startMode(), startTrain() (+5 more)
+Cohesion: 0.12
+Nodes (15): applyMap(), buildTrain(), DUEL_SPOTS, duelReset(), showScenery(), startDuel(), startMode(), startTrain() (+7 more)
 
 ### Community 14 - "renderWorld"
 Cohesion: 0.16
@@ -264,13 +254,13 @@ Nodes (36): CBX, CITY, cityApply(), cityBreakFx(), cityCrackFx(), cityFrame(), c
 Cohesion: 0.05
 Nodes (32): all, { execFile }, fs, OUT, path, src, browser(), { chromium } (+24 more)
 
-### Community 17 - "argparse"
+### Community 17 - "evaluate_chat_gsm8k.py"
 Cohesion: 0.11
-Nodes (11): args_parser(), args_parser(), extract_answer(), is_correct(), number_equal(), extract_code(), generate_sample(), decode() (+3 more)
+Nodes (12): extract_answer(), is_correct(), number_equal(), extract_code(), generate_sample(), decode(), extract_answer(), extract_answer_hf() (+4 more)
 
 ### Community 18 - "ringFx"
 Cohesion: 0.11
-Nodes (25): addFx(), animateArena(), boltFx(), circleFx(), easeOut(), glowify(), glowMats(), makeCircle() (+17 more)
+Nodes (26): addFx(), animateArena(), boltFx(), circleFx(), easeOut(), glowify(), glowMats(), makeCircle() (+18 more)
 
 ### Community 19 - "addShader"
 Cohesion: 0.25
@@ -297,8 +287,8 @@ Cohesion: 0.11
 Nodes (35): ba_arm(), bake_scale(), bd_body(), beast(), legq(), biped(), arm(), leg() (+27 more)
 
 ### Community 25 - "renderLobby"
-Cohesion: 0.19
-Nodes (15): bestFor(), gainXP(), needXP(), PICKABLE(), renderLobby(), renderProg(), renderTalents(), runStats() (+7 more)
+Cohesion: 0.13
+Nodes (23): bestFor(), flat0(), gainXP(), needXP(), PICKABLE(), pvDot, pvFit(), pvShow() (+15 more)
 
 ### Community 26 - "Elements"
 Cohesion: 0.05
@@ -325,24 +315,24 @@ Cohesion: 0.23
 Nodes (8): BLOCK, BLOCK_LOOK, guardFrame(), guardMake(), guardParticles(), guardPose(), GV, myGuard()
 
 ### Community 32 - "sim.js"
-Cohesion: 0.08
-Nodes (36): BOSS_SKY, bossCoast(), canCast(), capNear(), castEv(), cdOf(), clampArena(), collide() (+28 more)
+Cohesion: 0.10
+Nodes (24): BOSS_SKY, canCast(), castEv(), cdOf(), coneHits(), ELIST, ET, fire() (+16 more)
 
 ### Community 33 - "MUSIC"
 Cohesion: 1.00
 Nodes (3): MUSIC, playMood(), track()
 
 ### Community 34 - "os"
-Cohesion: 0.15
-Nodes (8): test_finetune(), test_inference_api(), test_inference_vllm_fschat(), run_in_subprocess(), simple_openai_api(), TelnetPort(), _device_map(), load_model_on_gpus()
+Cohesion: 0.19
+Nodes (6): test_finetune(), test_inference_api(), test_inference_vllm_fschat(), run_in_subprocess(), simple_openai_api(), TelnetPort()
 
 ### Community 35 - "Spirit playtest report"
 Cohesion: 0.25
 Nodes (7): LMB: Soul Wisps, Passive: Restless Dead (+ Haunted), Q: Banshee, R: Army of the Dead, RMB: Command, Spirit playtest report, Top 3
 
 ### Community 36 - "torch"
-Cohesion: 0.10
-Nodes (7): get_stop_words_ids(), make_context(), vLLMWrapper, get_stop_words_ids(), make_context(), vLLMWrapper, preprocess()
+Cohesion: 0.09
+Nodes (9): get_stop_words_ids(), make_context(), vLLMWrapper, get_stop_words_ids(), make_context(), vLLMWrapper, preprocess(), _device_map() (+1 more)
 
 ### Community 37 - "build_assets.py"
 Cohesion: 0.10
@@ -384,9 +374,9 @@ Nodes (31): flash(), aimBeam(), swap(), E: Penance, Light playtest report, LMB: 
 Cohesion: 0.22
 Nodes (8): Crystal playtest report, E: Crystal Spire (`crystal.3`, line 1135), LMB: Prism Shard (`crystal.0`, line 1097), Passive: Prismatic (`onKill`, line 1095), Q: Resonant Crystal (`crystal.2`, line 1123), R: Crystal Tomb (`crystal.4`, line 1153), RMB: Geode Bomb (`crystal.1`, line 1107), Top 3
 
-### Community 47 - "TRS"
-Cohesion: 0.12
-Nodes (19): sbody(), tent(), ba_body(), bwing(), bz_arm(), cn_leg(), eyeball(), gz_body() (+11 more)
+### Community 47 - "stepEnemies"
+Cohesion: 0.21
+Nodes (14): bossCoast(), capNear(), clampArena(), collide(), confine(), heavyStep(), inRects(), laserPath() (+6 more)
 
 ### Community 48 - "Cosmic playtest report"
 Cohesion: 0.20
@@ -397,12 +387,12 @@ Cohesion: 0.20
 Nodes (9): spread(), Balance summary, E: Ring of Fire (dmg 95, 476 ms avg = fire's slowest, 577 particles, 41 fx, 1 ent), Fire playtest report, LMB: Fireball (dmg 26 into pack, 170 ms avg, 339 particles, 27 fx), Passive: Kindling (death blast 20 x dmgMul, r 2.6), Q: Fire Brand (dmg 37 measured, see note; 386 ms avg, 883 particles = fire's highest, 30 fx), RMB: Flamethrower (dmg 118, 381 ms avg, 7347 ms worst, 812 particles, 40 fx) (+1 more)
 
 ### Community 50 - "damage"
-Cohesion: 0.09
-Nodes (30): addUlt(), applyStatus(), bondMul(), cc(), damage(), elementPower(), hitEnemy(), hurt() (+22 more)
+Cohesion: 0.13
+Nodes (19): addUlt(), bondMul(), cc(), ccEnd(), damage(), elementPower(), shoot(), stats() (+11 more)
 
 ### Community 51 - "Nature playtest report"
 Cohesion: 0.09
-Nodes (20): emit(), Blood playtest report, E: Crimson Mire (cd 9, 4 s pool, 10 dmg per .5 s, pull 22), LMB: Blood Bolt (cd .4, 21 dmg), Passive: Bloodlust (2.5% steal, bleed leech .1, up to +50% dmg at low HP), Q: Exsanguinate (cd 8), R: Blood Moon (ult, 4 s, 7 dmg per .25 s to 12 enemies, death pop 30 AoE), RMB: Crimson Fan (cd 3.5, 5 x 16, pierce 99) (+12 more)
+Nodes (20): emit(), E: Crimson Mire (cd 9, 4 s pool, 10 dmg per .5 s, pull 22), R: Bone Dragon (ultimate), E: Snaptrap, LMB: Thorn Volley, Nature playtest report, Passive: Regrowth (1.5 HP/s), Q: Parasite Seed (+12 more)
 
 ### Community 52 - "part"
 Cohesion: 0.19
@@ -421,28 +411,28 @@ Cohesion: 0.18
 Nodes (12): dropFade(), tripped(), wardMake(), wardUpd(), wardView(), E: Binding Circle, LMB: Rune Bolt, Passive: Rune Mastery (+4 more)
 
 ### Community 56 - "README_FR.md"
-Cohesion: 0.08
-Nodes (23): Accord de Licence, Besoins, Citation, Compréhension du Contexte Long, Contactez-nous, 🐳 Docker, Déploiement, FAQ (+15 more)
+Cohesion: 0.06
+Nodes (35): Accord de Licence, API, Besoins, Citation, Compréhension du Contexte Long, Contactez-nous, CPU, DashScope (+27 more)
 
 ### Community 57 - "Frost playtest report"
 Cohesion: 0.20
 Nodes (9): renderAim(), E: Frost Nova, Frost playtest report, LMB: Ice Shard, Passive: Permafrost (4 hits -> freeze 1.8 s, frozen take +40%), Performance (measured), R: Blizzard (ultimate), RMB: Glacial Lance (+1 more)
 
 ### Community 58 - "react"
-Cohesion: 0.20
-Nodes (16): r2(), alive(), blast(), center(), endShot(), launch(), nearest(), rayHits() (+8 more)
+Cohesion: 0.17
+Nodes (20): r2(), alive(), applyStatus(), blast(), center(), endShot(), enemiesNear(), hitEnemy() (+12 more)
 
 ### Community 59 - "evaluate_plugin.py"
-Cohesion: 0.16
+Cohesion: 0.15
 Nodes (11): _DummyTokenizer, eval_action(), eval_action_input(), _get_tokenized_string(), is_callable(), load_jobs(), load_models_tokenizer(), main() (+3 more)
 
 ### Community 60 - "Qwen/README.md"
 Cohesion: 0.08
 Nodes (25): Citation, Contact Us, Deployment, 🐳 Docker, FAQ, Finetuning, Finetuning, GPTQ (+17 more)
 
-### Community 61 - "Evaluation"
-Cohesion: 0.11
-Nodes (19): Coding, Coding, Conclusion, Data, Data, Evaluation, Evaluation, Fine-tuning (+11 more)
+### Community 61 - "EVALUATION.md"
+Cohesion: 0.14
+Nodes (11): 评测复现, Coding, Conclusion, Data, Evaluation, Fine-tuning, Introducing Qwen-7B: Open foundation and human-aligned models (of the state-of-the-arts), Math (+3 more)
 
 ### Community 62 - "Bone playtest report"
 Cohesion: 0.22
@@ -465,8 +455,8 @@ Cohesion: 0.24
 Nodes (9): laserShot(), novaBeams(), E: Laser Drone (lines 2050-2063), Laser playtest report, Passive: Ricochet and Focus (laserShot, lines 35-61), Q: Refractor (lines 2042-2049), R: Prism Nova (lines 2064-2089, novaBeams line 63), RMB: Ricochet Beam (line 2040) (+1 more)
 
 ### Community 67 - "Demo & Inference"
-Cohesion: 0.12
-Nodes (16): bos_id/eos_id/pad_id not found, Can I use CPU only?, Can Qwen support SFT or even RLHF?, Can Qwen support streaming?, Demo & Inference, Docker, Download official docker image is very slow, FAQ (+8 more)
+Cohesion: 0.09
+Nodes (22): bos_id/eos_id/pad_id not found, Can I use CPU only?, Can Qwen support SFT or even RLHF?, Can Qwen support streaming?, Demo & Inference, Docker, Download official docker image is very slow, Failure in installing flash attention (+14 more)
 
 ### Community 68 - "Earth playtest report"
 Cohesion: 0.22
@@ -485,8 +475,8 @@ Cohesion: 0.07
 Nodes (27): call_qwen(), test_1(), test_2(), test_3(), build_react_instruction(), format_train_sample(), main(), add_extra_stop_words() (+19 more)
 
 ### Community 73 - "burst"
-Cohesion: 0.10
-Nodes (19): burst(), shake(), skyFx(), Arcane playtest report, E: Polymorph (dmg 15, 94 ms avg, 681 particles = highest non-ult peak, 15 fx), LMB: Arcane Missiles (dmg 20 into pack, 242 ms avg, 285 particles, 8 fx), Passive: Arcane Charges (+8% per charge, up to 4) and Spellbound (+10% damage taken), Q: Arcane Familiar (dmg 22 in window, 257 ms avg, **5634 ms worst**, 467 particles, 1 ent) (+11 more)
+Cohesion: 0.11
+Nodes (17): burst(), Arcane playtest report, E: Polymorph (dmg 15, 94 ms avg, 681 particles = highest non-ult peak, 15 fx), LMB: Arcane Missiles (dmg 20 into pack, 242 ms avg, 285 particles, 8 fx), Passive: Arcane Charges (+8% per charge, up to 4) and Spellbound (+10% damage taken), Q: Arcane Familiar (dmg 22 in window, 257 ms avg, **5634 ms worst**, 467 particles, 1 ent), R: Arcane Torrent (dmg 67 in window, 95 ms avg, 588 particles, 25 fx). **Affected by the ult loop**, RMB: Arcane Barrage (dmg 25 with 0 charges, 387 ms avg = the kit's highest, 418 particles, 14 fx) (+9 more)
 
 ### Community 74 - "Qwen/web_demo.py"
 Cohesion: 0.19
@@ -500,33 +490,33 @@ Nodes (11): arenaMat(), arenaObj(), buildCityView(), buildKit(), cboxGeo(), city
 Cohesion: 0.26
 Nodes (10): deal_folder(), deal_one_file(), gen_code_comments(), merge_code_and_comments(), QWenChat, read_file(), split_context_by_maxline(), split_context_by_splitkey() (+2 more)
 
-### Community 79 - "Chrono playtest report"
+### Community 79 - "ev"
 Cohesion: 0.25
-Nodes (7): Chrono playtest report, E: Slow Field (cd 13, r 6, 6 s, 70% slow), LMB: Chrono Bolt (cd .45, 16 dmg + 16 echo after 1.2 s), Passive: Time Dilation (cooldowns ×0.82, timeworn slow .35), Q: Rewind (cd 6, 8 mark dmg, snap 35 + 14/m up to +200, +150 vs boss), R: Time Stop (ult, 4 s, damage stored ×1.5), Top 3
+Nodes (14): bossMeteors(), endWave(), enemyHits(), ev(), heal(), hurt(), mate(), players() (+6 more)
 
 ### Community 80 - "README_JA.md"
-Cohesion: 0.14
-Nodes (13): FAQ, お問い合わせ, 🔥 システムプロンプト, ツールの使用, トークナイザー, ニュースとアップデート, ライセンス契約, 再現 (+5 more)
+Cohesion: 0.07
+Nodes (27): 🐳 Docker, FAQ, GPTQ, KVキャッシュ量子化, お問い合わせ, 🔥 システムプロンプト, ツールの使用, デプロイ (+19 more)
 
 ### Community 81 - "Soul playtest report"
 Cohesion: 0.25
 Nodes (7): E: Soulstorm (lines 1900-1909), LMB: Soulfire (`js/elements.js` line 1866), Passive: Soulbound (`js/sim.js` lines 106, 410, 424), Q: Soul Rend (lines 1892-1899), RMB: Reap (lines 1874-1891), Soul playtest report, Top 3
 
 ### Community 82 - "ctxOf"
-Cohesion: 0.28
-Nodes (13): aimOf(), castAim(), coneHits(), ctxOf(), eyeOf(), flatAim(), groundAt(), handOf() (+5 more)
+Cohesion: 0.36
+Nodes (11): aimOf(), castAim(), ctxOf(), eyeOf(), groundAt(), handOf(), steerEnt(), steerer() (+3 more)
 
-### Community 83 - "Water playtest report"
-Cohesion: 0.25
-Nodes (7): E - Surf (cd 9, 24 dmg per enemy, 14 m dash), LMB - Aqua Bullets (cd .14, 10.5 dmg, kb 4.5), Passive - Tidal Force (st.kb 1.6), Q - Bubble Prison (cd 9, 10 dmg, 3 s bubble, +30% damage taken), R - Tsunami (ultimate, 110 per enemy, 2.6 s), Top 3, Water playtest report
+### Community 83 - "Storm playtest report"
+Cohesion: 0.22
+Nodes (8): shake(), skyFx(), LMB: Chain Lightning (cd 0.36, 6 dmg, chains 2 at 75%), Passive: Static (every 8th Storm hit drops a 16-dmg sky strike; Shocked takes +15%), Q: Thunderclap (cd 7, 0.45 s delay, 38 dmg r3.5 + stun 0.8, then 3 jumps x20), R: Thunderstorm (ult, cloud follows you for 5 s, a 38-dmg r1.6 sky bolt + 0.25 s stun every 0.24 s), Storm playtest report, Top 3
 
 ### Community 84 - "Qwen/README_CN.md"
-Cohesion: 0.15
-Nodes (12): FAQ, Tokenizer, 使用协议, 复现, 工具调用, 引用, 新闻, 🔥 系统指令 (System Prompt) (+4 more)
+Cohesion: 0.07
+Nodes (28): Batch推理, CPU, FAQ, GPTQ, KV cache量化, 🤖 ModelScope, Tokenizer, 🤗 Transformers (+20 more)
 
-### Community 85 - "インストールと環境"
-Cohesion: 0.17
-Nodes (11): bos_id/eos_id/pad_id が見つかりません。, FAQ, Flash attention 導入の失敗例, `qwen.tiktoken` が見つかりません。これは何ですか？, Qwen は SFT、あるいは RLHF に対応できますか？, transformers_stream_generator/tiktoken/accelerate が見つかりません。, transformers のバージョンは？, インストールと環境 (+3 more)
+### Community 85 - "デモと推論"
+Cohesion: 0.10
+Nodes (20): bos_id/eos_id/pad_id が見つかりません。, chat_stream() を使用すると、結果に文字化けが発生します。, CPU のみを使うことはできますか？, FAQ, Flash attention 導入の失敗例, `qwen.tiktoken` が見つかりません。これは何ですか？, Qwen は SFT、あるいは RLHF に対応できますか？, Qwen はストリーミングに対応していますか？ (+12 more)
 
 ### Community 86 - "cIx"
 Cohesion: 0.25
@@ -549,16 +539,16 @@ Cohesion: 0.20
 Nodes (9): DCU 架构基于 fastllm 推理 Qwen 模型, 加载环境, 安装方法, 容器启动, 推理, 模型推理, 模型转换, 环境准备 (+1 more)
 
 ### Community 91 - "evaluate_cmmlu.py"
-Cohesion: 0.36
+Cohesion: 0.42
 Nodes (7): cal_cmmlu(), eval_subject(), format_example(), generate_few_shot_prompt(), get_logits(), load_models_tokenizer(), main()
 
 ### Community 92 - "evaluate_mmlu.py"
-Cohesion: 0.36
+Cohesion: 0.31
 Nodes (7): cal_mmlu(), eval_subject(), format_example(), generate_few_shot_prompt(), get_logits(), load_models_tokenizer(), main()
 
-### Community 93 - "EVALUATION.md"
-Cohesion: 0.22
-Nodes (6): 评测复现, ReAct Prompting 示例, 准备工作一：样例问题、样例工具, 准备工作二：ReAct 模版, 步骤一：让千问判断要调用什么工具、生成工具入参, 步骤二：让千问根据插件返回结果继续作答
+### Community 93 - "ReAct Prompting 示例"
+Cohesion: 0.33
+Nodes (6): FAQ, ReAct Prompting 示例, 准备工作一：样例问题、样例工具, 准备工作二：ReAct 模版, 步骤一：让千问判断要调用什么工具、生成工具入参, 步骤二：让千问根据插件返回结果继续作答
 
 ### Community 94 - "system_prompt.md"
 Cohesion: 0.22
@@ -568,13 +558,13 @@ Nodes (8): 什么是系统指令? (What is the System Prompts?), 代码示例 Ex
 Cohesion: 0.22
 Nodes (8): Tools, Tools支持, Tools模型部署, 什么是HuggingFace Agent, 使用示例, 使用通义千问作为Agent, 安装依赖, 构建QWenAgent
 
-### Community 96 - "デモと推論"
+### Community 96 - "Abyss playtest report"
 Cohesion: 0.22
-Nodes (9): chat_stream() を使用すると、結果に文字化けが発生します。, CPU のみを使うことはできますか？, Qwen はストリーミングに対応していますか？, インストラクションとは関係ないようですが..., デモと推論, デモはありますか？CLI と Web UI のデモはありますか？, 量子化はサポートされていますか？, 長いシーケンスの処理で不満足なパフォーマンス (+1 more)
+Nodes (8): Abyss playtest report, Balance overview, E: Tentacle Ring, Icons, LMB: Void Bolt, R: Kraken, RMB: Grasp of the Deep, Top 3
 
-### Community 97 - "Demo & 推理"
+### Community 97 - "Evaluation"
 Cohesion: 0.22
-Nodes (9): Demo & 推理, Qwen支持流式推理吗？, 使用`chat_stream()`生成混乱的内容及乱码，为什么？, 处理长序列时效果有问题, 我没有GPU，只用CPU运行CLI demo可以吗？, 是否提供Demo？CLI Demo及Web UI Demo？, 是否有量化版本模型, 模型的输出看起来与输入无关/没有遵循指令/看起来呆呆的 (+1 more)
+Nodes (9): Coding, Data, Evaluation, Long-context inference, Math, Model, Natural language processing, Pretraining (+1 more)
 
 ### Community 98 - "Netcode"
 Cohesion: 0.25
@@ -585,24 +575,24 @@ Cohesion: 0.64
 Nodes (5): tofile(), write_int4(), write_int8(), writeKeyValue(), writeString()
 
 ### Community 100 - "Qwen/cli_demo.py"
-Cohesion: 0.26
-Nodes (9): _clear_screen(), _gc(), _get_input(), _load_model_tokenizer(), main(), _print_history(), extract_answer(), extract_answer_hf() (+1 more)
+Cohesion: 0.43
+Nodes (6): _clear_screen(), _gc(), _get_input(), _load_model_tokenizer(), main(), _print_history()
 
 ### Community 101 - "react_demo.py"
-Cohesion: 0.36
+Cohesion: 0.43
 Nodes (6): build_input_text(), call_plugin(), llm_with_plugin(), parse_latest_plugin_call(), test(), text_completion()
 
-### Community 102 - "FAQ"
-Cohesion: 0.14
-Nodes (13): bos_id/eos_id/pad_id，这些token id不存在，为什么？, Docker, FAQ, flash attention 安装失败, `qwen.tiktoken`这个文件找不到，怎么办？, Tokenizer, transformers_stream_generator/tiktoken/accelerate，这几个库提示找不到，怎么办？, 下载官方Docker镜像速度很慢 (+5 more)
+### Community 102 - "Demo & 推理"
+Cohesion: 0.09
+Nodes (22): bos_id/eos_id/pad_id，这些token id不存在，为什么？, Demo & 推理, Docker, FAQ, flash attention 安装失败, `qwen.tiktoken`这个文件找不到，怎么办？, Qwen支持流式推理吗？, Tokenizer (+14 more)
 
 ### Community 103 - "Quickstart"
 Cohesion: 0.25
 Nodes (8): Batch Inference, CPU, DashScope, 🤖 ModelScope, Multiple GPUs, Quickstart, 🤗 Transformers, x86 Platforms
 
-### Community 104 - "快速使用"
+### Community 104 - "Blood playtest report"
 Cohesion: 0.25
-Nodes (8): Batch推理, CPU, 🤖 ModelScope, 🤗 Transformers, x86 平台, 多GPU, 快速使用, 阿里云灵积（DashScope）API服务
+Nodes (7): Blood playtest report, LMB: Blood Bolt (cd .4, 21 dmg), Passive: Bloodlust (2.5% steal, bleed leech .1, up to +50% dmg at low HP), Q: Exsanguinate (cd 8), R: Blood Moon (ult, 4 s, 7 dmg per .25 s to 12 enemies, death pop 30 AoE), RMB: Crimson Fan (cd 3.5, 5 x 16, pierce 99), Top 3
 
 ### Community 105 - "Inference Qwen Using vLLM"
 Cohesion: 0.22
@@ -628,9 +618,9 @@ Nodes (7): API, vLLM, vLLM + 类Transformer接口, vLLM + 网页Demo / 类OpenAI
 Cohesion: 0.29
 Nodes (7): CPU, DashScope, Inferencia por lotes, Inicio rápido, 🤖 ModelScope, Múltiples GPU, 🤗 Transformers
 
-### Community 111 - "Démarrage Rapide"
-Cohesion: 0.29
-Nodes (7): CPU, DashScope, Démarrage Rapide, Inférence par lots, 🤖 ModelScope, Plusieurs GPU, 🤗 Transformers
+### Community 111 - "renderModes"
+Cohesion: 0.40
+Nodes (5): modeStat(), pickMode(), renderModes(), renderModeStats(), selMode()
 
 ### Community 112 - "デプロイ"
 Cohesion: 0.29
@@ -648,14 +638,6 @@ Nodes (6): Caveats, Injection attack prevention, Regular tokens, Special tokens,
 Cohesion: 0.29
 Nodes (6): Balance (median of 30: crowd 218.1 dps, boss 137.1 dps), Harness caveats, Mage Arena playtest report (all 30 elements), Performance hot list (peak particles in one move; the pool holds 4000), Second theme: effects that blind your own view, Top changes by element
 
-### Community 116 - "Installation & Environment"
-Cohesion: 0.33
-Nodes (6): Failure in installing flash attention, I downloaded the codes and checkpoints but I can't load the model locally. What should I do?, Installation & Environment, `qwen.tiktoken` is not found. What is it?, transformers_stream_generator/tiktoken/accelerate not found, Which version of transformers should I use?
-
-### Community 117 - "pvShow"
-Cohesion: 0.29
-Nodes (8): flat0(), pvDot, pvFit(), pvShow(), renderDetail(), smoothGeo(), soften(), unlocked()
-
 ### Community 118 - "swift/README.md"
 Cohesion: 0.33
 Nodes (5): Fine-tuning, Inference, Installation, Introduction, WebUI Usage
@@ -668,6 +650,10 @@ Nodes (5): webui使用, 介绍, 安装, 微调, 推理
 Cohesion: 0.33
 Nodes (5): Tokenization, 普通token, 注意事项, 特殊token, 词表扩展
 
+### Community 121 - "argparse"
+Cohesion: 0.21
+Nodes (3): args_parser(), args_parser(), get_model()
+
 ### Community 123 - "finetune_lora_single_gpu.sh"
 Cohesion: 0.50
 Nodes (4): CUDA_DEVICE_MAX_CONNECTIONS, CUDA_VISIBLE_DEVICES, finetune_lora_single_gpu.sh script, usage()
@@ -679,14 +665,6 @@ Nodes (4): CUDA_DEVICE_MAX_CONNECTIONS, CUDA_VISIBLE_DEVICES, finetune_qlora_sin
 ### Community 125 - "微调"
 Cohesion: 0.40
 Nodes (5): 使用方法, 多机微调, 微调, 显存占用及训练速度, 量化微调后模型
-
-### Community 128 - "Déploiement"
-Cohesion: 0.40
-Nodes (5): API, Démo CLI, Déploiement, Interface Web, vLLM
-
-### Community 129 - "トークン化"
-Cohesion: 0.40
-Nodes (4): インジェクション攻撃の防止, トークン化, 特別なトークン, 通常のトークン
 
 ### Community 130 - "Mage Arena"
 Cohesion: 0.40
@@ -712,18 +690,6 @@ Nodes (3): CUDA_DEVICE_MAX_CONNECTIONS, finetune_lora_ds.sh script, usage()
 Cohesion: 0.67
 Nodes (3): CUDA_DEVICE_MAX_CONNECTIONS, finetune_qlora_ds.sh script, usage()
 
-### Community 136 - "量化"
-Cohesion: 0.50
-Nodes (4): GPTQ, KV cache量化, 推理性能, 量化
-
-### Community 137 - "🐳 使用预构建的Docker镜像"
-Cohesion: 0.50
-Nodes (4): 🐳 使用预构建的Docker镜像, 准备操作, 微调, 部署
-
-### Community 138 - "🐳 Docker"
-Cohesion: 0.50
-Nodes (4): 🐳 Docker, デプロイ, ファインチューニング, 準備
-
 ### Community 139 - "Fine-tuning Qwen by Ascend NPU"
 Cohesion: 0.50
 Nodes (3): Environment Requirement, Fine-tuning Qwen by Ascend NPU, Quickstart
@@ -744,33 +710,25 @@ Nodes (4): Enemies, Fighting them, Wave budget, Wave modifiers
 Cohesion: 0.50
 Nodes (4): Alike within one element, Similar moves (reviewed 2026-10-27), Similar (same role, different twist), Very similar (near-duplicates)
 
-### Community 148 - "量子化"
-Cohesion: 0.67
-Nodes (3): GPTQ, KVキャッシュ量子化, 量子化
-
-### Community 149 - "ファインチューニング"
-Cohesion: 0.67
-Nodes (3): ファインチューニング, メモリと速度のプロファイリング, 使用方法
-
 ## Knowledge Gaps
 - **7 isolated node(s):** `CUDA_DEVICE_MAX_CONNECTIONS`, `CUDA_DEVICE_MAX_CONNECTIONS`, `CUDA_DEVICE_MAX_CONNECTIONS`, `CUDA_VISIBLE_DEVICES`, `CUDA_DEVICE_MAX_CONNECTIONS` (+2 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 1052 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
-- **13 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 1057 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **12 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `Blender Assets` connect `lib.py` to `Elements.md`, `grab`, `scarFx`, `Mesh`?**
-  _High betweenness centrality (0.240) - this node is a cross-community bridge._
+  _High betweenness centrality (0.229) - this node is a cross-community bridge._
 - **What connects `CUDA_DEVICE_MAX_CONNECTIONS`, `CUDA_DEVICE_MAX_CONNECTIONS`, `CUDA_DEVICE_MAX_CONNECTIONS` to the rest of the system?**
   _7 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `core.js` be split into smaller, more focused modules?**
   _Cohesion score 0.022420498741706704 - nodes in this community are weakly interconnected._
-- **Why does `model` connect `model` to `llm.py`, `.chat`, `Qwen/cli_demo.py`?**
-  _High betweenness centrality (0.213) - this node is a cross-community bridge._
+- **Why does `model` connect `model` to `llm.py`, `evaluate_chat_gsm8k.py`, `.chat`?**
+  _High betweenness centrality (0.203) - this node is a cross-community bridge._
 - **Should `dungeon.js` be split into smaller, more focused modules?**
   _Cohesion score 0.07486338797814207 - nodes in this community are weakly interconnected._
-- **Why does `Mesh` connect `Mesh` to `Venom playtest report`, `lib.py`, `part`, `build_enemies.py`?**
-  _High betweenness centrality (0.158) - this node is a cross-community bridge._
+- **Why does `Mesh` connect `Mesh` to `Venom playtest report`, `lib.py`, `part`?**
+  _High betweenness centrality (0.144) - this node is a cross-community bridge._
 - **Should `view.js` be split into smaller, more focused modules?**
-  _Cohesion score 0.04927536231884058 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.04717853839037928 - nodes in this community are weakly interconnected._
