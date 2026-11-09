@@ -1603,8 +1603,8 @@ function flat0(m) { const s = new THREE.Box3().setFromObject(m).getSize(V()); re
 //  - its weather, one or two layers of particles at three depths (far ones small, dim and slow, near ones big and quick)
 //    that sway, fade in and out and drift a little with the mouse;
 //  - an extra for some: forked lightning (Storm), a lens ring (Gravity), a clock face (Chrono), a rune circle (Rune).
-// Switching cross-fades the old element's effect out and the new one in, while two soft rings, a bloom and a spray of
-// sparks in the new colour ripple out from the card you clicked. Every shape is drawn once into a sprite and reused.
+// Switching cross-fades the old element's effect out and the new one in (the lobby's outlines glide to the new colour
+// with it, see the #lobby rules in index.html). Every shape is drawn once into a sprite and reused.
 const LFX_EL = { // [ambient, [[motion, shape, count], ...], extra]
   fire: ['heat', [['rise', 'ember', 120], ['rise', 'spark', 24]]],
   magma: ['heat', [['rise', 'ember', 110], ['rise', 'spark', 30]]],
@@ -1640,7 +1640,7 @@ const LFX_EL = { // [ambient, [[motion, shape, count], ...], extra]
 const LFX_SIZE = { dot: 10, ember: 9, spark: 7, wisp: 46, smoke: 150, flake: 18, star: 15, glint: 13, leaf: 20, drop: 11, bubble: 15, rock: 10, glyph: 26, streak: 1 };
 const LFX_LITE = new Set(['dot', 'ember', 'spark', 'wisp', 'flake', 'star', 'glint', 'bubble', 'glyph', 'streak']); // additive; the rest paint over
 const LFX_RUNES = 'ᚠᚢᚦᚨᚱᚲᚷᚹᚺᚾᛁᛃᛇᛈᛉᛊᛏᛒᛖᛗᛚᛜᛞᛟ';
-const LFX = { sys: [], sparks: [], burst: null, bolt: null, boltT: 3, flash: 0, from: null, mx: .5, my: .5, pmx: .5, pmy: .5, T: 0, last: 0, raf: 0, sprites: {},
+const LFX = { sys: [], bolt: null, boltT: 3, flash: 0, mx: .5, my: .5, pmx: .5, pmy: .5, T: 0, last: 0, raf: 0, sprites: {},
   reduce: matchMedia('(prefers-reduced-motion: reduce)').matches };
 const lfxRgb = c => [(c >> 16) & 255, (c >> 8) & 255, c & 255], lfxA = (rgb, a) => `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${a})`;
 const lfxLite = (rgb, k = .6) => rgb.map(v => Math.round(v + (255 - v) * k));
@@ -1651,14 +1651,7 @@ function lobbyFx(el) {
   const [amb, layers, extra] = LFX_EL[el] || LFX_EL.arcane, rgb = lfxRgb(EL[el].color);
   for (const s of LFX.sys) s.fade = -1;
   LFX.sys.push({ el, amb, layers, extra, rgb, a: cur ? 0 : .01, fade: 1, ps: [], filled: false, seed: Math.random() * 100 });
-  if (cur && !LFX.reduce) { // the ripple from the card you clicked
-    const cv = $('elFx'), x = LFX.from?.[0] ?? cv.clientWidth / 2, y = LFX.from?.[1] ?? cv.clientHeight * .42;
-    LFX.burst = { t: 0, x, y, rgb };
-    for (let i = 0; i < 28; i++) { const a = Math.random() * TAU, v = 160 + Math.random() * 420; LFX.sparks.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, t: 0, life: .6 + Math.random() * .6, s: 6 + Math.random() * 8, rgb }); }
-  }
-  LFX.from = null;
 }
-$('grid').addEventListener('pointerdown', e => { const b = e.target.closest('.elc'); if (b) { const r = b.getBoundingClientRect(); LFX.from = [r.left + r.width / 2, r.top + r.height / 2]; } });
 addEventListener('pointermove', e => { LFX.mx = e.clientX / innerWidth; LFX.my = e.clientY / innerHeight; });
 // a shape drawn once (64 px) in a colour, reused every frame
 function lfxSprite(shape, rgb, ch) {
@@ -1820,19 +1813,6 @@ function lfxFrame(now) {
     if (b.t > .3) LFX.bolt = null;
   }
   if (LFX.flash > 0) { g.globalCompositeOperation = 'lighter'; g.fillStyle = `rgba(200,185,255,${LFX.flash * .1})`; g.fillRect(0, 0, W, H); LFX.flash -= dt * 3; }
-  // the ripple from the clicked card: a bloom, two soft rings and a spray of sparks
-  if (LFX.burst) {
-    const b = LFX.burst; b.t += dt; const R = Math.hypot(W, H), L = lfxLite(b.rgb, .5);
-    g.globalCompositeOperation = 'lighter';
-    for (const [d, w] of [[0, 34], [.16, 18]]) { const t = Math.max(0, b.t - d) / 1.1; if (t <= 0 || t >= 1) continue; const e = 1 - (1 - t) ** 3; for (const [lw, al] of [[2 + w * 2.2 * (1 - e) + 10, .12], [2 + w * (1 - e), .3], [1.5, .55]]) { g.strokeStyle = lfxA(L, al * (1 - t)); g.lineWidth = lw; g.beginPath(); g.arc(b.x, b.y, e * R, 0, TAU); g.stroke(); } } // a soft halo, the ring, a bright edge
-    const t = Math.min(1, b.t / .9), sz = 160 + (1 - (1 - t) ** 2) * R * .9; g.globalAlpha = .4 * (1 - t); g.drawImage(lfxSprite('dot', b.rgb), b.x - sz / 2, b.y - sz / 2, sz, sz); g.globalAlpha = 1;
-    if (b.t > 1.3) LFX.burst = null;
-  }
-  for (let i = LFX.sparks.length - 1; i >= 0; i--) {
-    const p = LFX.sparks[i]; p.t += dt; if (p.t > p.life) { LFX.sparks.splice(i, 1); continue; }
-    const d = Math.exp(-dt * 3.2); p.vx *= d; p.vy *= d; p.vy += 60 * dt; p.x += p.vx * dt; p.y += p.vy * dt;
-    g.globalCompositeOperation = 'lighter'; g.globalAlpha = 1 - p.t / p.life; g.drawImage(lfxSprite('spark', p.rgb), p.x - p.s / 2, p.y - p.s / 2, p.s, p.s);
-  }
   g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
 }
 function savePick() { try { localStorage.setItem('magepact_pick', JSON.stringify({ el: myEl, el2: myEl2 })); } catch {} }
