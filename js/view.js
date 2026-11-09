@@ -1432,6 +1432,7 @@ function pickMode(k) {
   myMode = k;
   $('modes').classList.add('hidden'); $('lobby').classList.remove('hidden');
   $('modeName').textContent = MODES[k].name; $('soloBtn').textContent = MODES[k].play; sfx('pick'); renderLobby();
+  $('grid').classList.add('intro'); setTimeout(() => $('grid').classList.remove('intro'), 1400); // the cards rise in one after another
 }
 $('modeBack').onclick = () => { $('lobby').classList.add('hidden'); $('modes').classList.remove('hidden'); renderModes(); }; // records may have changed during the run
 
@@ -1490,15 +1491,15 @@ renderModes(); // after PROG exists: the cards and the header line read your lev
 const ELMETA = {
   fire: ['Burst', 'Area', 1, 'fire__phoenix'], frost: ['Control', 'Burst', 1, 'frost__lance'], storm: ['Chain', 'Burst', 2, 'storm__coil'],
   water: ['Control', 'Area', 1, 'water__wave'], earth: ['Tank', 'Control', 1, 'earth__boulder'], wind: ['Mobility', 'Control', 2, 'wind__tornado'],
-  nature: ['Sustain', 'Control', 1, 'nature__flower'], shadow: ['Assassin', 'Mobility', 3, 'shadow__dagger'], light: ['Sustain', 'Support', 1, 'light__spear'],
+  nature: ['Sustain', 'Control', 1, 'nature__flower'], shadow: ['Assassin', 'Mobility', 3, 'shadow__dagger'], light: ['Sustain', 'Support', 1, 'light__sun'],
   venom: ['Damage over time', 'Area', 2, 'venom__fang'], steel: ['Control', 'Burst', 2, 'steel__magnet'], magma: ['Area', 'Burst', 2, 'magma__volcano'],
   crystal: ['Defense', 'Burst', 2, 'crystal__spire'], sonic: ['Control', 'Area', 2, 'sonic__rings'], gravity: ['Control', 'Area', 2, 'gravity__hole'],
   chrono: ['Utility', 'Control', 3, 'chrono__hourglass'], blood: ['Damage', 'High risk', 3, 'blood__scythe'], spirit: ['Summoner', 'Control', 2, 'spirit__wolf'],
   cosmic: ['Area', 'Burst', 2, 'cosmic__comet'], explosion: ['Burst', 'Mobility', 2, 'explosion__bomb'], illusion: ['Trickster', 'Control', 3, 'illusion__mask'],
-  bone: ['Summoner', 'Tank', 2, 'bone__skull'], rune: ['Trapper', 'Burst', 3, 'rune__stone'], plasma: ['Burst', 'High risk', 3, 'plasma__orb'],
+  bone: ['Summoner', 'Tank', 2, 'bone__dragon'], rune: ['Trapper', 'Burst', 3, 'rune__stone'], plasma: ['Burst', 'High risk', 3, 'plasma__orb'],
   soul: ['Snowball', 'Execute', 2, 'soul__reaper'], abyss: ['Control', 'Area', 2, 'abyss__tentacle'], laser: ['Precision', 'Burst', 3, 'laser__drone'],
-  arcane: ['Combo', 'Burst', 2, 'arcane__owl'], blades: ['Melee', 'Mobility', 2, 'blades__sword'], ink: ['Control', 'Area', 2, 'ink__koi'],
-  god: ['Cheat', 'Infinite damage', 1, 'light__spear'],
+  arcane: ['Combo', 'Burst', 2, 'arcane__owl'], blades: ['Melee', 'Mobility', 2, 'blades__sword'], ink: ['Control', 'Area', 2, 'ink__dragon_head'],
+  god: ['Cheat', 'Infinite damage', 1, 'god__crown'],
 };
 const DIFF = ['', 'Easy', 'Medium', 'Hard'];
 let myEl = 'fire', myEl2 = null, hoverEl = null;
@@ -1506,7 +1507,7 @@ try { const s = JSON.parse(localStorage.getItem('magepact_pick') || '{}'); if (E
 if (!unlocked(myEl)) myEl = PROG.unl[0]; if (myEl2 && !unlocked(myEl2)) myEl2 = null;
 function bestFor(el) { try { return JSON.parse(localStorage.getItem(myMode === 'dungeon' ? 'magepact_best_floor' : 'magepact_best_el') || '{}')[el] || 0; } catch { return 0; } }
 function renderLobby() {
-  $('grid').innerHTML = PICKABLE().map(k => { const e = EL[k], b = bestFor(k), lock = !unlocked(k), st = stars(k); return `<button class="elc${k === myEl ? ' sel' : ''}${k === myEl2 ? ' sel2' : ''}${lock ? ' lock' : ''}${lock && PROG.keys ? ' can' : ''}" data-el="${k}" style="--c:${css(e.color)}"><span class="g">${lock ? '🔒' : elIcon(k)}</span><span class="n">${e.name}</span>${st ? `<span class="st">${'★'.repeat(st)}</span>` : ''}${b && myMode !== 'duel' ? `<span class="best">${myMode === 'dungeon' ? 'F' : 'W'}${b}</span>` : ''}${k === myEl2 ? '<span class="tab">TAB</span>' : ''}</button>`; }).join('');
+  $('grid').innerHTML = PICKABLE().map((k, i) => { const e = EL[k], b = bestFor(k), lock = !unlocked(k), st = stars(k); return `<button class="elc${k === myEl ? ' sel' : ''}${k === myEl2 ? ' sel2' : ''}${lock ? ' lock' : ''}${lock && PROG.keys ? ' can' : ''}" data-el="${k}" style="--c:${css(e.color)};--i:${i}"><span class="g">${lock ? '🔒' : elIcon(k)}</span><span class="n">${e.name}</span>${st ? `<span class="st">${'★'.repeat(st)}</span>` : ''}${b && myMode !== 'duel' ? `<span class="best">${myMode === 'dungeon' ? 'F' : 'W'}${b}</span>` : ''}${k === myEl2 ? '<span class="tab">TAB</span>' : ''}</button>`; }).join('');
   for (const b of $('grid').children) {
     b.onclick = () => {
       const k = b.dataset.el;
@@ -1514,8 +1515,6 @@ function renderLobby() {
       myEl = k; if (myEl2 === myEl) myEl2 = null; savePick(); renderLobby(); sfx('pick');
     };
     b.oncontextmenu = ev => { ev.preventDefault(); const k = b.dataset.el; if (!unlocked(k)) return; myEl2 = k === myEl2 || k === myEl ? null : k; savePick(); renderLobby(); sfx('swap'); };
-    b.onmouseenter = () => { hoverEl = b.dataset.el; renderDetail(); };
-    b.onmouseleave = () => { hoverEl = null; renderDetail(); };
   }
   $('pickinfo').innerHTML = `<label>Second element<select id="el2Sel"><option value="">none</option>${PICKABLE().filter(x => x !== myEl && unlocked(x)).map(x => `<option value="${x}"${x === myEl2 ? ' selected' : ''}>${EL[x].name}</option>`).join('')}</select></label><span>Click an element to make it your main one. Right-click one (or pick it here) to carry a second element; Tab swaps between them in battle.</span>`;
   $('el2Sel').onchange = ev => { myEl2 = ev.target.value || null; savePick(); renderLobby(); };
@@ -1525,6 +1524,8 @@ function renderLobby() {
 // circle, its signature model floating and turning in the middle with smoothed shading, up to three of its other spell
 // models orbiting it, a soft halo behind and motes of its colour rising through it
 const PV = { el: null, g: null, r: null, t: 0 };
+// models that read better turned a particular way in the preview ([x, y, z] radians, applied before fitting): flat weapons stand up to show their face
+const PV_POSE = { blood: [-Math.PI / 2, 0, .5], blades: [-Math.PI / 2, 0, .6] };
 const PV_SKIP = /^(ring_inner|ring_outer|runes|sigil|rings|dragon_seg|pool|cage|tomb|wall|plate|volcano)$/;
 // average the normals of vertices that share a position, so a low-poly model shades smoothly (its own copy of the geometry)
 function smoothGeo(o) {
@@ -1567,11 +1568,13 @@ function pvShow(el) {
   }
   if (PV.el === el) return;
   PV.el = el; if (PV.g) PV.sc.remove(PV.g);
+  const cv = $('pvc'); cv.classList.remove('pop'); void cv.offsetWidth; cv.classList.add('pop'); // a little pop as the new element appears
   const col = EL[el].color, g = new THREE.Group(), c = makeCircle(el), hero = new THREE.Group(), tilt = new THREE.Group(), orbit = new THREE.Group(), sats = [];
   c.scale.setScalar(1.25);
   // the signature model, centre stage
   const m = smoothGeo(model(ELMETA[el][3], col)); soften(m); if (el === 'abyss') curlTentacle(m, 1.2, 1, .15);
-  const flat = pvFit(m, flat0(m) ? 1.9 : 1.6); hero.add(tilt); tilt.add(m);
+  const pose = PV_POSE[el]; if (pose) { m.rotation.set(...pose); m.updateMatrixWorld(true); }
+  const flat = !pose && pvFit(m, flat0(m) ? 1.9 : 1.6); if (pose) pvFit(m, 1.9); hero.add(tilt); tilt.add(m);
   const y0 = flat ? .6 : .12; hero.position.y = y0; if (flat) tilt.rotation.x = .3; // projectiles fly level: float them and tip them toward you
   // the element's other spell models circling it
   const names = Object.keys(NODE).filter(k => k.startsWith(el + '__') && k !== ELMETA[el][3] && !PV_SKIP.test(k.split('__')[1])).slice(0, 3);

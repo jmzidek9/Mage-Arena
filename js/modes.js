@@ -33,7 +33,7 @@ const TRAIN_STATIONS = [ // [label, x, z, pad radius, colour, dummies [type, dx,
   ['Moving', 14, -4, 5, 0x7ad8a0, [['runner', -2, 0, 300, 1], ['runner', 2, 1, 300, 1], ['runner', 0, -2, 300, 1]]],
 ];
 const TRAIN_SPOTS = TRAIN_STATIONS.flatMap(([, x, z, r, , ds]) => ds.map(([type, dx, dz, hp, walk]) => [type, x + dx, z + dz, hp, walk, x, z, r]));
-// the yard's scenery, built the first time Training opens (so the sign font has loaded): an arena-stone tiled floor with a
+// the yard's scenery, built the first time Training opens (so the distance labels' font has loaded): an arena-stone tiled floor with a
 // dark runway down the range lane, the arena's own carved props (rim walls, pillars and banners, braziers, monoliths,
 // crystals, floating rocks, far islands) placed for this yard, and a glowing sigil where you start
 const trainG = new THREE.Group(), trainLights = [], TRAIN_PILLARS = [], tAmb = { flames: [], rocks: [], monos: [], sig: null };
@@ -73,16 +73,11 @@ function buildTrain() {
   }
   // where you start: a slowly turning sigil
   const sig = makeCircle('arcane', 0xe9c46a); sig.scale.setScalar(1.15); sig.position.set(0, .03, 8); trainG.add(sig); tAmb.sig = sig;
-  // stations: a glowing pad and a sign on a post, turned to face the start
+  // stations: a glowing pad
   for (const [label, x, z, r, col] of TRAIN_STATIONS) {
     add(new THREE.RingGeometry(r - .14, r, 64).rotateX(-Math.PI / 2), glow(col), x, .03, z);
     add(new THREE.RingGeometry(r * .55, r * .55 + .06, 64).rotateX(-Math.PI / 2), glow(col), x, .03, z).material.opacity = .5;
     add(new THREE.CircleGeometry(r, 64).rotateX(-Math.PI / 2), glow(col), x, .015, z).material.opacity = .1;
-    const px = x ? x - Math.sign(x) * (r + .9) : 4.4, pz = x ? z + r * .6 : z, yaw = Math.atan2(0 - px, 8 - pz);
-    add(new THREE.CylinderGeometry(.09, .12, 3.2, 8), mat('bronze', 0xc4a06c), px, 1.6, pz).castShadow = true;
-    add(new THREE.BoxGeometry(3.3, .95, .08), mat('slab', 0x504b5d), px, 3.2, pz).rotation.y = yaw;
-    const board = add(new THREE.PlaneGeometry(3.1, .78), new THREE.MeshBasicMaterial({ map: text(label, '#' + col.toString(16).padStart(6, '0')), transparent: true, side: THREE.DoubleSide, depthWrite: false }), px + Math.sin(yaw) * .05, 3.2, pz + Math.cos(yaw) * .05);
-    board.rotation.y = yaw;
   }
   // pillars with banners round the rim (none in front, so the lane stays open)
   const pil = src(/^pillar_\d+$/), ban = src(/^banner_\d+$/);

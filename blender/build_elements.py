@@ -1880,6 +1880,40 @@ for sx in (-1, 1):
 m.annulus(ih, 0.27, 0.29, 0, 24, TRS(rot=(math.pi / 2, 0, 0)), 0, math.pi)  # a glowing scale band over the back
 put('ink', m.done())
 
+# ---------- showcase models (the lobby's 3D preview) ----------
+m = M('light__sun')  # Light: a radiant sun, a white-hot core in a crown of long and short rays, two halos, standing to face you
+m.ico(lh_, 0.42, TRS((0, 0, 1.0)), sub=3, smooth=True)
+m.ico(lg_, 0.56, TRS((0, 0, 1.0)), sub=3, smooth=True)
+for i in range(16):
+    a = TAU * i / 16
+    L = 1.15 if i % 2 == 0 else 0.82
+    d = (math.cos(a), 0, math.sin(a))
+    m.lathe(lg_ if i % 2 else lh_, [(0.11 if i % 2 == 0 else 0.07, 0), (0.05, L * 0.6), (0, L)], n=6, M=aim(d, (d[0] * 0.5, 0, 1.0 + d[2] * 0.5)), smooth=False)
+for r0, r1 in ((0.66, 0.7), (1.62, 1.66)):
+    m.annulus(lh_, r0, r1, 0, 96, TRS((0, 0, 1.0), (math.pi / 2, 0, 0)))
+for i in range(8):  # little four-point stars on the outer halo
+    a = TAU * (i + 0.5) / 8
+    m.flat(lh_, starpts(4, 0.03, 0.14, 0, (1.64 * math.cos(a), 1.0 + 1.64 * math.sin(a))), 0, TRS(rot=(math.pi / 2, 0, 0)))
+put('light', m.done(False))
+
+m = M('god__crown')  # God Mode: a floating golden crown, jewelled, with a halo above it
+m.lathe(goldm, [(0.62, 0), (0.64, 0.04), (0.64, 0.36), (0.6, 0.4), (0.56, 0.4), (0.56, 0.04), (0.58, 0)], n=48, closed=True, smooth=True)  # the band
+m.lathe(goldm, [(0.66, 0.02), (0.68, 0.06), (0.66, 0.1)], n=48, smooth=True)  # rim beading
+m.lathe(redpaint, [(0.55, 0.1), (0.5, 0.5), (0.3, 0.72), (0, 0.78)], n=32, smooth=True)  # velvet cap inside
+for i in range(8):
+    a = TAU * i / 8
+    big = i % 2 == 0
+    c = (0.6 * math.cos(a), 0.6 * math.sin(a))
+    m.lathe(goldm, [(0.12 if big else 0.09, 0.36), (0.07, 0.62 if big else 0.52), (0, 0.9 if big else 0.68)], n=8, M=TRS((c[0], c[1], 0)), smooth=False)  # spikes
+    m.ico(lh_ if big else lg_, 0.06 if big else 0.045, TRS((c[0] * 1.0, c[1] * 1.0, 0.92 if big else 0.7)), sub=2, smooth=True)  # gems on the tips
+    m.ico(lg_, 0.065, TRS((0.66 * math.cos(a + TAU / 16), 0.66 * math.sin(a + TAU / 16), 0.2), scale=(1, 1, 1.3)), sub=1)  # gems round the band
+m.lathe(goldm, [(0.05, 0.7), (0.1, 0.8), (0.04, 0.9), (0.03, 1.08), (0, 1.12)], n=8, smooth=True)  # finial
+m.lathe(goldm, [(0.015, 0.95), (0.015, 1.25)], n=6, M=TRS((0, 0, 0)))  # cross upright
+m.lathe(goldm, [(0.015, 0), (0.015, 0.22)], n=6, M=TRS((-0.11, 0, 1.15), (0, math.pi / 2, 0)))  # cross bar
+m.annulus(lh_, 0.5, 0.56, 1.45, 96)  # halo
+m.annulus(lg_, 0.6, 0.62, 1.45, 96)
+put('god', m.done())
+
 # ---------- save, export, render ----------
 bpy.context.view_layer.update()
 bpy.ops.wm.save_as_mainfile(filepath=os.path.join(HERE, 'elements.blend'))
