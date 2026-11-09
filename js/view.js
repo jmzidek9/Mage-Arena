@@ -1383,12 +1383,8 @@ function showOver(e) {
 const MODES = {
   arena: { name: 'Arena', c: '#e9c46a', play: '⚔ Play Solo', tag: 'Hold the floating ruins under the black hole against endless waves.',
     info: ['Endless waves', 'Boss every 5', 'Solo or co-op'] },
-  train: { name: 'Training', c: '#7ad8a0', play: '⚔ Start Training', tag: 'A quiet island full of target dummies that never fight back. Try every move and read the damage.',
+  train: { name: 'Training', c: '#7ad8a0', play: '⚔ Start Training', tag: 'Your own practice yard: a range lane marked every 5 m, a crowd for area moves, moving targets, a heavy and a boss. Nothing fights back.',
     info: ['Nothing attacks you', 'Damage & DPS per move', 'No cooldowns, any element'] },
-  dungeon: { name: 'Dungeon', c: '#ffa040', play: '⚔ Enter Alone', tag: 'Descend through torchlit medieval halls, floor after floor, as deep as you dare.',
-    info: ['Endless floors', 'Boss every 5', 'Solo or co-op'] },
-  city: { name: 'Mage City', c: '#c9a0ff', play: '⚔ Play Solo', tag: 'Endless waves through a floating city of towers and halls. Every wall can be blasted apart.',
-    info: ['Huge map', 'Everything breaks', 'Solo or co-op'] },
 };
 let myMode = 'arena';
 // a mode's own record, shown on its card ('New' until you have played it)
@@ -1525,33 +1521,77 @@ function renderLobby() {
   $('el2Sel').onchange = ev => { myEl2 = ev.target.value || null; savePick(); renderLobby(); };
   renderProg(); renderDetail(); netLobby(); // (a waiting partner sees your pick and the mode)
 }
-// a live 3D preview in the detail panel: the element's spell circle under its signature model, turning (own small renderer)
-const PV = { el: null, g: null, r: null };
+// a live 3D preview in the detail panel (own small renderer, drawn at the canvas's on-screen size): the element's spell
+// circle, its signature model floating and turning in the middle with smoothed shading, up to three of its other spell
+// models orbiting it, a soft halo behind and motes of its colour rising through it
+const PV = { el: null, g: null, r: null, t: 0 };
+const PV_SKIP = /^(ring_inner|ring_outer|runes|sigil|rings|dragon_seg|pool|cage|tomb|wall|plate|volcano)$/;
+// average the normals of vertices that share a position, so a low-poly model shades smoothly (its own copy of the geometry)
+function smoothGeo(o) {
+  o.traverse(m => {
+    if (!m.isMesh) return;
+    const g = m.geometry = m.geometry.clone(), pos = g.attributes.position, nor = g.attributes.normal; if (!nor) return;
+    const acc = new Map(), key = i => `${pos.getX(i).toFixed(3)},${pos.getY(i).toFixed(3)},${pos.getZ(i).toFixed(3)}`;
+    for (let i = 0; i < pos.count; i++) { const k = key(i), v = acc.get(k) || [0, 0, 0]; v[0] += nor.getX(i); v[1] += nor.getY(i); v[2] += nor.getZ(i); acc.set(k, v); }
+    for (let i = 0; i < pos.count; i++) { const v = acc.get(key(i)), l = Math.hypot(...v) || 1; nor.setXYZ(i, v[0] / l, v[1] / l, v[2] / l); }
+    nor.needsUpdate = true;
+  });
+  return o;
+}
+// fit a model to `size` metres, centred on x/z with its base at y = 0
+function pvFit(m, size) {
+  const b = new THREE.Box3().setFromObject(m), s = b.getSize(V()), k = size / Math.max(s.x, s.y, s.z, .01);
+  m.scale.multiplyScalar(k); b.setFromObject(m); m.position.set(-(b.min.x + b.max.x) / 2, -b.min.y, -(b.min.z + b.max.z) / 2);
+  return s.y < .45 * Math.max(s.x, s.z); // flat (a projectile flying level)
+}
+const pvDot = (() => { let t; return () => t ||= (() => { const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d'), r = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  r.addColorStop(0, 'rgba(255,255,255,1)'); r.addColorStop(.25, 'rgba(255,255,255,.55)'); r.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = r; g.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(c); })(); })();
 function pvShow(el) {
   if (!PV.r) {
     PV.r = new THREE.WebGLRenderer({ canvas: $('pvc'), alpha: true, antialias: true }); PV.r.setPixelRatio(Math.min(devicePixelRatio, 2)); PV.r.setSize(200, 150, false);
-    PV.r.toneMapping = renderer.toneMapping; PV.r.toneMappingExposure = 1.2; PV.r.outputColorSpace = renderer.outputColorSpace;
+    PV.r.toneMapping = renderer.toneMapping; PV.r.toneMappingExposure = 1; PV.r.outputColorSpace = renderer.outputColorSpace;
     PV.sc = new THREE.Scene(); PV.sc.add(new THREE.HemisphereLight(0xc8d4ff, 0x3a2050, 2)); const dl = new THREE.DirectionalLight(0xfff0e0, 2.5); dl.position.set(2, 4, 3); PV.sc.add(dl);
-    PV.cam = new THREE.PerspectiveCamera(32, 200 / 150, .1, 50); PV.cam.position.set(0, 1.6, 4.6); PV.cam.lookAt(0, .75, 0);
+    PV.cam = new THREE.PerspectiveCamera(32, 200 / 150, .1, 50); PV.cam.position.set(0, 1.7, 5.8); PV.cam.lookAt(0, .95, 0);
     let last = performance.now();
     const tick = now => { requestAnimationFrame(tick); const dt = Math.min(.05, (now - last) / 1000); last = now;
       if (!PV.g || $('lobby').classList.contains('hidden')) return;
       const cv = PV.r.domElement, w = cv.clientWidth, h = cv.clientHeight;
       if (w && h && (w !== PV.w || h !== PV.h)) { PV.w = w; PV.h = h; PV.r.setSize(w, h, false); PV.cam.aspect = w / h; PV.cam.updateProjectionMatrix(); }
-      PV.g.userData.m.rotation.y += dt * .8; spinCircle(PV.g.userData.c, dt, .6); PV.r.render(PV.sc, PV.cam); };
+      const t = PV.t += dt, U = PV.g.userData;
+      U.hero.rotation.y += dt * .5; U.hero.position.y = U.y0 + Math.sin(t * 1.3) * .07; spinCircle(U.c, dt, .5);
+      U.orbit.rotation.y -= dt * .45; U.sats.forEach((s, i) => { s.rotation.y += dt * (1 + i * .3); s.position.y = 1.45 + Math.sin(t * 1.7 + i * 2.1) * .12; });
+      U.halo.material.opacity = .42 + Math.sin(t * 2) * .06;
+      const p = U.motes.geometry.attributes.position; for (let i = 0; i < p.count; i++) { let y = p.getY(i) + dt * (.25 + (i % 5) * .08); if (y > 2.6) y = 0; p.setY(i, y); } p.needsUpdate = true;
+      PV.r.render(PV.sc, PV.cam); };
     requestAnimationFrame(tick);
   }
   if (PV.el === el) return;
   PV.el = el; if (PV.g) PV.sc.remove(PV.g);
-  const g = new THREE.Group(), c = makeCircle(el), m = model(ELMETA[el][3], EL[el].color, { flat: true }), w = new THREE.Group(), tilt = new THREE.Group();
-  c.scale.setScalar(1.25); w.add(tilt); tilt.add(m); // w spins, tilt tips it toward you
-  if (el === 'abyss') curlTentacle(m, 1.2, 1, .15);
-  const b = new THREE.Box3().setFromObject(m), s = b.getSize(V()), flat = s.y < .45 * Math.max(s.x, s.z), k = (flat ? 1.9 : 1.5) / Math.max(s.x, s.y, s.z, .01); // fit any model to about 1.5 m
-  m.scale.multiplyScalar(k); b.setFromObject(m); m.position.set(-(b.min.x + b.max.x) / 2, .15 - b.min.y, -(b.min.z + b.max.z) / 2);
-  if (flat) { w.position.y = .55; tilt.rotation.x = .3; } // projectiles fly level: float them and tip them toward you, rather than lying on the circle
-  g.add(c, w); g.userData = { c, m: w }; PV.sc.add(g); PV.g = g;
-  if (!unlocked(el)) w.traverse(o => { if (o.isMesh && !o.material.uniforms) { o.material = o.material.clone(); o.material.color.setScalar(.05); o.material.emissive?.setScalar(0); } }); // locked: a silhouette
+  const col = EL[el].color, g = new THREE.Group(), c = makeCircle(el), hero = new THREE.Group(), tilt = new THREE.Group(), orbit = new THREE.Group(), sats = [];
+  c.scale.setScalar(1.25);
+  // the signature model, centre stage
+  const m = smoothGeo(model(ELMETA[el][3], col)); soften(m); if (el === 'abyss') curlTentacle(m, 1.2, 1, .15);
+  const flat = pvFit(m, flat0(m) ? 1.9 : 1.6); hero.add(tilt); tilt.add(m);
+  const y0 = flat ? .6 : .12; hero.position.y = y0; if (flat) tilt.rotation.x = .3; // projectiles fly level: float them and tip them toward you
+  // the element's other spell models circling it
+  const names = Object.keys(NODE).filter(k => k.startsWith(el + '__') && k !== ELMETA[el][3] && !PV_SKIP.test(k.split('__')[1])).slice(0, 3);
+  names.forEach((n, i) => {
+    const s = new THREE.Group(), sm = smoothGeo(model(n, col)); pvFit(sm, .55); sm.position.y -= .27; s.add(sm); soften(sm);
+    const a = i * TAU / names.length; s.position.set(Math.sin(a) * 2, 1.45, Math.cos(a) * 2); orbit.add(s); sats.push(s);
+  });
+  // a halo behind it and motes rising through it
+  const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: pvDot(), color: col, transparent: true, opacity: .45, blending: THREE.AdditiveBlending, depthWrite: false }));
+  halo.scale.setScalar(3.4); halo.position.set(0, 1, -.6);
+  const mp = new Float32Array(70 * 3); for (let i = 0; i < 70; i++) { const a = Math.random() * TAU, r = .3 + Math.random() * 1.6; mp.set([Math.sin(a) * r, Math.random() * 2.6, Math.cos(a) * r], i * 3); }
+  const mg = new THREE.BufferGeometry(); mg.setAttribute('position', new THREE.BufferAttribute(mp, 3));
+  const motes = new THREE.Points(mg, new THREE.PointsMaterial({ map: pvDot(), color: new THREE.Color(col).lerp(new THREE.Color(0xffffff), .35), size: .09, transparent: true, opacity: .9, blending: THREE.AdditiveBlending, depthWrite: false }));
+  g.add(halo, c, hero, orbit, motes); g.userData = { c, hero, y0, orbit, sats, halo, motes }; PV.sc.add(g); PV.g = g;
+  if (!unlocked(el)) { [hero, orbit].forEach(o => o.traverse(x => { if (x.isMesh && x.material.uniforms?.uColor) { x.material = x.material.clone(); x.material.uniforms.uColor.value.setScalar(.06); } })); halo.visible = motes.visible = false; } // locked: a silhouette
 }
+// the white-hot core shell blows out to plain white in a small preview: keep it to a glow
+const soften = m => (m.userData.mats || []).forEach(x => { if (x.uniforms?.uCore?.value) x.uniforms.uA.value = .45; });
+// is a model flat before fitting (a projectile flying level)?
+function flat0(m) { const s = new THREE.Box3().setFromObject(m).getSize(V()); return s.y < .45 * Math.max(s.x, s.z); }
 function savePick() { try { localStorage.setItem('magepact_pick', JSON.stringify({ el: myEl, el2: myEl2 })); } catch {} }
 function renderDetail() {
   const k = hoverEl || myEl, e = EL[k], [t1, t2, dif] = ELMETA[k], st = stars(k), mx = PROG.mast[k] || 0, nxt = MASTERY[st];

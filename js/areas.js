@@ -268,7 +268,7 @@ function laneLift(x, z) {
 const isleCenter = () => ISLES[S.mode === 'arena' ? S.isl || 0 : 0];
 // the walkable shape: every built island, every finished bridge, and as much of the one being built as exists so far
 function islandMap(src = S) {
-  if (src.mode && src.mode !== 'arena' && src.mode !== 'train') return;
+  if (src.mode && src.mode !== 'arena') return;
   const caps = [];
   for (const I of ISLES) if (I.k === 0 || (src.ib & 1 << I.k)) caps.push({ ax: I.x, az: I.z, bx: I.x, bz: I.z, r: I.r });
   for (let k = 0; k < 5; k++) {
@@ -1192,7 +1192,7 @@ function islandInit() {
 }
 function islandFrame(src, dt) {
   if (!IV.init) islandInit();
-  const on = !!src && (src.mode === 'arena' || src.mode === 'train') && arena.visible;
+  const on = !!src && src.mode === 'arena' && arena.visible;
   const now = performance.now() / 1000;
   for (const v of IV.isles) {
     if (!v) continue;

@@ -11,24 +11,77 @@ function applyMap(mode) {
   MAP.r = mode === 'duel' ? DUEL_R : ARENA_R;
   MAP.rects = MAP.erects = null; MAP.caps = null;
   PILLARS.length = 0; PILLARS.push(...(mode === 'duel' ? DUEL_PILLARS : ARENA_PILLARS));
-  if (mode === 'arena' || mode === 'train') islandMap(); // the islands and bridges built so far (areas.js); Training uses the first island
+  if (mode === 'arena') islandMap(); // the islands and bridges built so far (areas.js)
+  if (mode === 'train') MAP.r = TRAIN_R; // its own round yard
   if (mode === 'dungeon') dunMap(); // the floor itself is in dungeon.js
   if (mode === 'city') cityMap(); // and the city in city.js
   if (mapMode !== mode) { mapMode = mode; showScenery(mode); }
 }
 
 // ===================== training =====================
-// The first island with target dummies that never attack (they respawn 1.5 s after they die), you can't be hurt,
-// every element is in the Esc menu, and a panel shows total damage, DPS over the last 5 s and damage per move (S.dmgBy, see damage()).
-// N: cooldowns off / on (your ultimate is always ready while they are off). X: reset the damage meter.
-const TRAIN_SPOTS = [ // [type, x, z, hp, 1 = walks about]
-  ['grunt', -6, -2, 500], ['grunt', -2, -3, 500], ['grunt', 2, -3, 500], ['grunt', 6, -2, 500],
-  ['runner', -4, -8, 300, 1], ['runner', 4, -8, 300, 1],
-  ['brute', 0, -9, 2000], ['boss', 0, -16, 12000]];
+// Its own floating yard, laid out for testing moves: you start at (0, 8) looking down a range lane with gold lines every
+// 5 m, a dummy at 10 m, a heavy at 20 m and a boss at 29 m; a packed crowd on the left for area moves, and a pen of
+// moving targets on the right. The dummies never attack, respawn 1.5 s after they die, and walk back to their post after
+// being knocked away. You can't be hurt, every element is in the Esc menu, and a panel shows total damage, DPS over the
+// last 5 s and damage per move (S.dmgBy, see damage()). N: cooldowns off / on (your ultimate is always ready while they are off). X: reset the meter.
+const TRAIN_R = 30;
+const TRAIN_STATIONS = [ // [label, x, z, pad radius, colour, dummies [type, dx, dz, hp, 1 = walks about]]
+  ['Target · 10 m', 0, -2, 1.6, 0xe9c46a, [['grunt', 0, 0, 500]]],
+  ['Heavy · 20 m', 0, -12, 2, 0xff9a3a, [['brute', 0, 0, 2000]]],
+  ['Boss · 29 m', 0, -21, 3, 0xff4a5a, [['boss', 0, 0, 12000]]],
+  ['Crowd', -14, -4, 3.4, 0x6ad8ff, [['grunt', 0, 0, 500], ...[0, 1, 2, 3, 4, 5].map(i => ['grunt', 2.1 * Math.sin(i * TAU / 6), 2.1 * Math.cos(i * TAU / 6), 500])]],
+  ['Moving', 14, -4, 5, 0x7ad8a0, [['runner', -2, 0, 300, 1], ['runner', 2, 1, 300, 1], ['runner', 0, -2, 300, 1]]],
+];
+const TRAIN_SPOTS = TRAIN_STATIONS.flatMap(([, x, z, r, , ds]) => ds.map(([type, dx, dz, hp, walk]) => [type, x + dx, z + dz, hp, walk, x, z, r]));
+// the yard's scenery, built the first time Training opens (so the sign font has loaded)
+const trainG = new THREE.Group(), trainLights = []; trainG.visible = false; scene.add(trainG);
+function buildTrain() {
+  if (trainG.children.length) return;
+  const mat = (n, fb) => arenaMat(n) || new THREE.MeshStandardMaterial({ color: fb });
+  const glow = c => new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: .85, depthWrite: false, toneMapped: false });
+  const canvas = (w, h, draw) => { const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t; };
+  const text = (s, col, w = 512, h = 128) => canvas(w, h, g => { g.font = `700 ${h * .5}px Cinzel, Georgia, serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.shadowColor = col; g.shadowBlur = h * .18; g.fillStyle = '#fff6d8'; g.fillText(s, w / 2, h / 2); });
+  const add = (geo, m, x = 0, y = 0, z = 0) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.receiveShadow = !m.isMeshBasicMaterial; trainG.add(o); return o; };
+  // floor: slate tiles 5 m across with a faint line every metre (tile edges line up with the centre)
+  const floor = canvas(512, 512, (g, w) => {
+    g.fillStyle = '#2e2b38'; g.fillRect(0, 0, w, w); const n = 5, s = w / n;
+    for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) { g.fillStyle = `hsl(255,7%,${31 + ((i * 7 + j * 3) % 5) * 1.6}%)`; g.fillRect(i * s + 2, j * s + 2, s - 4, s - 4); }
+    g.strokeStyle = 'rgba(233,196,106,.38)'; g.lineWidth = 5; g.strokeRect(0, 0, w, w);
+  });
+  floor.wrapS = floor.wrapT = THREE.RepeatWrapping; floor.repeat.set(TRAIN_R * 2 / 5, TRAIN_R * 2 / 5);
+  add(new THREE.CircleGeometry(TRAIN_R, 128).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ map: floor, roughness: .85 }));
+  add(new THREE.CylinderGeometry(TRAIN_R, TRAIN_R * .97, 1.6, 128, 1, true), mat('slab', 0x504b5d), 0, -.8, 0);
+  const under = new THREE.ConeGeometry(TRAIN_R * .97, 22, 40, 6).rotateX(Math.PI), p = under.attributes.position; // a ragged rock root under the yard
+  for (let i = 0; i < p.count; i++) { const y = p.getY(i), k = (11 - y) / 22, n = 1 + Math.sin(i * 12.9898) * .18 * k; p.setX(i, p.getX(i) * n); p.setZ(i, p.getZ(i) * n); }
+  under.computeVertexNormals(); add(under, mat('rock', 0x796f79), 0, -12.6, 0);
+  add(new THREE.TorusGeometry(TRAIN_R - .15, .16, 8, 160).rotateX(Math.PI / 2), mat('gold', 0xf9d789), 0, .05, 0);
+  // the range lane: a gold line and a label every 5 m from the start, between two faint rails
+  for (const x of [-2.6, 2.6]) add(new THREE.PlaneGeometry(.06, 30).rotateX(-Math.PI / 2), glow(0xe9c46a), x, .02, 8 - 15).material.opacity = .35;
+  for (let d = 5; d <= 30; d += 5) {
+    add(new THREE.PlaneGeometry(5.2, d % 10 ? .08 : .14).rotateX(-Math.PI / 2), glow(0xe9c46a), 0, .025, 8 - d);
+    add(new THREE.PlaneGeometry(4, 1).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: text(`${d} m`, "#e9c46a"), transparent: true, depthWrite: false }), -5, .03, 8 - d + .4);
+  }
+  // stations: a glowing pad and a sign on a post, turned to face the start
+  for (const [label, x, z, r, col] of TRAIN_STATIONS) {
+    add(new THREE.RingGeometry(r - .12, r, 64).rotateX(-Math.PI / 2), glow(col), x, .03, z);
+    add(new THREE.CircleGeometry(r, 64).rotateX(-Math.PI / 2), glow(col), x, .015, z).material.opacity = .08;
+    const px = x ? x - Math.sign(x) * (r + .8) : 3.6, pz = x ? z + r * .6 : z, yaw = Math.atan2(0 - px, 8 - pz);
+    add(new THREE.CylinderGeometry(.08, .1, 3, 8), mat('bronze', 0xc4a06c), px, 1.5, pz);
+    const board = add(new THREE.PlaneGeometry(3, .75), new THREE.MeshBasicMaterial({ map: text(label, '#' + col.toString(16).padStart(6, '0')), transparent: true, side: THREE.DoubleSide, depthWrite: false }), px, 3.1, pz);
+    board.rotation.y = yaw;
+  }
+  // crystal lamps round the rim
+  for (let i = 0; i < 8; i++) {
+    const a = (i + .5) * TAU / 8, x = Math.sin(a) * (TRAIN_R - 1.4), z = Math.cos(a) * (TRAIN_R - 1.4);
+    add(new THREE.CylinderGeometry(.35, .5, 1.4, 8), mat('slab', 0x504b5d), x, .7, z);
+    add(new THREE.OctahedronGeometry(.5), mat(i % 2 ? 'crystal_cyan' : 'crystal_violet', 0xdaa0ff), x, 2, z).scale.y = 1.6;
+    if (i % 2 === 0) { const l = new THREE.PointLight(0xb8a0ff, 18, 24, 2); l.position.set(x, 2.6, z); l.visible = false; scene.add(l); trainLights.push(l); }
+  }
+}
 function startTrain() {
   S.wave = 1; S.phase = 'fight'; S.budget = 0; S.bossLeft = 0;
   S.cheat = { ...(S.cheat || {}), inv: 1, allEl: 1 };
-  S.dmgBy = {}; S.trn = { spots: TRAIN_SPOTS.map(([type, x, z, hp, walk]) => ({ type, x, z, hp, walk, id: 0, t: 0 })), hist: [], t0: S.t };
+  S.dmgBy = {}; S.trn = { spots: TRAIN_SPOTS.map(([type, x, z, hp, walk, px, pz, pr]) => ({ type, x, z, hp, walk, px, pz, pr, id: 0, t: 0 })), hist: [], t0: S.t };
 }
 function stepTrain(dt) {
   const T = S.trn; if (!T) return;
@@ -37,17 +90,24 @@ function stepTrain(dt) {
     if ((q.t -= dt) > 0) continue;
     if (q.id) { q.id = 0; q.t = 1.5; continue; } // it died: back in a moment
     const e = spawnEnemy(q.type, q.x, q.z); e.hp = e.max = q.hp; e.dummy = q.walk ? 2 : 1; e.yaw = Math.atan2(-q.x, 8 - q.z); q.id = e.id;
+    e.home = [q.x, q.z, q.px, q.pz, q.pr];
   }
   const tot = Object.values(S.dmgBy).reduce((a, b) => a + b, 0);
   T.hist.push([S.t, tot]); while (T.hist.length > 2 && S.t - T.hist[0][0] > 5) T.hist.shift();
   T.tot = tot; T.dps = Math.round((tot - T.hist[0][1]) / Math.max(1, S.t - T.hist[0][0]));
 }
-// a dummy: takes hits, knockback and crowd control like any monster, but never attacks; walkers stroll round the yard
+// a dummy: takes hits, knockback and crowd control like any monster, but never attacks; standing ones walk back to
+// their post once knocked away, walkers stroll round their pen
 function stepDummy(e, dt, hard) {
   e.atk = null; e.v = 0;
-  if (e.dummy !== 2 || hard) return;
-  const cx = 0, cz = -6, d = Math.hypot(e.x - cx, e.z - cz);
-  if (d > 9) e.wander = Math.atan2(cx - e.x, cz - e.z); else e.wander += rand(-1.5, 1.5) * dt;
+  if (hard || !e.home) return;
+  const [hx, hz, cx, cz, pr] = e.home;
+  if (e.dummy !== 2) {
+    const dx = hx - e.x, dz = hz - e.z, d = Math.hypot(dx, dz); if (d < .25) { e.yaw = Math.atan2(-e.x, 8 - e.z); return; }
+    const sp = Math.min(d, 3 * dt); e.x += dx / d * sp; e.z += dz / d * sp; e.yaw = Math.atan2(dx, dz); e.v = 3; return;
+  }
+  const d = Math.hypot(e.x - cx, e.z - cz);
+  if (d > pr - .8) e.wander = Math.atan2(cx - e.x, cz - e.z); else e.wander += rand(-1.5, 1.5) * dt;
   const sp = 2.4 * (1 - Math.min(.85, Math.max(e.m.slow, e.fs || 0))); e.fs = 0;
   e.x += Math.sin(e.wander) * sp * dt; e.z += Math.cos(e.wander) * sp * dt; e.yaw = e.wander; e.v = sp;
 }
@@ -173,11 +233,13 @@ function startMode() {
 }
 function showScenery(mode) {
   const under = mode === 'dungeon';
-  arena.visible = mode === 'arena' || mode === 'train'; duelG.visible = mode === 'duel'; dunView.visible = under; cityG.visible = mode === 'city';
+  if (mode === 'train') buildTrain();
+  arena.visible = mode === 'arena'; trainG.visible = mode === 'train'; duelG.visible = mode === 'duel'; dunView.visible = under; cityG.visible = mode === 'city';
   for (const l of cityLights) l.visible = false; // cityFrame lights the nearest braziers
   if (mode !== 'city') { moon.position.copy(BH).multiplyScalar(70); moon.target.position.set(0, 0, 0); moon.target.updateMatrixWorld(); }
   Object.assign(moon.shadow.camera, mode === 'city' ? { left: -42, right: 42, top: 42, bottom: -42 } : { left: -27, right: 27, top: 27, bottom: -27 }); moon.shadow.camera.updateProjectionMatrix();
-  for (const l of amb.lights) l.visible = mode === 'arena' || mode === 'train';
+  for (const l of amb.lights) l.visible = mode === 'arena';
+  for (const l of trainLights) l.visible = mode === 'train';
   for (const l of duelAmb.lights) l.visible = mode === 'duel';
   for (const l of dunLights) l.visible = under;
   for (const o of skyBits) o.visible = !under;
