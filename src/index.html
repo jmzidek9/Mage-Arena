@@ -86,6 +86,7 @@ input::placeholder{color:#b9add8;opacity:.8}input:focus{box-shadow:0 0 0 2px var
 #modeCols{display:flex;flex-direction:column;margin-top:clamp(12px,3.5vh,34px)}
 .mi{position:relative;display:flex;align-items:baseline;gap:18px;padding:clamp(5px,1.1vh,10px) 40px clamp(5px,1.1vh,10px) 4px;border:0;border-radius:0;background:none;box-shadow:none;font:700 clamp(20px,3.6vh,30px) Cinzel,Georgia,serif;letter-spacing:.22em;text-transform:uppercase;color:rgba(233,224,255,.42);text-align:left;transition:color .25s,letter-spacing .35s,transform .35s cubic-bezier(.2,.9,.3,1);animation:slideIn .8s cubic-bezier(.2,.9,.3,1) backwards}
 .mi:hover{transform:none;box-shadow:none}
+.mi.mset{margin-top:clamp(6px,1.6vh,14px);font-size:clamp(15px,2.4vh,19px);letter-spacing:.24em}.mi.mset i{font-style:normal}
 .mi i{font:500 italic clamp(15px,2.2vh,19px) 'Cormorant Garamond',Georgia,serif;letter-spacing:.05em;color:rgba(233,196,106,.45);width:30px;text-align:right;transition:color .25s}
 .mi.on{transform:translateX(10px);letter-spacing:.26em}
 .mi.on span{color:transparent;background:linear-gradient(180deg,#fffaf0,#f3d27a 55%,#b07a20);-webkit-background-clip:text;background-clip:text;filter:drop-shadow(0 0 14px rgba(233,196,106,.45))}
@@ -231,6 +232,36 @@ input::placeholder{color:#b9add8;opacity:.8}input:focus{box-shadow:0 0 0 2px var
 #lobby .strip .shead::before,#lobby .strip .shead::after{background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--el) 70%,transparent),transparent)}#lobby .strip .shead i{color:color-mix(in srgb,var(--el) 60%,white)}
 #lobby .pickinfo{border:1px solid color-mix(in srgb,var(--el) 22%,transparent)}
 #detail::before,#detail::after{border-color:color-mix(in srgb,var(--el) 65%,white);filter:drop-shadow(0 0 6px var(--el))}
+/* the lobby's bottom: second element bar, play bar, status, controls */
+.strip .pickinfo{justify-content:space-between;gap:10px 18px;padding:8px 10px 8px 14px;background:linear-gradient(90deg,color-mix(in srgb,var(--el) 10%,rgba(0,0,0,.3)),rgba(0,0,0,.22))}
+.pickinfo .p2{display:flex;align-items:center;gap:10px;font-family:Cinzel,Georgia,serif;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#fff6d8}
+.pickinfo .p2 .sigil,.pickinfo .p2 .none{width:30px;height:30px;flex:none}.pickinfo .p2 .none{border:1.5px dashed color-mix(in srgb,var(--el) 45%,rgba(255,255,255,.25));border-radius:50%;box-sizing:border-box}
+.pickinfo .p2 .sigil{filter:drop-shadow(0 0 6px color-mix(in srgb,var(--c2) 70%,transparent))}
+.strip .pickinfo select{margin:0;font:600 13px Cinzel,Georgia,serif;letter-spacing:.06em;padding:7px 30px 7px 12px;border-radius:10px;background:rgba(10,6,24,.75) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23e9c46a'/%3E%3C/svg%3E") no-repeat right 11px center;-webkit-appearance:none;appearance:none;color:#fff;cursor:pointer;transition:border-color .2s,box-shadow .2s}
+.strip .pickinfo select:hover,.strip .pickinfo select:focus{outline:none;box-shadow:0 0 14px color-mix(in srgb,var(--el) 45%,transparent)}
+.pickinfo .hint{font-size:12px;color:var(--dim);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.pickinfo kbd,.foot kbd{font-family:Cinzel,Georgia,serif;font-size:10.5px;font-weight:700;letter-spacing:.04em;padding:2px 7px;border-radius:6px;color:#fff6d8;background:linear-gradient(180deg,rgba(255,255,255,.13),rgba(0,0,0,.4));border:1px solid color-mix(in srgb,var(--el) 45%,rgba(255,255,255,.15));box-shadow:0 2px 0 rgba(0,0,0,.55)}
+#lobby .play{align-items:center;gap:16px;margin-top:4px}
+#lobby #soloBtn{position:relative;overflow:hidden;height:58px;min-width:250px;padding:0 34px;font-size:20px;letter-spacing:.12em;border-radius:14px;border-width:1.5px;background:linear-gradient(180deg,color-mix(in srgb,var(--el) 42%,#2a1a52),color-mix(in srgb,var(--el) 14%,#110a26));text-shadow:0 0 14px color-mix(in srgb,var(--el) 80%,transparent),0 1px 2px #000;box-shadow:inset 0 1px 0 rgba(255,255,255,.25),inset 0 -10px 24px -10px color-mix(in srgb,var(--el) 70%,transparent),0 0 0 4px color-mix(in srgb,var(--el) 14%,transparent),0 8px 26px rgba(0,0,0,.5);animation:none;transition:transform .18s cubic-bezier(.2,.9,.3,1.4),box-shadow .25s}
+#lobby #soloBtn::after{content:'';position:absolute;inset:0;background:linear-gradient(110deg,transparent 35%,rgba(255,255,255,.28) 50%,transparent 65%);background-size:250% 100%;animation:soloShine 3.4s ease-in-out infinite;pointer-events:none}
+#lobby #soloBtn:hover{transform:translateY(-2px) scale(1.03);box-shadow:inset 0 1px 0 rgba(255,255,255,.3),inset 0 -12px 28px -10px var(--el),0 0 0 5px color-mix(in srgb,var(--el) 22%,transparent),0 0 34px color-mix(in srgb,var(--el) 55%,transparent),0 10px 30px rgba(0,0,0,.5)}
+#lobby #soloBtn:active{transform:scale(.97)}
+@keyframes soloShine{0%,55%{background-position:160% 0}100%{background-position:-60% 0}}
+#lobby .play .or{font:italic 500 18px 'Cormorant Garamond',Georgia,serif;color:var(--dim);opacity:.8}
+#lobby .online{height:58px;box-sizing:border-box;padding:0 8px 0 16px;gap:8px;border-radius:14px;background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(0,0,0,.3));box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+#lobby .online .lbl{font-size:10.5px;line-height:1.25;letter-spacing:.2em;text-align:left;margin-right:6px}
+#lobby .online button,#lobby .online input{height:42px;box-sizing:border-box;padding:0 18px;font-size:14px;border-radius:10px}
+#lobby .online button{background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(0,0,0,.25))}
+#lobby .online input{width:132px;background:rgba(5,3,14,.7);box-shadow:inset 0 2px 6px rgba(0,0,0,.6);font-size:15px;letter-spacing:.32em;transition:border-color .2s,box-shadow .2s}
+#lobby .online input:focus{border-color:var(--el);box-shadow:inset 0 2px 6px rgba(0,0,0,.6),0 0 0 3px color-mix(in srgb,var(--el) 28%,transparent),0 0 18px color-mix(in srgb,var(--el) 40%,transparent)}
+#lobby .online input::placeholder{color:color-mix(in srgb,var(--el) 30%,#8a80a8);letter-spacing:.3em}
+#lobby #status{display:flex;align-items:center;justify-content:center;gap:8px;font-size:14px}
+#lobby #status::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--el);box-shadow:0 0 8px var(--el);animation:breathe2 2s ease-in-out infinite}
+#lobby .foot summary{display:inline-flex;align-items:center;gap:8px;padding:5px 14px;border-radius:20px;border:1px solid color-mix(in srgb,var(--el) 30%,transparent);font-size:11px;letter-spacing:.2em;list-style:none;transition:background .2s,color .2s}
+#lobby .foot summary::-webkit-details-marker{display:none}#lobby .foot summary::before{content:'⌨';font-size:13px;letter-spacing:0}
+#lobby .foot summary:hover,#lobby .foot[open] summary{background:color-mix(in srgb,var(--el) 14%,transparent);color:#fff6d8}
+#lobby .foot .keys{display:flex;flex-wrap:wrap;justify-content:center;gap:8px 16px;max-width:900px;margin-top:10px;color:var(--dim)}#lobby .foot .keys span{display:flex;align-items:center;gap:4px}
+@media (max-width:700px){#lobby .play .or{display:none}#lobby .online{height:auto;padding:8px}#lobby #soloBtn{width:100%}}
 .pickinfo{margin-top:12px;padding:10px 12px;border-radius:12px;background:rgba(0,0,0,.25);font-size:13px;color:var(--dim);display:grid;gap:6px}.pickinfo label{font-family:Cinzel,Georgia,serif;color:#fff6d8;letter-spacing:.06em}.pickinfo select{margin-left:8px;font:inherit;padding:4px 8px;border-radius:8px;background:#160d30;color:#fff;border:1px solid rgba(233,196,106,.45)}
 /* ---- ability bar ---- */
 #bar{position:absolute;bottom:18px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:6px}
@@ -394,10 +425,10 @@ body.touching #me{top:14px;bottom:auto;left:14px}body.touching #lock{display:non
     <div id="modeBar"><button id="modeBack" class="ghost">← Modes</button><h2 id="modeName"></h2><div class="row"><button id="gfxBtn" class="ghost">Graphics: High</button><button id="setBtn" class="ghost">Settings</button></div></div>
     <div class="rule"></div>
     <div class="pick"><div id="detail"><div id="mvCol" class="moves"></div><div class="stage"><canvas id="pvc" width="200" height="150"></canvas></div><div id="detailBody"></div></div><div class="strip"><div id="prog"></div><div class="shead"><i>✦</i> Choose your element <i>✦</i></div><div id="grid"></div><div id="pickinfo" class="pickinfo"></div></div></div>
-    <div class="play"><button id="soloBtn" class="el sel" style="--c:#e9c46a;color:#fff6d8">⚔ Play Solo</button><div class="online"><span class="lbl">With a friend</span><button id="hostBtn">Host game</button><i></i><input id="code" maxlength="5" placeholder="CODE" aria-label="Room code"><button id="joinBtn">Join</button><button id="startBtn" class="hidden">Start</button><button id="netLeave" class="ghost hidden">Leave room</button></div></div>
+    <div class="play"><button id="soloBtn" class="el sel" style="--c:#e9c46a;color:#fff6d8">⚔ Play Solo</button><span class="or">or</span><div class="online"><span class="lbl">With a<br>friend</span><button id="hostBtn">Host game</button><i></i><input id="code" maxlength="5" placeholder="CODE" aria-label="Room code"><button id="joinBtn">Join</button><button id="startBtn" class="hidden">Start</button><button id="netLeave" class="ghost hidden">Leave room</button></div></div>
     <div id="status">Loading Blender assets…</div>
     <button id="unlockAll" class="ghost">🔓 Unlock all elements</button>
-    <details class="foot"><summary>Controls</summary><div class="sub">WASD move · Mouse aim · <b>LMB / RMB / Q / E</b> moves · <b>R</b> ultimate · Space jump · Shift dash (dash through a red attack just before it lands for a perfect dodge) · Tab swap element · Esc settings &amp; switch element</div></details>
+    <details class="foot"><summary>Controls</summary><div class="sub keys"><span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> move</span><span><kbd>Mouse</kbd> aim</span><span><kbd>LMB</kbd><kbd>RMB</kbd><kbd>Q</kbd><kbd>E</kbd> moves</span><span><kbd>R</kbd> ultimate</span><span><kbd>Space</kbd> jump</span><span><kbd>Shift</kbd> dash (through a red attack just before it lands: perfect dodge)</span><span><kbd>Tab</kbd> swap element</span><span><kbd>C</kbd> block</span><span><kbd>Esc</kbd> settings</span></div></details>
   </div>
 </div>
 

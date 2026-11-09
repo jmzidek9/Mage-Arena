@@ -1412,7 +1412,9 @@ function selMode(k) {
 function renderModes() {
   const R = ['I', 'II', 'III', 'IV', 'V'];
   $('modeCols').innerHTML = Object.entries(MODES).map(([k, m], i) => `<button class="mi" data-mode="${k}" style="--c:${m.c};animation-delay:${.15 + i * .08}s"><i>${R[i]}</i><span>${m.name}</span></button>`).join('');
+  $('modeCols').insertAdjacentHTML('beforeend', `<button class="mi mset" data-act="settings" style="--c:#b9add8;animation-delay:${.15 + Object.keys(MODES).length * .08}s"><i>⚙</i><span>Settings</span></button>`);
   for (const b of $('modeCols').children) {
+    if (b.dataset.act === 'settings') { b.onclick = () => { sfx('pick'); toggleSettings(); }; b.onpointerenter = b.onfocus = () => { for (const x of $('modeCols').children) x.classList.toggle('on', x === b); $('modeDesc').innerHTML = '<p>Graphics, sound, mouse and key bindings.</p>'; $('modeDesc').style.setProperty('--c', '#b9add8'); }; continue; }
     b.onclick = () => pickMode(b.dataset.mode);
     b.onpointerenter = b.onfocus = () => modeSel !== b.dataset.mode && (selMode(b.dataset.mode), sfx('pick'));
   }
@@ -1516,7 +1518,7 @@ function renderLobby() {
     };
     b.oncontextmenu = ev => { ev.preventDefault(); const k = b.dataset.el; if (!unlocked(k)) return; myEl2 = k === myEl2 || k === myEl ? null : k; savePick(); renderLobby(); sfx('swap'); };
   }
-  $('pickinfo').innerHTML = `<label>Second element<select id="el2Sel"><option value="">none</option>${PICKABLE().filter(x => x !== myEl && unlocked(x)).map(x => `<option value="${x}"${x === myEl2 ? ' selected' : ''}>${EL[x].name}</option>`).join('')}</select></label><span>Click an element to make it your main one. Right-click one (or pick it here) to carry a second element; Tab swaps between them in battle.</span>`;
+  $('pickinfo').innerHTML = `<label class="p2" style="--c2:${myEl2 ? css(EL[myEl2].color) : 'transparent'}">${myEl2 ? elIcon(myEl2) : '<span class="none"></span>'}Second element<select id="el2Sel"><option value="">none</option>${PICKABLE().filter(x => x !== myEl && unlocked(x)).map(x => `<option value="${x}"${x === myEl2 ? ' selected' : ''}>${EL[x].name}</option>`).join('')}</select></label><span class="hint">Click a card to play it · <kbd>Right-click</kbd> one to carry it too · <kbd>Tab</kbd> swaps in battle</span>`;
   $('el2Sel').onchange = ev => { myEl2 = ev.target.value || null; savePick(); renderLobby(); };
   renderProg(); renderDetail(); netLobby(); // (a waiting partner sees your pick and the mode)
 }
