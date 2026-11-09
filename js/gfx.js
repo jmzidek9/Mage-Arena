@@ -10,21 +10,22 @@
 // shadow.radius (Soft PCF ignores it): radius > 50 means PCSS. One shader for High through Ultra, so moving in or out
 // of Ultra (or Adaptive quality dropping out of it mid-fight) never recompiles every material in the scene.
 // The key light is orthographic, so depth is linear and the penumbra grows with the gap between blocker and receiver.
-// The tap spiral turns by the golden angle with one fixed rotation per tap (no sin/cos in the loops), so it's cheap to run and to compile.
+// The tap spiral turns by the golden angle with one fixed rotation per tap: the same 16 + 24 taps at the same angles as
+// a sin/cos per tap, without the sin/cos, so it looks identical and is cheaper to run and to compile.
 {
   const c = THREE.ShaderChunk.shadowmap_pars_fragment, g = c.indexOf('float getShadow('), tag = '#elif defined( SHADOWMAP_TYPE_PCF_SOFT )', i = c.indexOf(tag, g), j = c.indexOf('#elif', i + tag.length);
   const pcss = `float pcssShadow( sampler2D map, vec2 uv, float z ) {
 		const mat2 G = mat2( -.7373688, .6754904, -.6754904, -.7373688 );
 		float a = fract( 52.9829189 * fract( dot( gl_FragCoord.xy, vec2( .06711056, .00583715 ) ) ) ) * 6.2831853, bs = 0., bn = 0.;
 		vec2 o = vec2( cos( a ), sin( a ) );
-		for ( int i = 0; i < 12; i ++ ) { float r = sqrt( ( float( i ) + .5 ) / 12. ) * .0065;
+		for ( int i = 0; i < 16; i ++ ) { float r = sqrt( ( float( i ) + .5 ) / 16. ) * .0065;
 			float d = unpackRGBAToDepth( textureLod( map, uv + o * r, 0. ) ), k = step( d, z - .0004 - r * .3 ); bs += d * k; bn += k; o = G * o; }
 		if ( bn < .5 ) return 1.;
 		float pen = clamp( ( z - bs / bn ) * .45, .0003, .0065 ), lit = 0.;
-		o = vec2( -o.y, o.x );
-		for ( int i = 0; i < 20; i ++ ) { float r = sqrt( ( float( i ) + .5 ) / 20. );
+		o = vec2( cos( a * 1.618 ), sin( a * 1.618 ) );
+		for ( int i = 0; i < 24; i ++ ) { float r = sqrt( ( float( i ) + .5 ) / 24. );
 			lit += step( z - r * pen * .5, unpackRGBAToDepth( textureLod( map, uv + o * r * pen, 0. ) ) ); o = G * o; }
-		return lit / 20.;
+		return lit / 24.;
 	}
 	`;
   if (g > 0 && i > g && j > i) THREE.ShaderChunk.shadowmap_pars_fragment = c.slice(0, g) + pcss + c.slice(g, i) + tag +
@@ -348,8 +349,7 @@ function applyGfx(o) {
     scene.traverse(m => { for (const x of [].concat(m.material || [])) x.needsUpdate = true; }); // their shaders hold the shadow filter
   }
   // ambient occlusion: [directions, steps, radius m, strength, resolution]; bounce light and contact shadows ride the same pass
-  // (Ultra too at half resolution: the depth-aware upscale keeps edges clean, and full-res cost 4x as much for little gain)
-  const A = [[0, 0, 1, 0, .5], [4, 4, 1, 1.2, .5], [6, 5, 1.3, 1.35, .5], [8, 6, 1.6, 1.5, .5]][o.ao];
+  const A = [[0, 0, 1, 0, .5], [4, 4, 1, 1.2, .5], [6, 5, 1.3, 1.35, .5], [8, 6, 1.6, 1.5, 1]][o.ao];
   const aoS = A[4]; GX.ao = o.ao; GX.gi = o.gi && o.ao > 0; GX.contact = o.contact;
   setDefs(GM.ao, { N: A[0], M: A[1], GI: GX.gi, CONTACT: o.contact });
   GM.ao.uniforms.uRad.value = A[2]; GM.ao.uniforms.uInt.value = A[3];
