@@ -184,37 +184,46 @@ scene.add(moon);
   scene.environment = pmrem.fromScene(envScene, .02).texture; scene.environmentIntensity = .7;
 }
 
-const composer = new EffectComposer(renderer);
-composer.addPass(new RenderPass(scene, camera));
-const bloomPass = HQ ? new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.48, 0.45, 1.0) : null;
-if (bloomPass) composer.addPass(bloomPass);
+const composer = new EffectComposer(renderer); // gfx.js inserts the scene + lighting pass in front (Settings > Graphics)
+const bloomPass = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.48, 0.45, 1.0);
+composer.addPass(bloomPass);
 composer.addPass(new OutputPass());
-const filmPass = new ShaderPass({ // film look: cool shadows, warm highlights, a touch of fringe, vignette, grain (+ time-stop grey, flashes)
-  uniforms: { tDiffuse: { value: null }, uTime, uGray: { value: 0 }, uWhite: { value: 0 }, uFilm: { value: 1 }, uTint: { value: new THREE.Vector3(0, 0, 0) } },
+const filmPass = new ShaderPass({ // film look: cool shadows, warm highlights, a touch of fringe, vignette, grain (+ time-stop grey, flashes).
+  // Settings split it into its parts and add sharpening, lens ghosts, contrast, saturation and a colour-blind filter
+  uniforms: { tDiffuse: { value: null }, tFlare: { value: null }, uTime, uGray: { value: 0 }, uWhite: { value: 0 }, uTint: { value: new THREE.Vector3(0, 0, 0) },
+    uGrade: { value: 1 }, uVig: { value: 1 }, uGrain: { value: 1 }, uCA: { value: 1 }, uSharp: { value: 0 }, uSat: { value: 1 }, uCon: { value: 1 }, uFlare: { value: 0 },
+    uCB: { value: new THREE.Matrix3() }, uTexel: { value: new THREE.Vector2(1, 1) } },
   vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }`,
-  fragmentShader: `uniform sampler2D tDiffuse; uniform float uTime, uGray, uWhite, uFilm; uniform vec3 uTint; varying vec2 vUv;
+  fragmentShader: `uniform sampler2D tDiffuse, tFlare; uniform float uTime, uGray, uWhite, uGrade, uVig, uGrain, uCA, uSharp, uSat, uCon, uFlare; uniform vec3 uTint; uniform mat3 uCB; uniform vec2 uTexel; varying vec2 vUv;
   void main(){
-    vec2 c = vUv - .5; float r = dot(c, c); vec2 off = c * r * (.01 * uFilm + uGray * .04);
-    vec3 col = vec3(texture2D(tDiffuse, vUv + off).r, texture2D(tDiffuse, vUv).g, texture2D(tDiffuse, vUv - off).b), raw = col;
+    vec2 c = vUv - .5; float r = dot(c, c); vec2 off = c * r * (.01 * uCA + uGray * .04);
+    vec3 raw = texture2D(tDiffuse, vUv).rgb, dl = vec3(0.);
+    if (uSharp > 0.) { // contrast-adaptive sharpening (after AMD's CAS): firm on soft detail, gentle on edges that are already hard
+      vec3 n = texture2D(tDiffuse, vUv + vec2(0., uTexel.y)).rgb, s = texture2D(tDiffuse, vUv - vec2(0., uTexel.y)).rgb;
+      vec3 e = texture2D(tDiffuse, vUv + vec2(uTexel.x, 0.)).rgb, w = texture2D(tDiffuse, vUv - vec2(uTexel.x, 0.)).rgb;
+      vec3 mn = min(raw, min(min(n, s), min(e, w))), mx = max(raw, max(max(n, s), max(e, w)));
+      vec3 k = -sqrt(clamp(min(mn, 1. - mx) / max(mx, vec3(1e-4)), 0., 1.)) * mix(.08, .2, uSharp);
+      dl = clamp((raw + (n + s + e + w) * k) / (1. + 4. * k), 0., 1.) - raw;
+    }
+    vec3 col = vec3(texture2D(tDiffuse, vUv + off).r, raw.g, texture2D(tDiffuse, vUv - off).b) + dl;
+    if (uFlare > 0.) { // lens ghosts: the brightest light mirrored through the centre as a row of fading discs, plus a faint halo
+      vec2 tc = 1. - vUv, gv = (.5 - tc) * .38; vec3 fl = vec3(0.);
+      for (int i = 0; i < 5; i++) { vec2 o = fract(tc + gv * float(i)); fl += texture2D(tFlare, o).rgb * pow(1. - length(.5 - o) / .7071, 8.) * vec3(1., .86 - float(i) * .07, .72 + float(i) * .07); }
+      vec2 hv = normalize(gv + 1e-5) * .42; fl += texture2D(tFlare, tc + hv).rgb * pow(1. - length(.5 - fract(tc + hv)) / .7071, 6.) * vec3(.6, .72, 1.);
+      col += min(fl * .022, vec3(.22)) * uFlare; // real ghosts are faint: a few percent of the light that makes them
+    }
     float l = dot(col, vec3(.299,.587,.114));
-    col *= mix(vec3(.92,.95,1.12), vec3(1.06,1.,.94), smoothstep(.15,.8,l));
-    col = mix(vec3(l), col, 1.15);
-    col *= 1. - r * .85;
-    col += (fract(sin(dot(vUv * 1000. + uTime, vec2(12.9898,78.233))) * 43758.5453) - .5) * .022;
-    col = mix(raw, col, uFilm); // Visuals > Film filter off: skip grade, vignette and grain
+    col = mix(col, col * mix(vec3(.92,.95,1.12), vec3(1.06,1.,.94), smoothstep(.15,.8,l)), uGrade);
+    col = mix(vec3(l), col, (1. + .15 * uGrade) * uSat);
+    col = (col - .5) * uCon + .5;
+    col *= 1. - r * .85 * uVig;
+    col += (fract(sin(dot(vUv * 1000. + uTime, vec2(12.9898,78.233))) * 43758.5453) - .5) * .022 * uGrain;
+    col = uCB * col; // colour-blind filter (identity when off)
     float g = dot(col, vec3(.299,.587,.114)); col = mix(col, vec3(g) * vec3(1.08, 1., .82), uGray);
     col += uTint * (.4 + r); col = mix(col, vec3(1.), uWhite);
     gl_FragColor = vec4(col, 1.); }`,
 });
 composer.addPass(filmPass);
-function setLowQuality() {
-  if (!HQ) return;
-  HQ = false;
-  if (bloomPass) bloomPass.enabled = false;
-  renderer.setPixelRatio(1); renderer.shadowMap.enabled = false; moon.castShadow = false;
-  scene.traverse(o => { if (o.material) o.material.needsUpdate = true; });
-  composer.setSize(innerWidth, innerHeight);
-}
 addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight); composer.setSize(innerWidth, innerHeight);
@@ -487,12 +496,15 @@ const pts = new THREE.Points(pGeo, new THREE.ShaderMaterial({
 }));
 pts.frustumCulled = false; scene.add(pts);
 const _c = new THREE.Color(), _v = V();
+let pMul = 1; // Settings > Graphics > Particles: below 1 drops sparks at random, above 1 bursts throw more
 function emit(x, y, z, vx, vy, vz, color, size, life, grav = 0, drag = 1.5) {
+  if (pMul < 1 && Math.random() > pMul) return;
   const i = pHead, j = i * 3; pHead = (pHead + 1) % PN; _c.set(color);
   pPos[j] = x; pPos[j + 1] = y; pPos[j + 2] = z; pVel[j] = vx; pVel[j + 1] = vy; pVel[j + 2] = vz;
   pCol[j] = _c.r; pCol[j + 1] = _c.g; pCol[j + 2] = _c.b; pS0[i] = size; pLife[i] = pMax[i] = life; pGrav[i] = grav; pDrag[i] = drag;
 }
 function burst(x, y, z, n, color, speed, size, life, grav = 0, up = 0) {
+  n = Math.round(n * Math.max(1, pMul));
   for (let k = 0; k < n; k++) { const d = _v.randomDirection(); emit(x, y, z, d.x * speed * rand(.3, 1), d.y * speed * rand(.3, 1) + up, d.z * speed * rand(.3, 1), color, size * rand(.6, 1.3), life * rand(.6, 1.2), grav); }
 }
 function stepParticles(dt) {
@@ -513,14 +525,14 @@ let flashHead = 0;
 // capped at 40, and dimmer still within 6 m of the camera: the big ones (150+) used to white out your own view
 function flash(x, y, z, color, i = 40, d = .25) {
   const f = flashes[flashHead++ % flashes.length], near = Math.hypot(x - camera.position.x, y - camera.position.y, z - camera.position.z);
-  i = Math.min(i, 40) * (near < 6 ? .35 + near * .11 : 1);
+  i = Math.min(i, 40) * (near < 6 ? .35 + near * .11 : 1) * flashMul;
   f.l.position.set(x, y, z); f.l.color.set(color); Object.assign(f, { i, t: d, d });
 }
 function stepFlashes(dt) { for (const f of flashes) { f.t -= dt; f.l.intensity = f.t > 0 ? f.i * f.t / f.d : 0; } }
 
 // floating damage numbers
 const nums = [];
-let showNums = true, shakeMul = 1; // Settings: damage numbers on/off, screen shake strength
+let showNums = true, shakeMul = 1, bobMul = 1, kickMul = 1, showHands = true, numScale = 1, flashMul = 1; // Settings: damage numbers, screen shake, hand sway, speed effects, hands, number size, flashes
 function popNum(x, y, z, text, color, cls = '') {
   if (nums.length > 70 || (!showNums && typeof text === 'number')) return;
   const el = document.createElement('div'); el.className = (text >= 40 ? 'num big ' : 'num ') + cls; el.textContent = text; el.style.color = color; $('hud').appendChild(el);
@@ -533,11 +545,11 @@ function stepNums(dt) {
     const s = _v.copy(n.p).project(camera);
     n.el.style.display = s.z > 1 ? 'none' : '';
     n.el.style.left = (s.x * .5 + .5) * innerWidth + 'px'; n.el.style.top = (-s.y * .5 + .5) * innerHeight + 'px';
-    n.el.style.opacity = 1 - n.t / .8; n.el.style.scale = 1.3 - n.t * .5;
+    n.el.style.opacity = 1 - n.t / .8; n.el.style.scale = (1.3 - n.t * .5) * numScale;
   }
 }
 let trauma = 0, fovKick = 0, hurtT = 0;
-const shake = a => trauma = Math.min(1, trauma + (Number.isFinite(a) ? a : 0) * shakeMul); // a bad value would turn the camera to NaN and black out the screen
+const shake = a => { a = Number.isFinite(a) ? a : 0; trauma = Math.min(1, trauma + a * shakeMul); if (padRumble && padOn && a > .05) padBuzz(a); }; // a bad value would turn the camera to NaN and black out the screen
 function banner(text, color = '#fff', dur = 1800) {
   const b = $('banner'); b.textContent = text; b.style.color = color; b.style.opacity = 1;
   clearTimeout(banner.t); banner.t = setTimeout(() => b.style.opacity = 0, dur);
@@ -765,7 +777,7 @@ const inp = { yaw: 0, pitch: 0, jumpN: 0, dashN: 0, swapN: 0, p: false, s: false
 // rebindable keys (Settings > Controls); alt is a keyboard stand-in for RMB
 const BIND_DEF = { fwd: 'KeyW', back: 'KeyS', left: 'KeyA', right: 'KeyD', jump: 'Space', dash: 'ShiftLeft', swap: 'Tab', alt: 'KeyF', q: 'KeyQ', e: 'KeyE', r: 'KeyR', block: 'KeyC' };
 const BIND = { ...BIND_DEF };
-let invertY = false;
+let invertY = false, rawMouse = false, blockToggle = false, blockLatch = false, padSens = 1, padInvert = false, padDead = .15, padRumble = true; // Settings > Controls
 const keyName = c => c.replace(/^Key|^Digit/, '').replace(/Left$|Right$/, '').replace('Arrow', '') || c;
 const slotKey = i => i === 0 ? 'LMB' : i === 1 ? 'RMB' : keyName(BIND[['', '', 'q', 'e', 'r'][i]]);
 // virtual controls from touch / gamepad: analog stick + held move slots
@@ -776,6 +788,7 @@ const usingVirt = () => performance.now() - virt.t < 8000; // touch or a control
 addEventListener('keydown', e => {
   keys[e.code] = true;
   if (e.repeat) return;
+  if (e.code === BIND.block && blockToggle) blockLatch = !blockLatch;
   if (e.code === BIND.jump) inp.jumpN++;
   if (e.code === BIND.dash || (BIND.dash === 'ShiftLeft' && e.code === 'ShiftRight')) inp.dashN++;
   if (e.code === BIND.swap) { e.preventDefault(); inp.swapN++; }
@@ -791,11 +804,14 @@ addEventListener('mouseup', e => { if (e.button === 0) { inp.p = false; if (e.ct
 addEventListener('contextmenu', e => e.preventDefault());
 addEventListener('blur', () => { for (const k in keys) keys[k] = false; inp.p = inp.s = false; virt.k.fill(false); });
 // requestPointerLock is missing on iPhone/iPad Safari and returns undefined (not a promise) on older desktop Safari
-const lockMouse = () => { if (usingVirt()) return; try { renderer.domElement.requestPointerLock?.()?.catch?.(() => {}); } catch {} };
+const lockMouse = () => { // raw input skips the OS mouse acceleration where the browser supports it (falls back quietly)
+  if (usingVirt()) return; const el = renderer.domElement;
+  try { el.requestPointerLock?.(rawMouse ? { unadjustedMovement: true } : undefined)?.catch?.(() => { if (rawMouse) try { el.requestPointerLock()?.catch?.(() => {}); } catch {} }); } catch {}
+};
 const unlockMouse = () => { try { document.exitPointerLock?.(); } catch {} };
 renderer.domElement.addEventListener('click', () => { if (playing) lockMouse(); });
 // k = held state of the 5 move slots: LMB, RMB, Q, E, R. mx / mz = analog strafe / forward (-1..1)
-const localInput = () => ({ yaw: inp.yaw, pitch: inp.pitch, jumpN: inp.jumpN, dashN: inp.dashN, swapN: inp.swapN, jump: !!keys[BIND.jump] || virt.jump, b: !!keys[BIND.block] || !!virt.b, // b: holding block
+const localInput = () => ({ yaw: inp.yaw, pitch: inp.pitch, jumpN: inp.jumpN, dashN: inp.dashN, swapN: inp.swapN, jump: !!keys[BIND.jump] || virt.jump, b: (blockToggle ? blockLatch : !!keys[BIND.block]) || !!virt.b, // b: holding block (or toggled on)
   mx: clamp((keys[BIND.right] ? 1 : 0) - (keys[BIND.left] ? 1 : 0) + virt.mx, -1, 1), mz: clamp((keys[BIND.fwd] ? 1 : 0) - (keys[BIND.back] ? 1 : 0) + virt.mz, -1, 1),
   k: [inp.p || virt.k[0], inp.s || !!keys[BIND.alt] || virt.k[1], !!keys[BIND.q] || virt.k[2], !!keys[BIND.e] || virt.k[3], !!keys[BIND.r] || virt.k[4]] });
 
@@ -845,17 +861,23 @@ function pollPad(dt) {
   const pads = navigator.getGamepads ? navigator.getGamepads() : [];
   const gp = [...pads].find(p => p && p.connected);
   if (!gp) { if (padOn) { padOn = false; virt.mx = virt.mz = 0; virt.k.fill(false); virt.jump = false; } return; }
-  const ax = i => { const v = gp.axes[i] || 0; return Math.abs(v) < .15 ? 0 : v; }, bt = i => !!gp.buttons[i]?.pressed;
+  const ax = i => { const v = gp.axes[i] || 0; return Math.abs(v) < padDead ? 0 : (v - Math.sign(v) * padDead) / (1 - padDead); }, bt = i => !!gp.buttons[i]?.pressed;
   if (gp.buttons.some(b => b.pressed) || gp.axes.some(a => Math.abs(a) > .3)) { virt.t = performance.now(); padOn = true; }
   if (!padOn) return;
   virt.mx = ax(0); virt.mz = -ax(1);
-  inp.yaw -= ax(2) * dt * 2.8 * (sens / .0022); inp.pitch = clamp(inp.pitch - ax(3) * dt * 2.2 * (sens / .0022), -1.45, 1.45);
+  inp.yaw -= ax(2) * dt * 2.8 * (sens / .0022) * padSens; inp.pitch = clamp(inp.pitch - ax(3) * dt * 2.2 * (sens / .0022) * padSens * (padInvert ? -1 : 1), -1.45, 1.45);
   virt.k = [bt(7), bt(6), bt(4), bt(5), bt(3)];
   virt.jump = bt(0);
   const edge = i => bt(i) && !padPrev[i];
   if (edge(0)) inp.jumpN++; if (edge(1)) inp.dashN++; if (edge(2)) inp.swapN++;
   if (edge(9) && playing) toggleSettings(); // Start: pause / menu
   gp.buttons.forEach((b, i) => padPrev[i] = b.pressed);
+}
+
+// controller rumble with the screen shake (Settings > Controls > Vibration)
+function padBuzz(a) {
+  const gp = [...(navigator.getGamepads?.() || [])].find(p => p?.connected);
+  try { gp?.vibrationActuator?.playEffect?.('dual-rumble', { duration: 60 + Math.min(a, 1) * 240, strongMagnitude: Math.min(1, a * 1.2), weakMagnitude: Math.min(1, a * .8) })?.catch?.(() => {}); } catch {}
 }
 
 function animateArena(dt, t, dark) {

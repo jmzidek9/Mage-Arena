@@ -1267,7 +1267,7 @@ function hud(src, mp) {
   const other = Object.values(src.players).find(p => p.id !== myId);
   $('mate').classList.toggle('hidden', !other);
   const shaky = !!other && !other.ai && netShaky(); $('mate').classList.toggle('lag', shaky);
-  if (other) { $('mateHp').style.width = other.hp / other.max * 100 + '%'; $('mateName').textContent = `${other.down ? '💀 DOWN · ' : ''}${src.mode === 'duel' ? other.ai ? 'AI Wizard' : 'Opponent' : 'Partner'} · ${EL[other.cur || other.el].glyph} ${EL[other.cur || other.el].name}${other.ai ? '' : shaky ? ' · ⚠ connection unstable' : ping ? ` · ${ping} ms` : ''}`; $('mateUlt').style.width = (other.ult || 0) * 100 + '%'; }
+  if (other) { $('mateHp').style.width = other.hp / other.max * 100 + '%'; $('mateName').textContent = `${other.down ? '💀 DOWN · ' : ''}${src.mode === 'duel' ? other.ai ? 'AI Wizard' : 'Opponent' : 'Partner'} · ${EL[other.cur || other.el].glyph} ${EL[other.cur || other.el].name}${other.ai ? '' : shaky ? ' · ⚠ connection unstable' : ping && settings.ping ? ` · ${ping} ms` : ''}`; $('mateUlt').style.width = (other.ult || 0) * 100 + '%'; }
   mateMark(other, src);
   const D = src.duel, opp = other?.id || (myId === 'h' ? 'g' : 'h');
   const U = src.dun;
@@ -1414,7 +1414,7 @@ function renderModes() {
   $('modeCols').innerHTML = Object.entries(MODES).map(([k, m], i) => `<button class="mi" data-mode="${k}" style="--c:${m.c};animation-delay:${.15 + i * .08}s"><i>${R[i]}</i><span>${m.name}</span></button>`).join('');
   $('modeCols').insertAdjacentHTML('beforeend', `<button class="mi mset" data-act="settings" style="--c:#b9add8;animation-delay:${.15 + Object.keys(MODES).length * .08}s"><i>⚙</i><span>Settings</span></button>`);
   for (const b of $('modeCols').children) {
-    if (b.dataset.act === 'settings') { b.onclick = () => { sfx('pick'); toggleSettings(); }; b.onpointerenter = b.onfocus = () => { for (const x of $('modeCols').children) x.classList.toggle('on', x === b); $('modeDesc').innerHTML = '<p>Graphics, sound, mouse and key bindings.</p>'; $('modeDesc').style.setProperty('--c', '#b9add8'); }; continue; }
+    if (b.dataset.act === 'settings') { b.onclick = () => { sfx('pick'); toggleSettings(); }; b.onpointerenter = b.onfocus = () => { for (const x of $('modeCols').children) x.classList.toggle('on', x === b); $('modeDesc').innerHTML = '<p>Five graphics presets up to Ultra (ray-traced light and reflections), plus display, sound, controls and accessibility.</p>'; $('modeDesc').style.setProperty('--c', '#b9add8'); }; continue; }
     b.onclick = () => pickMode(b.dataset.mode);
     b.onpointerenter = b.onfocus = () => modeSel !== b.dataset.mode && (selMode(b.dataset.mode), sfx('pick'));
   }
@@ -1642,6 +1642,7 @@ const LFX_EL = { // [ambient, [[motion, shape, count], ...], extra]
 const LFX_SIZE = { dot: 10, ember: 9, spark: 7, wisp: 46, smoke: 150, flake: 18, star: 15, glint: 13, leaf: 20, drop: 11, bubble: 15, rock: 10, glyph: 26, streak: 1 };
 const LFX_LITE = new Set(['dot', 'ember', 'spark', 'wisp', 'flake', 'star', 'glint', 'bubble', 'glyph', 'streak']); // additive; the rest paint over
 const LFX_RUNES = 'ᚠᚢᚦᚨᚱᚲᚷᚹᚺᚾᛁᛃᛇᛈᛉᛊᛏᛒᛖᛗᛚᛜᛞᛟ';
+let menuFxOn = true; // Settings > Interface > Menu effects
 const LFX = { sys: [], bolt: null, boltT: 3, flash: 0, mx: .5, my: .5, pmx: .5, pmy: .5, T: 0, last: 0, raf: 0, sprites: {},
   reduce: matchMedia('(prefers-reduced-motion: reduce)').matches };
 const lfxRgb = c => [(c >> 16) & 255, (c >> 8) & 255, c & 255], lfxA = (rgb, a) => `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${a})`;
@@ -1753,7 +1754,7 @@ function lfxAmbient(g, s, W, H, T) {
 }
 function lfxFrame(now) {
   LFX.raf = requestAnimationFrame(lfxFrame);
-  const cv = $('elFx'); if (!cv || $('lobby').classList.contains('hidden') || !LFX.sys.length) { LFX.last = 0; return; }
+  const cv = $('elFx'); if (!cv || !menuFxOn || $('lobby').classList.contains('hidden') || !LFX.sys.length) { LFX.last = 0; return; }
   const D = Math.min(devicePixelRatio || 1, 1.5), W = cv.clientWidth, H = cv.clientHeight;
   if (cv.width !== Math.round(W * D) || cv.height !== Math.round(H * D)) { cv.width = Math.round(W * D); cv.height = Math.round(H * D); }
   const dt = LFX.last ? Math.min(.05, (now - LFX.last) / 1000) : 0; LFX.last = now; const T = LFX.T += dt;
@@ -1805,7 +1806,7 @@ function lfxFrame(now) {
         LFX.boltT = 2.5 + Math.random() * 4; const pts = [[W * (.15 + Math.random() * .7), -10]], fork = [];
         while (pts[pts.length - 1][1] < H * (.45 + Math.random() * .25)) { const [px, py] = pts[pts.length - 1]; pts.push([px + (Math.random() - .5) * 90, py + 30 + Math.random() * 40]); if (Math.random() < .18 && !fork.length) fork.push([px, py]); }
         if (fork.length) { let [fx, fy] = fork[0]; const d = Math.random() < .5 ? -1 : 1; for (let i = 0; i < 5; i++) { fx += d * (20 + Math.random() * 40); fy += 25 + Math.random() * 30; fork.push([fx, fy]); } }
-        LFX.bolt = { pts, fork, t: 0 }; LFX.flash = 1;
+        LFX.bolt = { pts, fork, t: 0 }; LFX.flash = flashMul;
       }
     }
   }

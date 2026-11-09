@@ -34,8 +34,8 @@ input{font-family:Cinzel,Georgia,serif;font-size:18px;padding:12px;border-radius
 input::placeholder{color:#b9add8;opacity:.8}input:focus{box-shadow:0 0 0 2px var(--glow),0 0 20px rgba(154,92,255,.5)}
 #status{min-height:1.4em;color:var(--dim)}
 #hud{position:fixed;inset:0;pointer-events:none;z-index:2;font-family:Cinzel,Georgia,serif}
-#cross{position:absolute;left:50%;top:50%;width:4px;height:4px;margin:-2px;border-radius:50%;background:#fff;box-shadow:0 0 8px var(--el)}
-#cross::before{content:'';position:absolute;left:50%;top:50%;width:26px;height:26px;margin:-13px;border-radius:50%;border:1.5px solid color-mix(in srgb,var(--el) 80%,white);opacity:.65;-webkit-mask:conic-gradient(#000 0 20%,transparent 0 25%,#000 0 45%,transparent 0 50%,#000 0 70%,transparent 0 75%,#000 0 95%,transparent 0);mask:conic-gradient(#000 0 20%,transparent 0 25%,#000 0 45%,transparent 0 50%,#000 0 70%,transparent 0 75%,#000 0 95%,transparent 0);animation:spin 8s linear infinite}
+#cross{position:absolute;left:50%;top:50%;width:4px;height:4px;margin:-2px;border-radius:50%;background:#fff;box-shadow:0 0 8px var(--xc,var(--el))}
+#cross::before{content:'';position:absolute;left:50%;top:50%;width:26px;height:26px;margin:-13px;border-radius:50%;border:1.5px solid color-mix(in srgb,var(--xc,var(--el)) 80%,white);opacity:.65;-webkit-mask:conic-gradient(#000 0 20%,transparent 0 25%,#000 0 45%,transparent 0 50%,#000 0 70%,transparent 0 75%,#000 0 95%,transparent 0);mask:conic-gradient(#000 0 20%,transparent 0 25%,#000 0 45%,transparent 0 50%,#000 0 70%,transparent 0 75%,#000 0 95%,transparent 0);animation:spin 8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 #wave{position:absolute;top:18px;left:50%;transform:translateX(-50%);font-size:24px;font-weight:700;letter-spacing:.25em;color:#f6ecd0;text-shadow:0 0 14px rgba(154,92,255,.9),0 2px 2px #000}
 #train{position:absolute;top:120px;right:18px;width:280px;padding:10px 12px;background:rgba(8,14,12,.72);border:1px solid rgba(122,216,160,.4);border-radius:8px;color:#e8f4ec;font-size:12px;pointer-events:none}
@@ -322,12 +322,6 @@ input::placeholder{color:#b9add8;opacity:.8}input:focus{box-shadow:0 0 0 2px var
 #over .stats{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;align-items:center;margin-top:12px}#over .stats .who{width:64px;font-size:11px;color:var(--gold)}
 #over .stats span{display:flex;flex-direction:column;align-items:center;font-size:12px;color:var(--dim);letter-spacing:.1em;text-transform:uppercase}
 #over .stats b{font-family:Cinzel,Georgia,serif;font-size:22px;color:#fff6d8}
-#settings{position:fixed;right:16px;top:16px;z-index:8;padding:16px;max-height:calc(100vh - 32px);overflow-y:auto;max-width:min(440px,calc(100vw - 32px));border-radius:14px;background:rgba(14,8,30,.92);border:1px solid rgba(233,196,106,.4);display:grid;gap:10px;font-family:Cinzel,Georgia,serif;font-size:13px;min-width:250px}
-#settings label{display:grid;grid-template-columns:90px 1fr 46px;align-items:center;gap:8px}
-#settings input{width:100%;padding:0;text-transform:none;letter-spacing:0}
-#settings .pane{display:grid;gap:10px}
-#settings .tabs{display:flex;gap:6px}#settings .tabs button{flex:1;padding:6px}#settings .tabs button.on{border-color:var(--gold);color:#fff6d8}
-#settings label.ck input{width:auto;justify-self:start}
 #binds{display:grid;grid-template-columns:1fr 1fr;gap:4px 10px}#binds div{display:flex;justify-content:space-between;align-items:center;gap:8px}#binds button{min-width:70px;padding:4px 8px;font-size:12px;text-transform:none}#binds button.wait{border-color:var(--gold);color:var(--gold)}
 #pauseTag{text-align:center;font-size:18px;letter-spacing:.2em;color:#fff6d8}#pauseTag small{display:block;font-size:11px;letter-spacing:.05em;color:var(--dim)}
 #swapGrid{display:grid;grid-template-columns:repeat(5,44px);gap:6px;margin-top:6px}
@@ -372,6 +366,96 @@ input::placeholder{color:#b9add8;opacity:.8}input:focus{box-shadow:0 0 0 2px var
 #tset{position:absolute;right:14px;top:14px;width:44px;height:44px;padding:0;border-radius:50%;font-size:20px}
 body.touching #me{top:14px;bottom:auto;left:14px}body.touching #lock{display:none}body.touching #bar{bottom:auto;top:62px;transform:translateX(-50%) scale(.8)}
 @media (max-width:900px){#bar{left:calc(50% + 40px)}.slot{width:52px}.slot .face{width:46px;height:46px}.slot.ult{width:62px}.slot.ult .face{width:56px;height:56px}.slot .ico{font-size:21px}.slot .ico .pico{width:38px;height:38px}.slot.ult .ico .pico{width:48px;height:48px}.slot span{display:none}#slots{gap:7px}#me .bar{width:150px}#meSeal{width:42px;height:42px}#meGlyph{font-size:20px}#mate .bar{width:120px}}
+/* Settings: its own full screen, like the Arena screen. Left: categories and options; right: the live game, lit by whatever you pick */
+#settings{position:fixed;inset:0;z-index:8;display:grid;grid-template-columns:minmax(0,min(960px,68vw)) minmax(0,1fr);grid-template-rows:minmax(0,100%);overflow:hidden;background:linear-gradient(90deg,rgba(4,2,12,.97) 0%,rgba(4,2,12,.93) 52%,rgba(4,2,12,.55) 68%,rgba(4,2,12,.06) 84%,transparent);animation:setIn .35s ease-out;transition:background .3s}
+#settings::before{content:'';position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 60% 80% at 0% 0%,rgba(154,92,255,.15),transparent 60%),radial-gradient(ellipse 50% 60% at 30% 100%,rgba(233,196,106,.07),transparent 60%);transition:opacity .25s}
+@keyframes setIn{from{opacity:0}}
+@keyframes setSlide{from{opacity:0;transform:translateX(-24px)}}
+@keyframes setPane{from{opacity:0;transform:translateY(8px)}}
+.setWrap{position:relative;display:flex;flex-direction:column;min-height:0;height:100%;box-sizing:border-box;padding:clamp(16px,3.2vh,34px) 0 clamp(10px,2vh,20px) clamp(18px,4vw,60px);animation:setSlide .45s cubic-bezier(.2,.9,.3,1) backwards;transition:opacity .25s}
+.setTop{display:flex;align-items:center;gap:16px;margin-bottom:clamp(10px,2.4vh,22px);padding-right:clamp(10px,2vw,28px)}
+.setTop h2{margin:0 0 0 6px;font:900 clamp(26px,4.4vh,40px)/1 'Cinzel Decorative',Cinzel,Georgia,serif;letter-spacing:.08em;background:linear-gradient(180deg,#fffaf0 0%,#f6dc8c 38%,#c9922e 70%,#f3d27a 100%);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 2px 0 #2a1406) drop-shadow(0 0 18px rgba(154,92,255,.55))}
+.setTop button{padding:9px 16px;font-size:12px;letter-spacing:.16em;text-transform:uppercase}
+#setPreset{margin-left:auto;font:700 10.5px Cinzel,Georgia,serif;letter-spacing:.24em;text-transform:uppercase;color:var(--dim);padding:7px 14px;border-radius:20px;border:1px solid rgba(233,196,106,.3);background:rgba(233,196,106,.06);white-space:nowrap}#setPreset b{color:#fff6d8;margin-left:6px}
+.setCols{display:grid;grid-template-columns:clamp(150px,15vw,200px) minmax(0,1fr);gap:clamp(12px,2vw,30px);min-height:0;flex:1}
+#setNav{display:flex;flex-direction:column;gap:3px}
+#setNav button{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:11px 14px;border-radius:11px;background:transparent;border:1px solid transparent;box-shadow:none;font-size:12.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);transition:background .2s,color .2s,border-color .2s}
+#setNav button i{font-style:normal;width:18px;text-align:center;color:var(--gold);opacity:.7;font-size:15px;letter-spacing:0}
+#setNav button:hover{transform:none;background:rgba(255,255,255,.045);color:#fff6d8;box-shadow:none}
+#setNav button.on{color:#fff6d8;background:linear-gradient(90deg,rgba(233,196,106,.2),rgba(233,196,106,.03));border-color:rgba(233,196,106,.35);box-shadow:inset 3px 0 0 var(--gold),0 0 22px rgba(233,196,106,.12)}
+#setNav button.on i{opacity:1;text-shadow:0 0 10px var(--gold)}
+#setMain{overflow-y:auto;min-height:0;padding:6px clamp(10px,2vw,28px) 30px 4px;scrollbar-width:thin;scrollbar-color:rgba(233,196,106,.35) transparent;-webkit-mask:linear-gradient(180deg,transparent,#000 12px,#000 calc(100% - 26px),transparent);mask:linear-gradient(180deg,transparent,#000 12px,#000 calc(100% - 26px),transparent)}
+#setMain .pane{animation:setPane .3s ease-out}
+#setMain h3{display:flex;align-items:center;gap:12px;margin:22px 0 6px;font:700 11px Cinzel,Georgia,serif;letter-spacing:.34em;text-transform:uppercase;color:var(--gold)}
+#setMain h3::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,rgba(233,196,106,.45),transparent)}
+#setMain .pane>h3:first-child{margin-top:4px}
+.srow{display:grid;grid-template-columns:minmax(130px,1fr) auto;align-items:center;gap:16px;min-height:44px;padding:5px 12px;border-radius:10px;transition:background .15s}
+.srow:hover{background:linear-gradient(90deg,rgba(255,255,255,.055),rgba(255,255,255,.015))}
+.srow .sn{font-size:16px;color:#efe8ff}
+.srow.off{opacity:.38}.srow.off .sc{pointer-events:none}
+.sc{display:flex;align-items:center;justify-content:flex-end;gap:12px}
+.seg,.step{display:flex;align-items:center;padding:3px;gap:2px;border-radius:10px;background:rgba(0,0,0,.42);border:1px solid rgba(255,255,255,.08)}
+.seg button{padding:6px 12px;font-size:11.5px;letter-spacing:.06em;border:0;border-radius:7px;background:transparent;box-shadow:none;color:var(--dim);white-space:nowrap}
+.seg button:hover{transform:none;color:#fff;background:rgba(255,255,255,.07);box-shadow:none}
+.seg button.on{background:linear-gradient(180deg,#f3d27a,#b8862e);color:#1d1003;box-shadow:0 0 14px rgba(233,196,106,.4),inset 0 1px 0 rgba(255,255,255,.5)}
+.step span{min-width:128px;text-align:center;font:700 12.5px Cinzel,Georgia,serif;letter-spacing:.06em;color:#fff6d8}
+.step button{width:30px;height:28px;padding:0;font-size:18px;line-height:1;border:0;border-radius:7px;background:rgba(255,255,255,.05);box-shadow:none;color:var(--gold)}
+.step button:hover{transform:none;background:rgba(233,196,106,.2);box-shadow:none}
+.tog{position:relative;width:48px;height:26px;padding:0;border-radius:13px;background:rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.16);box-shadow:inset 0 2px 5px rgba(0,0,0,.5)}
+.tog:hover{transform:none;box-shadow:inset 0 2px 5px rgba(0,0,0,.5),0 0 12px rgba(233,196,106,.25)}
+.tog i{position:absolute;left:3px;top:3px;width:18px;height:18px;border-radius:50%;background:#7d7299;transition:transform .22s cubic-bezier(.3,1.4,.5,1),background .2s,box-shadow .2s}
+.tog.on{background:linear-gradient(90deg,rgba(233,196,106,.55),rgba(233,196,106,.25));border-color:var(--gold)}
+.tog.on i{transform:translateX(22px);background:#fff6d8;box-shadow:0 0 10px var(--gold)}
+#settings input[type=range]{-webkit-appearance:none;appearance:none;width:clamp(140px,16vw,230px);height:6px;margin:0;padding:0;border:0;border-radius:3px;background:linear-gradient(90deg,#b8862e,var(--gold) var(--p,50%),rgba(255,255,255,.13) var(--p,50%));box-shadow:none;cursor:pointer;letter-spacing:0;text-transform:none}
+#settings input[type=range]:focus{box-shadow:none}
+#settings input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#fffaf0,#e9c46a 70%);border:2px solid #2a1a52;box-shadow:0 0 0 2px rgba(233,196,106,.5),0 0 14px rgba(233,196,106,.6)}
+#settings input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:#f3d27a;border:2px solid #2a1a52;box-shadow:0 0 0 2px rgba(233,196,106,.5),0 0 14px rgba(233,196,106,.6)}
+#settings output{min-width:46px;text-align:right;font:700 12.5px Cinzel,Georgia,serif;color:#fff6d8}
+/* the five quality presets */
+.presets{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin:4px 0 6px}
+.pre{position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:flex-start;gap:7px;min-height:134px;padding:15px 13px 12px;text-align:left;border-radius:14px;border-color:rgba(233,196,106,.22);background:linear-gradient(180deg,rgba(42,26,82,.55),rgba(12,7,26,.75));letter-spacing:.06em}
+.pre b{font:900 15px Cinzel,Georgia,serif;letter-spacing:.08em;color:#fff6d8}
+.pre small{font:400 12px/1.38 Spectral,Georgia,serif;letter-spacing:0;color:var(--dim)}
+.pre i{margin-top:auto;font-style:normal;font-size:9px;letter-spacing:3px;color:var(--gold);text-shadow:0 0 6px rgba(233,196,106,.7)}.pre i u{text-decoration:none;color:rgba(255,255,255,.14);text-shadow:none}
+.pre:hover{transform:translateY(-3px);border-color:rgba(233,196,106,.6)}
+.pre.on{border-color:var(--gold);background:radial-gradient(circle at 50% 130%,rgba(233,196,106,.38),rgba(12,7,26,.85) 72%);box-shadow:0 0 0 1px var(--gold),0 0 28px rgba(233,196,106,.38),inset 0 1px 0 rgba(255,255,255,.15)}
+.pre.on::after{content:'\2713';position:absolute;right:11px;top:10px;font:900 13px Cinzel,Georgia,serif;color:var(--gold)}
+.pre[data-pre=ultra] b{background:linear-gradient(90deg,#fff6d8,#f3d27a,#c39bff,#8ad8ff,#fff6d8) 0 0/200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:ultraB 4s linear infinite}
+@keyframes ultraB{to{background-position:200% 0}}
+.pre[data-pre=ultra]::before{content:'';position:absolute;inset:0;border-radius:inherit;padding:1.5px;background:conic-gradient(from var(--spin),transparent 0 60%,#c39bff 75%,#fff 82%,#8ad8ff 89%,transparent 100%);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;animation:spinb 3.2s linear infinite;pointer-events:none;opacity:.9}
+#setCustom{margin:2px 4px 0;font-size:13px;color:var(--gold)}
+.looks{display:flex;gap:8px;flex-wrap:wrap;padding:4px 12px 8px}.looks button{padding:8px 16px;font-size:12px;letter-spacing:.12em}
+/* the live side: the game shows through, with what the hovered setting does */
+#setSide{position:relative;display:flex;flex-direction:column;justify-content:flex-end;align-items:flex-end;gap:12px;padding:clamp(16px,3.2vh,34px) clamp(16px,2.6vw,40px) clamp(16px,3vh,30px) 12px;pointer-events:none;min-width:0}
+#setSide>*{pointer-events:auto}
+.pvTag{position:absolute;top:clamp(16px,3.2vh,34px);right:clamp(16px,2.6vw,40px);display:flex;align-items:center;gap:10px;padding:8px 14px;border-radius:20px;font:700 10.5px Cinzel,Georgia,serif;letter-spacing:.3em;text-transform:uppercase;color:#fff6d8;background:rgba(4,2,12,.6);border:1px solid rgba(233,196,106,.3);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.pvTag i{width:7px;height:7px;border-radius:50%;background:#ff4a5a;box-shadow:0 0 8px #ff4a5a;animation:breathe2 1.6s ease-in-out infinite}
+.pvTag b{color:var(--gold);letter-spacing:.12em}
+#setInfo{width:min(380px,100%);padding:16px 18px;border-radius:14px;background:linear-gradient(160deg,rgba(28,14,56,.84),rgba(8,4,20,.84));border:1px solid rgba(233,196,106,.3);box-shadow:0 12px 40px rgba(0,0,0,.5);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);transition:opacity .25s}
+#setInfo b{font:700 16px Cinzel,Georgia,serif;letter-spacing:.06em;color:#fff6d8}
+#setInfo p{margin:7px 0 0;font-size:14.5px;line-height:1.5;color:#cfc6ea}#setInfo em{display:block;margin-top:6px;font-style:normal;color:#ff9a7a}
+#setInfo .cost{display:block;margin-top:10px;font:700 10.5px Cinzel,Georgia,serif;letter-spacing:.24em;text-transform:uppercase;color:var(--dim)}#setInfo .cost i{font-style:normal;color:var(--gold);letter-spacing:3px;margin-left:6px}#setInfo .cost u{text-decoration:none;color:rgba(255,255,255,.15);letter-spacing:3px}
+#setPeek{padding:9px 16px;font-size:12px;letter-spacing:.14em;text-transform:uppercase;background:rgba(4,2,12,.6)}
+#settings.peek{background:transparent}#settings.peek .setWrap,#settings.peek #setInfo,#settings.peek::before{opacity:0}#settings.peek .setWrap{pointer-events:none}
+/* in a game: the pause menu is the Game tab */
+#settings [data-pane=game]{display:grid;gap:14px;align-content:start}
+#settings #pauseTag{text-align:left;font:900 26px Cinzel,Georgia,serif;letter-spacing:.2em;padding:6px 12px}#settings #pauseTag small{font-family:Spectral,Georgia,serif;font-size:13px;letter-spacing:.02em;margin-top:4px}
+#settings #swapGrid{grid-template-columns:repeat(auto-fill,52px);padding:0 12px}
+#settings #cheatBody{padding:0 12px}#settings #cheatBody .row{justify-content:flex-start}
+#settings #leaveBtn{justify-self:start;margin:10px 12px 0}
+#binds{padding:0 12px}#bindReset{margin:12px 12px 0}
+@media (max-width:1100px){#settings{grid-template-columns:minmax(0,1fr);background:rgba(4,2,12,.95)}#setSide{display:none}}
+@media (max-width:760px){.setCols{grid-template-columns:minmax(0,1fr)}#setNav{flex-direction:row;overflow-x:auto;gap:4px;padding-bottom:6px}#setNav button{width:auto;white-space:nowrap;padding:8px 12px}.presets{grid-template-columns:repeat(2,minmax(0,1fr))}.srow{grid-template-columns:minmax(0,1fr);gap:6px}.sc{justify-content:flex-start;flex-wrap:wrap}.setWrap{padding-left:14px}#setPreset{display:none}}
+/* HUD size and opacity, crosshair styles, the FPS counter (Settings > Interface / Display) */
+#me,#mate,#bar{scale:var(--hudS,1);opacity:var(--hudA,1)}#me,#bar{transform-origin:0 100%}#mate{transform-origin:100% 100%}body.touching #me,body.touching #bar{transform-origin:0 0}
+#cross{scale:var(--crossS,1)}
+#cross[data-s=dot]::before{display:none}
+#cross[data-s=circle]::before{-webkit-mask:none;mask:none;animation:none;opacity:.7}
+#cross[data-s=cross]{background:transparent;box-shadow:none}
+#cross[data-s=cross]::before{width:22px;height:22px;margin:-11px;border:0;border-radius:0;-webkit-mask:none;mask:none;animation:none;opacity:.95;background:linear-gradient(var(--xc,#fff),var(--xc,#fff)) 50% 0/2px 8px no-repeat,linear-gradient(var(--xc,#fff),var(--xc,#fff)) 50% 100%/2px 8px no-repeat,linear-gradient(var(--xc,#fff),var(--xc,#fff)) 0 50%/8px 2px no-repeat,linear-gradient(var(--xc,#fff),var(--xc,#fff)) 100% 50%/8px 2px no-repeat;filter:drop-shadow(0 0 2px #000) drop-shadow(0 0 4px var(--el))}
+#cross[data-s=none]{display:none}
+#fpsMeter{position:fixed;top:10px;right:12px;z-index:9;padding:4px 10px;border-radius:7px;font:700 12px Cinzel,Georgia,serif;letter-spacing:.08em;color:#9dffb0;background:rgba(0,0,0,.5);border:1px solid rgba(157,255,176,.25);pointer-events:none;white-space:pre}
+body.calm .overlay *,body.calm #settings,body.calm #settings *{animation:none!important;transition:none!important}
 </style>
 <!-- pack.py inlines these (and the models and audio) so index.html is one self-contained file that runs in every browser, Safari included -->
 <script src="js/vendor/three.min.js"></script>
@@ -433,33 +517,23 @@ body.touching #me{top:14px;bottom:auto;left:14px}body.touching #lock{display:non
 </div>
 
 <div id="settings" class="hidden">
-  <div id="pauseTag" class="hidden"></div>
-  <div class="tabs"><button class="ghost on" data-tab="general">General</button><button class="ghost" data-tab="visuals">Visuals</button><button class="ghost" data-tab="controls">Controls</button></div>
-  <div class="pane" data-pane="general">
-    <label>Sensitivity<input id="sSens" type="range" min=".2" max="3" step=".05"><span id="sSensV"></span></label>
-    <label>Sound<input id="sVol" type="range" min="0" max="1.5" step=".05"><span id="sVolV"></span></label>
-    <label>Music<input id="sMus" type="range" min="0" max="1.5" step=".05"><span id="sMusV"></span></label>
-    <label>Screen shake<input id="sShake" type="range" min="0" max="1.5" step=".05"><span id="sShakeV"></span></label>
-    <label class="ck">Damage numbers<input id="cNums" type="checkbox"></label>
-    <div id="elSwap" class="hidden">Switch element<div id="swapGrid"></div></div>
-    <div id="cheats" class="hidden">Cheats (testing)<div id="cheatBody"></div></div>
+  <div class="setWrap">
+    <div class="setTop"><button id="setClose" class="ghost">&larr; Back</button><h2>Settings</h2><span id="setPreset"></span><button id="setReset" class="ghost">Reset tab</button></div>
+    <div class="setCols">
+      <nav id="setNav"></nav>
+      <div id="setMain">
+        <div class="pane hidden" data-pane="game">
+          <div id="pauseTag" class="hidden"></div>
+          <div id="elSwap" class="hidden"><h3>Switch element</h3><div id="swapGrid"></div></div>
+          <div id="cheats" class="hidden"><h3>Cheats (testing)</h3><div id="cheatBody"></div></div>
+          <button id="leaveBtn" class="ghost hidden">Leave to menu</button>
+        </div>
+      </div>
+    </div>
   </div>
-  <div class="pane hidden" data-pane="visuals">
-    <label>Field of view<input id="sFov" type="range" min="60" max="100" step="1"><span id="sFovV"></span></label>
-    <label>Brightness<input id="sBright" type="range" min=".6" max="1.6" step=".05"><span id="sBrightV"></span></label>
-    <label>Render scale<input id="sScale" type="range" min=".5" max="1" step=".05"><span id="sScaleV"></span></label>
-    <label class="ck">Bloom<input id="cBloom" type="checkbox"></label>
-    <label class="ck">Shadows<input id="cShadows" type="checkbox"></label>
-    <label class="ck">Film filter<input id="cFilm" type="checkbox"></label>
-  </div>
-  <div class="pane hidden" data-pane="controls">
-    <label class="ck">Invert mouse Y<input id="cInvert" type="checkbox"></label>
-    <div id="binds"></div>
-    <button id="bindReset" class="ghost">Reset keys</button>
-  </div>
-  <button id="leaveBtn" class="ghost hidden">Leave to menu</button>
-  <button id="setClose" class="ghost">Close</button>
+  <aside id="setSide"><div class="pvTag"><i></i>Live view<b id="setFps"></b></div><div id="setInfo"></div><button id="setPeek" class="ghost">&#9673; Hold to look</button></aside>
 </div>
+<div id="fpsMeter" class="hidden"></div>
 
 <div id="talents" class="overlay hidden">
   <div class="panel">
@@ -496,7 +570,7 @@ body.touching #me{top:14px;bottom:auto;left:14px}body.touching #lock{display:non
       : Promise.resolve(window.fflateGunzip(u8).buffer); // Safari before 16.4
     const loader = new GLTFLoader(), names = ['arena', 'duel', 'fp_rig', 'spells', 'enemies', 'wizard', 'elements', 'islands', 'foes'];
     window.GLB = Object.fromEntries(await Promise.all(names.map(async n => [n, (await loader.parseAsync(await gunzip(bytes(window.MAGE_ASSETS_GZ[n])), '')).scene])));
-    for (const src of ['core.js', 'elements.js', 'icons.js', 'sim.js', 'modes.js', 'dungeon.js', 'city.js', 'areas.js', 'blocks.js', 'view.js', 'net.js']) {
+    for (const src of ['core.js', 'gfx.js', 'elements.js', 'icons.js', 'sim.js', 'modes.js', 'dungeon.js', 'city.js', 'areas.js', 'blocks.js', 'view.js', 'settings.js', 'net.js']) {
       const code = document.querySelector(`script[data-src="js/${src}"]`);
       if (!code) throw new Error(`this file is incomplete (${src} missing). Download index.html again`);
       const s = document.createElement('script'); s.text = code.textContent; document.body.appendChild(s);

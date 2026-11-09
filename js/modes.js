@@ -274,7 +274,8 @@ function showScenery(mode) {
   arena.visible = mode === 'arena'; trainG.visible = mode === 'train'; duelG.visible = mode === 'duel'; dunView.visible = under; cityG.visible = mode === 'city';
   for (const l of cityLights) l.visible = false; // cityFrame lights the nearest braziers
   if (mode !== 'city') { moon.position.copy(BH).multiplyScalar(70); moon.target.position.set(0, 0, 0); moon.target.updateMatrixWorld(); }
-  Object.assign(moon.shadow.camera, mode === 'city' ? { left: -42, right: 42, top: 42, bottom: -42 } : { left: -27, right: 27, top: 27, bottom: -27 }); moon.shadow.camera.updateProjectionMatrix();
+  const sr = mode === 'city' ? 42 : mode === 'train' ? TRAIN_R + 3 : 27; // the training yard is wider than the arena: shadows reach its far end too
+  Object.assign(moon.shadow.camera, { left: -sr, right: sr, top: sr, bottom: -sr }); moon.shadow.camera.updateProjectionMatrix();
   for (const l of amb.lights) l.visible = mode === 'arena';
   for (const l of trainLights) l.visible = mode === 'train';
   for (const l of duelAmb.lights) l.visible = mode === 'duel';

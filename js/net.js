@@ -39,48 +39,6 @@ function startSolo() {
   const p = S.players.h;
   banner(p.el2 ? `${EL[p.el].name.toUpperCase()} + ${EL[p.el2].name.toUpperCase()} · TAB TO SWAP` : `${EL[p.el].glyph} ${EL[p.el].name.toUpperCase()}`, css(EL[p.el].color), 3200);
 }
-$('gfxBtn').textContent = `Graphics: ${HQ ? 'High' : 'Low'}`;
-$('gfxBtn').onclick = () => { try { localStorage.setItem('magepact_gfx', HQ ? 'low' : 'high'); } catch {} location.reload(); };
-
-// settings (remembered per browser). General: sensitivity, volume. Visuals: field of view, brightness, bloom, shadows, film filter
-let baseFov = 75;
-function applySettings(o) {
-  sens = .0022 * o.sens; sfxVol = .35 * o.vol; if (master) master.gain.value = sfxVol; musicVol = .4 * o.mus; if (musicBus) musicBus.gain.value = musicVol; baseFov = o.fov;
-  renderer.toneMappingExposure = 1.1 * o.bright;
-  const pr = (HQ ? Math.min(devicePixelRatio, 2) : 1) * o.scale; // render scale: fewer pixels for slow laptops, live
-  if (renderer.getPixelRatio() !== pr) { renderer.setPixelRatio(pr); composer.setSize(innerWidth, innerHeight); }
-  if (bloomPass) bloomPass.enabled = o.bloom && HQ;
-  if (renderer.shadowMap.enabled !== o.shadows) { renderer.shadowMap.enabled = moon.castShadow = o.shadows; scene.traverse(m => { if (m.material) m.material.needsUpdate = true; }); }
-  filmPass.uniforms.uFilm.value = o.film ? 1 : 0;
-  shakeMul = o.shake; showNums = o.nums; invertY = o.invert; Object.assign(BIND, BIND_DEF, o.keys); hudKey = '';
-  $('sSens').value = o.sens; $('sVol').value = o.vol; $('sMus').value = o.mus; $('sFov').value = o.fov; $('sBright').value = o.bright; $('sScale').value = o.scale;
-  $('cBloom').checked = o.bloom; $('cBloom').disabled = !bloomPass || !HQ; $('cShadows').checked = o.shadows; $('cFilm').checked = o.film; $('cNums').checked = o.nums; $('cInvert').checked = o.invert; $('sShake').value = o.shake; $('sShakeV').textContent = Math.round(o.shake * 100) + '%'; renderBinds();
-  $('sSensV').textContent = o.sens.toFixed(2); $('sVolV').textContent = Math.round(o.vol * 100) + '%'; $('sMusV').textContent = Math.round(o.mus * 100) + '%'; $('sFovV').textContent = o.fov; $('sBrightV').textContent = Math.round(o.bright * 100) + '%'; $('sScaleV').textContent = Math.round(o.scale * 100) + '%';
-}
-// Settings > Controls: click a key, press the new one (Esc cancels). Stored as settings.keys
-const BIND_NAMES = { fwd: 'Forward', back: 'Back', left: 'Left', right: 'Right', jump: 'Jump', dash: 'Dash', swap: 'Swap element', alt: 'Right click (key)', q: 'Skill 1', e: 'Skill 2', r: 'Ultimate', block: 'Block (hold)' };
-let rebinding = null;
-function renderBinds() {
-  $('binds').innerHTML = Object.entries(BIND_NAMES).map(([k, n]) => `<div>${n}<button class="ghost${rebinding === k ? ' wait' : ''}" data-k="${k}">${rebinding === k ? 'press…' : keyName(BIND[k])}</button></div>`).join('');
-  for (const b of $('binds').querySelectorAll('button')) b.onclick = () => { rebinding = b.dataset.k; renderBinds(); };
-}
-addEventListener('keydown', e => { // capture phase: the key goes to the binding, not the game (or Esc's menu toggle)
-  if (!rebinding) return;
-  e.preventDefault(); e.stopImmediatePropagation();
-  if (e.code !== 'Escape') { for (const k in BIND) if (k !== rebinding && BIND[k] === e.code) settings.keys[k] = BIND[rebinding]; settings.keys[rebinding] = e.code; } // taking a used key swaps the two
-  rebinding = null; saveSettings();
-}, true);
-$('bindReset').onclick = () => { settings.keys = {}; saveSettings(); };
-let settings = { sens: 1, vol: 1, mus: 1, fov: 75, bright: 1, scale: 1, bloom: true, shadows: HQ, film: true, shake: 1, nums: true, invert: false, keys: {} };
-try { settings = { ...settings, ...JSON.parse(localStorage.getItem('magepact_settings') || '{}') }; } catch {}
-applySettings(settings);
-const saveSettings = () => { applySettings(settings); try { localStorage.setItem('magepact_settings', JSON.stringify(settings)); } catch {} };
-for (const [id, k] of [['sSens', 'sens'], ['sVol', 'vol'], ['sMus', 'mus'], ['sFov', 'fov'], ['sBright', 'bright'], ['sScale', 'scale'], ['sShake', 'shake']]) $(id).oninput = () => { settings[k] = +$(id).value; saveSettings(); };
-for (const [id, k] of [['cBloom', 'bloom'], ['cShadows', 'shadows'], ['cFilm', 'film'], ['cNums', 'nums'], ['cInvert', 'invert']]) $(id).onchange = () => { settings[k] = $(id).checked; saveSettings(); };
-for (const b of document.querySelectorAll('#settings .tabs button')) b.onclick = () => {
-  for (const x of document.querySelectorAll('#settings .tabs button')) x.classList.toggle('on', x === b);
-  for (const p of document.querySelectorAll('#settings .pane')) p.classList.toggle('hidden', p.dataset.pane !== b.dataset.tab);
-};
 // the menu pauses solo play; online the world keeps running for your partner (and the bots)
 const paused = () => playing && role === 'host' && !conn?.open && !$('settings').classList.contains('hidden');
 // the settings panel doubles as the mid-game element menu
@@ -143,10 +101,10 @@ function pickEl(el) {
   banner(`${EL[el].glyph} ${EL[el].name.toUpperCase()}`, css(EL[el].color), 1500);
   renderSwap();
 }
-function menuChanged() { renderSwap(); $('setClose').textContent = playing ? 'Resume' : 'Close'; $('leaveBtn').classList.toggle('hidden', !playing); }
-const toggleSettings = () => { $('settings').classList.toggle('hidden'); menuChanged(); };
+function menuChanged() { renderSwap(); $('setClose').textContent = playing ? '▶ Resume' : '← Back'; $('leaveBtn').classList.toggle('hidden', !playing); }
+const toggleSettings = () => $('settings').classList.contains('hidden') ? openSettings() : closeSettings(); // the Settings screen (settings.js)
 $('setBtn').onclick = toggleSettings;
-$('setClose').onclick = () => { $('settings').classList.add('hidden'); menuChanged(); if (playing) lockMouse(); }; // Resume grabs the mouse back: no extra click
+$('setClose').onclick = () => { closeSettings(); if (playing) lockMouse(); }; // Resume grabs the mouse back: no extra click
 $('tset').onclick = toggleSettings;
 addEventListener('keydown', e => { if (e.code === 'Escape' && playing) toggleSettings(); });
 
@@ -228,7 +186,7 @@ function hostGone() {
   playing = false; $('hud').classList.add('hidden');
   $('overTitle').textContent = 'HOST LEFT';
   $('overTxt').innerHTML = 'The host left the game, so this run is over. What you earned is kept.' + runXP({ wave: R?.dun?.floor ?? R?.wave ?? 0 }, R?.players.g);
-  $('againBtn').classList.add('hidden'); $('settings').classList.add('hidden'); $('over').classList.remove('hidden');
+  $('againBtn').classList.add('hidden'); closeSettings(); $('over').classList.remove('hidden');
   unlockMouse();
 }
 $('hostBtn').onclick = () => {
@@ -544,17 +502,21 @@ function update(dt) {
 }
 window.MP.tick = (sec, dt = 1 / 60) => { for (let t = 0; t < sec; t += dt) { update(dt); stepFx(dt); stepParticles(dt); } };
 window.MP.net = () => ({ role, myId, castFxN, open: !!conn?.open, ping, roomCode, playing, guestEl, R: !!R, G: G && { x: G.x, z: G.z, hp: G.hp }, phase: (role === 'guest' ? R : S)?.phase, players: Object.keys((role === 'guest' ? R : S)?.players || {}) });
-window.MP.gl = () => ({ ...renderer.info.render, programs: renderer.info.programs.length, geometries: renderer.info.memory.geometries });
-// slow device (many Chromebooks): after 6 s of smooth-running play under 30 fps, drop to low graphics live (no reload).
-// Measures real frame gaps, ignores hidden tabs / stalls, and never overrides a graphics setting the player picked.
+window.MP.gl = () => ({ ...gfxInfo, programs: renderer.info.programs.length, geometries: renderer.info.memory.geometries }); // gfxInfo: the scene pass (gfx.js)
+// Adaptive quality (Settings > Graphics): after 6 s of smooth-running play under 30 fps, drop one preset live (no reload).
+// Measures real frame gaps and ignores hidden tabs, stalls and a frame cap of 30 or less.
 let aqT = 0, aqN = 0, aqLast = 0;
 function autoQuality() {
   const now = performance.now(), gap = now - aqLast; aqLast = now;
-  let pref = null; try { pref = localStorage.getItem('magepact_gfx'); } catch {}
-  if (!HQ || pref || !playing || hold || document.hidden || gap > 250) { aqT = aqN = 0; return; }
+  if (!settings.autoQ || settings.preset === 'low' || (fpsCap && fpsCap <= 30) || !playing || hold || document.hidden || gap > 250) { aqT = aqN = 0; return; }
   aqT += gap / 1000; aqN++;
   if (aqT < 6) return;
-  if (aqN / aqT < 30) { setLowQuality(); applySettings(settings); $('gfxBtn').textContent = 'Graphics: Low'; banner('LOW GRAPHICS ON FOR SMOOTHER PLAY', '#cfc8e8', 2200); }
+  if (aqN / aqT < 30) {
+    const near = GFX_ORDER.reduce((b, p) => { const n = GFX_KEYS.filter(k => GFX_PRESETS[p][k] === settings[k]).length; return n > b[1] ? [p, n] : b; }, ['high', -1])[0];
+    const p = GFX_ORDER[Math.max(0, GFX_ORDER.indexOf(near) - 1)];
+    Object.assign(settings, GFX_PRESETS[p], { preset: p }); saveSettings();
+    banner(`GRAPHICS SET TO ${PRESET_INFO[p][0].toUpperCase()} FOR SMOOTHER PLAY`, '#cfc8e8', 2200);
+  }
   aqT = aqN = 0;
 }
 let hold = false; // test switch: freeze the sim between scripted frames so screenshots show exactly that state
@@ -567,6 +529,7 @@ function frame(now, manual = false) {
   if (AC && (AC.state === 'running') === paused()) paused() ? AC.suspend() : AC.resume(); // sound freezes with a solo pause
   if (!manual) autoQuality();
   const src = role === 'guest' ? R : (playing ? snap() : null), mp = me();
+  audioTick(); // the menu-music setting follows you in and out of games
   music(!playing || !src ? 'menu' : src.phase === 'over' ? 'over' : src.mode === 'train' ? 'train' : src.enemies.some(e => ET[e.type].boss) ? 'boss' : src.mode);
   if (playing && mp) footsteps(mp, src?.mode, dt);
   animateArena(dt, t, src?.mod === 'darkness' && src?.phase === 'fight');
@@ -579,13 +542,13 @@ function frame(now, manual = false) {
     trauma = Math.max(0, trauma - dt * 1.6);
     const sh = trauma * trauma;
     camera.position.x += (Math.random() - .5) * sh * .5; camera.position.y += (Math.random() - .5) * sh * .5; camera.rotation.z += (Math.random() - .5) * sh * .08;
-    fovKick += (0 - fovKick) * Math.min(1, dt * 8); camera.fov = baseFov + fovKick * 10; camera.updateProjectionMatrix();
-    vm.visible = !mp.down;
+    fovKick += (0 - fovKick) * Math.min(1, dt * 8); camera.fov = baseFov + fovKick * 10 * kickMul; camera.updateProjectionMatrix();
+    vm.visible = !mp.down && showHands;
     vmKick = Math.max(0, vmKick - dt * 5);
     const k = vmKick * vmKick, chargeK = renderAim(mp, dt), chan = mp.ch ? 1 : 0, gd = guardPose(mp, dt); // gd: the block held up (blocks.js)
     const moving = (keys.KeyW || keys.KeyA || keys.KeyS || keys.KeyD) && mp.gr;
     vmBob += dt * (moving ? 9 : 2);
-    const amp = moving ? .012 : .004, tremble = (chargeK * .004 + chan * .003) * Math.sin(t * 60);
+    const amp = (moving ? .012 : .004) * bobMul, tremble = (chargeK * .004 + chan * .003) * Math.sin(t * 60);
     vm.position.set(Math.cos(vmBob * .5) * amp + tremble, Math.sin(vmBob) * amp - (mp.vy || 0) * .003, 0);
     handL.position.set(hL0.x + k * .05 + chan * .04, hL0.y + k * .06 + chan * .05, hL0.z - k * .16 - chan * .12 + chargeK * .06); handL.rotation.x = hLr.x + k * .5 + chan * .4; // casts
     handB.position.set(-hL0.x - gd * .05, hL0.y + gd * .1, hL0.z - gd * .16); // as far out as the left hand's cast handB.rotation.x = hLr.x + gd * .8; handB.rotation.z = -hLr.z + gd * .15; // only blocks: raised straight up on its own side
@@ -598,7 +561,7 @@ function frame(now, manual = false) {
   timeFx = Math.max(0, timeFx - dt); whiteFx = Math.max(0, whiteFx - dt * 2.5); dodgeFx = Math.max(0, dodgeFx - dt);
   const tsOn = src?.ts ? 1 : 0;
   filmPass.uniforms.uGray.value += (Math.max(tsOn, dodgeFx > 0 ? .5 : 0) - filmPass.uniforms.uGray.value) * Math.min(1, dt * 6);
-  filmPass.uniforms.uWhite.value = Math.min(whiteFx, .5) * .7; // never more than a 35% wash: a full white-out hid the fight
+  filmPass.uniforms.uWhite.value = Math.min(whiteFx, .5) * .7 * flashMul; // never more than a 35% wash: a full white-out hid the fight (less with Reduce flashing)
   // the sky's black hole flares while a Singularity is open, and burns brighter through boss waves
   const flare = src?.ents?.some(n => n.mv === 'gravity.4') ? 1 : src?.enemies?.some(e => e.type === 'boss') ? .45 : 0;
   skyU.uFlare.value += (flare - skyU.uFlare.value) * Math.min(1, dt * 3);
@@ -606,7 +569,7 @@ function frame(now, manual = false) {
   skyU.uStorm.value += (storm - skyU.uStorm.value) * Math.min(1, dt * (storm ? 1.8 : 1.2));
   const red = src?.ents?.some(n => n.mv === 'blood.4') ? 1 : 0; skyU.uRed.value += (red - skyU.uRed.value) * Math.min(1, dt * (red ? 2 : 1.2)); // Blood Moon: the sky bleeds
   const ecl = src?.ents?.some(n => n.mv === 'shadow.4') ? 1 : 0; skyU.uEclipse.value += (ecl - skyU.uEclipse.value) * Math.min(1, dt * (ecl ? 2.5 : 1.2)); // Eclipse: the sky goes dark while the black sun is up
-  if (skyU.uStorm.value > .5 && Math.random() < dt * 1.4) skyU.uBolt.value = Math.max(skyU.uBolt.value, rand(.5, 1)); // distant lightning across the sky
+  if (skyU.uStorm.value > .5 && Math.random() < dt * 1.4) skyU.uBolt.value = Math.max(skyU.uBolt.value, rand(.5, 1) * flashMul); // distant lightning across the sky
   skyU.uBolt.value = Math.max(0, skyU.uBolt.value - dt * 4.5);
   stepParticles(dt); stepFx(dt); stepFlashes(dt); stepNums(dt); cityFrame(dt, t);
   composer.render();
@@ -622,7 +585,13 @@ function footsteps(mp, mode, dt) {
 }
 // one bad frame (a broken effect) is logged and skipped instead of killing the loop for good
 let frameErrs = 0;
-renderer.setAnimationLoop(now => { lastRaf = performance.now(); lastBg = 0; try { frame(now); } catch (err) { if (frameErrs++ < 20) console.error(err); } });
+let capNext = 0, fpsT = 0, fpsN = 0;
+renderer.setAnimationLoop(now => {
+  lastRaf = performance.now(); lastBg = 0;
+  if (fpsCap) { const iv = 1000 / fpsCap; if (now < capNext - 1) return; capNext = now - capNext > iv ? now + iv : capNext + iv; } // Frame rate limit
+  fpsN++; if (now - fpsT >= 500) { fpsNow = Math.round(fpsN * 1000 / (now - fpsT)); fpsT = now; fpsN = 0; fpsShow(); }
+  try { frame(now); } catch (err) { if (frameErrs++ < 20) console.error(err); }
+});
 // step the real frame loop by hand (the browser pauses requestAnimationFrame for hidden tabs)
 window.MP.frames = (n, dt = 1 / 60) => { for (let i = 0; i < n; i++) frame(last + dt * 1000, true); };
 window.MP.hold = on => { hold = on; };
