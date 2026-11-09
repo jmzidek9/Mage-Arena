@@ -170,7 +170,7 @@ function cityMap() {
     // warm-up: draw one frame with every kind of city object showing (shadows too), so no shader compiles mid-fight
     const vis = cityG.visible, D = CITY.view.debris; cityG.visible = true; D.bm.setVisibleAt(0, true);
     for (const d of CITY.view.bm) { d.bm.visible = d.im.visible = true; }
-    try { renderer.render(scene, camera); } catch {}
+    warmRender(); // gfx.js
     D.bm.setVisibleAt(0, false); for (const d of CITY.view.bm) { d.near = true; d.im.visible = false; } cityG.visible = vis;
   }
   if (!CITY.blk.size) { cityReset(); return; } // first time on this machine: every block in place (the guest may miss the reset event)

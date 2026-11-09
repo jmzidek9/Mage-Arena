@@ -1328,7 +1328,7 @@ function warmFx() {
   if (!inkPool.length) { const d = inkDragonBuild(); inkPool.push(d); g.add(d, d.userData.body); } // the Ink Dragon is built (and compiled) now, not on its first cast
   g.scale.setScalar(.05);
   camera.add(g); g.position.set(0, 0, -3);
-  try { renderer.compile(scene, camera); renderer.render(scene, camera); } catch (err) { console.error(err); }
+  warmRender(); // gfx.js: into the scene target, so these are the shaders play uses
   camera.remove(g);
 }
 function showGame() {

@@ -6,22 +6,30 @@
 // All ray tracing here is screen space (the depth buffer is the scene): browsers have no ray tracing hardware.
 'use strict';
 
-// ---- Ultra shadows: contact-hardening soft shadows (PCSS) in place of three's plain PCF (Soft PCF stays as it is).
+// ---- Ultra shadows: contact-hardening soft shadows (PCSS) inside three's Soft PCF filter, switched by the light's
+// shadow.radius (Soft PCF ignores it): radius > 50 means PCSS. One shader for High through Ultra, so moving in or out
+// of Ultra (or Adaptive quality dropping out of it mid-fight) never recompiles every material in the scene.
 // The key light is orthographic, so depth is linear and the penumbra grows with the gap between blocker and receiver.
+// The tap spiral turns by the golden angle with one fixed rotation per tap (no sin/cos in the loops), so it's cheap to run and to compile.
 {
-  const c = THREE.ShaderChunk.shadowmap_pars_fragment, g = c.indexOf('float getShadow('), tag = '#if defined( SHADOWMAP_TYPE_PCF )', i = c.indexOf(tag, g);
+  const c = THREE.ShaderChunk.shadowmap_pars_fragment, g = c.indexOf('float getShadow('), tag = '#elif defined( SHADOWMAP_TYPE_PCF_SOFT )', i = c.indexOf(tag, g), j = c.indexOf('#elif', i + tag.length);
   const pcss = `float pcssShadow( sampler2D map, vec2 uv, float z ) {
+		const mat2 G = mat2( -.7373688, .6754904, -.6754904, -.7373688 );
 		float a = fract( 52.9829189 * fract( dot( gl_FragCoord.xy, vec2( .06711056, .00583715 ) ) ) ) * 6.2831853, bs = 0., bn = 0.;
-		for ( int i = 0; i < 16; i ++ ) { float r = sqrt( ( float( i ) + .5 ) / 16. ) * .0065, t = a + float( i ) * 2.3999632;
-			float d = unpackRGBAToDepth( textureLod( map, uv + vec2( cos( t ), sin( t ) ) * r, 0. ) ); if ( d < z - .0004 - r * .3 ) { bs += d; bn += 1.; } }
+		vec2 o = vec2( cos( a ), sin( a ) );
+		for ( int i = 0; i < 12; i ++ ) { float r = sqrt( ( float( i ) + .5 ) / 12. ) * .0065;
+			float d = unpackRGBAToDepth( textureLod( map, uv + o * r, 0. ) ), k = step( d, z - .0004 - r * .3 ); bs += d * k; bn += k; o = G * o; }
 		if ( bn < .5 ) return 1.;
 		float pen = clamp( ( z - bs / bn ) * .45, .0003, .0065 ), lit = 0.;
-		for ( int i = 0; i < 24; i ++ ) { float r = sqrt( ( float( i ) + .5 ) / 24. ), t = a * 1.618 + float( i ) * 2.3999632;
-			lit += step( z - r * pen * .5, unpackRGBAToDepth( textureLod( map, uv + vec2( cos( t ), sin( t ) ) * r * pen, 0. ) ) ); }
-		return lit / 24.;
+		o = vec2( -o.y, o.x );
+		for ( int i = 0; i < 20; i ++ ) { float r = sqrt( ( float( i ) + .5 ) / 20. );
+			lit += step( z - r * pen * .5, unpackRGBAToDepth( textureLod( map, uv + o * r * pen, 0. ) ) ); o = G * o; }
+		return lit / 20.;
 	}
 	`;
-  if (g > 0 && i > g) THREE.ShaderChunk.shadowmap_pars_fragment = c.slice(0, g) + pcss + c.slice(g, i) + tag + '\n\t\t\tshadow = pcssShadow( shadowMap, shadowCoord.xy, shadowCoord.z );\n\t\t#elif 0' + c.slice(i + tag.length);
+  if (g > 0 && i > g && j > i) THREE.ShaderChunk.shadowmap_pars_fragment = c.slice(0, g) + pcss + c.slice(g, i) + tag +
+    '\n\t\t\tif ( shadowRadius > 50. ) shadow = pcssShadow( shadowMap, shadowCoord.xy, shadowCoord.z ); else {' + c.slice(i + tag.length, j) + '}\n\t\t' + c.slice(j);
+  else console.warn('gfx: three shadow chunk changed, Ultra falls back to Soft PCF shadows');
 }
 
 const GFX_VS = `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }`;
@@ -297,6 +305,14 @@ const gfxPass = { // stands in for RenderPass: draws the scene, then the lightin
   },
   dispose() {},
 };
+// shader warm-ups (warmFx, the city's first visit) draw into the scene target, the way play draws. Drawn straight to the
+// screen, three compiles the tone-mapped sRGB versions instead, and every warmed effect then compiled again, as a hitch,
+// the first time it really showed up
+function warmRender() {
+  const rt = renderer.getRenderTarget(); renderer.setRenderTarget(sceneRT);
+  try { renderer.compile(scene, camera); renderer.render(scene, camera); } catch (err) { console.error(err); }
+  renderer.setRenderTarget(rt);
+}
 window.MP_gfxDebug = k => { GM.comp.uniforms.uDbg.value = k; }; // 1 AO + bounce, 2 reflections, 3 volumetric light (tuning)
 const fxaaPass = new ShaderPass({ uniforms: { tDiffuse: { value: null }, uTexel: { value: new THREE.Vector2(1, 1) } }, vertexShader: GFX_VS, fragmentShader: GFX_FXAA });
 fxaaPass.enabled = false;
@@ -323,15 +339,17 @@ function applyGfx(o) {
   const smp = Math.min({ msaa2: 2, msaa4: 4, msaa8: 8 }[o.aa] || 0, renderer.capabilities.maxSamples || 4);
   if (sceneRT.samples !== smp) { sceneRT.samples = smp; sceneRT.dispose(); }
   fxaaPass.enabled = o.aa === 'fxaa';
-  // shadows: Low 1024, Medium 2048, High 4096, Ultra 4096 with contact-hardening PCSS
-  const sq = o.shadowQ, size = [1024, 1024, 2048, 4096, 4096][sq], type = sq === 4 ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
+  // shadows: Low 1024, Medium 2048, High 4096, Ultra 4096 with contact-hardening PCSS (a uniform, not a new shader: see the top)
+  const sq = o.shadowQ, size = [1024, 1024, 2048, 4096, 4096][sq], type = THREE.PCFSoftShadowMap;
+  moon.shadow.radius = sq === 4 ? 100 : 1;
   if (renderer.shadowMap.enabled !== sq > 0 || renderer.shadowMap.type !== type || moon.shadow.mapSize.x !== size) {
     renderer.shadowMap.enabled = moon.castShadow = sq > 0; renderer.shadowMap.type = type;
     if (moon.shadow.mapSize.x !== size) { moon.shadow.mapSize.set(size, size); moon.shadow.map?.dispose(); moon.shadow.map = null; }
     scene.traverse(m => { for (const x of [].concat(m.material || [])) x.needsUpdate = true; }); // their shaders hold the shadow filter
   }
   // ambient occlusion: [directions, steps, radius m, strength, resolution]; bounce light and contact shadows ride the same pass
-  const A = [[0, 0, 1, 0, .5], [4, 4, 1, 1.2, .5], [6, 5, 1.3, 1.35, .5], [8, 6, 1.6, 1.5, 1]][o.ao];
+  // (Ultra too at half resolution: the depth-aware upscale keeps edges clean, and full-res cost 4x as much for little gain)
+  const A = [[0, 0, 1, 0, .5], [4, 4, 1, 1.2, .5], [6, 5, 1.3, 1.35, .5], [8, 6, 1.6, 1.5, .5]][o.ao];
   const aoS = A[4]; GX.ao = o.ao; GX.gi = o.gi && o.ao > 0; GX.contact = o.contact;
   setDefs(GM.ao, { N: A[0], M: A[1], GI: GX.gi, CONTACT: o.contact });
   GM.ao.uniforms.uRad.value = A[2]; GM.ao.uniforms.uInt.value = A[3];

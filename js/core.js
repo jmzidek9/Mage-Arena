@@ -22,7 +22,7 @@ const PILLARS = [];
 // ===================== renderer & scene =====================
 let HQ = true; // let: auto quality may switch this off at runtime
 try { HQ = localStorage.getItem('magepact_gfx') !== 'low'; } catch {}
-const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' }); // no MSAA on the canvas: the scene draws into its own MSAA target (gfx.js), the canvas only gets the full-screen passes
 renderer.setPixelRatio(HQ ? Math.min(devicePixelRatio, 2) : 1);
 renderer.setSize(innerWidth, innerHeight);
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
