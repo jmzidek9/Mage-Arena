@@ -164,6 +164,25 @@ input::placeholder{color:#b9add8;opacity:.8}input:focus{box-shadow:0 0 0 2px var
 #startBtn{border-color:var(--gold);box-shadow:0 0 20px rgba(233,196,106,.45)}
 #lobby .panel{animation:rise .5s cubic-bezier(.2,.9,.3,1)}
 .elc{transition:transform .15s,box-shadow .2s}.elc:hover{transform:translateY(-3px)}
+#lobby .panel{max-width:min(1400px,100%)}
+.pick{display:flex;flex-direction:column;gap:12px;flex:none}.pick>*{overflow:visible}
+#detail{display:grid;grid-template-columns:minmax(220px,300px) minmax(0,1fr) minmax(260px,340px);grid-template-rows:minmax(0,1fr);gap:18px;align-items:center;height:clamp(300px,48vh,540px);padding:10px 16px;background:radial-gradient(ellipse 45% 70% at 50% 62%,color-mix(in srgb,var(--el) 38%,transparent),transparent 70%),linear-gradient(180deg,rgba(18,10,38,.35),rgba(10,6,24,.6));border-color:color-mix(in srgb,var(--el) 30%,transparent)}
+#detail .stage{align-self:stretch;display:flex;align-items:center;justify-content:center;min-width:0}
+#pvc{float:none;width:100%;max-width:620px;height:auto;aspect-ratio:4/3;max-height:100%;margin:0;filter:drop-shadow(0 0 28px color-mix(in srgb,var(--el) 70%,transparent))}
+#detailBody{align-self:start;overflow:auto;max-height:100%}
+#detail .dh .sigil{width:64px;height:64px;flex:none;filter:drop-shadow(0 0 10px var(--el))}
+#detail .dh{align-items:flex-start}#detail .dh b{font-size:34px;line-height:1.1;margin-bottom:6px}
+#mvCol{display:grid;gap:8px;align-self:center;max-height:100%;overflow:auto}
+#mvCol .mv{grid-template-columns:40px 40px 1fr;align-items:center;padding:7px 10px;border-radius:12px;background:rgba(0,0,0,.35);border:1px solid color-mix(in srgb,var(--el) 30%,transparent);transition:border-color .2s,background .2s}
+#mvCol .mv .mi svg{width:36px;height:36px}#mvCol .mv small{display:none}
+#mvCol .mv:hover{border-color:var(--el);background:color-mix(in srgb,var(--el) 14%,rgba(0,0,0,.4))}#mvCol .mv:hover small{display:block;margin-top:4px}
+.strip #prog{display:flex;align-items:center;gap:18px;margin-bottom:8px}.strip #prog .xpbar{flex:1}
+#grid{grid-template-columns:repeat(auto-fill,minmax(76px,1fr));gap:6px}
+.elc{padding:6px 2px 5px}.elc .g{font-size:30px;line-height:1;height:44px;display:flex;align-items:center}.elc .g .sigil{width:44px;height:44px;filter:drop-shadow(0 0 6px color-mix(in srgb,var(--c) 70%,transparent))}
+.elc:hover .sigil{transform:scale(1.12)}.elc .sigil{transition:transform .2s}
+.strip .pickinfo{margin-top:8px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:6px 12px}
+@media (max-width:900px){#detail{grid-template-columns:1fr;grid-template-rows:auto;height:auto;max-height:none}#detail .stage{order:-1;height:200px}#mvCol{order:1}#pvc{width:auto;height:100%}#detailBody,#mvCol{max-height:none}#detail .dh b{font-size:26px}}
+@media (max-height:760px){#detail{height:clamp(260px,44vh,400px)}.elc .g,.elc .g .sigil{height:34px;width:34px}}
 .pickinfo{margin-top:12px;padding:10px 12px;border-radius:12px;background:rgba(0,0,0,.25);font-size:13px;color:var(--dim);display:grid;gap:6px}.pickinfo label{font-family:Cinzel,Georgia,serif;color:#fff6d8;letter-spacing:.06em}.pickinfo select{margin-left:8px;font:inherit;padding:4px 8px;border-radius:8px;background:#160d30;color:#fff;border:1px solid rgba(233,196,106,.45)}
 /* ---- ability bar ---- */
 #bar{position:absolute;bottom:18px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:6px}
@@ -233,7 +252,7 @@ input::placeholder{color:#b9add8;opacity:.8}input:focus{box-shadow:0 0 0 2px var
 #binds{display:grid;grid-template-columns:1fr 1fr;gap:4px 10px}#binds div{display:flex;justify-content:space-between;align-items:center;gap:8px}#binds button{min-width:70px;padding:4px 8px;font-size:12px;text-transform:none}#binds button.wait{border-color:var(--gold);color:var(--gold)}
 #pauseTag{text-align:center;font-size:18px;letter-spacing:.2em;color:#fff6d8}#pauseTag small{display:block;font-size:11px;letter-spacing:.05em;color:var(--dim)}
 #swapGrid{display:grid;grid-template-columns:repeat(5,44px);gap:6px;margin-top:6px}
-#swapGrid .elc{padding:6px 0}#swapGrid .elc .g{font-size:20px}
+#swapGrid .elc{padding:6px 0}#swapGrid .elc .g{font-size:20px;height:auto}#swapGrid .elc .sigil{width:30px;height:30px}
 #swapGrid.big{grid-template-columns:repeat(auto-fill,minmax(70px,1fr));max-height:300px;overflow-y:auto}#swapGrid.big .elc{display:flex;flex-direction:column;align-items:center;gap:2px}#swapGrid.big .elc .n{font-size:10px;opacity:.85}
 #cheatBody .row{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;align-items:center}#cheatBody button{padding:6px 10px;font-size:12px}#cheatBody button.on{border-color:var(--gold);color:#fff6d8;background:rgba(255,200,90,.15)}
 #cheatBody input,#cheatBody select{background:#1a1428;color:#eee;border:1px solid #4a3a6a;border-radius:6px;padding:5px;font-size:12px}#cheatBody input{width:60px}#cheatBody small{opacity:.6;width:100%}
@@ -326,7 +345,7 @@ body.touching #me{top:14px;bottom:auto;left:14px}body.touching #lock{display:non
   <div class="panel">
     <div id="modeBar"><button id="modeBack" class="ghost">← Modes</button><h2 id="modeName"></h2><div class="row"><button id="gfxBtn" class="ghost">Graphics: High</button><button id="setBtn" class="ghost">Settings</button></div></div>
     <div class="rule"></div>
-    <div class="pick"><div><div id="prog"></div><div id="grid"></div><div id="pickinfo" class="pickinfo"></div></div><div id="detail"><canvas id="pvc" width="200" height="150"></canvas><div id="detailBody"></div></div></div>
+    <div class="pick"><div id="detail"><div id="mvCol" class="moves"></div><div class="stage"><canvas id="pvc" width="200" height="150"></canvas></div><div id="detailBody"></div></div><div class="strip"><div id="prog"></div><div id="grid"></div><div id="pickinfo" class="pickinfo"></div></div></div>
     <div class="play"><button id="soloBtn" class="el sel" style="--c:#e9c46a;color:#fff6d8">⚔ Play Solo</button><div class="online"><span class="lbl">With a friend</span><button id="hostBtn">Host game</button><i></i><input id="code" maxlength="5" placeholder="CODE" aria-label="Room code"><button id="joinBtn">Join</button><button id="startBtn" class="hidden">Start</button><button id="netLeave" class="ghost hidden">Leave room</button></div></div>
     <div id="status">Loading Blender assets…</div>
     <button id="unlockAll" class="ghost">🔓 Unlock all elements</button>

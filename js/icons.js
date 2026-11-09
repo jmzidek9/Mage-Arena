@@ -519,3 +519,44 @@ SPELL_ART.god = [
   // Armageddon: the sky falls and everything dies
   k => `<ellipse cx="32" cy="10" rx="22" ry="9" fill="#ff6a1a" opacity=".3" filter="url(#${k.id}g)"/>` + k.orb(32, 8, 8) + [[12, 36, 5], [28, 48, 6], [46, 38, 5], [56, 56, 4], [18, 58, 3.5]].map(([x, y, r]) => `<g transform="rotate(-28 ${x} ${y})">${k.flame(x, y + r * .4, r * 2.2, r * 5, 0, .8).replace(/url\(#[^)]*?(fo|fm|fi)\)/g, (m, g) => `url(#${k.id}${g})`)}</g>` + k.glow(x, y, r * 1.4, .7, '#ff6a1a') + `<circle cx="${x}" cy="${y}" r="${r}" fill="url(#${k.id}rk)"/><circle cx="${x}" cy="${y}" r="${r}" fill="#ff6a1a" opacity=".35"/>`).join('') + k.ground(62, 30, .6),
 ];
+
+// ===================== element emblems =====================
+// One painted emblem per element for the element picker: the element's own symbol, big and glowing, in its colour.
+// elIcon(el) returns the <svg>; an element with no emblem keeps its emoji glyph.
+const SIGIL = {
+  fire: k => k.glow(32, 38, 24, .6) + k.flame(32, 58, 34, 52) + k.flame(20, 58, 14, 28, -3, .85) + k.flame(44, 58, 14, 30, 3, .85),
+  frost: k => k.glow(32, 32, 24, .5) + [0, 60, 120, 180, 240, 300].map(r => k.shard(32, 18, 14, 0, false).replace('translate(32 18)', `rotate(${r} 32 32) translate(32 18)`)).join('') + k.twinkle(32, 32, 7),
+  storm: k => k.cloud(32, 18, 1.15) + k.bolt([[36, 24], [26, 40], [36, 40], [28, 60]], 4) + k.twinkle(48, 46, 3),
+  water: k => k.glow(32, 36, 24, .5) + k.wave(34, 36, 1.1) + k.drop(50, 14, .55, 15) + k.drop(14, 20, .4, -15),
+  earth: k => k.glow(32, 40, 22, .45) + k.rock(32, 38, 2.2) + k.rock(14, 52, .9, 30) + k.rock(52, 50, 1.1, -20),
+  wind: k => k.glow(32, 32, 22, .45) + k.spiral(32, 32, 24, 2.4, 3) + k.streak(2, 50, 24, 46, 3, .6) + k.streak(62, 14, 40, 18, 3, .6),
+  nature: k => k.glow(32, 34, 22, .5) + _root('M32 60C32 46 30 36 32 24', 4) + _leaf(k, 32, 30, 2.2, -40) + _leaf(k, 32, 40, 2, 200).replace('rotate(200)', 'rotate(200) scale(1 -1)') + _leaf(k, 32, 24, 1.6, -100),
+  shadow: k => k.glow(32, 32, 30, .75) + `<circle cx="32" cy="32" r="22" fill="${k.u('o')}"/><circle cx="37" cy="29" r="20" fill="#05020c"/>` + k.eye(38, 30, .42, '#05020c') + k.twinkle(52, 10, 3) + k.twinkle(8, 54, 2),
+  light: k => k.burst(32, 32, 28, 12, .55) + k.orb(32, 32, 12),
+  venom: k => k.glow(32, 30, 22, .5) + k.skull(32, 30, 1.5) + k.drop(22, 56, .45) + k.drop(40, 58, .35) + k.drop(32, 52, .3),
+  magma: k => `<path d="M6 60L24 18H40L58 60Z" fill="${k.u('rk')}"/><path d="M24 18H40L36 30L32 24L28 32Z" fill="${k.M}"/>` + k.flame(32, 22, 16, 22) + _lava(k, 20, 10, 4) + _lava(k, 46, 8, 3),
+  crystal: k => k.shard(32, 32, 26) + k.shard(16, 42, 13, -25, false) + k.shard(48, 42, 13, 25, false) + k.twinkle(44, 14, 3.5),
+  sonic: k => k.glow(32, 32, 22, .45) + [10, 18, 26].map((r, i) => `<path d="M${18 + r * .3} ${32 - r}A${r} ${r} 0 0 1 ${18 + r * .3} ${32 + r}" fill="none" stroke="${i ? k.L : k.W}" stroke-width="${4 - i}" stroke-linecap="round" opacity="${1 - i * .2}"/>`).join('') + k.orb(14, 32, 7),
+  gravity: k => k.glow(32, 32, 28, .6) + k.ring(32, 32, 26, 10, 2.5) + `<circle cx="32" cy="32" r="13" fill="#05020c"/>` + k.ring(32, 32, 13, 13, 1.6) + k.spiral(32, 32, 11, 1.6, 1.2, .8),
+  chrono: k => k.glow(32, 32, 24, .45) + _clock(k, 32, 32, 22, -90, 20),
+  blood: k => k.glow(32, 36, 22, .55) + k.drop(32, 34, 2.1) + k.drop(52, 50, .55) + k.drop(12, 52, .45),
+  spirit: k => k.glow(32, 34, 24, .5) + _wisp(k, 32, 32, 1.7) + k.twinkle(52, 14, 3) + k.twinkle(12, 22, 2.4),
+  cosmic: k => k.glow(32, 32, 26, .45) + k.ring(32, 34, 26, 8, 1.8, .8) + k.star(32, 30, 18) + k.twinkle(10, 12, 3) + k.twinkle(54, 54, 3) + k.twinkle(52, 10, 2),
+  explosion: k => k.glow(32, 34, 30, .7) + k.burst(32, 34, 28, 11, .5, 8) + k.burst(32, 34, 16, 9, .55) + `<circle cx="32" cy="34" r="7" fill="#fff"/>` + k.sparks([[8, 10, 2], [56, 12, 2.4], [6, 54, 1.8], [58, 56, 2]]),
+  illusion: k => k.glow(32, 32, 24, .5) + k.eye(32, 32, 1.45) + k.twinkle(10, 12, 3) + k.twinkle(54, 52, 3),
+  bone: k => k.bone(12, 52, 52, 12, 5) + k.bone(12, 12, 52, 52, 5) + k.skull(32, 32, 1.35, _ghost),
+  rune: k => _glyph(k, 32, 32, 26),
+  plasma: k => k.glow(32, 32, 26, .5) + [0, 60, 120].map(r => `<ellipse cx="32" cy="32" rx="26" ry="9" transform="rotate(${r} 32 32)" fill="none" stroke="${k.L}" stroke-width="2"/>`).join('') + k.orb(32, 32, 8),
+  soul: k => k.glow(32, 30, 22, .55) + k.flame(32, 40, 22, 34) + `<path d="M14 44Q32 62 50 44L46 52H18Z" fill="${k.u('gd')}"/><ellipse cx="32" cy="44" rx="18" ry="4" fill="${k.u('gd')}"/>`,
+  abyss: k => k.glow(32, 34, 26, .5) + k.tentacle('M14 60C6 44 22 38 14 22C10 14 18 8 22 12', 6) + k.tentacle('M50 60C58 44 42 38 50 22C54 14 46 8 42 12', 6) + k.tentacle('M32 62C30 48 36 40 32 28', 5) + k.eye(32, 22, .55),
+  laser: k => k.beam(4, 52, 60, 12, 5) + k.burst(60, 12, 9, 8, .35) + k.orb(6, 52, 6) + k.twinkle(40, 44, 3),
+  arcane: k => k.glow(32, 30, 26, .5) + k.orb(32, 28, 18) + `<path d="M18 50H46L42 58H22Z" fill="${k.u('gd')}"/>` + k.twinkle(26, 22, 4) + k.twinkle(40, 34, 2.5),
+  blades: k => k.blade(32, 54, 44, 35) + k.blade(32, 54, 44, -35),
+  ink: k => k.glow(32, 36, 24, .45) + `<g fill="#06060e" stroke="${k.M}" stroke-width="1.6"><circle cx="32" cy="38" r="14"/><circle cx="20" cy="30" r="7"/><circle cx="45" cy="44" r="8"/><circle cx="24" cy="50" r="6"/></g><circle cx="32" cy="38" r="13" fill="#06060e"/><circle cx="20" cy="30" r="6" fill="#06060e"/><circle cx="45" cy="44" r="7" fill="#06060e"/><circle cx="24" cy="50" r="5" fill="#06060e"/><circle cx="52" cy="18" r="3.5" fill="#06060e" stroke="${k.M}"/><circle cx="12" cy="52" r="3" fill="#06060e" stroke="${k.M}"/>` + _ink(k, 'M44 6C38 16 34 24 30 36', 5) + k.drop(28, 42, .45, 200),
+  god: k => k.halo(32, 34, 30) + `<path d="M10 46L14 20L24 32L32 14L40 32L50 20L54 46Z" fill="${k.u('gd')}"/><rect x="10" y="44" width="44" height="7" rx="2" fill="${k.u('gd')}"/>` + k.orb(32, 30, 4) + k.twinkle(32, 8, 4),
+};
+function elIcon(el) {
+  const fn = SIGIL[el]; if (!fn) return EL[el]?.glyph ?? '';
+  const id = 'si' + (iconSeq++).toString(36) + '_', col = '#' + (EL[el]?.color ?? 0xffffff).toString(16).padStart(6, '0'), k = paintKit(id, col);
+  return `<svg class="sigil" viewBox="0 0 64 64" aria-hidden="true">${k.defs}${fn(k)}</svg>`;
+}

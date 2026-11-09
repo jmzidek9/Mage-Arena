@@ -1510,7 +1510,7 @@ try { const s = JSON.parse(localStorage.getItem('magepact_pick') || '{}'); if (E
 if (!unlocked(myEl)) myEl = PROG.unl[0]; if (myEl2 && !unlocked(myEl2)) myEl2 = null;
 function bestFor(el) { try { return JSON.parse(localStorage.getItem(myMode === 'dungeon' ? 'magepact_best_floor' : 'magepact_best_el') || '{}')[el] || 0; } catch { return 0; } }
 function renderLobby() {
-  $('grid').innerHTML = PICKABLE().map(k => { const e = EL[k], b = bestFor(k), lock = !unlocked(k), st = stars(k); return `<button class="elc${k === myEl ? ' sel' : ''}${k === myEl2 ? ' sel2' : ''}${lock ? ' lock' : ''}${lock && PROG.keys ? ' can' : ''}" data-el="${k}" style="--c:${css(e.color)}"><span class="g">${lock ? '🔒' : e.glyph}</span><span class="n">${e.name}</span>${st ? `<span class="st">${'★'.repeat(st)}</span>` : ''}${b && myMode !== 'duel' ? `<span class="best">${myMode === 'dungeon' ? 'F' : 'W'}${b}</span>` : ''}${k === myEl2 ? '<span class="tab">TAB</span>' : ''}</button>`; }).join('');
+  $('grid').innerHTML = PICKABLE().map(k => { const e = EL[k], b = bestFor(k), lock = !unlocked(k), st = stars(k); return `<button class="elc${k === myEl ? ' sel' : ''}${k === myEl2 ? ' sel2' : ''}${lock ? ' lock' : ''}${lock && PROG.keys ? ' can' : ''}" data-el="${k}" style="--c:${css(e.color)}"><span class="g">${lock ? '🔒' : elIcon(k)}</span><span class="n">${e.name}</span>${st ? `<span class="st">${'★'.repeat(st)}</span>` : ''}${b && myMode !== 'duel' ? `<span class="best">${myMode === 'dungeon' ? 'F' : 'W'}${b}</span>` : ''}${k === myEl2 ? '<span class="tab">TAB</span>' : ''}</button>`; }).join('');
   for (const b of $('grid').children) {
     b.onclick = () => {
       const k = b.dataset.el;
@@ -1536,6 +1536,8 @@ function pvShow(el) {
     let last = performance.now();
     const tick = now => { requestAnimationFrame(tick); const dt = Math.min(.05, (now - last) / 1000); last = now;
       if (!PV.g || $('lobby').classList.contains('hidden')) return;
+      const cv = PV.r.domElement, w = cv.clientWidth, h = cv.clientHeight;
+      if (w && h && (w !== PV.w || h !== PV.h)) { PV.w = w; PV.h = h; PV.r.setSize(w, h, false); PV.cam.aspect = w / h; PV.cam.updateProjectionMatrix(); }
       PV.g.userData.m.rotation.y += dt * .8; spinCircle(PV.g.userData.c, dt, .6); PV.r.render(PV.sc, PV.cam); };
     requestAnimationFrame(tick);
   }
@@ -1555,10 +1557,11 @@ function renderDetail() {
   const k = hoverEl || myEl, e = EL[k], [t1, t2, dif] = ELMETA[k], st = stars(k), mx = PROG.mast[k] || 0, nxt = MASTERY[st];
   document.documentElement.style.setProperty('--el', css(e.color));
   pvShow(k);
-  $('detailBody').innerHTML = `<div class="dh"><div><b>${e.glyph} ${e.name}</b><small>${e.blurb}</small></div></div>
+  $('detailBody').innerHTML = `<div class="dh">${elIcon(k)}<div><b>${e.name}</b><small>${e.blurb}</small></div></div>
     <div class="tags"><span>${t1}</span><span>${t2}</span><span class="dif d${dif}">${'●'.repeat(dif)}${'○'.repeat(3 - dif)} ${DIFF[dif]}</span>${unlocked(k) ? `<span class="mast" title="Mastery: ${mx}${nxt ? ' / ' + nxt : ''} XP">${'★'.repeat(st)}${'☆'.repeat(5 - st)}</span>` : `<span class="lk">🔒 ${PROG.keys ? 'Click to unlock' : 'Locked: level up to unlock'}</span>`}</div>
     <div class="passive"><em>Passive</em> ${e.passive}</div>
     <div class="passive"><em>Block (${keyName(BIND.block)}, hold)</em> <b>${BLOCK[k]?.name}</b>: ${BLOCK_DESC}</div>
-    <div class="moves">${e.moves.map((m, i) => `<div class="mv"><kbd>${slotKey(i)}</kbd><span class="mi">${moveIcon(m)}</span><div><b>${m.name}</b>${m.mode === 'charge' ? ' <i>hold to charge</i>' : m.mode === 'channel' ? ' <i>hold</i>' : m.mode === 'aim' ? ' <i>hold to aim</i>' : ''}<small>${m.desc}</small></div></div>`).join('')}</div>`;
+    `;
+  $('mvCol').innerHTML = `${e.moves.map((m, i) => `<div class="mv"><kbd>${slotKey(i)}</kbd><span class="mi">${moveIcon(m)}</span><div><b>${m.name}</b>${m.mode === 'charge' ? ' <i>hold to charge</i>' : m.mode === 'channel' ? ' <i>hold</i>' : m.mode === 'aim' ? ' <i>hold to aim</i>' : ''}<small>${m.desc}</small></div></div>`).join('')}`;
 }
 
