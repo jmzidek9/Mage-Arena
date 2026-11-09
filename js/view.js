@@ -1325,10 +1325,12 @@ function warmFx() {
   add(new THREE.Sprite(new THREE.SpriteMaterial({ map: puffTex(), transparent: true, depthWrite: false })));
   for (const f of WARM) add(f()); // moves' own meshes and shaders (elements.js)
   add(new THREE.Mesh(JET_GEO, jetMat(0))); // the Flamethrower's fire shader
+  add(new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false }))); // the plain glowing arcs, fans and flares many moves build as they cast
   if (!inkPool.length) { const d = inkDragonBuild(); inkPool.push(d); g.add(d, d.userData.body); } // the Ink Dragon is built (and compiled) now, not on its first cast
   g.scale.setScalar(.05);
   camera.add(g); g.position.set(0, 0, -3);
   warmRender(); // gfx.js: into the scene target, so these are the shaders play uses
+  warmGfxLower(settings); // and the lighting passes Adaptive quality would drop to
   camera.remove(g);
 }
 function showGame() {

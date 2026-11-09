@@ -512,8 +512,7 @@ function autoQuality() {
   aqT += gap / 1000; aqN++;
   if (aqT < 6) return;
   if (aqN / aqT < 30) {
-    const near = GFX_ORDER.reduce((b, p) => { const n = GFX_KEYS.filter(k => GFX_PRESETS[p][k] === settings[k]).length; return n > b[1] ? [p, n] : b; }, ['high', -1])[0];
-    const p = GFX_ORDER[Math.max(0, GFX_ORDER.indexOf(near) - 1)];
+    const p = GFX_ORDER[Math.max(0, GFX_ORDER.indexOf(gfxNear(settings)) - 1)]; // its lighting shaders were compiled at load (warmGfxLower, gfx.js)
     Object.assign(settings, GFX_PRESETS[p], { preset: p }); saveSettings();
     banner(`GRAPHICS SET TO ${PRESET_INFO[p][0].toUpperCase()} FOR SMOOTHER PLAY`, '#cfc8e8', 2200);
   }

@@ -16,3 +16,5 @@ vault/Graph Report.md
 playtest/node_modules/
 playtest/out/
 node_modules/
+Qwen/
+.opencode/

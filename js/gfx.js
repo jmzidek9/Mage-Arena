@@ -332,6 +332,31 @@ const GFX_PRESETS = {
 };
 const GFX_ORDER = ['low', 'medium', 'high', 'vhigh', 'ultra'];
 const gfxPreset = o => GFX_ORDER.find(p => GFX_KEYS.every(k => GFX_PRESETS[p][k] === o[k])) || 'custom';
+const gfxNear = o => GFX_ORDER.reduce((b, p) => { const n = GFX_KEYS.filter(k => GFX_PRESETS[p][k] === o[k]).length; return n > b[1] ? [p, n] : b; }, ['high', -1])[0]; // the preset a custom mix is closest to
+
+// ambient occlusion: [directions, steps, radius m, strength, resolution]; reflections: [steps, refinements, reach m]
+const AO_Q = [[0, 0, 1, 0, .5], [4, 4, 1, 1.2, .5], [6, 5, 1.3, 1.35, .5], [8, 6, 1.6, 1.5, 1]], SSR_Q = [[0, 0, 0], [16, 3, 10], [32, 4, 18], [56, 6, 28]];
+// the #defines each lighting pass is compiled with for these options (null: that pass is off)
+function gfxDefs(o) {
+  const A = AO_Q[o.ao], R = SSR_Q[o.ssr], ao = o.ao > 0 || o.contact, vol = o.shadowQ ? o.vlight : 0;
+  return { ao: ao ? { N: A[0], M: A[1], GI: o.gi && o.ao > 0, CONTACT: o.contact } : null, ssr: o.ssr ? { STEPS: R[0], REFINE: R[1] } : null, vol: vol ? { VSTEPS: vol === 2 ? 32 : 16 } : null,
+    comp: { AO: ao, AOLO: ao && A[4] < 1, SSR: o.ssr > 0, VOL: vol > 0, GOD: o.god, FOG: o.fog, MB: o.mblur > 0 } };
+}
+// Adaptive quality drops a preset in the middle of a fight, and the lighting passes of the lower preset are different
+// shaders. Compile them when the game loads (warmFx), so the drop itself doesn't hitch the machine that's already struggling.
+// (Medium to Low still recompiles the scene: Low has no shadows, and that's a different shader for every material.)
+function warmGfxLower(o) {
+  if (!o.autoQ) return;
+  const rt = renderer.getRenderTarget(), cur = gfxDefs(o), use = d => { for (const k in d) if (d[k]) setDefs(GM[k], d[k]); };
+  try {
+    for (const p of GFX_ORDER.slice(0, GFX_ORDER.indexOf(gfxNear(o)))) {
+      const d = gfxDefs(GFX_PRESETS[p]); use(d);
+      for (const k in d) if (d[k]) blit(renderer, GM[k], aoB);
+      if (GFX_PRESETS[p].aa === 'fxaa') blit(renderer, fxaaPass.material, aoB);
+    }
+  } catch (err) { console.error(err); }
+  use(cur); renderer.setRenderTarget(rt);
+}
 
 // apply the graphics half of the settings; cheap when nothing changed (it's called on every settings save)
 function applyGfx(o) {
@@ -348,18 +373,13 @@ function applyGfx(o) {
     if (moon.shadow.mapSize.x !== size) { moon.shadow.mapSize.set(size, size); moon.shadow.map?.dispose(); moon.shadow.map = null; }
     scene.traverse(m => { for (const x of [].concat(m.material || [])) x.needsUpdate = true; }); // their shaders hold the shadow filter
   }
-  // ambient occlusion: [directions, steps, radius m, strength, resolution]; bounce light and contact shadows ride the same pass
-  const A = [[0, 0, 1, 0, .5], [4, 4, 1, 1.2, .5], [6, 5, 1.3, 1.35, .5], [8, 6, 1.6, 1.5, 1]][o.ao];
-  const aoS = A[4]; GX.ao = o.ao; GX.gi = o.gi && o.ao > 0; GX.contact = o.contact;
-  setDefs(GM.ao, { N: A[0], M: A[1], GI: GX.gi, CONTACT: o.contact });
+  // ambient occlusion (bounce light and contact shadows ride the same pass), reflections, volumetric light
+  const A = AO_Q[o.ao], aoS = A[4], D = gfxDefs(o);
+  GX.ao = o.ao; GX.gi = o.gi && o.ao > 0; GX.contact = o.contact; GX.ssr = o.ssr; GX.vol = o.shadowQ ? o.vlight : 0; GX.god = o.god; GX.fog = o.fog; GX.mb = o.mblur;
+  for (const k in D) if (D[k]) setDefs(GM[k], D[k]);
   GM.ao.uniforms.uRad.value = A[2]; GM.ao.uniforms.uInt.value = A[3];
   GM.comp.uniforms.uGI.value = .35;
-  // reflections: [steps, refinements, reach m]
-  const R = [[0, 0, 0], [16, 3, 10], [32, 4, 18], [56, 6, 28]][o.ssr];
-  GX.ssr = o.ssr; if (o.ssr) { setDefs(GM.ssr, { STEPS: R[0], REFINE: R[1] }); GM.ssr.uniforms.uMax.value = R[2]; }
-  GX.vol = o.shadowQ ? o.vlight : 0; if (GX.vol) { setDefs(GM.vol, { VSTEPS: GX.vol === 2 ? 32 : 16 }); GM.vol.uniforms.uDens.value = GX.vol === 2 ? .006 : .0045; }
-  GX.god = o.god; GX.fog = o.fog; GX.mb = o.mblur;
-  setDefs(GM.comp, { AO: GX.ao > 0 || GX.contact, AOLO: (GX.ao > 0 || GX.contact) && aoS < 1, SSR: GX.ssr > 0, VOL: GX.vol > 0, GOD: GX.god, FOG: GX.fog, MB: GX.mb > 0 });
+  GM.ssr.uniforms.uMax.value = SSR_Q[o.ssr][2]; GM.vol.uniforms.uDens.value = GX.vol === 2 ? .006 : .0045;
   if (GX.aoS !== aoS) { GX.aoS = aoS; gfxPass.setSize(gfxPass.w, gfxPass.h); }
   // bloom and the lens it feeds
   bloomPass.enabled = o.bloom > 0; bloomPass.strength = [0, .38, .48, .52][o.bloom]; bloomPass.radius = [0, .35, .45, .55][o.bloom];
