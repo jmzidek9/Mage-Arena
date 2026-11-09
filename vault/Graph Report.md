@@ -1,7 +1,7 @@
 # Graph Report - Test Game  (2026-11-08)
 
 ## Corpus Check
-- 149 files · ~387,827 words
+- 149 files · ~387,440 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 27 file(s) not represented in the graph (top: (none) 12, .ipynb 12, .properties 1)
 
@@ -11,7 +11,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `c895833b`
+- Built from commit: `3e36a8f4`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -705,6 +705,6 @@ _Questions this graph is uniquely positioned to answer:_
 - **Should `dungeon.js` be split into smaller, more focused modules?**
   _Cohesion score 0.07486338797814207 - nodes in this community are weakly interconnected._
 - **Why does `Mesh` connect `Mesh` to `build_elements.py`, `build_assets.py`, `Venom playtest report`, `build_hell`, `lib.py`, `TRS`?**
-  _High betweenness centrality (0.155) - this node is a cross-community bridge._
+  _High betweenness centrality (0.157) - this node is a cross-community bridge._
 - **Should `view.js` be split into smaller, more focused modules?**
   _Cohesion score 0.04392156862745098 - nodes in this community are weakly interconnected._
